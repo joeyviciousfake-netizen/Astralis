@@ -1,6 +1,6 @@
 # ASTRALIS — ÍNDICE GERAL
 
-VERSION: 1.3
+VERSION: 1.5
 STATUS: AUTHORITATIVE (split de `Documentação.md` v1.1 + decisões v1.2/v1.3)
 AUDIENCE: AI AGENTS
 LANGUAGE: PT-BR
@@ -25,7 +25,9 @@ docs/
   09_STUDIO_EDITOR.md          <- editores, UX, starter kit [NOVO], wizard
   10_PREVIEW_TESTE_DEBUG.md    <- preview unificado [NOVO], test lab mínimo [NOVO], GUT, determinismo
   11_ROADMAP_AGENTES.md        <- MVP, roadmap, agentes, workflow
-  12_DISTRIBUICAO_EXPORTACAO.md <- fita .astralis + cadeado + bundles win/linux/android [NOVO v1.3]
+   12_DISTRIBUICAO_EXPORTACAO.md <- fita .astralis + cadeado + bundles win/linux/android [NOVO v1.3]
+   13_TABULEIRO_DUELO.md <- zonas[3+3], fases DRAW/MAIN/BATTLE/END, mão 5/7, LP dado, win LP+deckout [NOVO v1.4]
+   14_EXPERIENCIA_USUARIO.md <- Simples/Avançado em tudo, galeria, erro PT-BR, Play verde, guia 5min [NOVO v1.5]
   AI_MANIFEST.json          <- mapa máquina (owner, depends, read_order)
   SESSAO_ATUAL.md           <- OPS mutável: onde paramos + próximo passo (ler sempre)
   DECISOES.md               <- OPS append-only: travas D01-D13, não reabrir

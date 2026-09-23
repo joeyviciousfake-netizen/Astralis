@@ -35,3 +35,7 @@ Isso continua data, sem código, mas reduz 90% do trabalho.
 ## 6.3 Preview / teste
 
 Usam FusionSystem real via TestHarness. Ver `10_PREVIEW_TESTE_DEBUG.md`. Fusion Preview é só um contexto de `Jogar a partir daqui` com 2 cartas na mão.
+
+## 6.4 [MELHORIA V1.5] Fusão Simples/Avançado
+
+Simples: lista de receitas `A+B=C` + busca + botão `Testar fusão` (lança duelo preparado com as 2 cartas na mão). Avançado: aba Regras (form com selects + prioridade + aviso de conflito). Mesmo schema, mesma resolução no Astralis (receita exata primeiro, regra por prioridade, senão falha).

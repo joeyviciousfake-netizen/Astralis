@@ -58,3 +58,7 @@ Arquitetura vence quando:
 6. GUT testa internals;
 7. editor e runtime usam contrato compatível;
 8. projeto evolui sem Godot instalado no usuário.
+
+## 1.6 [MELHORIA V1.5] Guia 5 minutos (Play primeiro)
+
+Primeira experiência oficial: `1. Play no Starter Kit (30 seg) -> 2. Duplicar 1 carta e mudar ATK/arte -> 3. Montar deck com ela -> 4. Play de novo -> 5. Exportar`. Nenhum passo exige ler manual. Todo doc de editor deve respeitar essa ordem: jogar, duplicar, editar, testar, distribuir.

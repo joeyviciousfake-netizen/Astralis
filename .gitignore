@@ -1,0 +1,20 @@
+# Engine Godot local (programa, ~172 MB) — não vai para o git
+Godot/
+
+# Cache do editor Godot (gerado ao abrir astralis/)
+.godot/
+*.godot.uid
+
+# Builds e fitas geradas
+*.astralis
+build/
+dist/
+
+# Studio (Rust/Tauri/Svelte)
+astralis-studio/target/
+astralis-studio/node_modules/
+*.node
+
+# Sistema
+Thumbs.db
+Desktop.ini

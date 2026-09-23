@@ -48,3 +48,7 @@ Studio expõe como 3 sliders + dropdown. Runtime interpreta. Dá identidade (ex.
 ## 5.5 MVP Runtime
 
 Carregar projeto/cartas/duelistas/decks, iniciar duelo, turn flow, summon/attack/damage, victory/defeat, fusion, effect engine inicial, save/load.
+
+## 5.6 [MELHORIA V1.5] Duelista Simples/Avançado + arquétipos
+
+Studio no Simples mostra só: nome, retrato, deck, vida + 3 arquétipos num clique (`Bravo: agressivo+fusão alta | Equilibrado | Defensor: protege LP`). Cada arquétipo preenche os 4 params do preset (dificuldade, agressividade, uso_fusao, protecao_lp). Avançado libera os sliders + dropdown. Runtime não muda: só interpreta os números. Mesma validação nos dois modos.

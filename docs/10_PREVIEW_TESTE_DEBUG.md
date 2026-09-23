@@ -47,3 +47,11 @@ Falha mostra: expected, actual, trace real, state_before/after, events, erro —
 GUT = dev-oriented ("EffectResolver processa X"). Test Lab = autor-oriented ("esta carta deveria destruir este monstro"). Complementares. Para sistemas críticos: SPEC->TEST->IMPLEMENT->RUN->FIX->REGRESSION; bug vira teste permanente.
 
 Debug V1: State Inspector simples (scene, turn, LP, field, hand, grave, active effects, event queue). Adiado V1: State Diff completo, Trace rico, Breakpoints, Recording, DebugConsole completo. Infra (GameState, EventBus, Snapshot, Data/Asset loader) deve ser compartilhada desde cedo para não exigir reescrita.
+
+## 10.5 [MELHORIA V1.5] Erro como gente + Testar agora em tudo + Play verde
+
+Validação fala PT-BR simples, sem termo técnico: em vez de `target incompatível`, mostra `essa carta precisa de um inimigo no campo`. Todo erro mostra onde clicar para consertar; quando a correção é segura (ex.: preencher vida vazia com 8000, ligar on_lose esquecido), botão `Consertar pra mim`.
+
+Botão `Testar agora` existe em todo editor (carta, efeito, fusão, duelo), não só no efeito: monta cenário pronto com seed fixa e mostra `eu esperava X, aconteceu Y, por quê?` com expected, actual e trace real. Botão `Criar teste permanente` salva o cenário.
+
+Botão verde `Jogar` em todo editor: `Jogar a partir daqui` preenche o context (cena, duelo, carta, efeito, fusão) e lança o mesmo Astralis. V1 já inclui para carta/duelo/cena; efeito/fusão como contexto de duelo preparado.

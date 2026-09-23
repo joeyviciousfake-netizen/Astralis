@@ -28,3 +28,21 @@ Todo `New Project` vem com kit jogável mínimo:
 - 10 cartas, 2 duelistas (1 fácil/agressivo baixo, 1 normal), 2 decks, 3 fusões (2 receitas + 1 regra), 2 efeitos modelo, 1 campanha com 2 cenas + 1 batalha com win/lose, assets placeholder.
 
 Wizard 3 passos: `1. Duplicar carta -> 2. Montar deck -> 3. Play`. Reduz fricção de tela em branco e já valida pipeline Studio->Astralis no dia 1.
+
+## 9.4 [MELHORIA V1.5] Padrão Simples/Avançado em tudo + galeria
+
+O Modo Simples/Avançado do efeito (doc 07) vira padrão de todos os editores:
+
+- Todo editor abre no Simples (2-3 campos) com botão `Avançado` que libera o resto. Mesmo dado, mesma validação, só muda o que mostra.
+- Fusão: Simples = só lista de receitas `A+B=C` + botão `Testar fusão`; Avançado = aba Regras com selects e prioridade.
+- Duelista: Simples = nome, retrato, deck, vida + arquétipo num clique (`Bravo | Equilibrado | Defensor`); Avançado = 3 sliders + dropdown de dificuldade.
+- Campanha: Simples = modelos de cena e batalha com win/lose já ligado; Avançado = grafo + timeline completos.
+- Duelo: Simples = escolher os 2 duelistas + vida + Play; Avançado = seed, arena, ordem de turno.
+
+Galeria de prontos (um clique, tudo duplicável): 10 efeitos modelo, 5 fusões famosas, 3 duelistas arquétipo, 3 campanhas modelo (rival clássico, torneio, final múltiplo). Galeria usa os mesmos schemas; item da galeria é só dado inicial.
+
+Duplicar e editar é a ação principal de toda lista (antes de Criar do zero). Nunca tela em branco.
+
+Assets arrasta e solta: arrastar PNG/JPG/OGG para dentro importa, converte e referencia sozinho; valida tamanho/formato com aviso em PT-BR; se faltar arte, usa placeholder cinza automático para não travar o Play.
+
+Botão verde Jogar em todo editor (carta, deck, duelo, efeito, fusão, cena): salva + lança Astralis com o contexto daquilo (doc 10). Erro de validação aparece em PT-BR simples com botão `Consertar pra mim` quando houver correção segura.

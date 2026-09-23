@@ -54,3 +54,7 @@ counters: inteiros simples (ex.: vitorias: 0..99)
 Suficiente para finais múltiplos, revanche, caminho secreto. Variables completas (bool/int/string, conditions avançadas) ficam para futuro, após runtime/campanha/editor/preview estáveis.
 
 Choices V1: `"Sim" -> scene_b / "Não" -> scene_c`, opcionalmente setando flag.
+
+## 8.4 [MELHORIA V1.5] Campanha Simples/Avançado + modelos
+
+Simples: 3 campanhas modelo duplicáveis (`Rival clássico: 2 cenas + 1 batalha | Torneio: fila de batalhas com revanche | Final múltiplo: 1 escolha + 2 finais via flag`). Cena modelo já vem com batalha win/lose ligada e flags exemplo. Avançado: grafo + timeline completos. Mesmos schemas, mesma execução no Astralis.
