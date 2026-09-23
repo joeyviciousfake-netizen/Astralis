@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "card_dragao_trevas_comum",
+  "name": "Dragão das Trevas",
+  "description": "Um dragão comum corrompido pelas trevas. Resultado de fusão genérica.",
+  "artwork": "assets/cards/card_dragao_trevas_comum.png",
+  "card_type": "monster",
+  "monster_type": "dragon",
+  "attribute": "dark",
+  "level": 5,
+  "attack": 2000,
+  "defense": 1500,
+  "effects": [],
+  "tags": ["starter", "fusao", "dragao"]
+}

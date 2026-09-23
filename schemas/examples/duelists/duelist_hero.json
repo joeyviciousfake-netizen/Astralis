@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": "duelist_hero",
+  "name": "Hero (Tutorial)",
+  "portrait": "assets/characters/duelist_hero.png",
+  "sprite": "assets/characters/duelist_hero_sprite.png",
+  "deck_id": "deck_starter_hero",
+  "ai_preset": {
+    "dificuldade": "facil",
+    "agressividade": 30,
+    "uso_fusao": 20,
+    "protecao_lp": 60
+  },
+  "arena": "arena_starter",
+  "music": "assets/music/duel_tutorial.ogg"
+}

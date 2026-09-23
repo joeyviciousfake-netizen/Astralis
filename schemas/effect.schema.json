@@ -1,0 +1,55 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Astralis Effects V1",
+  "description": "Contrato do arquivo effects.json: blocos TRIGGER->CONDITIONS->TARGET->ACTIONS->FLOW (D10). Templates do Modo Simples geram este mesmo formato. Owner: Systems. Ver docs/07_SISTEMA_EFEITOS.md.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "effects": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "name": { "type": "string", "minLength": 1, "description": "Nome do modelo (ex: nome do template no Modo Simples)." },
+          "description": { "type": "string", "description": "Texto humano DERIVADO, só exibição. Nunca fonte de lógica." },
+          "trigger": { "type": "string", "enum": ["card_summoned", "card_destroyed", "turn_started", "turn_finished", "attack_started", "damage_dealt"], "description": "Vocabulário MVP V1. Studio só mostra o que o Astralis executa." },
+          "conditions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "field": { "type": "string", "description": "Ex: opponent_monster_attack, player_lp, opponent_lp, attribute, monster_type." },
+                "operator": { "type": "string", "enum": [">", "<", ">=", "<=", "==", "!="] },
+                "value": { "type": ["number", "string"] }
+              },
+              "required": ["field", "operator", "value"],
+              "additionalProperties": false
+            },
+            "default": []
+          },
+          "target": { "type": "string", "enum": ["self", "self_player", "opponent", "ally_monster", "enemy_monster", "all_ally_monsters", "all_enemy_monsters", "selected_card", "random_card", "card_in_graveyard", "card_in_hand"], "description": "Compatibilidade com a action é validada (ex: draw só mira self_player)." },
+          "actions": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "properties": {
+                "action": { "type": "string", "enum": ["modify_attack", "modify_defense", "damage", "heal", "destroy", "draw", "discard"], "description": "Vocabulário MVP V1." },
+                "amount": { "type": "integer", "description": "Valor (ex: -500 em modify_attack, 1 em draw)." },
+                "duration": { "type": "string", "enum": ["until_end_of_turn", "this_turn", "permanent"], "description": "Só para modify_attack/modify_defense." }
+              },
+              "required": ["action"],
+              "additionalProperties": false
+            }
+          },
+          "flow": { "type": "object", "description": "V1: só sequence (múltiplas actions em ordem). if/else/repeat adiados.", "properties": { "mode": { "type": "string", "enum": ["sequence"] } }, "required": ["mode"], "additionalProperties": false }
+        },
+        "required": ["id", "name", "trigger", "target", "actions"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["schema_version", "effects"],
+  "additionalProperties": false
+}

@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "id": "deck_starter_rival",
+  "name": "Deck Inicial do Rival",
+  "cards": [
+    "card_lobo_cinzento",
+    "card_lobo_cinzento",
+    "card_lobo_cinzento",
+    "card_guerreiro_ardente",
+    "card_guerreiro_ardente",
+    "card_guerreiro_ardente",
+    "card_sereia_maritima",
+    "card_sereia_maritima",
+    "card_sereia_maritima",
+    "card_quimera_chamas",
+    "card_quimera_chamas",
+    "card_espada_luz",
+    "card_espada_luz",
+    "card_bola_fogo",
+    "card_bola_fogo",
+    "card_bola_fogo",
+    "card_dragao_branco",
+    "card_dragao_branco",
+    "card_mago_negro",
+    "card_mago_negro"
+  ]
+}

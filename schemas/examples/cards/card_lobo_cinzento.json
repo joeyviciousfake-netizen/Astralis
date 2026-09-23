@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "card_lobo_cinzento",
+  "name": "Lobo Cinzento",
+  "description": "Um lobo veloz que caça em matilha.",
+  "artwork": "assets/cards/card_lobo_cinzento.png",
+  "card_type": "monster",
+  "monster_type": "beast",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 1200,
+  "defense": 800,
+  "effects": [],
+  "tags": ["starter", "fera"]
+}

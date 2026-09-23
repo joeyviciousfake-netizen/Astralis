@@ -1,0 +1,20 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Astralis Deck V1",
+  "description": "Contrato de deck: só lista de Card IDs (R3, doc 04.4). Owner: Systems. Ver docs/05_RUNTIME_DUELO.md.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "name": { "type": "string", "minLength": 1 },
+    "cards": {
+      "type": "array",
+      "description": "Card IDs. Repetição permitida (cópias). V1: mínimo tutorial 20, construído 40-60, máximo 60 (zona deck, doc 13.1).",
+      "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+      "minItems": 20,
+      "maxItems": 60
+    }
+  },
+  "required": ["schema_version", "id", "name", "cards"],
+  "additionalProperties": false
+}

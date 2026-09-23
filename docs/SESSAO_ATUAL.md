@@ -3,21 +3,16 @@
 > IA: atualize este arquivo NO FIM de toda resposta com mudança. Nunca deixe próximo_passo vazio.
 
 ```yaml
-onde_estamos: "docs v1.5 + pastas + ferramentas prontos; usuário perguntou se pode começar — plano de largada proposto"
-acabamos_de_fazer: "Proposto início em 3 tempos: 1) commit da organização 2) schemas/ V1 + starter kit (systems, sem Godot) 3) projeto Godot astralis/ + GUT + MCP (runtime+qa)"
-próximo_passo: "Aguardando ok do usuário para commit; depois schemas/ V1 via systems"
+onde_estamos: "schemas/ V1 + Starter Kit criados, validados pelo lead e commitados; docs v1.5 prontos"
+acabamos_de_fazer: "Systems criou 6 schemas + examples/ (10 cards, 2 duelists, 2 decks 20 cartas, fusions 2+1, effects 2, duel_setup 4000LP); lead verificou refs/LP/sem-código/schema_version (0 erros); corrigido travas duplicadas; commit"
+próximo_passo: "Projeto Godot astralis/ + GUT + MCP addon (runtime+qa)"
 travas_e_dúvidas:
   - "V1: monster[3]+spell[3] fixos, mão 5/7 fixa, sem Extra Deck, sem standby/main2 (R5)"
-  - "Nada de código até docs prontos (pedido usuário 2026-09-23)"
+  - "Código liberado pelo usuário em 2026-09-23 (fase dados primeiro: schemas antes do motor)"
   - "Rust/cargo AUSENTE — instalar só quando começar o Studio (rustup.rs)"
-  - "MCP: Godot MCP asset 5470 + GUT 1709 travados em D16; instalar só quando começar astralis/; Python 3.14 local já atende (3.11-3.14)"
+  - "MCP: Godot MCP asset 5470 + GUT 1709 travados em D16; instalar ao criar astralis/; Python 3.14 já atende"
   - "Godot 4.7.2 exe em Godot/ local, ignorado no git"
-  - "Não reabrir D01-D15 sem permissão"
-travas_e_dúvidas:
-  - "V1: monster[3]+spell[3] fixos, mão 5/7 fixa, sem Extra Deck, sem standby/main2 (R5)"
-  - "Nada de código até docs prontos (pedido usuário 2026-09-23)"
-  - "Godot 4.7.2 exe em Godot/ local, ignorado no git"
-  - "Não reabrir D01-D15 sem permissão; v1.5 é compatível, não quebra travas"
+  - "Não reabrir D01-D16 sem permissão"
 data_utc: "2026-09-23"
 versão_docs: "1.5"
 ```

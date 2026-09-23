@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "card_guerreiro_ardente",
+  "name": "Guerreiro Ardente",
+  "description": "Um guerreiro envolto em chamas. Queima o oponente ao entrar em campo.",
+  "artwork": "assets/cards/card_guerreiro_ardente.png",
+  "card_type": "monster",
+  "monster_type": "warrior",
+  "attribute": "fire",
+  "level": 4,
+  "attack": 1600,
+  "defense": 1200,
+  "effects": ["effect_dano_ao_invocar"],
+  "tags": ["starter", "guerreiro"]
+}

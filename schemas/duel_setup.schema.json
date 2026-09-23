@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Astralis Duel Setup V1",
+  "description": "Contrato de setup de duelo: quem joga, com que deck, LP, ordem, seed, arena, win flags (DADO). Zonas/fases/mão são FIXAS no runtime (doc 13). Owner: Systems. Ver docs/13_TABULEIRO_DUELO.md.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "duel_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "duelist1": {
+      "type": "object",
+      "properties": {
+        "duelist_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "deck_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+      },
+      "required": ["duelist_id", "deck_id"],
+      "additionalProperties": false
+    },
+    "duelist2": {
+      "type": "object",
+      "properties": {
+        "duelist_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "deck_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+      },
+      "required": ["duelist_id", "deck_id"],
+      "additionalProperties": false
+    },
+    "starting_lp": { "type": "integer", "exclusiveMinimum": 0, "description": "LP inicial do duelo (dado). Padrão 8000, starter 4000. LP nunca passa do inicial (regra fixa)." },
+    "turn_order": { "type": "string", "enum": ["first_p1", "first_p2", "random"] },
+    "seed": { "type": "integer", "description": "Seed determinística (ex: 42 no starter). Preview/Test usam a mesma." },
+    "arena_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "win": {
+      "type": "object",
+      "description": "Fixos V1 (só LP + deckout). Vão no JSON para compat futura.",
+      "properties": {
+        "on_lp_zero": { "type": "boolean" },
+        "on_deckout": { "type": "boolean" }
+      },
+      "required": ["on_lp_zero", "on_deckout"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["schema_version", "duel_id", "duelist1", "duelist2", "starting_lp", "turn_order", "seed", "arena_id", "win"],
+  "additionalProperties": false
+}

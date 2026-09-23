@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "card_dragao_branco",
+  "name": "Dragão Branco",
+  "description": "Um dragão lendário de escamas brancas e sopro luminoso.",
+  "artwork": "assets/cards/card_dragao_branco.png",
+  "card_type": "monster",
+  "monster_type": "dragon",
+  "attribute": "light",
+  "level": 8,
+  "attack": 3000,
+  "defense": 2500,
+  "effects": [],
+  "tags": ["starter", "dragao"]
+}

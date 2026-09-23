@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "card_mago_negro",
+  "name": "Mago Negro",
+  "description": "O mago supremo do ataque e da defesa arcanos.",
+  "artwork": "assets/cards/card_mago_negro.png",
+  "card_type": "monster",
+  "monster_type": "spellcaster",
+  "attribute": "dark",
+  "level": 7,
+  "attack": 2500,
+  "defense": 2100,
+  "effects": ["effect_enfraquecer_inimigo"],
+  "tags": ["starter", "mago"]
+}

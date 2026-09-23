@@ -1,0 +1,11 @@
+{
+  "schema_version": 1,
+  "duel_id": "duel_starter_4000",
+  "duelist1": { "duelist_id": "duelist_hero", "deck_id": "deck_starter_hero" },
+  "duelist2": { "duelist_id": "duelist_rival", "deck_id": "deck_starter_rival" },
+  "starting_lp": 4000,
+  "turn_order": "first_p1",
+  "seed": 42,
+  "arena_id": "arena_starter",
+  "win": { "on_lp_zero": true, "on_deckout": true }
+}

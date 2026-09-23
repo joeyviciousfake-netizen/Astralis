@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "card_dragao_supremo",
+  "name": "Dragão Supremo",
+  "description": "Fusão do Dragão Branco com o Mago Negro. Poder absoluto.",
+  "artwork": "assets/cards/card_dragao_supremo.png",
+  "card_type": "monster",
+  "monster_type": "dragon",
+  "attribute": "dark",
+  "level": 9,
+  "attack": 3500,
+  "defense": 2800,
+  "effects": [],
+  "tags": ["starter", "fusao", "dragao"]
+}

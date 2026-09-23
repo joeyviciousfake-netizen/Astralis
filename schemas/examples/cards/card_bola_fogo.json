@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "id": "card_bola_fogo",
+  "name": "Bola de Fogo",
+  "description": "Uma esfera flamejante lançada contra o inimigo.",
+  "artwork": "assets/cards/card_bola_fogo.png",
+  "card_type": "spell",
+  "effects": [],
+  "tags": ["starter", "magia"]
+}

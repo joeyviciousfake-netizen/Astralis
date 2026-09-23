@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "card_quimera_chamas",
+  "name": "Quimera das Chamas",
+  "description": "Fusão do Lobo Cinzento com o Guerreiro Ardente. Fera de fogo.",
+  "artwork": "assets/cards/card_quimera_chamas.png",
+  "card_type": "monster",
+  "monster_type": "beast",
+  "attribute": "fire",
+  "level": 6,
+  "attack": 1900,
+  "defense": 1600,
+  "effects": [],
+  "tags": ["starter", "fusao", "fera"]
+}

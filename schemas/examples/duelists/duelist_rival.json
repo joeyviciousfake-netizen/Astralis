@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "id": "duelist_rival",
+  "name": "Rival",
+  "portrait": "assets/characters/duelist_rival.png",
+  "sprite": "assets/characters/duelist_rival_sprite.png",
+  "deck_id": "deck_starter_rival",
+  "ai_preset": {
+    "dificuldade": "normal",
+    "agressividade": 65,
+    "uso_fusao": 60,
+    "protecao_lp": 40
+  },
+  "arena": "arena_starter",
+  "music": "assets/music/duel_rival.ogg"
+}

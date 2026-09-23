@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "effects": [
+    {
+      "id": "effect_dano_ao_invocar",
+      "name": "Dano ao invocar",
+      "description": "Quando invocado, causa 500 de dano ao oponente.",
+      "trigger": "card_summoned",
+      "conditions": [],
+      "target": "opponent",
+      "actions": [{ "action": "damage", "amount": 500 }],
+      "flow": { "mode": "sequence" }
+    },
+    {
+      "id": "effect_enfraquecer_inimigo",
+      "name": "Enfraquecer inimigo",
+      "description": "Quando invocado, reduza o ATK de 1 monstro do oponente em 500 até o fim do turno.",
+      "trigger": "card_summoned",
+      "conditions": [{ "field": "opponent_monster_attack", "operator": ">=", "value": 1000 }],
+      "target": "enemy_monster",
+      "actions": [{ "action": "modify_attack", "amount": -500, "duration": "until_end_of_turn" }],
+      "flow": { "mode": "sequence" }
+    }
+  ]
+}

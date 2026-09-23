@@ -1,0 +1,29 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Astralis Card V1",
+  "description": "Contrato de carta. Dado puro, sem lógica (R3). Owner: Systems. Ver docs/04_CONTRATO_DADOS.md e docs/05_RUNTIME_DUELO.md.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1, "description": "Sempre 1 na V1." },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "description": "ID estável snake_case. Nunca muda mesmo se name mudar." },
+    "name": { "type": "string", "minLength": 1, "description": "Nome exibido (pode ser traduzido sem trocar o id)." },
+    "description": { "type": "string", "description": "Texto exibido na carta." },
+    "artwork": { "type": "string", "description": "Caminho do asset, ex: assets/cards/card_x.png. Pode ser placeholder." },
+    "card_type": { "type": "string", "enum": ["monster", "spell", "trap"] },
+    "monster_type": { "type": "string", "enum": ["dragon", "spellcaster", "warrior", "beast", "aqua", "rock", "pyro", "thunder", "plant", "zombie", "fairy", "insect", "machine", "fiend"], "description": "Obrigatório se card_type=monster." },
+    "attribute": { "type": "string", "enum": ["light", "dark", "fire", "water", "earth", "wind", "divine"], "description": "Obrigatório se card_type=monster." },
+    "level": { "type": "integer", "minimum": 1, "maximum": 12 },
+    "attack": { "type": "integer", "minimum": 0 },
+    "defense": { "type": "integer", "minimum": 0 },
+    "effects": { "type": "array", "description": "IDs de efeitos (refs para effects.json). Vazio = carta vanilla.", "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }, "default": [] },
+    "tags": { "type": "array", "items": { "type": "string" } }
+  },
+  "required": ["schema_version", "id", "name", "card_type"],
+  "allOf": [
+    {
+      "if": { "properties": { "card_type": { "const": "monster" } } },
+      "then": { "required": ["monster_type", "attribute", "level", "attack", "defense"] }
+    }
+  ],
+  "additionalProperties": false
+}

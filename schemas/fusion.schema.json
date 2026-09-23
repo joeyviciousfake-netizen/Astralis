@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Astralis Fusions V1",
+  "description": "Contrato do arquivo fusions.json: receitas explícitas (prioridade máxima) + regras genéricas fallback (D08). Dado puro. Owner: Systems. Ver docs/06_SISTEMA_FUSAO.md.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "recipes": {
+      "type": "array",
+      "description": "Receita explícita A+B=C. Ordem de A/B não importa. Sempre vence regra.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "input": {
+            "type": "object",
+            "properties": {
+              "card_a": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+              "card_b": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+            },
+            "required": ["card_a", "card_b"],
+            "additionalProperties": false
+          },
+          "result": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" }
+        },
+        "required": ["id", "input", "result"],
+        "additionalProperties": false
+      }
+    },
+    "rules": {
+      "type": "array",
+      "description": "Regra genérica fallback: tipo+atributo->resultado. Avaliada por priority (maior primeiro).",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "when": {
+            "type": "object",
+            "description": "Pelo menos 1 critério. Campos ausentes = coringa.",
+            "properties": {
+              "type_a": { "type": "string" },
+              "attribute_a": { "type": "string" },
+              "type_b": { "type": "string" },
+              "attribute_b": { "type": "string" },
+              "min_atk": { "type": "integer", "minimum": 0 }
+            },
+            "minProperties": 1,
+            "additionalProperties": false
+          },
+          "result": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "priority": { "type": "integer", "minimum": 0 }
+        },
+        "required": ["id", "when", "result", "priority"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["schema_version", "recipes", "rules"],
+  "additionalProperties": false
+}

@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "id": "card_espada_luz",
+  "name": "Espada da Luz",
+  "description": "Uma lâmina sagrada que corta as trevas.",
+  "artwork": "assets/cards/card_espada_luz.png",
+  "card_type": "spell",
+  "effects": [],
+  "tags": ["starter", "magia"]
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "card_sereia_maritima",
+  "name": "Sereia Marítima",
+  "description": "Guardiã das marés, canta para confundir inimigos.",
+  "artwork": "assets/cards/card_sereia_maritima.png",
+  "card_type": "monster",
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 4,
+  "attack": 1400,
+  "defense": 1000,
+  "effects": [],
+  "tags": ["starter", "agua"]
+}

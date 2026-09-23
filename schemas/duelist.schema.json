@@ -1,0 +1,32 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Astralis Duelist V1",
+  "description": "Contrato de duelista (data-driven). IA é preset de números, sem script (R3, D09). Owner: Systems. Ver docs/05_RUNTIME_DUELO.md.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1 },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+    "name": { "type": "string", "minLength": 1 },
+    "portrait": { "type": "string", "description": "Caminho do retrato. Pode ser placeholder." },
+    "sprite": { "type": "string" },
+    "deck_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "description": "Ref para deck. Deck referencia Card IDs, não duplica objetos." },
+    "ai_preset": {
+      "type": "object",
+      "description": "Mesma base de IA do runtime; só parâmetros. Studio expõe como 3 sliders + dropdown.",
+      "properties": {
+        "dificuldade": { "type": "string", "enum": ["facil", "normal", "dificil"] },
+        "agressividade": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "uso_fusao": { "type": "integer", "minimum": 0, "maximum": 100 },
+        "protecao_lp": { "type": "integer", "minimum": 0, "maximum": 100 }
+      },
+      "required": ["dificuldade", "agressividade", "uso_fusao", "protecao_lp"],
+      "additionalProperties": false
+    },
+    "arena": { "type": "string" },
+    "music": { "type": "string" },
+    "dialogue": { "type": "object", "description": "Refs de falas (ids de cena/dialogue), sem lógica." },
+    "reward": { "type": "object", "description": "Config de recompensa (dado, ex: card_ids). Runtime entrega." }
+  },
+  "required": ["schema_version", "id", "name", "deck_id", "ai_preset"],
+  "additionalProperties": false
+}

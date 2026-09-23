@@ -1,0 +1,27 @@
+{
+  "schema_version": 1,
+  "id": "deck_starter_hero",
+  "name": "Deck Inicial do Hero",
+  "cards": [
+    "card_dragao_branco",
+    "card_dragao_branco",
+    "card_dragao_branco",
+    "card_mago_negro",
+    "card_mago_negro",
+    "card_mago_negro",
+    "card_sereia_maritima",
+    "card_sereia_maritima",
+    "card_sereia_maritima",
+    "card_lobo_cinzento",
+    "card_lobo_cinzento",
+    "card_guerreiro_ardente",
+    "card_guerreiro_ardente",
+    "card_espada_luz",
+    "card_espada_luz",
+    "card_espada_luz",
+    "card_bola_fogo",
+    "card_bola_fogo",
+    "card_bola_fogo",
+    "card_quimera_chamas"
+  ]
+}
