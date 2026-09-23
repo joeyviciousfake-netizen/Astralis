@@ -4,6 +4,7 @@ Godot/
 # Cache do editor Godot (gerado ao abrir astralis/)
 .godot/
 *.godot.uid
+*.gd.uid
 
 # Builds e fitas geradas
 *.astralis
