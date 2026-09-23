@@ -3,9 +3,9 @@
 > IA: atualize este arquivo NO FIM de toda resposta com mudança. Nunca deixe próximo_passo vazio.
 
 ```yaml
-onde_estamos: "astralis/ Godot 4.7 rodando: loader+validador, GUT 3/3 verde, addons GUT+MCP instalados"
-acabamos_de_fazer: "Runtime criou projeto + DataLoader + validador PT-BR + main (headless STP 10/2/2 erros=0); QA instalou GUT 9.7.1 e teste real 3/3 passou (13 asserts); lead instalou MCP addon (godot_ai+godot_omni) e corrigiu .gitignore (*.gd.uid)"
-próximo_passo: "Duelo núcleo: TurnManager + invocação/batalha/dano + vitória/derrota (runtime) com teste GUT (qa)"
+onde_estamos: "Duelo núcleo pronto e testado: turnos, invocação, batalha, dano, win/lose — 12/12 GUT verde"
+acabamos_de_fazer: "Runtime criou duel/ (game_state, turn, summon, battle regra V1, damage, manager) + auto-duelo no main (3 turnos, 4000x0); QA testou 9 regras (62 asserts, determinismo seed ok, 0 bugs); commit"
+próximo_passo: "Fusão no duelo: FusionSystem receita+regra + teste GUT (runtime+qa)"
 travas_e_dúvidas:
   - "V1: monster[3]+spell[3] fixos, mão 5/7 fixa, sem Extra Deck, sem standby/main2 (R5)"
   - "Código liberado pelo usuário em 2026-09-23 (dados primeiro, motor depois)"
@@ -29,3 +29,4 @@ versão_docs: "1.5"
 - 2026-09-23: criado 13_TABULEIRO_DUELO.md V1 (zonas 3+3, DRAW/MAIN/BATTLE/END, mão 5/7, LP dado, win LP+deckout) via runtime+systems, bump docs v1.4
 - 2026-09-23: criado projeto Godot astralis/ etapa 1 (loader+validador, STP 10/2/2 erros=0 no headless 4.7.2)
 - 2026-09-23: GUT 9.7.1 instalado + teste real 3/3 verde (13 asserts) + MCP addon (godot_ai+godot_omni) + .gitignore *.gd.uid
+- 2026-09-23: duelo núcleo pronto (turn/invoca/batalha/dano/win-lose) + 12/12 GUT verde (62 asserts, seed determinística)
