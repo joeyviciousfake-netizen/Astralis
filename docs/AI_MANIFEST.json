@@ -1,0 +1,44 @@
+{
+  "project": "Astralis",
+  "docs_version": "1.3",
+  "entrypoint": "AGENTS.md",
+  "bootstrap_read_order": [
+    "docs/AI_MANIFEST.json",
+    "docs/00_INDICE_GERAL.md",
+    "docs/SESSAO_ATUAL.md",
+    "docs/DECISOES.md"
+  ],
+  "ops_files": {
+    "SESSAO_ATUAL.md": { "mutable": "every_turn", "purpose": "onde paramos + proximo passo" },
+    "DECISOES.md": { "mutable": "append_only_by_user_decision", "purpose": "travas, nao reabrir" }
+  },
+  "spec_files": [
+    { "file": "docs/00_INDICE_GERAL.md", "owner": "lead", "purpose": "mapa + changelog", "depends_on": [] },
+    { "file": "docs/01_VISAO_PRODUTO.md", "owner": "lead", "purpose": "identidade, modelo, sucesso", "depends_on": ["00"] },
+    { "file": "docs/02_PRINCIPIOS_ARQUITETURAIS.md", "owner": "lead", "purpose": "inviolaveis DATA!=LOGIC, sem motor paralelo", "depends_on": ["00", "01"] },
+    { "file": "docs/03_STACK_DISTRIBUICAO.md", "owner": "lead", "purpose": "dev vs produto, modos", "depends_on": ["02"] },
+    { "file": "docs/04_CONTRATO_DADOS.md", "owner": "systems", "purpose": "schemas, versionamento, IDs", "depends_on": ["02"] },
+    { "file": "docs/05_RUNTIME_DUELO.md", "owner": "runtime", "purpose": "duelo, carta, deck, duelista + AI preset", "depends_on": ["02", "04"] },
+    { "file": "docs/06_SISTEMA_FUSAO.md", "owner": "runtime+systems", "purpose": "receita + regra", "depends_on": ["04", "05"] },
+    { "file": "docs/07_SISTEMA_EFEITOS.md", "owner": "runtime+systems+editor", "purpose": "trigger/condition/target/action/flow + templates", "depends_on": ["04", "05"] },
+    { "file": "docs/08_CAMPANHA.md", "owner": "campaign", "purpose": "grafo, cena, battle win/lose, flags-lite", "depends_on": ["04"] },
+    { "file": "docs/09_STUDIO_EDITOR.md", "owner": "editor", "purpose": "editores, starter kit, wizard", "depends_on": ["04", "05", "06", "07", "08"] },
+    { "file": "docs/10_PREVIEW_TESTE_DEBUG.md", "owner": "qa+runtime+editor", "purpose": "preview unificado, test lab minimo, GUT", "depends_on": ["05", "06", "07", "08"] },
+    { "file": "docs/11_ROADMAP_AGENTES.md", "owner": "lead", "purpose": "mvp, roadmap, agentes", "depends_on": ["00"] },
+    { "file": "docs/12_DISTRIBUICAO_EXPORTACAO.md", "owner": "systems+runtime+editor", "purpose": ".astralis binario + cadeado + bundles", "depends_on": ["03", "04"] }
+  ],
+  "rules": [
+    "R1 runtime unica verdade gameplay",
+    "R2 proibido Fake engine",
+    "R3 DATA != LOGIC",
+    "R4 studio so expoe o que runtime executa",
+    "R5 sem escopo extra sem permissao",
+    "R6 .astralis binario trancado",
+    "R7 nao reabrir DECISOES sem permissao"
+  ],
+  "session_protocol": {
+    "on_start": "ler manifest, indice, sessao, decisoes; confirmar em 1 linha",
+    "on_end": "atualizar SESSAO_ATUAL.md (onde, fez, proximo, travas, data); anexar decisao nova em DECISOES.md",
+    "on_user_says_continue": "retomar SESSAO_ATUAL.proximo_passo"
+  }
+}
