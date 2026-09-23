@@ -20,14 +20,21 @@ Princípios: preview avançado só após GameState/Effect/Duel/contrato/comunica
 
 Futuro (não V1): variables completas, campanha condicional avançada, flow avançado, AI profiles completos, animação rica, UI flexível, test generation/recording, breakpoints, inspector rico, plugins se necessário, migration.
 
-## 11.3 Agentes (6, por domínio)
+## 11.3 Agentes (6, por domínio — travado em D15)
 
 1 Lead Architect (arquitetura/contratos/invariantes/docs, impede hardcoding, editor-gameplay, genericização)
-2 Runtime Engineer (Astralis, Duel/Effect/Fusion execution, AI, Save, UI, DataLoader, Preview/Test modes)
-3 Systems/Data Engineer (owner schemas, Card/Duelist/Deck/Fusion/Effect, serialização)
-4 Campaign Engineer (Campaign/SceneRunner/Dialogue/Choice/Timeline/Graph/Battle transition, respeita schema)
-5 Editor Engineer (Studio Rust/Tauri/Svelte, editores, Builder, Asset, Validation, Preview/Test UI, sem gameplay alternativo)
-6 QA/Integration (GUT, integração/regressão, Test Lab infra, compatibilidade, build)
+2 Runtime Engineer (Astralis, Duel/Effect/Fusion execution, AI, Save, UI, DataLoader, Preview/Test modes) — ponto de sobrecarga, ver split abaixo
+3 Systems/Data Engineer (owner schemas, Card/Duelist/Deck/Fusion/Effect, serialização, formato .astralis)
+4 Campaign Engineer (Campaign/SceneRunner/Dialogue/Choice/Timeline/Graph/Battle transition, respeita schema) — esvazia após MVP
+5 Editor Engineer (Studio Rust/Tauri/Svelte, editores, Builder, Asset, Validation, Preview/Test UI, empacotamento zip, sem gameplay alternativo) — ponto de sobrecarga
+6 QA/Integration (GUT, integração/regressão, Test Lab infra, compatibilidade player x fita, tamper, build)
+
+Distribuição sem dono fixo na V1: força-tarefa Systems (formato) + Runtime (leitura/validação) + Editor (Exportar/zip/chave) + QA (matriz + tamper), Lead coordena. 7º agente Build/Release só se APK fundido V2 virar dor recorrente.
+
+Limites de split (não criar micro-agentes sem atingir):
+- Runtime lotar (duelo+efeito+fusão+IA) → especialista temporário de Efeito, rejunta depois.
+- Editor lotar (7 telas) → especialista temporário de Campaign Editor, rejunta depois.
+- Nunca dividir por carta/duelista/cena individual.
 
 Ownership: `docs/architecture->Lead, astralis/->Runtime, schemas/data-model->Systems, campaign/->Campaign, astralis-studio/->Editor, tests/tools/ci->QA`. Shared changes coordenadas.
 

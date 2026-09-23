@@ -17,3 +17,4 @@
 - D12 2026-09-23: Preview unificado "Jogar a partir daqui" (1 mecanismo launch with context). Test Lab mínimo com botão Testar agora + seed fixa. Debug completo adiado. | motivo: menos UI, mesmo motor | impacto: docs 10
 - D13 2026-09-23: 6 agentes por domínio, sem micro-agentes. Feature: contrato → Astralis → Studio → testes → docs. | motivo: evitar divergência | impacto: docs 11
 - D14 2026-09-23: Removido Documentação.md monolito, fonte oficial passa a ser docs/00-12 + MANIFEST. | motivo: já dividido + evitar duplicidade | impacto: raiz só tem AGENTS.md + docs/
+- D15 2026-09-23: Manter 6 agentes na V1, sem criar nem remover. Distribuição como força-tarefa (Systems+Runtime+Editor+QA, Lead coordena). Split só se lotar: Runtime→efeito vira especialista temporário; 7º Build/Release só se APK fundido virar dor recorrente na V2. | motivo: evitar briga de fronteira e micro-agentes | impacto: docs 11
