@@ -3,9 +3,11 @@
 > IA: atualize este arquivo NO FIM de toda resposta com mudança. Nunca deixe próximo_passo vazio.
 
 ```yaml
-onde_estamos: "docs v1.3 + agents OpenCode criados (.opencode/agents/lead+5), prontos para restart"
-acabamos_de_fazer: "Criados lead(primary, orquestra via Task) + runtime/systems/campaign/editor/qa(subagents, task deny); lead lê AGENTS/SESSAO/DECISOES e delega"
-próximo_passo: "Reiniciar opencode CLI e testar @lead com 'leia AGENTS.md e continue'; depois definir 13_TABULEIRO_DUELO.md"
+onde_estamos: "docs v1.3 + agents criados, usuário vai fechar e reabrir opencode CLI para testar"
+acabamos_de_fazer: "Criados lead(primary) + 5 subagents; push 0acf986; instruído restart para carregar novo config"
+próximo_passo: "QUANDO REABRIR: ler AGENTS.md + MANIFEST + SESSAO + DECISOES, responder 'Retomando de: agents criados → testar @lead' e aguardar teste do usuário com '@lead leia AGENTS.md e continue'"
+teste_esperado: "@lead deve confirmar bootstrap em 1 linha e mostrar que enxerga lead/runtime/systems/campaign/editor/qa via Task; se não enxergar, orientar checar Tab/@ e restart"
+depois_do_teste: "Definir 13_TABULEIRO_DUELO.md (zonas, fases, mão, LP, vitória/derrota) + exemplos JSON mínimos"
 travas_e_dúvidas:
   - "APK fundido (fita dentro) adiado para V2; V1 usa APK + importação com auto-detect em Download"
   - "Repo público criado; decidir se .astralis final e builds vão para releases ou repo separado"
