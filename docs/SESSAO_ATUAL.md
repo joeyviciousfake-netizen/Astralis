@@ -3,8 +3,8 @@
 > IA: atualize este arquivo NO FIM de toda resposta com mudança. Nunca deixe próximo_passo vazio.
 
 ```yaml
-onde_estamos: "docs v1.3 no GitHub https://github.com/joeyviciousfake-netizen/Astralis (main, commit fcea17c)"
-acabamos_de_fazer: "git init + commit + gh repo create Astralis --public + push; 18 arquivos (AGENTS, Documentação.md, docs/00-12, MANIFEST, SESSAO, DECISOES)"
+onde_estamos: "docs v1.3 no GitHub, sem monolito (só AGENTS + docs/)"
+acabamos_de_fazer: "Apagado Documentação.md (git rm) — conteúdo já dividido em docs/00-12; registrada D14"
 próximo_passo: "Definir 13_TABULEIRO_DUELO.md (zonas, fases, mão, LP, vitória/derrota) + exemplos JSON mínimos de schemas"
 travas_e_dúvidas:
   - "APK fundido (fita dentro) adiado para V2; V1 usa APK + importação com auto-detect em Download"
@@ -19,3 +19,4 @@ versão_docs: "1.3"
 - 2026-09-23: criado 12 exportação protegida + cadeado por jogo + bundles por plataforma
 - 2026-09-23: criado sistema anti-perda de contexto (AGENTS, SESSAO, DECISOES, MANIFEST)
 - 2026-09-23: repo GitHub criado e push main (fcea17c) em https://github.com/joeyviciousfake-netizen/Astralis
+- 2026-09-23: apagado Documentação.md legado (D14), fonte oficial = docs/00-12
