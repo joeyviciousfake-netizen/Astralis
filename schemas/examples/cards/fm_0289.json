@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0289",
+  "name": "Change Slime",
+  "description": "",
+  "artwork": "assets/fm/card_0289.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 1,
+  "attack": 400,
+  "defense": 300,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "moon",
+  "password": "18914778",
+  "starchip_cost": 15
+}

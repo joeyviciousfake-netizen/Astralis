@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0665",
+  "name": "Curse of Millennium Shield",
+  "description": "",
+  "artwork": "assets/fm/card_0665.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ],
+  "password": "83094937",
+  "starchip_cost": 10
+}

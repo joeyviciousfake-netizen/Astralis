@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0456",
+  "name": "Minomushi Warrior",
+  "description": "",
+  "artwork": "assets/fm/card_0456.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "rock"
+  ],
+  "monster_type": "rock",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1300,
+  "defense": 1200,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "venus",
+  "password": "46864967",
+  "starchip_cost": 100
+}

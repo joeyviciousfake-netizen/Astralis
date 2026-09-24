@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0077",
+  "name": "Grappler",
+  "description": "",
+  "artwork": "assets/fm/card_0077.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "reptile"
+  ],
+  "monster_type": "reptile",
+  "attribute": "water",
+  "level": 4,
+  "attack": 1300,
+  "defense": 1200,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "saturn",
+  "password": "02906250",
+  "starchip_cost": 100
+}

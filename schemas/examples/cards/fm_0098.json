@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0098",
+  "name": "Clown Zombie",
+  "description": "",
+  "artwork": "assets/fm/card_0098.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "zombie"
+  ],
+  "monster_type": "zombie",
+  "attribute": "dark",
+  "level": 2,
+  "attack": 1350,
+  "defense": 0,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "pluto",
+  "password": "92667214",
+  "starchip_cost": 140
+}

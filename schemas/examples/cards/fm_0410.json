@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0410",
+  "name": "Mechanical Spider",
+  "description": "",
+  "artwork": "assets/fm/card_0410.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "earth",
+  "level": 2,
+  "attack": 400,
+  "defense": 500,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "mercury",
+  "password": "45688586",
+  "starchip_cost": 20
+}

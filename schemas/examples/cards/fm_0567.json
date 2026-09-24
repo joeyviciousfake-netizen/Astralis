@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0567",
+  "name": "Darkworld Thorns",
+  "description": "",
+  "artwork": "assets/fm/card_0567.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "plant"
+  ],
+  "monster_type": "plant",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 1200,
+  "defense": 900,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "jupiter",
+  "password": "43500484",
+  "starchip_cost": 60
+}

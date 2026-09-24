@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0561",
+  "name": "Lesser Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0561.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "wind",
+  "level": 4,
+  "attack": 1200,
+  "defense": 1000,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "saturn",
+  "password": "55444629",
+  "starchip_cost": 70
+}

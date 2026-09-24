@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_gargula_tensao",
+  "name": "Gárgula de Tensão",
+  "description": "Guarda o telhado e adora tempestade.",
+  "artwork": "assets/cards/card_gargula_tensao.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "teste",
+    "thunder"
+  ],
+  "monster_type": "thunder",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1600,
+  "defense": 1800
+}

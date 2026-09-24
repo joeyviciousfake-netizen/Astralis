@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0353",
+  "name": "Takriminos",
+  "description": "",
+  "artwork": "assets/fm/card_0353.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "sea-serpent"
+  ],
+  "monster_type": "sea-serpent",
+  "attribute": "water",
+  "level": 4,
+  "attack": 1500,
+  "defense": 1200,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "mercury",
+  "password": "44073668",
+  "starchip_cost": 140
+}

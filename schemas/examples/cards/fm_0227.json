@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0227",
+  "name": "Hitodenchak",
+  "description": "",
+  "artwork": "assets/fm/card_0227.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 2,
+  "attack": 600,
+  "defense": 700,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "mars",
+  "password": "46718686",
+  "starchip_cost": 30
+}

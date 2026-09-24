@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0279",
+  "name": "King Fog",
+  "description": "",
+  "artwork": "assets/fm/card_0279.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 1000,
+  "defense": 900,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "neptune",
+  "password": "84686841",
+  "starchip_cost": 50
+}

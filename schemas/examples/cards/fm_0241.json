@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0241",
+  "name": "Dark Assailant",
+  "description": "",
+  "artwork": "assets/fm/card_0241.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "zombie"
+  ],
+  "monster_type": "zombie",
+  "attribute": "dark",
+  "level": 4,
+  "attack": 1200,
+  "defense": 1200,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "uranus",
+  "password": "41949033",
+  "starchip_cost": 120
+}

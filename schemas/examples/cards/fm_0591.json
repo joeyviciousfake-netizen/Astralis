@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0591",
+  "name": "Morphing Jar",
+  "description": "",
+  "artwork": "assets/fm/card_0591.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "rock"
+  ],
+  "monster_type": "rock",
+  "attribute": "earth",
+  "level": 2,
+  "attack": 700,
+  "defense": 600,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "neptune",
+  "password": "33508719",
+  "starchip_cost": 30
+}

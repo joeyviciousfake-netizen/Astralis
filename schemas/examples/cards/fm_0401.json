@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0401",
+  "name": "Ushi Oni",
+  "description": "",
+  "artwork": "assets/fm/card_0401.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 6,
+  "attack": 2150,
+  "defense": 1950,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "venus",
+  "password": "48649353",
+  "starchip_cost": 700
+}

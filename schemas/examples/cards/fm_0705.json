@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "fm_0705",
+  "name": "Tri-horned Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0705.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "dark",
+  "level": 8,
+  "attack": 2850,
+  "defense": 2350,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "jupiter"
+}

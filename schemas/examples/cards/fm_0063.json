@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0063",
+  "name": "Harpie Lady Sisters",
+  "description": "",
+  "artwork": "assets/fm/card_0063.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "winged-beast"
+  ],
+  "monster_type": "winged-beast",
+  "attribute": "wind",
+  "level": 6,
+  "attack": 1950,
+  "defense": 2100,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "mars",
+  "password": "12206212",
+  "starchip_cost": 999999
+}

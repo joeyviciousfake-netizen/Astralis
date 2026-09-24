@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0620",
+  "name": "Snakeyashi",
+  "description": "",
+  "artwork": "assets/fm/card_0620.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "plant"
+  ],
+  "monster_type": "plant",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1000,
+  "defense": 1200,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "mercury",
+  "password": "29802344",
+  "starchip_cost": 70
+}

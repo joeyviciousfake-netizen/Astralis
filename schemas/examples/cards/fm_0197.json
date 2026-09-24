@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0197",
+  "name": "Mech Mole Zombie",
+  "description": "",
+  "artwork": "assets/fm/card_0197.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "zombie"
+  ],
+  "monster_type": "zombie",
+  "attribute": "dark",
+  "level": 2,
+  "attack": 500,
+  "defense": 400,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "saturn",
+  "password": "63545455",
+  "starchip_cost": 20
+}

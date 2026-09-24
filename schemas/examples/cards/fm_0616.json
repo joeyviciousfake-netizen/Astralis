@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0616",
+  "name": "Hourglass of Courage",
+  "description": "",
+  "artwork": "assets/fm/card_0616.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fairy"
+  ],
+  "monster_type": "fairy",
+  "attribute": "light",
+  "level": 4,
+  "attack": 1100,
+  "defense": 1200,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "neptune",
+  "password": "43530283",
+  "starchip_cost": 80
+}

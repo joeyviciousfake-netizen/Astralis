@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0538",
+  "name": "Niwatori",
+  "description": "",
+  "artwork": "assets/fm/card_0538.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "winged-beast"
+  ],
+  "monster_type": "winged-beast",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 900,
+  "defense": 800,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "venus",
+  "password": "07805359",
+  "starchip_cost": 40
+}

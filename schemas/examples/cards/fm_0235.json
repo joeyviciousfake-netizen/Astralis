@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0235",
+  "name": "Wodan the Resident of the Forest",
+  "description": "",
+  "artwork": "assets/fm/card_0235.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 900,
+  "defense": 1200,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "sun",
+  "password": "42883273",
+  "starchip_cost": 999999
+}

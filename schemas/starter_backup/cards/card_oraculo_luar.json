@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_oraculo_luar",
+  "name": "Oráculo do Luar",
+  "description": "Lê o futuro nas crateras da lua.",
+  "artwork": "assets/cards/card_oraculo_luar.png",
+  "card_type": "monster",
+  "monster_type": "spellcaster",
+  "attribute": "light",
+  "level": 4,
+  "attack": 1400,
+  "defense": 1600,
+  "effects": [],
+  "tags": [
+    "teste",
+    "spellcaster"
+  ]
+}

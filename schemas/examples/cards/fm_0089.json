@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0089",
+  "name": "Catapult Turtle",
+  "description": "",
+  "artwork": "assets/fm/card_0089.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 5,
+  "attack": 1000,
+  "defense": 2000,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "sun",
+  "password": "95727991",
+  "starchip_cost": 200
+}

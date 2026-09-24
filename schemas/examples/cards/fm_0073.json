@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0073",
+  "name": "Kairyu-shin",
+  "description": "",
+  "artwork": "assets/fm/card_0073.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "sea-serpent"
+  ],
+  "monster_type": "sea-serpent",
+  "attribute": "water",
+  "level": 5,
+  "attack": 1800,
+  "defense": 1500,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "mars",
+  "password": "76634149",
+  "starchip_cost": 290
+}

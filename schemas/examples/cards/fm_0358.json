@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0358",
+  "name": "Seiyaryu",
+  "description": "",
+  "artwork": "assets/fm/card_0358.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "light",
+  "level": 7,
+  "attack": 2500,
+  "defense": 2300,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "neptune",
+  "password": "06740720",
+  "starchip_cost": 1700
+}

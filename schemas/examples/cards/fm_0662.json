@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0662",
+  "name": "Eradicating Aerosol",
+  "description": "",
+  "artwork": "assets/fm/card_0662.png",
+  "card_type": "spell",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spell"
+  ],
+  "password": "94716515",
+  "starchip_cost": 999999
+}

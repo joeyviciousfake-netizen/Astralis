@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "fm_0701",
+  "name": "Performance of Sword",
+  "description": "",
+  "artwork": "assets/fm/card_0701.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 6,
+  "attack": 1950,
+  "defense": 1850,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "saturn"
+}

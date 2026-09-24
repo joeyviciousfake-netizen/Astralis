@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0225",
+  "name": "Fiend Sword",
+  "description": "",
+  "artwork": "assets/fm/card_0225.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "dark",
+  "level": 4,
+  "attack": 1400,
+  "defense": 800,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "mercury",
+  "password": "22855882",
+  "starchip_cost": 70
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "fm_0717",
+  "name": "Javelin Beetle",
+  "description": "",
+  "artwork": "assets/fm/card_0717.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "insect"
+  ],
+  "monster_type": "insect",
+  "attribute": "earth",
+  "level": 8,
+  "attack": 2450,
+  "defense": 2550,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "uranus"
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "fm_0716",
+  "name": "Garma Sword",
+  "description": "",
+  "artwork": "assets/fm/card_0716.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "dark",
+  "level": 7,
+  "attack": 2550,
+  "defense": 2150,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "uranus"
+}

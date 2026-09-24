@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0178",
+  "name": "Claw Reacher",
+  "description": "",
+  "artwork": "assets/fm/card_0178.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 1000,
+  "defense": 800,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "mars",
+  "password": "41218256",
+  "starchip_cost": 45
+}

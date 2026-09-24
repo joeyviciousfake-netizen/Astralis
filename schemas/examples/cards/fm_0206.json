@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0206",
+  "name": "Twin Long Rods #1",
+  "description": "",
+  "artwork": "assets/fm/card_0206.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 3,
+  "attack": 900,
+  "defense": 700,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "mercury",
+  "password": "60589682",
+  "starchip_cost": 35
+}

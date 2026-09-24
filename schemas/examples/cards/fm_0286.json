@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0286",
+  "name": "Gatekeeper",
+  "description": "",
+  "artwork": "assets/fm/card_0286.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "dark",
+  "level": 5,
+  "attack": 1500,
+  "defense": 1800,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "mars",
+  "password": "19737320",
+  "starchip_cost": 290
+}

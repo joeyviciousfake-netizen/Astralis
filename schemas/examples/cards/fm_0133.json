@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0133",
+  "name": "Charubin the Fire Knight",
+  "description": "",
+  "artwork": "assets/fm/card_0133.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "pyro"
+  ],
+  "monster_type": "pyro",
+  "attribute": "fire",
+  "level": 3,
+  "attack": 1100,
+  "defense": 800,
+  "guardian_star_1": "mars",
+  "guardian_star_2": "uranus",
+  "password": "37421579",
+  "starchip_cost": 50
+}

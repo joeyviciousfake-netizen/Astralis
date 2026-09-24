@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0082",
+  "name": "Red-eyes B. Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0082.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "dark",
+  "level": 7,
+  "attack": 2400,
+  "defense": 2000,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "neptune",
+  "password": "74677422",
+  "starchip_cost": 999999
+}

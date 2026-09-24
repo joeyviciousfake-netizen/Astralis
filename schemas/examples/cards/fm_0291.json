@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0291",
+  "name": "Fireyarou",
+  "description": "",
+  "artwork": "assets/fm/card_0291.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "pyro"
+  ],
+  "monster_type": "pyro",
+  "attribute": "fire",
+  "level": 4,
+  "attack": 1300,
+  "defense": 1000,
+  "guardian_star_1": "mars",
+  "guardian_star_2": "saturn",
+  "password": "71407486",
+  "starchip_cost": 80
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0344",
+  "name": "Hinotama",
+  "description": "",
+  "artwork": "assets/fm/card_0344.png",
+  "card_type": "spell",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spell"
+  ],
+  "password": "46130346",
+  "starchip_cost": 55
+}

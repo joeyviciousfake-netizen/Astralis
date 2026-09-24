@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0166",
+  "name": "Mysterious Puppeteer",
+  "description": "",
+  "artwork": "assets/fm/card_0166.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1000,
+  "defense": 1500,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "mercury",
+  "password": "54098121",
+  "starchip_cost": 100
+}

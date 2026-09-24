@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0094",
+  "name": "Crawling Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0094.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1600,
+  "defense": 1400,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "sun",
+  "password": "67494157",
+  "starchip_cost": 200
+}

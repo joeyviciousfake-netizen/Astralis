@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0105",
+  "name": "Tomozaurus",
+  "description": "",
+  "artwork": "assets/fm/card_0105.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dinosaur"
+  ],
+  "monster_type": "dinosaur",
+  "attribute": "earth",
+  "level": 2,
+  "attack": 500,
+  "defense": 400,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "venus",
+  "password": "46457856",
+  "starchip_cost": 20
+}

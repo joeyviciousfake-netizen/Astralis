@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0146",
+  "name": "Temple of Skulls",
+  "description": "",
+  "artwork": "assets/fm/card_0146.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "zombie"
+  ],
+  "monster_type": "zombie",
+  "attribute": "dark",
+  "level": 4,
+  "attack": 900,
+  "defense": 1300,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "pluto",
+  "password": "00732302",
+  "starchip_cost": 70
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0296",
+  "name": "One-eyed Shield Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0296.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "wind",
+  "level": 3,
+  "attack": 700,
+  "defense": 1300,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "pluto",
+  "password": "33064647",
+  "starchip_cost": 55
+}

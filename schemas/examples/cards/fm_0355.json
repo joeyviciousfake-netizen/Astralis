@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0355",
+  "name": "Megasonic Eye",
+  "description": "",
+  "artwork": "assets/fm/card_0355.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "dark",
+  "level": 5,
+  "attack": 1500,
+  "defense": 1800,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "jupiter",
+  "password": "07562372",
+  "starchip_cost": 290
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0254",
+  "name": "Embryonic Beast",
+  "description": "",
+  "artwork": "assets/fm/card_0254.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 2,
+  "attack": 500,
+  "defense": 750,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "mars",
+  "password": "64154377",
+  "starchip_cost": 25
+}

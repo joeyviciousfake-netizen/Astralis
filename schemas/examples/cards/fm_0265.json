@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0265",
+  "name": "The Furious Sea King",
+  "description": "",
+  "artwork": "assets/fm/card_0265.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 3,
+  "attack": 800,
+  "defense": 700,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "jupiter",
+  "password": "18710707",
+  "starchip_cost": 30
+}

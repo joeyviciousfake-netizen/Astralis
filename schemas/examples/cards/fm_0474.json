@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0474",
+  "name": "Sea Kamen",
+  "description": "",
+  "artwork": "assets/fm/card_0474.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 4,
+  "attack": 1100,
+  "defense": 1300,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "sun",
+  "password": "71746462",
+  "starchip_cost": 120
+}

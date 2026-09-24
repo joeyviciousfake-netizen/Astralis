@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0517",
+  "name": "Sand Stone",
+  "description": "",
+  "artwork": "assets/fm/card_0517.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "rock"
+  ],
+  "monster_type": "rock",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1300,
+  "defense": 1600,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "mars",
+  "password": "73051941",
+  "starchip_cost": 180
+}

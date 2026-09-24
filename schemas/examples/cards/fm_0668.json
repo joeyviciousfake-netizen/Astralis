@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0668",
+  "name": "Bright Castle",
+  "description": "",
+  "artwork": "assets/fm/card_0668.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "82878489",
+  "starchip_cost": 800
+}

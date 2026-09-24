@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0473",
+  "name": "Vermillion Sparrow",
+  "description": "",
+  "artwork": "assets/fm/card_0473.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "pyro"
+  ],
+  "monster_type": "pyro",
+  "attribute": "fire",
+  "level": 5,
+  "attack": 1900,
+  "defense": 1500,
+  "guardian_star_1": "mars",
+  "guardian_star_2": "venus",
+  "password": "35752363",
+  "starchip_cost": 320
+}

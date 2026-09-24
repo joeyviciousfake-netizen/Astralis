@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0677",
+  "name": "Hamburger Recipe",
+  "description": "",
+  "artwork": "assets/fm/card_0677.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ],
+  "password": "80811661",
+  "starchip_cost": 50
+}

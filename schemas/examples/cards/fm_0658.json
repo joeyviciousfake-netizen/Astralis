@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0658",
+  "name": "Metalmorph",
+  "description": "",
+  "artwork": "assets/fm/card_0658.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "68540058",
+  "starchip_cost": 999999
+}

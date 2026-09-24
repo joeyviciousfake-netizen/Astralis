@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0564",
+  "name": "Great Mammoth of Goldfine",
+  "description": "",
+  "artwork": "assets/fm/card_0564.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "zombie"
+  ],
+  "monster_type": "zombie",
+  "attribute": "dark",
+  "level": 6,
+  "attack": 2200,
+  "defense": 1800,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "pluto",
+  "password": "54622031",
+  "starchip_cost": 800
+}

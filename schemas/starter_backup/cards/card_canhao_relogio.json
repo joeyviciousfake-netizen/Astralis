@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_canhao_relogio",
+  "name": "Canhão Relógio",
+  "description": "Atira em ponto. Sempre em ponto.",
+  "artwork": "assets/cards/card_canhao_relogio.png",
+  "card_type": "monster",
+  "monster_type": "machine",
+  "attribute": "fire",
+  "level": 5,
+  "attack": 2000,
+  "defense": 1000,
+  "effects": [],
+  "tags": [
+    "teste",
+    "machine"
+  ]
+}

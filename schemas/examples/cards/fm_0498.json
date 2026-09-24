@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0498",
+  "name": "Morinphen",
+  "description": "",
+  "artwork": "assets/fm/card_0498.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 5,
+  "attack": 1550,
+  "defense": 1300,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "neptune",
+  "password": "55784832",
+  "starchip_cost": 160
+}

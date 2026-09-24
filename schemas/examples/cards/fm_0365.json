@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "fm_0365",
+  "name": "Fiend's Mirror",
+  "description": "",
+  "artwork": "assets/fm/card_0365.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 6,
+  "attack": 2100,
+  "defense": 1800,
+  "guardian_star_1": "venus",
+  "guardian_star_2": "pluto"
+}

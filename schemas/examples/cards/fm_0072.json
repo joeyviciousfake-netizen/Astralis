@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0072",
+  "name": "Cocoon of Evolution",
+  "description": "",
+  "artwork": "assets/fm/card_0072.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "insect"
+  ],
+  "monster_type": "insect",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 0,
+  "defense": 2000,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "venus",
+  "password": "40240595",
+  "starchip_cost": 999999
+}

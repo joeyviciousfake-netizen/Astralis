@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0586",
+  "name": "Greenkappa",
+  "description": "",
+  "artwork": "assets/fm/card_0586.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 650,
+  "defense": 900,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "mercury",
+  "password": "61831093",
+  "starchip_cost": 30
+}

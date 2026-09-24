@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0325",
+  "name": "Machine Conversion Factory",
+  "description": "",
+  "artwork": "assets/fm/card_0325.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "25769732",
+  "starchip_cost": 999999
+}

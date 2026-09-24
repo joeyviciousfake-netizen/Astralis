@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0573",
+  "name": "Little D",
+  "description": "",
+  "artwork": "assets/fm/card_0573.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dinosaur"
+  ],
+  "monster_type": "dinosaur",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 1100,
+  "defense": 700,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "mercury",
+  "password": "42625254",
+  "starchip_cost": 45
+}

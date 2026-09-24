@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0459",
+  "name": "Tripwire Beast",
+  "description": "",
+  "artwork": "assets/fm/card_0459.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "thunder"
+  ],
+  "monster_type": "thunder",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1200,
+  "defense": 1300,
+  "guardian_star_1": "pluto",
+  "guardian_star_2": "saturn",
+  "password": "45042329",
+  "starchip_cost": 100
+}

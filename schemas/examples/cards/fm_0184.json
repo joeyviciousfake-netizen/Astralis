@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0184",
+  "name": "Genin",
+  "description": "",
+  "artwork": "assets/fm/card_0184.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "light",
+  "level": 3,
+  "attack": 600,
+  "defense": 900,
+  "guardian_star_1": "venus",
+  "guardian_star_2": "sun",
+  "password": "49370026",
+  "starchip_cost": 30
+}

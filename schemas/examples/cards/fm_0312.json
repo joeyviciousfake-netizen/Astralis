@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0312",
+  "name": "Silver Bow and Arrow",
+  "description": "",
+  "artwork": "assets/fm/card_0312.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "01557499",
+  "starchip_cost": 800
+}

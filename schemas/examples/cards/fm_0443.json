@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0443",
+  "name": "Sea King Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0443.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "sea-serpent"
+  ],
+  "monster_type": "sea-serpent",
+  "attribute": "water",
+  "level": 6,
+  "attack": 2000,
+  "defense": 1700,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "mercury",
+  "password": "23659124",
+  "starchip_cost": 1000
+}

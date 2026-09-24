@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0408",
+  "name": "Giant Mech-soldier",
+  "description": "",
+  "artwork": "assets/fm/card_0408.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "earth",
+  "level": 6,
+  "attack": 1750,
+  "defense": 1900,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "neptune",
+  "password": "72299832",
+  "starchip_cost": 400
+}

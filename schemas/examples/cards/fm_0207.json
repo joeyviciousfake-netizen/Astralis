@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0207",
+  "name": "Droll Bird",
+  "description": "",
+  "artwork": "assets/fm/card_0207.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "winged-beast"
+  ],
+  "monster_type": "winged-beast",
+  "attribute": "wind",
+  "level": 2,
+  "attack": 600,
+  "defense": 500,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "moon",
+  "password": "97973387",
+  "starchip_cost": 25
+}

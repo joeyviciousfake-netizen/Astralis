@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0578",
+  "name": "Leo Wizard",
+  "description": "",
+  "artwork": "assets/fm/card_0578.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1350,
+  "defense": 1200,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "neptune",
+  "password": "04392470",
+  "starchip_cost": 100
+}

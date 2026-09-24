@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0373",
+  "name": "Suijin",
+  "description": "",
+  "artwork": "assets/fm/card_0373.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 7,
+  "attack": 2500,
+  "defense": 2400,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "saturn",
+  "password": "98434877",
+  "starchip_cost": 999999
+}

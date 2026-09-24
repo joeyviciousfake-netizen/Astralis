@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0320",
+  "name": "Stop Defense",
+  "description": "",
+  "artwork": "assets/fm/card_0320.png",
+  "card_type": "spell",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spell"
+  ],
+  "password": "63102017",
+  "starchip_cost": 800
+}

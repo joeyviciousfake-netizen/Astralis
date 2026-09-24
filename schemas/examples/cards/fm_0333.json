@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0333",
+  "name": "Sogen",
+  "description": "",
+  "artwork": "assets/fm/card_0333.png",
+  "card_type": "spell",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spell"
+  ],
+  "password": "86318356",
+  "starchip_cost": 55
+}

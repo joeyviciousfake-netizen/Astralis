@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_gladiador_ferro",
+  "name": "Gladiador de Ferro",
+  "description": "Nunca perdeu uma briga de arena.",
+  "artwork": "assets/cards/card_gladiador_ferro.png",
+  "card_type": "monster",
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1900,
+  "defense": 1700,
+  "effects": [],
+  "tags": [
+    "teste",
+    "warrior"
+  ]
+}

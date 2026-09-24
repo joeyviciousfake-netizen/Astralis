@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0060",
+  "name": "Great White",
+  "description": "",
+  "artwork": "assets/fm/card_0060.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fish"
+  ],
+  "monster_type": "fish",
+  "attribute": "water",
+  "level": 4,
+  "attack": 1600,
+  "defense": 800,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "moon",
+  "password": "13429800",
+  "starchip_cost": 999999
+}

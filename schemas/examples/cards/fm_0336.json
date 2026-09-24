@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0336",
+  "name": "Dark Hole",
+  "description": "",
+  "artwork": "assets/fm/card_0336.png",
+  "card_type": "spell",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spell"
+  ],
+  "password": "53129443",
+  "starchip_cost": 20000
+}

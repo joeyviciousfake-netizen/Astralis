@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0288",
+  "name": "Dark Artist",
+  "description": "",
+  "artwork": "assets/fm/card_0288.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 600,
+  "defense": 1400,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "jupiter",
+  "password": "72520073",
+  "starchip_cost": 999999
+}

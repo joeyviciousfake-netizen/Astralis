@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0516",
+  "name": "Muka Muka",
+  "description": "",
+  "artwork": "assets/fm/card_0516.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "rock"
+  ],
+  "monster_type": "rock",
+  "attribute": "earth",
+  "level": 2,
+  "attack": 600,
+  "defense": 300,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "mercury",
+  "password": "46657337",
+  "starchip_cost": 20
+}

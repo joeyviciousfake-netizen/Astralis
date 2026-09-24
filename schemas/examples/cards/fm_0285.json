@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0285",
+  "name": "Serpent Marauder",
+  "description": "",
+  "artwork": "assets/fm/card_0285.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "reptile"
+  ],
+  "monster_type": "reptile",
+  "attribute": "earth",
+  "level": 2,
+  "attack": 700,
+  "defense": 600,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "sun",
+  "password": "82742611",
+  "starchip_cost": 30
+}

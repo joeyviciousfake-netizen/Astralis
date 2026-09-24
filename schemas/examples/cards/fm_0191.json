@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0191",
+  "name": "LaLa Li-oon",
+  "description": "",
+  "artwork": "assets/fm/card_0191.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "thunder"
+  ],
+  "monster_type": "thunder",
+  "attribute": "wind",
+  "level": 2,
+  "attack": 600,
+  "defense": 600,
+  "guardian_star_1": "pluto",
+  "guardian_star_2": "moon",
+  "password": "09430387",
+  "starchip_cost": 25
+}

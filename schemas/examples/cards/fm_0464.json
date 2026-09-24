@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0464",
+  "name": "Wing Eagle",
+  "description": "",
+  "artwork": "assets/fm/card_0464.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "winged-beast"
+  ],
+  "monster_type": "winged-beast",
+  "attribute": "wind",
+  "level": 5,
+  "attack": 1800,
+  "defense": 1500,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "mercury",
+  "password": "47319141",
+  "starchip_cost": 290
+}

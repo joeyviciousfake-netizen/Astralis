@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0267",
+  "name": "Unknown Warrior of Fiend",
+  "description": "",
+  "artwork": "assets/fm/card_0267.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 1000,
+  "defense": 500,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "mars",
+  "password": "97360116",
+  "starchip_cost": 30
+}

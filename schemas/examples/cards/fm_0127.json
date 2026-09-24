@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0127",
+  "name": "Ansatsu",
+  "description": "",
+  "artwork": "assets/fm/card_0127.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1700,
+  "defense": 1200,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "neptune",
+  "password": "48365709",
+  "starchip_cost": 180
+}

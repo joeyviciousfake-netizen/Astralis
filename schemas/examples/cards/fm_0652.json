@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0652",
+  "name": "Magical Labyrinth",
+  "description": "",
+  "artwork": "assets/fm/card_0652.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "64389297",
+  "starchip_cost": 10
+}

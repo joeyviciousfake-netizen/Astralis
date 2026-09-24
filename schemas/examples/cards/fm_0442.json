@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0442",
+  "name": "Aqua Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0442.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "sea-serpent"
+  ],
+  "monster_type": "sea-serpent",
+  "attribute": "water",
+  "level": 6,
+  "attack": 2250,
+  "defense": 1900,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "moon",
+  "password": "86164529",
+  "starchip_cost": 700
+}

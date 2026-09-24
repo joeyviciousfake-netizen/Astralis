@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0419",
+  "name": "Giganto",
+  "description": "",
+  "artwork": "assets/fm/card_0419.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "dark",
+  "level": 5,
+  "attack": 1700,
+  "defense": 1800,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "uranus",
+  "password": "33621868",
+  "starchip_cost": 350
+}

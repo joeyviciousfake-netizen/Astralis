@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0700",
+  "name": "Fortress Whale's Oath",
+  "description": "",
+  "artwork": "assets/fm/card_0700.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ],
+  "password": "77454922",
+  "starchip_cost": 10
+}

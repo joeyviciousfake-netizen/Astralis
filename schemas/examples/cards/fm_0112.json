@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0112",
+  "name": "That Which Feeds on Life",
+  "description": "",
+  "artwork": "assets/fm/card_0112.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 4,
+  "attack": 1200,
+  "defense": 1000,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "uranus",
+  "password": "52367652",
+  "starchip_cost": 70
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0670",
+  "name": "Black Luster Ritual",
+  "description": "",
+  "artwork": "assets/fm/card_0670.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ],
+  "password": "55761792",
+  "starchip_cost": 100
+}

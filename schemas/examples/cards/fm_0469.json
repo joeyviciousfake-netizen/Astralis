@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0469",
+  "name": "Armed Ninja",
+  "description": "",
+  "artwork": "assets/fm/card_0469.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 1,
+  "attack": 300,
+  "defense": 300,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "mars",
+  "password": "09076207",
+  "starchip_cost": 15
+}

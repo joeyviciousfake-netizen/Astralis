@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0623",
+  "name": "The Thing That Hides in the Mud",
+  "description": "",
+  "artwork": "assets/fm/card_0623.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "rock"
+  ],
+  "monster_type": "rock",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1200,
+  "defense": 1300,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "jupiter",
+  "password": "18180762",
+  "starchip_cost": 100
+}

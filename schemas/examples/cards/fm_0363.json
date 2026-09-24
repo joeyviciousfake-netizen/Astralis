@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0363",
+  "name": "Fairy's Gift",
+  "description": "",
+  "artwork": "assets/fm/card_0363.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "light",
+  "level": 4,
+  "attack": 1400,
+  "defense": 1000,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "mercury",
+  "password": "68401546",
+  "starchip_cost": 120
+}

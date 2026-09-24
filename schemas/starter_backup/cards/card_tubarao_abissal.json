@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_tubarao_abissal",
+  "name": "Tubarão Abissal",
+  "description": "Rei do fundo do mar escuro.",
+  "artwork": "assets/cards/card_tubarao_abissal.png",
+  "card_type": "monster",
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 6,
+  "attack": 2200,
+  "defense": 1600,
+  "effects": [],
+  "tags": [
+    "teste",
+    "aqua"
+  ]
+}

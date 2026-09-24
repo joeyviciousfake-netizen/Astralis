@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0033",
+  "name": "Judge Man",
+  "description": "",
+  "artwork": "assets/fm/card_0033.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 6,
+  "attack": 2200,
+  "defense": 1500,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "saturn",
+  "password": "30113682",
+  "starchip_cost": 1000
+}

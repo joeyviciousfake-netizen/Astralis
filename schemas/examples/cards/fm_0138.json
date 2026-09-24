@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0138",
+  "name": "Dragon Statue",
+  "description": "",
+  "artwork": "assets/fm/card_0138.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 1100,
+  "defense": 900,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "mars",
+  "password": "09197735",
+  "starchip_cost": 55
+}

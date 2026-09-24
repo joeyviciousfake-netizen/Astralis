@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0377",
+  "name": "Ryu-kishin Powered",
+  "description": "",
+  "artwork": "assets/fm/card_0377.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 4,
+  "attack": 1600,
+  "defense": 1200,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "jupiter",
+  "password": "24611934",
+  "starchip_cost": 160
+}

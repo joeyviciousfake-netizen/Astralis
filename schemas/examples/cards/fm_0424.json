@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0424",
+  "name": "Sky Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0424.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "wind",
+  "level": 6,
+  "attack": 1900,
+  "defense": 1800,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "uranus",
+  "password": "95288024",
+  "starchip_cost": 1000
+}

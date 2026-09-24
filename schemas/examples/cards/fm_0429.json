@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0429",
+  "name": "Goddess of Whim",
+  "description": "",
+  "artwork": "assets/fm/card_0429.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fairy"
+  ],
+  "monster_type": "fairy",
+  "attribute": "light",
+  "level": 3,
+  "attack": 950,
+  "defense": 700,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "uranus",
+  "password": "67959180",
+  "starchip_cost": 999999
+}

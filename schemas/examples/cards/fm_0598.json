@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0598",
+  "name": "Little Chimera",
+  "description": "",
+  "artwork": "assets/fm/card_0598.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast"
+  ],
+  "monster_type": "beast",
+  "attribute": "fire",
+  "level": 2,
+  "attack": 600,
+  "defense": 550,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "moon",
+  "password": "68658728",
+  "starchip_cost": 25
+}

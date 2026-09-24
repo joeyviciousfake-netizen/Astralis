@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0302",
+  "name": "Sword of Dark Destruction",
+  "description": "",
+  "artwork": "assets/fm/card_0302.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "37120512",
+  "starchip_cost": 800
+}

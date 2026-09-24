@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0631",
+  "name": "Maiden of the Moonlight",
+  "description": "",
+  "artwork": "assets/fm/card_0631.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "light",
+  "level": 4,
+  "attack": 1500,
+  "defense": 1300,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "venus",
+  "password": "79629370",
+  "starchip_cost": 160
+}

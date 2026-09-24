@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0317",
+  "name": "Cyber Shield",
+  "description": "",
+  "artwork": "assets/fm/card_0317.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "63224564",
+  "starchip_cost": 800
+}

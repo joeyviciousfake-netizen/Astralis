@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0103",
+  "name": "Job-change Mirror",
+  "description": "",
+  "artwork": "assets/fm/card_0103.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 800,
+  "defense": 1300,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "mars",
+  "password": "55337339",
+  "starchip_cost": 999999
+}

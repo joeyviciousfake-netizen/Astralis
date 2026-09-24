@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0357",
+  "name": "Yamadron",
+  "description": "",
+  "artwork": "assets/fm/card_0357.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "fire",
+  "level": 5,
+  "attack": 1600,
+  "defense": 1800,
+  "guardian_star_1": "mars",
+  "guardian_star_2": "uranus",
+  "password": "70345785",
+  "starchip_cost": 320
+}

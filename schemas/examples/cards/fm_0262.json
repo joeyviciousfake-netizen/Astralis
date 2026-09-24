@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0262",
+  "name": "The Little Swordsman of Aile",
+  "description": "",
+  "artwork": "assets/fm/card_0262.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "water",
+  "level": 3,
+  "attack": 800,
+  "defense": 1300,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "mars",
+  "password": "25109950",
+  "starchip_cost": 60
+}

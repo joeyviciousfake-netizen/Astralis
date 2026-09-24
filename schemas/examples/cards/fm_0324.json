@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0324",
+  "name": "Invigoration",
+  "description": "",
+  "artwork": "assets/fm/card_0324.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "98374133",
+  "starchip_cost": 800
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0242",
+  "name": "Candle of Fate",
+  "description": "",
+  "artwork": "assets/fm/card_0242.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 2,
+  "attack": 600,
+  "defense": 600,
+  "guardian_star_1": "mars",
+  "guardian_star_2": "moon",
+  "password": "47695416",
+  "starchip_cost": 25
+}

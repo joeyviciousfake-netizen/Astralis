@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0648",
+  "name": "Machine Attacker",
+  "description": "",
+  "artwork": "assets/fm/card_0648.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1600,
+  "defense": 1300,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "neptune",
+  "password": "38116136",
+  "starchip_cost": 180
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0150",
+  "name": "Akihiron",
+  "description": "",
+  "artwork": "assets/fm/card_0150.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 5,
+  "attack": 1700,
+  "defense": 1400,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "jupiter",
+  "password": "36904469",
+  "starchip_cost": 230
+}

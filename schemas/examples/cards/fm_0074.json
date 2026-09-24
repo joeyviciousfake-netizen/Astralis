@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0074",
+  "name": "Giant Soldier of Stone",
+  "description": "",
+  "artwork": "assets/fm/card_0074.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "rock"
+  ],
+  "monster_type": "rock",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 1300,
+  "defense": 2000,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "venus",
+  "password": "13039848",
+  "starchip_cost": 290
+}

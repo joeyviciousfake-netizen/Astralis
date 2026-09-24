@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "fm_0356",
+  "name": "Super War-lion",
+  "description": "",
+  "artwork": "assets/fm/card_0356.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast"
+  ],
+  "monster_type": "beast",
+  "attribute": "earth",
+  "level": 7,
+  "attack": 2300,
+  "defense": 2100,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "venus"
+}

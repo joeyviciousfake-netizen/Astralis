@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0131",
+  "name": "Octoberser",
+  "description": "",
+  "artwork": "assets/fm/card_0131.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 5,
+  "attack": 1600,
+  "defense": 1400,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "moon",
+  "password": "74637266",
+  "starchip_cost": 200
+}

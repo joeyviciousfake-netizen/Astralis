@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0382",
+  "name": "Rude Kaiser",
+  "description": "",
+  "artwork": "assets/fm/card_0382.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast-warrior"
+  ],
+  "monster_type": "beast-warrior",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1800,
+  "defense": 1600,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "sun",
+  "password": "26378150",
+  "starchip_cost": 320
+}

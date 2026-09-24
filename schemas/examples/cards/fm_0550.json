@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0550",
+  "name": "Behegon",
+  "description": "",
+  "artwork": "assets/fm/card_0550.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 4,
+  "attack": 1350,
+  "defense": 1000,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "saturn",
+  "password": "94022093",
+  "starchip_cost": 80
+}

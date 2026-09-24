@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0493",
+  "name": "Maha Vailo",
+  "description": "",
+  "artwork": "assets/fm/card_0493.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "light",
+  "level": 5,
+  "attack": 1550,
+  "defense": 1400,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "venus",
+  "password": "93013676",
+  "starchip_cost": 180
+}

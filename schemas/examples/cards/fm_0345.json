@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0345",
+  "name": "Final Flame",
+  "description": "",
+  "artwork": "assets/fm/card_0345.png",
+  "card_type": "spell",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spell"
+  ],
+  "password": "73134081",
+  "starchip_cost": 20000
+}

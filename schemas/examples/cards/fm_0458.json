@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0458",
+  "name": "Kaminari Attack",
+  "description": "",
+  "artwork": "assets/fm/card_0458.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "thunder"
+  ],
+  "monster_type": "thunder",
+  "attribute": "wind",
+  "level": 5,
+  "attack": 1900,
+  "defense": 1400,
+  "guardian_star_1": "pluto",
+  "guardian_star_2": "venus",
+  "password": "09653271",
+  "starchip_cost": 290
+}

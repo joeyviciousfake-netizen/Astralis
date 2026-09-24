@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0532",
+  "name": "Gemini Elf",
+  "description": "",
+  "artwork": "assets/fm/card_0532.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1900,
+  "defense": 900,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "uranus",
+  "password": "69140098",
+  "starchip_cost": 160
+}

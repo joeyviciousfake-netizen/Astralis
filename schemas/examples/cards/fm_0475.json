@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0475",
+  "name": "Sinister Serpent",
+  "description": "",
+  "artwork": "assets/fm/card_0475.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "reptile"
+  ],
+  "monster_type": "reptile",
+  "attribute": "water",
+  "level": 1,
+  "attack": 300,
+  "defense": 250,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "jupiter",
+  "password": "08131171",
+  "starchip_cost": 10
+}

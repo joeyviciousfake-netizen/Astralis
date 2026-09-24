@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0509",
+  "name": "Bracchio-raidus",
+  "description": "",
+  "artwork": "assets/fm/card_0509.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dinosaur"
+  ],
+  "monster_type": "dinosaur",
+  "attribute": "water",
+  "level": 6,
+  "attack": 2200,
+  "defense": 2000,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "moon",
+  "password": "16507828",
+  "starchip_cost": 800
+}

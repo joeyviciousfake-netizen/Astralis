@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0134",
+  "name": "Mystical Capture Chain",
+  "description": "",
+  "artwork": "assets/fm/card_0134.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fairy"
+  ],
+  "monster_type": "fairy",
+  "attribute": "light",
+  "level": 2,
+  "attack": 700,
+  "defense": 700,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "neptune",
+  "password": "63515678",
+  "starchip_cost": 30
+}

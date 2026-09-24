@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0070",
+  "name": "Fiend Kraken",
+  "description": "",
+  "artwork": "assets/fm/card_0070.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 4,
+  "attack": 1200,
+  "defense": 1400,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "venus",
+  "password": "77456781",
+  "starchip_cost": 120
+}

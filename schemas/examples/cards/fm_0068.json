@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0068",
+  "name": "Garoozis",
+  "description": "",
+  "artwork": "assets/fm/card_0068.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast-warrior"
+  ],
+  "monster_type": "beast-warrior",
+  "attribute": "fire",
+  "level": 5,
+  "attack": 1800,
+  "defense": 1500,
+  "guardian_star_1": "mars",
+  "guardian_star_2": "venus",
+  "password": "14977074",
+  "starchip_cost": 290
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0343",
+  "name": "Sparks",
+  "description": "",
+  "artwork": "assets/fm/card_0343.png",
+  "card_type": "spell",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spell"
+  ],
+  "password": "76103675",
+  "starchip_cost": 10
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0446",
+  "name": "Aqua Snake",
+  "description": "",
+  "artwork": "assets/fm/card_0446.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 3,
+  "attack": 1050,
+  "defense": 900,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "saturn",
+  "password": "12436646",
+  "starchip_cost": 50
+}

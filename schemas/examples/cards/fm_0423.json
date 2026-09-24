@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0423",
+  "name": "Dice Armadillo",
+  "description": "",
+  "artwork": "assets/fm/card_0423.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1650,
+  "defense": 1800,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "pluto",
+  "password": "69893315",
+  "starchip_cost": 320
+}

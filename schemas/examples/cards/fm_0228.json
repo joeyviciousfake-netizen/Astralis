@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0228",
+  "name": "Wood Remains",
+  "description": "",
+  "artwork": "assets/fm/card_0228.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "zombie"
+  ],
+  "monster_type": "zombie",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 1000,
+  "defense": 900,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "neptune",
+  "password": "17733394",
+  "starchip_cost": 50
+}

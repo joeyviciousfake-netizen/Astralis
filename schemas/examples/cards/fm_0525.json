@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0525",
+  "name": "Spirit of the Mountain",
+  "description": "",
+  "artwork": "assets/fm/card_0525.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1300,
+  "defense": 1800,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "jupiter",
+  "password": "34690519",
+  "starchip_cost": 230
+}

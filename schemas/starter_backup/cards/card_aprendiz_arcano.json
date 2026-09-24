@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_aprendiz_arcano",
+  "name": "Aprendiz Arcano",
+  "description": "Ainda erra o feitiço, mas já assusta.",
+  "artwork": "assets/cards/card_aprendiz_arcano.png",
+  "card_type": "monster",
+  "monster_type": "spellcaster",
+  "attribute": "dark",
+  "level": 2,
+  "attack": 800,
+  "defense": 600,
+  "effects": [],
+  "tags": [
+    "teste",
+    "spellcaster"
+  ]
+}

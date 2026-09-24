@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0565",
+  "name": "Man-eating Black Shark",
+  "description": "",
+  "artwork": "assets/fm/card_0565.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fish"
+  ],
+  "monster_type": "fish",
+  "attribute": "water",
+  "level": 5,
+  "attack": 2100,
+  "defense": 1300,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "sun",
+  "password": "80727036",
+  "starchip_cost": 320
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0434",
+  "name": "Beautiful Beast Trainer",
+  "description": "",
+  "artwork": "assets/fm/card_0434.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1750,
+  "defense": 1500,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "neptune",
+  "password": "29616941",
+  "starchip_cost": 260
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0478",
+  "name": "Insect Soldiers of the Sky",
+  "description": "",
+  "artwork": "assets/fm/card_0478.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "insect"
+  ],
+  "monster_type": "insect",
+  "attribute": "wind",
+  "level": 3,
+  "attack": 1000,
+  "defense": 800,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "neptune",
+  "password": "07019529",
+  "starchip_cost": 45
+}

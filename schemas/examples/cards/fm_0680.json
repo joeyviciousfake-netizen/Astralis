@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0680",
+  "name": "Curse of Tri-Horned Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0680.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ],
+  "password": "79699070",
+  "starchip_cost": 50
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0667",
+  "name": "Gate Guardian Ritual",
+  "description": "",
+  "artwork": "assets/fm/card_0667.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ],
+  "password": "56483330",
+  "starchip_cost": 999999
+}

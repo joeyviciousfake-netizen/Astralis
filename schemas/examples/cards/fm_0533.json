@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0533",
+  "name": "Kwagar Hercules",
+  "description": "",
+  "artwork": "assets/fm/card_0533.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "insect"
+  ],
+  "monster_type": "insect",
+  "attribute": "earth",
+  "level": 6,
+  "attack": 1900,
+  "defense": 1700,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "sun",
+  "password": "95144193",
+  "starchip_cost": 400
+}

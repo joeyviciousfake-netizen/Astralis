@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0513",
+  "name": "Guardian of the Throne Room",
+  "description": "",
+  "artwork": "assets/fm/card_0513.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "light",
+  "level": 5,
+  "attack": 1650,
+  "defense": 1600,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "saturn",
+  "password": "47879985",
+  "starchip_cost": 260
+}

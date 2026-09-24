@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "fm_0702",
+  "name": "Hungry Burger",
+  "description": "",
+  "artwork": "assets/fm/card_0702.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "dark",
+  "level": 6,
+  "attack": 2000,
+  "defense": 1850,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "mars"
+}

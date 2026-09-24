@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0012",
+  "name": "Swamp Battleguard",
+  "description": "",
+  "artwork": "assets/fm/card_0012.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1800,
+  "defense": 1500,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "mars",
+  "password": "40453765",
+  "starchip_cost": 290
+}

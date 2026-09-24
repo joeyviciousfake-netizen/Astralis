@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0396",
+  "name": "Ocubeam",
+  "description": "",
+  "artwork": "assets/fm/card_0396.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fairy"
+  ],
+  "monster_type": "fairy",
+  "attribute": "light",
+  "level": 5,
+  "attack": 1550,
+  "defense": 1650,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "venus",
+  "password": "86088138",
+  "starchip_cost": 260
+}

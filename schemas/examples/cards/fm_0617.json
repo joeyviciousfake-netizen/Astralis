@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0617",
+  "name": "Marine Beast",
+  "description": "",
+  "artwork": "assets/fm/card_0617.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fish"
+  ],
+  "monster_type": "fish",
+  "attribute": "water",
+  "level": 5,
+  "attack": 1700,
+  "defense": 1600,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "mercury",
+  "password": "29929832",
+  "starchip_cost": 290
+}

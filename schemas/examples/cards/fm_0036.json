@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0036",
+  "name": "The Snake Hair",
+  "description": "",
+  "artwork": "assets/fm/card_0036.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "zombie"
+  ],
+  "monster_type": "zombie",
+  "attribute": "dark",
+  "level": 4,
+  "attack": 1500,
+  "defense": 1200,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "saturn",
+  "password": "29491031",
+  "starchip_cost": 140
+}

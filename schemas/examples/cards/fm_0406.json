@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0406",
+  "name": "Yaiba Robo",
+  "description": "",
+  "artwork": "assets/fm/card_0406.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "dark",
+  "level": 4,
+  "attack": 1000,
+  "defense": 1300,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "uranus",
+  "password": "10315429",
+  "starchip_cost": 80
+}

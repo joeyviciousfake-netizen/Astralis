@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0676",
+  "name": "Commencement Dance",
+  "description": "",
+  "artwork": "assets/fm/card_0676.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ],
+  "password": "43417563",
+  "starchip_cost": 50
+}

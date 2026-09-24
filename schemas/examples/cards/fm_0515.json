@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0515",
+  "name": "The Statue of Easter Island",
+  "description": "",
+  "artwork": "assets/fm/card_0515.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "rock"
+  ],
+  "monster_type": "rock",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1100,
+  "defense": 1400,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "venus",
+  "password": "10262698",
+  "starchip_cost": 100
+}

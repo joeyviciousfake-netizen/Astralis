@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0544",
+  "name": "Dharma Cannon",
+  "description": "",
+  "artwork": "assets/fm/card_0544.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "dark",
+  "level": 2,
+  "attack": 900,
+  "defense": 500,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "mercury",
+  "password": "96967123",
+  "starchip_cost": 30
+}

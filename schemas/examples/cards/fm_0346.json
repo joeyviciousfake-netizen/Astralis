@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0346",
+  "name": "Ookazi",
+  "description": "",
+  "artwork": "assets/fm/card_0346.png",
+  "card_type": "spell",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spell"
+  ],
+  "password": "19523799",
+  "starchip_cost": 35000
+}

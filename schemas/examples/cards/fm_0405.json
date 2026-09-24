@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0405",
+  "name": "Saber Slasher",
+  "description": "",
+  "artwork": "assets/fm/card_0405.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "dark",
+  "level": 5,
+  "attack": 1450,
+  "defense": 1500,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "saturn",
+  "password": "73911410",
+  "starchip_cost": 180
+}

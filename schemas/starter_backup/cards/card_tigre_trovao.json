@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_tigre_trovao",
+  "name": "Tigre do Trovão",
+  "description": "Cada passo dele parece um raio caindo.",
+  "artwork": "assets/cards/card_tigre_trovao.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "teste",
+    "beast"
+  ],
+  "monster_type": "beast",
+  "attribute": "fire",
+  "level": 6,
+  "attack": 2100,
+  "defense": 1400
+}

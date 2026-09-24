@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_estatua_viva",
+  "name": "Estátua Viva",
+  "description": "Piscou. Ninguém viu, mas piscou.",
+  "artwork": "assets/cards/card_estatua_viva.png",
+  "card_type": "monster",
+  "monster_type": "rock",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 600,
+  "defense": 2200,
+  "effects": [],
+  "tags": [
+    "teste",
+    "rock"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0455",
+  "name": "Barrel Rock",
+  "description": "",
+  "artwork": "assets/fm/card_0455.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "rock"
+  ],
+  "monster_type": "rock",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1000,
+  "defense": 1300,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "moon",
+  "password": "10476868",
+  "starchip_cost": 80
+}

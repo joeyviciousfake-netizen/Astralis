@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0020",
+  "name": "Left Arm of the Forbidden One",
+  "description": "",
+  "artwork": "assets/fm/card_0020.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "dark",
+  "level": 1,
+  "attack": 200,
+  "defense": 300,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "pluto",
+  "password": "07902349",
+  "starchip_cost": 999999
+}

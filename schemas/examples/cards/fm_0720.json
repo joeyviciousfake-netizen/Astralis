@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "fm_0720",
+  "name": "Mask of Shine & Dark",
+  "description": "",
+  "artwork": "assets/fm/card_0720.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "dark",
+  "level": 6,
+  "attack": 2000,
+  "defense": 1800,
+  "guardian_star_1": "venus",
+  "guardian_star_2": "pluto"
+}

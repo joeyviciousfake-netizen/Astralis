@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0449",
+  "name": "30,000-Year White Turtle",
+  "description": "",
+  "artwork": "assets/fm/card_0449.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 5,
+  "attack": 1250,
+  "defense": 2100,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "moon",
+  "password": "11714098",
+  "starchip_cost": 290
+}

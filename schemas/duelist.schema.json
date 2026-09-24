@@ -10,6 +10,7 @@
     "portrait": { "type": "string", "description": "Caminho do retrato. Pode ser placeholder." },
     "sprite": { "type": "string" },
     "deck_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "description": "Ref para deck. Deck referencia Card IDs, não duplica objetos." },
+    "starting_lp": { "type": "integer", "minimum": 1, "maximum": 99999, "description": "OPCIONAL. Sugestão de vida deste duelista (dado). Precedência: duel_setup.starting_lp (obrigatório) sempre vence na batalha; este campo só pré-preenche a vida no Duelo rápido do Studio. Ausente = sem sugestão (Studio usa 4000). Runtime ignora este campo hoje." },
     "ai_preset": {
       "type": "object",
       "description": "Mesma base de IA do runtime; só parâmetros. Studio expõe como 3 sliders + dropdown.",

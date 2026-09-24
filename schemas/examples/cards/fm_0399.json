@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0399",
+  "name": "Swordsman from a Foreign Land",
+  "description": "",
+  "artwork": "assets/fm/card_0399.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 1,
+  "attack": 250,
+  "defense": 250,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "venus",
+  "password": "85255550",
+  "starchip_cost": 10
+}

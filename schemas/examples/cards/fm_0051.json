@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0051",
+  "name": "Armored Lizard",
+  "description": "",
+  "artwork": "assets/fm/card_0051.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "reptile"
+  ],
+  "monster_type": "reptile",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1500,
+  "defense": 1200,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "sun",
+  "password": "15480588",
+  "starchip_cost": 999999
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0692",
+  "name": "Turtle Oath",
+  "description": "",
+  "artwork": "assets/fm/card_0692.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ],
+  "password": "76806714",
+  "starchip_cost": 100
+}

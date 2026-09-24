@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0367",
+  "name": "Jirai Gumo",
+  "description": "",
+  "artwork": "assets/fm/card_0367.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "insect"
+  ],
+  "monster_type": "insect",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 2200,
+  "defense": 100,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "uranus",
+  "password": "94773007",
+  "starchip_cost": 80
+}

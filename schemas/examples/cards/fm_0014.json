@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0014",
+  "name": "Battle Steer",
+  "description": "",
+  "artwork": "assets/fm/card_0014.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast-warrior"
+  ],
+  "monster_type": "beast-warrior",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1800,
+  "defense": 1300,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "uranus",
+  "password": "18246479",
+  "starchip_cost": 230
+}

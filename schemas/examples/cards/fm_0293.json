@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0293",
+  "name": "Masaki the Legendary Swordsman",
+  "description": "",
+  "artwork": "assets/fm/card_0293.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1100,
+  "defense": 1100,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "uranus",
+  "password": "44287299",
+  "starchip_cost": 70
+}

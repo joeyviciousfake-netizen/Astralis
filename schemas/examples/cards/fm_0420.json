@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0420",
+  "name": "Cyber-Stein",
+  "description": "",
+  "artwork": "assets/fm/card_0420.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "dark",
+  "level": 2,
+  "attack": 700,
+  "defense": 500,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "neptune",
+  "password": "69015963",
+  "starchip_cost": 25
+}

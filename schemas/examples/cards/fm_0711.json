@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0711",
+  "name": "Mikazukinoyaiba",
+  "description": "",
+  "artwork": "assets/fm/card_0711.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "dark",
+  "level": 7,
+  "attack": 2200,
+  "defense": 2350,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "uranus",
+  "password": "38277918",
+  "starchip_cost": 999999
+}

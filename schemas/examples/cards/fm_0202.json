@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0202",
+  "name": "Air Marmot of Nefariousness",
+  "description": "",
+  "artwork": "assets/fm/card_0202.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast"
+  ],
+  "monster_type": "beast",
+  "attribute": "earth",
+  "level": 2,
+  "attack": 400,
+  "defense": 600,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "uranus",
+  "password": "75889523",
+  "starchip_cost": 20
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0666",
+  "name": "Yamadron Ritual",
+  "description": "",
+  "artwork": "assets/fm/card_0666.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ],
+  "password": "29089635",
+  "starchip_cost": 10
+}

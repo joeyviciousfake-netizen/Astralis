@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0016",
+  "name": "Time Wizard",
+  "description": "",
+  "artwork": "assets/fm/card_0016.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "light",
+  "level": 2,
+  "attack": 500,
+  "defense": 400,
+  "guardian_star_1": "venus",
+  "guardian_star_2": "sun",
+  "password": "71625222",
+  "starchip_cost": 999999
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0043",
+  "name": "Karbonala Warrior",
+  "description": "",
+  "artwork": "assets/fm/card_0043.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1500,
+  "defense": 1200,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "jupiter",
+  "password": "54541900",
+  "starchip_cost": 140
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0157",
+  "name": "Firegrass",
+  "description": "",
+  "artwork": "assets/fm/card_0157.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "plant"
+  ],
+  "monster_type": "plant",
+  "attribute": "earth",
+  "level": 2,
+  "attack": 700,
+  "defense": 600,
+  "guardian_star_1": "mars",
+  "guardian_star_2": "moon",
+  "password": "53293545",
+  "starchip_cost": 30
+}

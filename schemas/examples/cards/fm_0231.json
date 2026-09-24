@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0231",
+  "name": "Wood Clown",
+  "description": "",
+  "artwork": "assets/fm/card_0231.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 800,
+  "defense": 1200,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "mars",
+  "password": "17511156",
+  "starchip_cost": 55
+}

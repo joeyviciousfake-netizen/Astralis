@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0695",
+  "name": "Puppet Ritual",
+  "description": "",
+  "artwork": "assets/fm/card_0695.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ],
+  "password": "05783166",
+  "starchip_cost": 50
+}

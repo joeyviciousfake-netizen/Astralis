@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0069",
+  "name": "Thousand Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0069.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "wind",
+  "level": 7,
+  "attack": 2400,
+  "defense": 2000,
+  "guardian_star_1": "mars",
+  "guardian_star_2": "mercury",
+  "password": "41462083",
+  "starchip_cost": 999999
+}

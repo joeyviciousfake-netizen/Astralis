@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0308",
+  "name": "Beast Fangs",
+  "description": "",
+  "artwork": "assets/fm/card_0308.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "46009906",
+  "starchip_cost": 800
+}

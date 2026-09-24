@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_fenix_cinzas",
+  "name": "Fênix das Cinzas",
+  "description": "Renasce sempre. Sempre mesmo.",
+  "artwork": "assets/cards/card_fenix_cinzas.png",
+  "card_type": "monster",
+  "monster_type": "pyro",
+  "attribute": "fire",
+  "level": 7,
+  "attack": 2400,
+  "defense": 1800,
+  "effects": [],
+  "tags": [
+    "teste",
+    "pyro"
+  ]
+}

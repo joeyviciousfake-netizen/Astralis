@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0390",
+  "name": "Launcher Spider",
+  "description": "",
+  "artwork": "assets/fm/card_0390.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "fire",
+  "level": 7,
+  "attack": 2200,
+  "defense": 2500,
+  "guardian_star_1": "mars",
+  "guardian_star_2": "pluto",
+  "password": "87322377",
+  "starchip_cost": 999999
+}

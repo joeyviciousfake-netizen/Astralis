@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0172",
+  "name": "Armaill",
+  "description": "",
+  "artwork": "assets/fm/card_0172.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 700,
+  "defense": 1300,
+  "guardian_star_1": "mars",
+  "guardian_star_2": "mercury",
+  "password": "53153481",
+  "starchip_cost": 55
+}

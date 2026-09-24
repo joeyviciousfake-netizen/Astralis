@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0607",
+  "name": "Great Bill",
+  "description": "",
+  "artwork": "assets/fm/card_0607.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast"
+  ],
+  "monster_type": "beast",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1250,
+  "defense": 1300,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "sun",
+  "password": "55691901",
+  "starchip_cost": 100
+}

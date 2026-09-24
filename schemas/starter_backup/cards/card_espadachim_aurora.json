@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_espadachim_aurora",
+  "name": "Espadachim da Aurora",
+  "description": "Saca a espada junto com o nascer do sol.",
+  "artwork": "assets/cards/card_espadachim_aurora.png",
+  "card_type": "monster",
+  "monster_type": "warrior",
+  "attribute": "light",
+  "level": 4,
+  "attack": 1600,
+  "defense": 1400,
+  "effects": [],
+  "tags": [
+    "teste",
+    "warrior"
+  ]
+}

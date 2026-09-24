@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0108",
+  "name": "Graveyard and the Hand of Invitation",
+  "description": "",
+  "artwork": "assets/fm/card_0108.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "zombie"
+  ],
+  "monster_type": "zombie",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 700,
+  "defense": 900,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "pluto",
+  "password": "27094595",
+  "starchip_cost": 35
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0044",
+  "name": "Rogue Doll",
+  "description": "",
+  "artwork": "assets/fm/card_0044.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "light",
+  "level": 4,
+  "attack": 1600,
+  "defense": 1000,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "pluto",
+  "password": "91939608",
+  "starchip_cost": 120
+}

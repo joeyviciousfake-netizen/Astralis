@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "fm_0710",
+  "name": "Crab Turtle",
+  "description": "",
+  "artwork": "assets/fm/card_0710.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 8,
+  "attack": 2550,
+  "defense": 2500,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "jupiter"
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0040",
+  "name": "Dragon Piper",
+  "description": "",
+  "artwork": "assets/fm/card_0040.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "pyro"
+  ],
+  "monster_type": "pyro",
+  "attribute": "fire",
+  "level": 3,
+  "attack": 200,
+  "defense": 1800,
+  "guardian_star_1": "mars",
+  "guardian_star_2": "moon",
+  "password": "55763552",
+  "starchip_cost": 55
+}

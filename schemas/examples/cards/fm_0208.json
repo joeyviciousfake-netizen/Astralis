@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0208",
+  "name": "Petit Angel",
+  "description": "",
+  "artwork": "assets/fm/card_0208.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fairy"
+  ],
+  "monster_type": "fairy",
+  "attribute": "light",
+  "level": 3,
+  "attack": 600,
+  "defense": 900,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "pluto",
+  "password": "38142739",
+  "starchip_cost": 30
+}

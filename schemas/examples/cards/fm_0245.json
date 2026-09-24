@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0245",
+  "name": "Meda Bat",
+  "description": "",
+  "artwork": "assets/fm/card_0245.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 2,
+  "attack": 800,
+  "defense": 400,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "neptune",
+  "password": "76211194",
+  "starchip_cost": 25
+}

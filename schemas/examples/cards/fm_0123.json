@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0123",
+  "name": "Dark Plant",
+  "description": "",
+  "artwork": "assets/fm/card_0123.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "plant"
+  ],
+  "monster_type": "plant",
+  "attribute": "dark",
+  "level": 1,
+  "attack": 300,
+  "defense": 400,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "jupiter",
+  "password": "13193642",
+  "starchip_cost": 15
+}

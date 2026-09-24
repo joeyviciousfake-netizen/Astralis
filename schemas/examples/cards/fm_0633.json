@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0633",
+  "name": "Winged Egg of New Life",
+  "description": "",
+  "artwork": "assets/fm/card_0633.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fairy"
+  ],
+  "monster_type": "fairy",
+  "attribute": "light",
+  "level": 5,
+  "attack": 1400,
+  "defense": 1700,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "mars",
+  "password": "42418084",
+  "starchip_cost": 230
+}

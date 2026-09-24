@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0200",
+  "name": "Petit Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0200.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "wind",
+  "level": 2,
+  "attack": 600,
+  "defense": 700,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "sun",
+  "password": "75356564",
+  "starchip_cost": 30
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0660",
+  "name": "Stain Storm",
+  "description": "",
+  "artwork": "assets/fm/card_0660.png",
+  "card_type": "spell",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spell"
+  ],
+  "password": "21323861",
+  "starchip_cost": 999999
+}

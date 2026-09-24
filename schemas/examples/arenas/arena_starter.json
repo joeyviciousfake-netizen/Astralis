@@ -1,0 +1,33 @@
+{
+  "schema_version": 1,
+  "id": "arena_starter",
+  "name": "Arena Inicial",
+  "description": "Arena Inicial 1920x1080 em ESPELHO (D24/R3: só desenho, IDs e lógica intactos). p0 = você/baixo: monstros y=600, magias y=789, x crescente 780→1536 (m0 à esquerda). p1 = rival/cima ESPELHADO: fileiras trocadas (monstro embaixo/perto do centro y=317, magia em cima/longe y=128) + X invertido (m0/s0 à direita x=1536, m4/s4 à esquerda x=780). Mão: p0 x=1240 y=980 aberta, p1 x=1240 y=20 de costas.",
+  "background": "assets/backgrounds/arena_starter.png",
+  "slots": [
+    { "slot_id": "p1_m0", "x": 1536, "y": 317 },
+    { "slot_id": "p1_m1", "x": 1347, "y": 317 },
+    { "slot_id": "p1_m2", "x": 1158, "y": 317 },
+    { "slot_id": "p1_m3", "x": 969, "y": 317 },
+    { "slot_id": "p1_m4", "x": 780, "y": 317 },
+    { "slot_id": "p1_s0", "x": 1536, "y": 128 },
+    { "slot_id": "p1_s1", "x": 1347, "y": 128 },
+    { "slot_id": "p1_s2", "x": 1158, "y": 128 },
+    { "slot_id": "p1_s3", "x": 969, "y": 128 },
+    { "slot_id": "p1_s4", "x": 780, "y": 128 },
+    { "slot_id": "p0_m0", "x": 780, "y": 600 },
+    { "slot_id": "p0_m1", "x": 969, "y": 600 },
+    { "slot_id": "p0_m2", "x": 1158, "y": 600 },
+    { "slot_id": "p0_m3", "x": 1347, "y": 600 },
+    { "slot_id": "p0_m4", "x": 1536, "y": 600 },
+    { "slot_id": "p0_s0", "x": 780, "y": 789 },
+    { "slot_id": "p0_s1", "x": 969, "y": 789 },
+    { "slot_id": "p0_s2", "x": 1158, "y": 789 },
+    { "slot_id": "p0_s3", "x": 1347, "y": 789 },
+    { "slot_id": "p0_s4", "x": 1536, "y": 789 }
+  ],
+  "hand": {
+    "p0": { "x": 1240, "y": 980, "step": 95 },
+    "p1": { "x": 1240, "y": 20, "step": 60 }
+  }
+}

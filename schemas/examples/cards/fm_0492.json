@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0492",
+  "name": "Hoshiningen",
+  "description": "",
+  "artwork": "assets/fm/card_0492.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fairy"
+  ],
+  "monster_type": "fairy",
+  "attribute": "light",
+  "level": 2,
+  "attack": 500,
+  "defense": 700,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "neptune",
+  "password": "67629977",
+  "starchip_cost": 25
+}

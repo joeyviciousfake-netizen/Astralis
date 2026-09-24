@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0313",
+  "name": "Horn of Light",
+  "description": "",
+  "artwork": "assets/fm/card_0313.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "38552107",
+  "starchip_cost": 800
+}

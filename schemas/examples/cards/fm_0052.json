@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0052",
+  "name": "Hercules Beetle",
+  "description": "",
+  "artwork": "assets/fm/card_0052.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "insect"
+  ],
+  "monster_type": "insect",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1500,
+  "defense": 2000,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "neptune",
+  "password": "52584282",
+  "starchip_cost": 999999
+}

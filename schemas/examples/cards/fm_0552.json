@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0552",
+  "name": "Winged Dragon #2",
+  "description": "",
+  "artwork": "assets/fm/card_0552.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "winged-beast"
+  ],
+  "monster_type": "winged-beast",
+  "attribute": "wind",
+  "level": 4,
+  "attack": 1200,
+  "defense": 1000,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "neptune",
+  "password": "57405307",
+  "starchip_cost": 70
+}

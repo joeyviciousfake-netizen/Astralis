@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0220",
+  "name": "Masked Sorcerer",
+  "description": "",
+  "artwork": "assets/fm/card_0220.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "dark",
+  "level": 4,
+  "attack": 900,
+  "defense": 1400,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "neptune",
+  "password": "10189126",
+  "starchip_cost": 80
+}

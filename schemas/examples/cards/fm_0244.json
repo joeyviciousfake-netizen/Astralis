@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0244",
+  "name": "Dissolverock",
+  "description": "",
+  "artwork": "assets/fm/card_0244.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "rock"
+  ],
+  "monster_type": "rock",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 900,
+  "defense": 1000,
+  "guardian_star_1": "mars",
+  "guardian_star_2": "venus",
+  "password": "40826495",
+  "starchip_cost": 50
+}

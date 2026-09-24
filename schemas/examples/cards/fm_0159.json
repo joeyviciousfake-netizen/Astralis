@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0159",
+  "name": "Dig Beak",
+  "description": "",
+  "artwork": "assets/fm/card_0159.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast"
+  ],
+  "monster_type": "beast",
+  "attribute": "earth",
+  "level": 2,
+  "attack": 500,
+  "defense": 800,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "pluto",
+  "password": "29948642",
+  "starchip_cost": 30
+}

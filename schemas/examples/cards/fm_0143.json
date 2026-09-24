@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0143",
+  "name": "Necrolancer the Timelord",
+  "description": "",
+  "artwork": "assets/fm/card_0143.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 800,
+  "defense": 900,
+  "guardian_star_1": "venus",
+  "guardian_star_2": "uranus",
+  "password": "61454890",
+  "starchip_cost": 40
+}

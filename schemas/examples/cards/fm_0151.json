@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0151",
+  "name": "Rhaimundos of the Red Sword",
+  "description": "",
+  "artwork": "assets/fm/card_0151.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1200,
+  "defense": 1300,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "mars",
+  "password": "62403074",
+  "starchip_cost": 100
+}

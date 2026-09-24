@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0114",
+  "name": "White Magical Hat",
+  "description": "",
+  "artwork": "assets/fm/card_0114.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "light",
+  "level": 3,
+  "attack": 1000,
+  "defense": 700,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "mars",
+  "password": "15150365",
+  "starchip_cost": 40
+}

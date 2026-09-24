@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0165",
+  "name": "The Judgement Hand",
+  "description": "",
+  "artwork": "assets/fm/card_0165.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 1400,
+  "defense": 700,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "venus",
+  "password": "28003512",
+  "starchip_cost": 60
+}

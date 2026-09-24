@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0454",
+  "name": "Destroyer Golem",
+  "description": "",
+  "artwork": "assets/fm/card_0454.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "rock"
+  ],
+  "monster_type": "rock",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1500,
+  "defense": 1000,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "sun",
+  "password": "73481154",
+  "starchip_cost": 100
+}

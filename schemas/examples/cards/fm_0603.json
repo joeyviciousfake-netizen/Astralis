@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0603",
+  "name": "Fairy Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0603.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "wind",
+  "level": 4,
+  "attack": 1100,
+  "defense": 1200,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "saturn",
+  "password": "20315854",
+  "starchip_cost": 999999
+}

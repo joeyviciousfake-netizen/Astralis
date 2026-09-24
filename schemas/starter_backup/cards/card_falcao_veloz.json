@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_falcao_veloz",
+  "name": "Falcão Veloz",
+  "description": "Mais rápido que fofoca de vila.",
+  "artwork": "assets/cards/card_falcao_veloz.png",
+  "card_type": "monster",
+  "monster_type": "beast",
+  "attribute": "wind",
+  "level": 2,
+  "attack": 900,
+  "defense": 700,
+  "effects": [],
+  "tags": [
+    "teste",
+    "beast"
+  ]
+}

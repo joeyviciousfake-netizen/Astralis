@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0689",
+  "name": "Reverse Trap",
+  "description": "",
+  "artwork": "assets/fm/card_0689.png",
+  "card_type": "trap",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "trap"
+  ],
+  "password": "77622396",
+  "starchip_cost": 999999
+}

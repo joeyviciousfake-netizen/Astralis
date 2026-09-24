@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0463",
+  "name": "Electric Snake",
+  "description": "",
+  "artwork": "assets/fm/card_0463.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "thunder"
+  ],
+  "monster_type": "thunder",
+  "attribute": "light",
+  "level": 3,
+  "attack": 800,
+  "defense": 900,
+  "guardian_star_1": "pluto",
+  "guardian_star_2": "mars",
+  "password": "11324436",
+  "starchip_cost": 40
+}

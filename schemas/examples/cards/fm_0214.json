@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0214",
+  "name": "Kagemusha of the Blue Flame",
+  "description": "",
+  "artwork": "assets/fm/card_0214.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 2,
+  "attack": 800,
+  "defense": 400,
+  "guardian_star_1": "mars",
+  "guardian_star_2": "sun",
+  "password": "15401633",
+  "starchip_cost": 25
+}

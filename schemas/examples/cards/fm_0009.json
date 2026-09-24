@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0009",
+  "name": "Shadow Specter",
+  "description": "",
+  "artwork": "assets/fm/card_0009.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "zombie"
+  ],
+  "monster_type": "zombie",
+  "attribute": "dark",
+  "level": 1,
+  "attack": 500,
+  "defense": 200,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "saturn",
+  "password": "40575313",
+  "starchip_cost": 15
+}

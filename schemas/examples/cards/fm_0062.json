@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0062",
+  "name": "Harpie Lady",
+  "description": "",
+  "artwork": "assets/fm/card_0062.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "winged-beast"
+  ],
+  "monster_type": "winged-beast",
+  "attribute": "wind",
+  "level": 4,
+  "attack": 1300,
+  "defense": 1400,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "neptune",
+  "password": "76812113",
+  "starchip_cost": 999999
+}

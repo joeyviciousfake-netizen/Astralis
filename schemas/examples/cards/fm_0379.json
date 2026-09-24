@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0379",
+  "name": "La Jinn the Mystical Genie",
+  "description": "",
+  "artwork": "assets/fm/card_0379.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 4,
+  "attack": 1800,
+  "defense": 1000,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "saturn",
+  "password": "97590747",
+  "starchip_cost": 160
+}

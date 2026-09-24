@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0034",
+  "name": "Saggi the Dark Clown",
+  "description": "",
+  "artwork": "assets/fm/card_0034.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 600,
+  "defense": 1500,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "moon",
+  "password": "66602787",
+  "starchip_cost": 60
+}

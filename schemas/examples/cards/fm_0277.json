@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0277",
+  "name": "Gorgon Egg",
+  "description": "",
+  "artwork": "assets/fm/card_0277.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 300,
+  "defense": 1300,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "jupiter",
+  "password": "11793047",
+  "starchip_cost": 35
+}

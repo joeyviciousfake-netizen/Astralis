@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0414",
+  "name": "Shovel Crusher",
+  "description": "",
+  "artwork": "assets/fm/card_0414.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 900,
+  "defense": 1200,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "neptune",
+  "password": "71950093",
+  "starchip_cost": 60
+}

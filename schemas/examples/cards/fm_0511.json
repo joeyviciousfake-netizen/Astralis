@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0511",
+  "name": "Bean Soldier",
+  "description": "",
+  "artwork": "assets/fm/card_0511.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "plant"
+  ],
+  "monster_type": "plant",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1400,
+  "defense": 1300,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "uranus",
+  "password": "84990171",
+  "starchip_cost": 140
+}

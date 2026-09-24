@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0574",
+  "name": "Witch of the Black Forest",
+  "description": "",
+  "artwork": "assets/fm/card_0574.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "dark",
+  "level": 4,
+  "attack": 1100,
+  "defense": 1200,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "pluto",
+  "password": "78010363",
+  "starchip_cost": 80
+}

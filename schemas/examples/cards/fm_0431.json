@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0431",
+  "name": "Ice Water",
+  "description": "",
+  "artwork": "assets/fm/card_0431.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 3,
+  "attack": 1150,
+  "defense": 900,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "moon",
+  "password": "20848593",
+  "starchip_cost": 55
+}

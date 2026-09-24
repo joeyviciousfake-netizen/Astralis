@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0079",
+  "name": "Megazowler",
+  "description": "",
+  "artwork": "assets/fm/card_0079.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dinosaur"
+  ],
+  "monster_type": "dinosaur",
+  "attribute": "earth",
+  "level": 6,
+  "attack": 1800,
+  "defense": 2000,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "neptune",
+  "password": "75390004",
+  "starchip_cost": 500
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0368",
+  "name": "Shadow Ghoul",
+  "description": "",
+  "artwork": "assets/fm/card_0368.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "zombie"
+  ],
+  "monster_type": "zombie",
+  "attribute": "dark",
+  "level": 5,
+  "attack": 1600,
+  "defense": 1300,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "pluto",
+  "password": "30778711",
+  "starchip_cost": 180
+}

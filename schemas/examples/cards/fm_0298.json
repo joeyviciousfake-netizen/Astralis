@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0298",
+  "name": "Wicked Dragon with the Ersatz Head",
+  "description": "",
+  "artwork": "assets/fm/card_0298.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "wind",
+  "level": 3,
+  "attack": 900,
+  "defense": 900,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "neptune",
+  "password": "02957055",
+  "starchip_cost": 45
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "fm_0709",
+  "name": "Chakra",
+  "description": "",
+  "artwork": "assets/fm/card_0709.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 7,
+  "attack": 2450,
+  "defense": 2000,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "moon"
+}

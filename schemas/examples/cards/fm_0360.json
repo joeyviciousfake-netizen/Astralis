@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "fm_0360",
+  "name": "Zera The Mant",
+  "description": "",
+  "artwork": "assets/fm/card_0360.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 8,
+  "attack": 2800,
+  "defense": 2300,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "saturn"
+}

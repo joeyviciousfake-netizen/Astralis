@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0411",
+  "name": "Bat",
+  "description": "",
+  "artwork": "assets/fm/card_0411.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "wind",
+  "level": 1,
+  "attack": 300,
+  "defense": 350,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "mercury",
+  "password": "72076281",
+  "starchip_cost": 15
+}

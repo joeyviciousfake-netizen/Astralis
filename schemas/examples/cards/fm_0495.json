@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0495",
+  "name": "Musician King",
+  "description": "",
+  "artwork": "assets/fm/card_0495.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "light",
+  "level": 5,
+  "attack": 1750,
+  "defense": 1500,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "mars",
+  "password": "56907389",
+  "starchip_cost": 260
+}

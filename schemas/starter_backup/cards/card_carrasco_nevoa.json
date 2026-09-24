@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_carrasco_nevoa",
+  "name": "Carrasco da Névoa",
+  "description": "Aparece na neblina com machado afiado.",
+  "artwork": "assets/cards/card_carrasco_nevoa.png",
+  "card_type": "monster",
+  "monster_type": "zombie",
+  "attribute": "dark",
+  "level": 6,
+  "attack": 2300,
+  "defense": 1700,
+  "effects": [],
+  "tags": [
+    "teste",
+    "zombie"
+  ]
+}

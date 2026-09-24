@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0614",
+  "name": "Hunter Spider",
+  "description": "",
+  "artwork": "assets/fm/card_0614.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "insect"
+  ],
+  "monster_type": "insect",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1600,
+  "defense": 1400,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "venus",
+  "password": "80141480",
+  "starchip_cost": 200
+}

@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "fm_0719",
+  "name": "Dokurorider",
+  "description": "",
+  "artwork": "assets/fm/card_0719.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "zombie"
+  ],
+  "monster_type": "zombie",
+  "attribute": "dark",
+  "level": 6,
+  "attack": 1900,
+  "defense": 1850,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "mars"
+}

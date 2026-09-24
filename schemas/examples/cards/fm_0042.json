@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0042",
+  "name": "Illusionist Faceless Mage",
+  "description": "",
+  "artwork": "assets/fm/card_0042.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "dark",
+  "level": 5,
+  "attack": 1200,
+  "defense": 2200,
+  "guardian_star_1": "venus",
+  "guardian_star_2": "mars",
+  "password": "28546905",
+  "starchip_cost": 320
+}

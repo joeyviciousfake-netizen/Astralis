@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0566",
+  "name": "Yormungarde",
+  "description": "",
+  "artwork": "assets/fm/card_0566.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "reptile"
+  ],
+  "monster_type": "reptile",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 1200,
+  "defense": 900,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "moon",
+  "password": "17115745",
+  "starchip_cost": 60
+}

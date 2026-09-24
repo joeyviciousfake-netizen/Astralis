@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0270",
+  "name": "Wetha",
+  "description": "",
+  "artwork": "assets/fm/card_0270.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 3,
+  "attack": 1000,
+  "defense": 900,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "saturn",
+  "password": "96643568",
+  "starchip_cost": 50
+}

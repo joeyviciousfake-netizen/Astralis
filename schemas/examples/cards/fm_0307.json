@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0307",
+  "name": "Elf's Light",
+  "description": "",
+  "artwork": "assets/fm/card_0307.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "39897277",
+  "starchip_cost": 800
+}

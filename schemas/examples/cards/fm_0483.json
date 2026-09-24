@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0483",
+  "name": "Garvas",
+  "description": "",
+  "artwork": "assets/fm/card_0483.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast"
+  ],
+  "monster_type": "beast",
+  "attribute": "earth",
+  "level": 6,
+  "attack": 2000,
+  "defense": 1700,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "pluto",
+  "password": "69780745",
+  "starchip_cost": 1000
+}

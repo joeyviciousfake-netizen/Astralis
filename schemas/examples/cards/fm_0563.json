@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0563",
+  "name": "Wretched Ghost of the Attic",
+  "description": "",
+  "artwork": "assets/fm/card_0563.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 2,
+  "attack": 550,
+  "defense": 400,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "uranus",
+  "password": "17238333",
+  "starchip_cost": 20
+}

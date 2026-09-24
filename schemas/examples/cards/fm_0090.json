@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0090",
+  "name": "Gyakutenno Megami",
+  "description": "",
+  "artwork": "assets/fm/card_0090.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fairy"
+  ],
+  "monster_type": "fairy",
+  "attribute": "light",
+  "level": 6,
+  "attack": 1800,
+  "defense": 2000,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "neptune",
+  "password": "31122090",
+  "starchip_cost": 500
+}

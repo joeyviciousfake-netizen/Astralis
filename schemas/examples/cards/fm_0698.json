@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0698",
+  "name": "Cosmo Queen's Prayer",
+  "description": "",
+  "artwork": "assets/fm/card_0698.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ],
+  "password": "04561679",
+  "starchip_cost": 50
+}

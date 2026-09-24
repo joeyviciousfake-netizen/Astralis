@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0257",
+  "name": "Stone Armadiller",
+  "description": "",
+  "artwork": "assets/fm/card_0257.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "rock"
+  ],
+  "monster_type": "rock",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 800,
+  "defense": 1200,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "sun",
+  "password": "63432835",
+  "starchip_cost": 55
+}

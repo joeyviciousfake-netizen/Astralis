@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0636",
+  "name": "Blue-winged Crown",
+  "description": "",
+  "artwork": "assets/fm/card_0636.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "winged-beast"
+  ],
+  "monster_type": "winged-beast",
+  "attribute": "wind",
+  "level": 4,
+  "attack": 1600,
+  "defense": 1200,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "venus",
+  "password": "41396436",
+  "starchip_cost": 160
+}

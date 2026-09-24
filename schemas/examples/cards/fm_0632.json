@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0632",
+  "name": "Stone Ogre Grotto",
+  "description": "",
+  "artwork": "assets/fm/card_0632.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "rock"
+  ],
+  "monster_type": "rock",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1600,
+  "defense": 1500,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "sun",
+  "password": "15023985",
+  "starchip_cost": 230
+}

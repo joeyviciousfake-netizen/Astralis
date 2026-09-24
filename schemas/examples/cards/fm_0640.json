@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0640",
+  "name": "Acid Crawler",
+  "description": "",
+  "artwork": "assets/fm/card_0640.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "insect"
+  ],
+  "monster_type": "insect",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 900,
+  "defense": 700,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "venus",
+  "password": "77568553",
+  "starchip_cost": 999999
+}

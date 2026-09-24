@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0111",
+  "name": "Doma The Angel of Silence",
+  "description": "",
+  "artwork": "assets/fm/card_0111.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fairy"
+  ],
+  "monster_type": "fairy",
+  "attribute": "dark",
+  "level": 5,
+  "attack": 1600,
+  "defense": 1400,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "saturn",
+  "password": "16972957",
+  "starchip_cost": 200
+}

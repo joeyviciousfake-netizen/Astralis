@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0579",
+  "name": "Abyss Flower",
+  "description": "",
+  "artwork": "assets/fm/card_0579.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "plant"
+  ],
+  "monster_type": "plant",
+  "attribute": "earth",
+  "level": 2,
+  "attack": 750,
+  "defense": 400,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "venus",
+  "password": "40387124",
+  "starchip_cost": 25
+}

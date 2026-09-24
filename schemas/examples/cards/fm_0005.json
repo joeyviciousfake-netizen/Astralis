@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0005",
+  "name": "Ryu-kishin",
+  "description": "",
+  "artwork": "assets/fm/card_0005.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 1000,
+  "defense": 500,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "sun",
+  "password": "15303296",
+  "starchip_cost": 30
+}

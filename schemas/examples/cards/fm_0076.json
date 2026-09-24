@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0076",
+  "name": "Krokodilus",
+  "description": "",
+  "artwork": "assets/fm/card_0076.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "reptile"
+  ],
+  "monster_type": "reptile",
+  "attribute": "water",
+  "level": 4,
+  "attack": 1100,
+  "defense": 1200,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "jupiter",
+  "password": "76512652",
+  "starchip_cost": 80
+}

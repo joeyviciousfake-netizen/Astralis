@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0688",
+  "name": "Bad Reaction to Simochi",
+  "description": "",
+  "artwork": "assets/fm/card_0688.png",
+  "card_type": "trap",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "trap"
+  ],
+  "password": "40633297",
+  "starchip_cost": 999999
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0193",
+  "name": "Turtle Tiger",
+  "description": "",
+  "artwork": "assets/fm/card_0193.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 4,
+  "attack": 1000,
+  "defense": 1500,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "saturn",
+  "password": "37313348",
+  "starchip_cost": 100
+}

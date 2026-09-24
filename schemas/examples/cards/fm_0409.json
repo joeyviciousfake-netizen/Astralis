@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0409",
+  "name": "Metal Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0409.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "wind",
+  "level": 6,
+  "attack": 1850,
+  "defense": 1700,
+  "guardian_star_1": "mars",
+  "guardian_star_2": "moon",
+  "password": "09293977",
+  "starchip_cost": 350
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0601",
+  "name": "Tenderness",
+  "description": "",
+  "artwork": "assets/fm/card_0601.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fairy"
+  ],
+  "monster_type": "fairy",
+  "attribute": "light",
+  "level": 3,
+  "attack": 700,
+  "defense": 1400,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "jupiter",
+  "password": "57935140",
+  "starchip_cost": 60
+}

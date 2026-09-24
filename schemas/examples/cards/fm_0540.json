@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0540",
+  "name": "Skelengel",
+  "description": "",
+  "artwork": "assets/fm/card_0540.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fairy"
+  ],
+  "monster_type": "fairy",
+  "attribute": "light",
+  "level": 2,
+  "attack": 900,
+  "defense": 400,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "pluto",
+  "password": "60694662",
+  "starchip_cost": 30
+}

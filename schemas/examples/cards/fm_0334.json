@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0334",
+  "name": "Umi",
+  "description": "",
+  "artwork": "assets/fm/card_0334.png",
+  "card_type": "spell",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spell"
+  ],
+  "password": "22702055",
+  "starchip_cost": 55
+}

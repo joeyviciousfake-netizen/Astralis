@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0092",
+  "name": "Rabid Horseman",
+  "description": "",
+  "artwork": "assets/fm/card_0092.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast-warrior"
+  ],
+  "monster_type": "beast-warrior",
+  "attribute": "earth",
+  "level": 6,
+  "attack": 2000,
+  "defense": 1700,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "pluto",
+  "password": "94905343",
+  "starchip_cost": 999999
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0621",
+  "name": "Succubus Knight",
+  "description": "",
+  "artwork": "assets/fm/card_0621.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "dark",
+  "level": 5,
+  "attack": 1650,
+  "defense": 1300,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "jupiter",
+  "password": "55291359",
+  "starchip_cost": 180
+}

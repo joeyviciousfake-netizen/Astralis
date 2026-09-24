@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0528",
+  "name": "Togex",
+  "description": "",
+  "artwork": "assets/fm/card_0528.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast"
+  ],
+  "monster_type": "beast",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1600,
+  "defense": 1800,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "sun",
+  "password": "33878931",
+  "starchip_cost": 320
+}

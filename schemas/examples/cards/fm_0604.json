@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0604",
+  "name": "Obese Marmot of Nefariousness",
+  "description": "",
+  "artwork": "assets/fm/card_0604.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast"
+  ],
+  "monster_type": "beast",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 750,
+  "defense": 800,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "mars",
+  "password": "56713552",
+  "starchip_cost": 30
+}

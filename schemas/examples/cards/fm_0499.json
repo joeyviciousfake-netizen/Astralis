@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0499",
+  "name": "Kattapillar",
+  "description": "",
+  "artwork": "assets/fm/card_0499.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "insect"
+  ],
+  "monster_type": "insect",
+  "attribute": "earth",
+  "level": 1,
+  "attack": 250,
+  "defense": 300,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "neptune",
+  "password": "81179446",
+  "starchip_cost": 999999
+}

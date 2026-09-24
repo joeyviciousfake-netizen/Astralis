@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "fm_0364",
+  "name": "Black Luster Soldier",
+  "description": "",
+  "artwork": "assets/fm/card_0364.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "dark",
+  "level": 8,
+  "attack": 3000,
+  "defense": 2500,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "uranus"
+}

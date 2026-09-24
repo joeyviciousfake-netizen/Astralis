@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0681",
+  "name": "House of Adhesive Tape",
+  "description": "",
+  "artwork": "assets/fm/card_0681.png",
+  "card_type": "trap",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "trap"
+  ],
+  "password": "15083728",
+  "starchip_cost": 999999
+}

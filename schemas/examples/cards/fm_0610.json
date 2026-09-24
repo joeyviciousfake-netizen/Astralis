@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0610",
+  "name": "Electric Lizard",
+  "description": "",
+  "artwork": "assets/fm/card_0610.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "thunder"
+  ],
+  "monster_type": "thunder",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 850,
+  "defense": 800,
+  "guardian_star_1": "pluto",
+  "guardian_star_2": "sun",
+  "password": "55875323",
+  "starchip_cost": 35
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0311",
+  "name": "Black Pendant",
+  "description": "",
+  "artwork": "assets/fm/card_0311.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "65169794",
+  "starchip_cost": 800
+}

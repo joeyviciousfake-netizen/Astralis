@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0161",
+  "name": "M-warrior #2",
+  "description": "",
+  "artwork": "assets/fm/card_0161.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 500,
+  "defense": 1000,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "venus",
+  "password": "92731455",
+  "starchip_cost": 30
+}

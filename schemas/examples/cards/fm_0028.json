@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0028",
+  "name": "Rock Ogre Grotto #1",
+  "description": "",
+  "artwork": "assets/fm/card_0028.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "rock"
+  ],
+  "monster_type": "rock",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 800,
+  "defense": 1200,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "mercury",
+  "password": "68846917",
+  "starchip_cost": 999999
+}

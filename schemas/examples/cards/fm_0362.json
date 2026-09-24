@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0362",
+  "name": "Millennium Shield",
+  "description": "",
+  "artwork": "assets/fm/card_0362.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 0,
+  "defense": 3000,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "mars",
+  "password": "32012841",
+  "starchip_cost": 200
+}

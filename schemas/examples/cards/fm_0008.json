@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0008",
+  "name": "Mushroom Man",
+  "description": "",
+  "artwork": "assets/fm/card_0008.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "plant"
+  ],
+  "monster_type": "plant",
+  "attribute": "earth",
+  "level": 2,
+  "attack": 800,
+  "defense": 600,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "sun",
+  "password": "14181608",
+  "starchip_cost": 30
+}

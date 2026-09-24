@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0542",
+  "name": "Misairuzame",
+  "description": "",
+  "artwork": "assets/fm/card_0542.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fish"
+  ],
+  "monster_type": "fish",
+  "attribute": "water",
+  "level": 5,
+  "attack": 1400,
+  "defense": 1600,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "sun",
+  "password": "33178416",
+  "starchip_cost": 200
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0153",
+  "name": "Dokuroizo the Grim Reaper",
+  "description": "",
+  "artwork": "assets/fm/card_0153.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "zombie"
+  ],
+  "monster_type": "zombie",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 900,
+  "defense": 1200,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "pluto",
+  "password": "25882881",
+  "starchip_cost": 60
+}

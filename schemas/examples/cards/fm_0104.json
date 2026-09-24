@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0104",
+  "name": "Curtain of the Dark Ones",
+  "description": "",
+  "artwork": "assets/fm/card_0104.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "dark",
+  "level": 2,
+  "attack": 600,
+  "defense": 500,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "jupiter",
+  "password": "22026707",
+  "starchip_cost": 25
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0570",
+  "name": "Trakadon",
+  "description": "",
+  "artwork": "assets/fm/card_0570.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dinosaur"
+  ],
+  "monster_type": "dinosaur",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 1300,
+  "defense": 800,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "venus",
+  "password": "42348802",
+  "starchip_cost": 60
+}

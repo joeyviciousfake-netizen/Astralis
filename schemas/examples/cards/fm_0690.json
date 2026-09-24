@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0690",
+  "name": "Fake Trap",
+  "description": "",
+  "artwork": "assets/fm/card_0690.png",
+  "card_type": "trap",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "trap"
+  ],
+  "password": "03027001",
+  "starchip_cost": 999999
+}

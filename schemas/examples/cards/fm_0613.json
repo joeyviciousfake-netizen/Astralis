@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0613",
+  "name": "Twin-headed Thunder Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0613.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "thunder"
+  ],
+  "monster_type": "thunder",
+  "attribute": "light",
+  "level": 7,
+  "attack": 2800,
+  "defense": 2100,
+  "guardian_star_1": "pluto",
+  "guardian_star_2": "moon",
+  "password": "54752875",
+  "starchip_cost": 1900
+}

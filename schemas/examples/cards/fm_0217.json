@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0217",
+  "name": "B. Skull Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0217.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "dark",
+  "level": 9,
+  "attack": 3200,
+  "defense": 2500,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "jupiter",
+  "password": "11901678",
+  "starchip_cost": 999999
+}

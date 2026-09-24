@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0527",
+  "name": "Milus Radiant",
+  "description": "",
+  "artwork": "assets/fm/card_0527.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast"
+  ],
+  "monster_type": "beast",
+  "attribute": "earth",
+  "level": 1,
+  "attack": 300,
+  "defense": 250,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "neptune",
+  "password": "07489323",
+  "starchip_cost": 10
+}

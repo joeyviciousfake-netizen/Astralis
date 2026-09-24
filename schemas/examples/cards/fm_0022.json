@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0022",
+  "name": "Summoned Skull",
+  "description": "",
+  "artwork": "assets/fm/card_0022.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 6,
+  "attack": 2500,
+  "defense": 1200,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "pluto",
+  "password": "70781052",
+  "starchip_cost": 999999
+}

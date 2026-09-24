@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0350",
+  "name": "Dark-piercing Light",
+  "description": "",
+  "artwork": "assets/fm/card_0350.png",
+  "card_type": "spell",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spell"
+  ],
+  "password": "45895206",
+  "starchip_cost": 999999
+}

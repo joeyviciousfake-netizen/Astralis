@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0389",
+  "name": "Giltia the D. Knight",
+  "description": "",
+  "artwork": "assets/fm/card_0389.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "light",
+  "level": 5,
+  "attack": 1850,
+  "defense": 1500,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "mars",
+  "password": "51828629",
+  "starchip_cost": 290
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0507",
+  "name": "Crazy Fish",
+  "description": "",
+  "artwork": "assets/fm/card_0507.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fish"
+  ],
+  "monster_type": "fish",
+  "attribute": "water",
+  "level": 4,
+  "attack": 1600,
+  "defense": 1200,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "jupiter",
+  "password": "53713014",
+  "starchip_cost": 160
+}

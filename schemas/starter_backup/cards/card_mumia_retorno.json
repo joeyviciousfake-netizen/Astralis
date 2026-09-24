@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_mumia_retorno",
+  "name": "Múmia do Retorno",
+  "description": "Voltou para buscar o que esqueceu.",
+  "artwork": "assets/cards/card_mumia_retorno.png",
+  "card_type": "monster",
+  "monster_type": "zombie",
+  "attribute": "dark",
+  "level": 4,
+  "attack": 1500,
+  "defense": 1200,
+  "effects": [],
+  "tags": [
+    "teste",
+    "zombie"
+  ]
+}

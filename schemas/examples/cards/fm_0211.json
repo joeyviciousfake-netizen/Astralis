@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0211",
+  "name": "Kaminarikozou",
+  "description": "",
+  "artwork": "assets/fm/card_0211.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "thunder"
+  ],
+  "monster_type": "thunder",
+  "attribute": "wind",
+  "level": 2,
+  "attack": 700,
+  "defense": 600,
+  "guardian_star_1": "pluto",
+  "guardian_star_2": "venus",
+  "password": "15510988",
+  "starchip_cost": 30
+}

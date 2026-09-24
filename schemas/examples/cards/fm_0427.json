@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0427",
+  "name": "Kaiser Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0427.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "light",
+  "level": 7,
+  "attack": 2300,
+  "defense": 2000,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "jupiter",
+  "password": "94566432",
+  "starchip_cost": 900
+}

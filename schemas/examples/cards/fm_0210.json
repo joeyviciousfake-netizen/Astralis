@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0210",
+  "name": "Hinotama Soul",
+  "description": "",
+  "artwork": "assets/fm/card_0210.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "pyro"
+  ],
+  "monster_type": "pyro",
+  "attribute": "fire",
+  "level": 2,
+  "attack": 600,
+  "defense": 500,
+  "guardian_star_1": "mars",
+  "guardian_star_2": "uranus",
+  "password": "96851799",
+  "starchip_cost": 25
+}

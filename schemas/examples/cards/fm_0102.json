@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0102",
+  "name": "Mask of Darkness",
+  "description": "",
+  "artwork": "assets/fm/card_0102.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 2,
+  "attack": 900,
+  "defense": 400,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "moon",
+  "password": "28933734",
+  "starchip_cost": 30
+}

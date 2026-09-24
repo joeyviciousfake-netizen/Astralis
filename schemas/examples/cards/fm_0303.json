@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0303",
+  "name": "Dark Energy",
+  "description": "",
+  "artwork": "assets/fm/card_0303.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "04614116",
+  "starchip_cost": 800
+}

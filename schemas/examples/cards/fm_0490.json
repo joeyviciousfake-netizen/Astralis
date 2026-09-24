@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0490",
+  "name": "Needle Ball",
+  "description": "",
+  "artwork": "assets/fm/card_0490.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 2,
+  "attack": 750,
+  "defense": 700,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "uranus",
+  "password": "94230224",
+  "starchip_cost": 30
+}

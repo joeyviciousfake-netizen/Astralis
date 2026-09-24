@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0386",
+  "name": "Harpie's Pet Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0386.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "wind",
+  "level": 7,
+  "attack": 2000,
+  "defense": 2500,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "moon",
+  "password": "52040216",
+  "starchip_cost": 999999
+}

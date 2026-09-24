@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0230",
+  "name": "Rare Fish",
+  "description": "",
+  "artwork": "assets/fm/card_0230.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fish"
+  ],
+  "monster_type": "fish",
+  "attribute": "water",
+  "level": 4,
+  "attack": 1500,
+  "defense": 1200,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "jupiter",
+  "password": "80516007",
+  "starchip_cost": 140
+}

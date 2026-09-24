@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0582",
+  "name": "Dark Witch",
+  "description": "",
+  "artwork": "assets/fm/card_0582.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fairy"
+  ],
+  "monster_type": "fairy",
+  "attribute": "light",
+  "level": 5,
+  "attack": 1800,
+  "defense": 1700,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "neptune",
+  "password": "35565537",
+  "starchip_cost": 350
+}

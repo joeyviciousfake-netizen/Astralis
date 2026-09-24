@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0494",
+  "name": "Rainbow Marine Mermaid",
+  "description": "",
+  "artwork": "assets/fm/card_0494.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fish"
+  ],
+  "monster_type": "fish",
+  "attribute": "water",
+  "level": 5,
+  "attack": 1550,
+  "defense": 1700,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "venus",
+  "password": "29402771",
+  "starchip_cost": 260
+}

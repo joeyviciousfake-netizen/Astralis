@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0310",
+  "name": "Vile Germs",
+  "description": "",
+  "artwork": "assets/fm/card_0310.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "39774685",
+  "starchip_cost": 800
+}

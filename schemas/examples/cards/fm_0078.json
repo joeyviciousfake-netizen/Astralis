@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0078",
+  "name": "Axe Raider",
+  "description": "",
+  "artwork": "assets/fm/card_0078.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1700,
+  "defense": 1150,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "mercury",
+  "password": "48305365",
+  "starchip_cost": 160
+}

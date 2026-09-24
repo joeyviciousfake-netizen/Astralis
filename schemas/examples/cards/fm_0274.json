@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0274",
+  "name": "Green Phantom King",
+  "description": "",
+  "artwork": "assets/fm/card_0274.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "plant"
+  ],
+  "monster_type": "plant",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 500,
+  "defense": 1600,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "neptune",
+  "password": "22910685",
+  "starchip_cost": 60
+}

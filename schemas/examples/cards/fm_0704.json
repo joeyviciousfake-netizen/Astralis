@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "fm_0704",
+  "name": "Skull Guardian",
+  "description": "",
+  "artwork": "assets/fm/card_0704.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "light",
+  "level": 7,
+  "attack": 2050,
+  "defense": 2500,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "jupiter"
+}

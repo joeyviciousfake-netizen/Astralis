@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "id": "fm_duelist_11",
+  "name": "Mai Valentine",
+  "deck_id": "fm_deck_11",
+  "starting_lp": 8000,
+  "ai_preset": {
+    "dificuldade": "normal",
+    "agressividade": 50,
+    "uso_fusao": 50,
+    "protecao_lp": 50
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0697",
+  "name": "Garma Sword Oath",
+  "description": "",
+  "artwork": "assets/fm/card_0697.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ],
+  "password": "78577570",
+  "starchip_cost": 50
+}

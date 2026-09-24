@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0403",
+  "name": "Leogun",
+  "description": "",
+  "artwork": "assets/fm/card_0403.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast"
+  ],
+  "monster_type": "beast",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1750,
+  "defense": 1550,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "mercury",
+  "password": "10538007",
+  "starchip_cost": 290
+}

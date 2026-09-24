@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0106",
+  "name": "Spirit of the Winds",
+  "description": "",
+  "artwork": "assets/fm/card_0106.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "wind",
+  "level": 5,
+  "attack": 1700,
+  "defense": 1400,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "sun",
+  "password": "54615781",
+  "starchip_cost": 230
+}

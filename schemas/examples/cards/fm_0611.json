@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0611",
+  "name": "Hiro's Shadow Scout",
+  "description": "",
+  "artwork": "assets/fm/card_0611.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 2,
+  "attack": 650,
+  "defense": 500,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "saturn",
+  "password": "81863068",
+  "starchip_cost": 25
+}

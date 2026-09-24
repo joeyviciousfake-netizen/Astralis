@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0656",
+  "name": "Eternal Rest",
+  "description": "",
+  "artwork": "assets/fm/card_0656.png",
+  "card_type": "spell",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spell"
+  ],
+  "password": "95051344",
+  "starchip_cost": 999999
+}

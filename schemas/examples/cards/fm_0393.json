@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0393",
+  "name": "Zone Eater",
+  "description": "",
+  "artwork": "assets/fm/card_0393.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 1,
+  "attack": 250,
+  "defense": 200,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "sun",
+  "password": "86100785",
+  "starchip_cost": 10
+}

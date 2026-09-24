@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0170",
+  "name": "Spirit of the Harp",
+  "description": "",
+  "artwork": "assets/fm/card_0170.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fairy"
+  ],
+  "monster_type": "fairy",
+  "attribute": "light",
+  "level": 4,
+  "attack": 800,
+  "defense": 2000,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "mars",
+  "password": "80770678",
+  "starchip_cost": 160
+}

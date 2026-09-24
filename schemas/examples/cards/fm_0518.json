@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0518",
+  "name": "Boulder Tortoise",
+  "description": "",
+  "artwork": "assets/fm/card_0518.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "earth",
+  "level": 6,
+  "attack": 1450,
+  "defense": 2200,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "neptune",
+  "password": "09540040",
+  "starchip_cost": 400
+}

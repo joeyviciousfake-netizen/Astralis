@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0023",
+  "name": "The Wicked Worm Beast",
+  "description": "",
+  "artwork": "assets/fm/card_0023.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast"
+  ],
+  "monster_type": "beast",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 1400,
+  "defense": 700,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "venus",
+  "password": "06285791",
+  "starchip_cost": 60
+}

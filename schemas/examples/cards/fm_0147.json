@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0147",
+  "name": "Monster Egg",
+  "description": "",
+  "artwork": "assets/fm/card_0147.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 600,
+  "defense": 900,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "jupiter",
+  "password": "36121917",
+  "starchip_cost": 999999
+}

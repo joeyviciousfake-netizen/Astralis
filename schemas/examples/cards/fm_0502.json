@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0502",
+  "name": "D. Human",
+  "description": "",
+  "artwork": "assets/fm/card_0502.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1300,
+  "defense": 1100,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "mars",
+  "password": "81057959",
+  "starchip_cost": 120
+}

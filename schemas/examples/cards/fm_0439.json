@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0439",
+  "name": "Bottom Dweller",
+  "description": "",
+  "artwork": "assets/fm/card_0439.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fish"
+  ],
+  "monster_type": "fish",
+  "attribute": "water",
+  "level": 5,
+  "attack": 1650,
+  "defense": 1700,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "sun",
+  "password": "81386177",
+  "starchip_cost": 290
+}

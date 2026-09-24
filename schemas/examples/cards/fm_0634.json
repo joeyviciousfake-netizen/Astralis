@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0634",
+  "name": "Night Lizard",
+  "description": "",
+  "artwork": "assets/fm/card_0634.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 4,
+  "attack": 1150,
+  "defense": 1300,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "jupiter",
+  "password": "78402798",
+  "starchip_cost": 120
+}

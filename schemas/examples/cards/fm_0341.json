@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0341",
+  "name": "Soul of the Pure",
+  "description": "",
+  "artwork": "assets/fm/card_0341.png",
+  "card_type": "spell",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spell"
+  ],
+  "password": "47852924",
+  "starchip_cost": 35000
+}

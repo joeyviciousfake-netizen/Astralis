@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0081",
+  "name": "Crawling Dragon #2",
+  "description": "",
+  "artwork": "assets/fm/card_0081.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dinosaur"
+  ],
+  "monster_type": "dinosaur",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1600,
+  "defense": 1200,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "pluto",
+  "password": "38289717",
+  "starchip_cost": 160
+}

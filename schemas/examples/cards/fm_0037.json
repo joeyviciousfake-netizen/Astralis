@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0037",
+  "name": "Gaia the Dragon Champion",
+  "description": "",
+  "artwork": "assets/fm/card_0037.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "wind",
+  "level": 7,
+  "attack": 2600,
+  "defense": 2100,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "mercury",
+  "password": "66889139",
+  "starchip_cost": 999999
+}

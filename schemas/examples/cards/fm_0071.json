@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0071",
+  "name": "Jellyfish",
+  "description": "",
+  "artwork": "assets/fm/card_0071.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 4,
+  "attack": 1200,
+  "defense": 1500,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "mercury",
+  "password": "14851496",
+  "starchip_cost": 140
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0699",
+  "name": "Revival of Skeleton Rider",
+  "description": "",
+  "artwork": "assets/fm/card_0699.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ],
+  "password": "31066283",
+  "starchip_cost": 10
+}

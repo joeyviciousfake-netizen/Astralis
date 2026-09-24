@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0338",
+  "name": "Mooyan Curry",
+  "description": "",
+  "artwork": "assets/fm/card_0338.png",
+  "card_type": "spell",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spell"
+  ],
+  "password": "58074572",
+  "starchip_cost": 999999
+}

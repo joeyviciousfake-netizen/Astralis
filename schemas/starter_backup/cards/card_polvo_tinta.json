@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_polvo_tinta",
+  "name": "Polvo de Tinta",
+  "description": "Some na fumaça preta e volta com tudo.",
+  "artwork": "assets/cards/card_polvo_tinta.png",
+  "card_type": "monster",
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 3,
+  "attack": 1000,
+  "defense": 1300,
+  "effects": [],
+  "tags": [
+    "teste",
+    "aqua"
+  ]
+}

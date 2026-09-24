@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0436",
+  "name": "White Dolphin",
+  "description": "",
+  "artwork": "assets/fm/card_0436.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fish"
+  ],
+  "monster_type": "fish",
+  "attribute": "water",
+  "level": 2,
+  "attack": 500,
+  "defense": 400,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "jupiter",
+  "password": "92409659",
+  "starchip_cost": 20
+}

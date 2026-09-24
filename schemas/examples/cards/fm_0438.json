@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0438",
+  "name": "Metal Fish",
+  "description": "",
+  "artwork": "assets/fm/card_0438.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "water",
+  "level": 5,
+  "attack": 1600,
+  "defense": 1900,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "saturn",
+  "password": "55998462",
+  "starchip_cost": 350
+}

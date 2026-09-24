@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0551",
+  "name": "Dark Elf",
+  "description": "",
+  "artwork": "assets/fm/card_0551.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "dark",
+  "level": 4,
+  "attack": 2000,
+  "defense": 800,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "jupiter",
+  "password": "21417692",
+  "starchip_cost": 160
+}

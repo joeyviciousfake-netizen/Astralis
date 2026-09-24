@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0593",
+  "name": "Giant Turtle Who Feeds on Flames",
+  "description": "",
+  "artwork": "assets/fm/card_0593.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 5,
+  "attack": 1400,
+  "defense": 1800,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "mars",
+  "password": "96981563",
+  "starchip_cost": 260
+}

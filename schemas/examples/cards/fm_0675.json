@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0675",
+  "name": "Ultimate Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0675.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ],
+  "password": "17928958",
+  "starchip_cost": 999999
+}

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_lobo_alfa",
+  "name": "Lobo Alfa",
+  "description": "Uiva e a matilha inteira obedece.",
+  "artwork": "assets/cards/card_lobo_alfa.png",
+  "card_type": "monster",
+  "monster_type": "beast",
+  "attribute": "wind",
+  "level": 4,
+  "attack": 1500,
+  "defense": 1000,
+  "effects": [],
+  "tags": [
+    "teste",
+    "beast"
+  ]
+}

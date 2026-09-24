@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0448",
+  "name": "Spike Seadra",
+  "description": "",
+  "artwork": "assets/fm/card_0448.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "sea-serpent"
+  ],
+  "monster_type": "sea-serpent",
+  "attribute": "water",
+  "level": 5,
+  "attack": 1600,
+  "defense": 1300,
+  "guardian_star_1": "pluto",
+  "guardian_star_2": "mercury",
+  "password": "85326399",
+  "starchip_cost": 180
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0046",
+  "name": "Griffore",
+  "description": "",
+  "artwork": "assets/fm/card_0046.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast"
+  ],
+  "monster_type": "beast",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1200,
+  "defense": 1500,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "mercury",
+  "password": "53829412",
+  "starchip_cost": 140
+}

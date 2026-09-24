@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_flor_carnivora",
+  "name": "Flor Carnívora",
+  "description": "Cheirosa por fora, faminta por dentro.",
+  "artwork": "assets/cards/card_flor_carnivora.png",
+  "card_type": "monster",
+  "monster_type": "plant",
+  "attribute": "dark",
+  "level": 5,
+  "attack": 1800,
+  "defense": 1200,
+  "effects": [],
+  "tags": [
+    "teste",
+    "plant"
+  ]
+}

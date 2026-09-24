@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0375",
+  "name": "Dungeon Worm",
+  "description": "",
+  "artwork": "assets/fm/card_0375.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "insect"
+  ],
+  "monster_type": "insect",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1800,
+  "defense": 1500,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "moon",
+  "password": "51228280",
+  "starchip_cost": 290
+}

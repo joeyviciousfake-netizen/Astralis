@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0594",
+  "name": "Rose Spectre of Dunn",
+  "description": "",
+  "artwork": "assets/fm/card_0594.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "plant"
+  ],
+  "monster_type": "plant",
+  "attribute": "dark",
+  "level": 6,
+  "attack": 2000,
+  "defense": 1800,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "jupiter",
+  "password": "32485271",
+  "starchip_cost": 500
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0038",
+  "name": "Gaia the Fierce Knight",
+  "description": "",
+  "artwork": "assets/fm/card_0038.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 7,
+  "attack": 2300,
+  "defense": 2100,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "jupiter",
+  "password": "06368038",
+  "starchip_cost": 999999
+}

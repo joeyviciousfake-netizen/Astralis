@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0093",
+  "name": "Zanki",
+  "description": "",
+  "artwork": "assets/fm/card_0093.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1500,
+  "defense": 1700,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "jupiter",
+  "password": "30090452",
+  "starchip_cost": 260
+}

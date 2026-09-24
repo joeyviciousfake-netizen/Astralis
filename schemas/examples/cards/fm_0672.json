@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0672",
+  "name": "Harpie's Feather Duster",
+  "description": "",
+  "artwork": "assets/fm/card_0672.png",
+  "card_type": "spell",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spell"
+  ],
+  "password": "18144506",
+  "starchip_cost": 999999
+}

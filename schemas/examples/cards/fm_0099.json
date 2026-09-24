@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0099",
+  "name": "Pumpking the King of Ghosts",
+  "description": "",
+  "artwork": "assets/fm/card_0099.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "zombie"
+  ],
+  "monster_type": "zombie",
+  "attribute": "dark",
+  "level": 6,
+  "attack": 1800,
+  "defense": 2000,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "neptune",
+  "password": "29155212",
+  "starchip_cost": 500
+}

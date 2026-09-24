@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0486",
+  "name": "Boo Koo",
+  "description": "",
+  "artwork": "assets/fm/card_0486.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "dark",
+  "level": 2,
+  "attack": 650,
+  "defense": 500,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "jupiter",
+  "password": "68963107",
+  "starchip_cost": 25
+}

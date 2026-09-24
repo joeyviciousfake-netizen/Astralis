@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0659",
+  "name": "Winged Trumpeter",
+  "description": "",
+  "artwork": "assets/fm/card_0659.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "94939166",
+  "starchip_cost": 800
+}

@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_besouro_tita",
+  "name": "Besouro Titã",
+  "description": "Carrega dez vezes o próprio peso.",
+  "artwork": "assets/cards/card_besouro_tita.png",
+  "card_type": "monster",
+  "monster_type": "insect",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1900,
+  "defense": 2000,
+  "effects": [],
+  "tags": [
+    "teste",
+    "insect"
+  ]
+}

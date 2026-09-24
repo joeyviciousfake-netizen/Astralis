@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0376",
+  "name": "Monster Tamer",
+  "description": "",
+  "artwork": "assets/fm/card_0376.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1800,
+  "defense": 1600,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "pluto",
+  "password": "97612389",
+  "starchip_cost": 320
+}

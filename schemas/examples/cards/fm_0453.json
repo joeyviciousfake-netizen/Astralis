@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0453",
+  "name": "Millennium Golem",
+  "description": "",
+  "artwork": "assets/fm/card_0453.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "rock"
+  ],
+  "monster_type": "rock",
+  "attribute": "earth",
+  "level": 6,
+  "attack": 2000,
+  "defense": 2200,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "jupiter",
+  "password": "47986555",
+  "starchip_cost": 800
+}

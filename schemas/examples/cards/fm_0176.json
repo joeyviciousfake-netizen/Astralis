@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0176",
+  "name": "Fire Eye",
+  "description": "",
+  "artwork": "assets/fm/card_0176.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "pyro"
+  ],
+  "monster_type": "pyro",
+  "attribute": "fire",
+  "level": 2,
+  "attack": 800,
+  "defense": 600,
+  "guardian_star_1": "mars",
+  "guardian_star_2": "saturn",
+  "password": "88435542",
+  "starchip_cost": 30
+}

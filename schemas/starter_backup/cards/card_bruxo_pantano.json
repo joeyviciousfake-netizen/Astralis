@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_bruxo_pantano",
+  "name": "Bruxo do Pântano",
+  "description": "Faz poção com água parada e mau humor.",
+  "artwork": "assets/cards/card_bruxo_pantano.png",
+  "card_type": "monster",
+  "monster_type": "spellcaster",
+  "attribute": "water",
+  "level": 3,
+  "attack": 1200,
+  "defense": 1000,
+  "effects": [],
+  "tags": [
+    "teste",
+    "spellcaster"
+  ]
+}

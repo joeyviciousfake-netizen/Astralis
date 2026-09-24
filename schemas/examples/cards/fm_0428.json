@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0428",
+  "name": "Magician of Faith",
+  "description": "",
+  "artwork": "assets/fm/card_0428.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "light",
+  "level": 1,
+  "attack": 300,
+  "defense": 400,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "saturn",
+  "password": "31560081",
+  "starchip_cost": 999999
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0116",
+  "name": "Nightmare Scorpion",
+  "description": "",
+  "artwork": "assets/fm/card_0116.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "insect"
+  ],
+  "monster_type": "insect",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 900,
+  "defense": 800,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "neptune",
+  "password": "88643173",
+  "starchip_cost": 40
+}

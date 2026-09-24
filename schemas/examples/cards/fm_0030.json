@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0030",
+  "name": "Zombie Warrior",
+  "description": "",
+  "artwork": "assets/fm/card_0030.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "zombie"
+  ],
+  "monster_type": "zombie",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 1200,
+  "defense": 900,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "mars",
+  "password": "31339260",
+  "starchip_cost": 60
+}

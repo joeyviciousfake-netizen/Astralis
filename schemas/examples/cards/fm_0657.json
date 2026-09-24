@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0657",
+  "name": "Megamorph",
+  "description": "",
+  "artwork": "assets/fm/card_0657.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "22046459",
+  "starchip_cost": 50000
+}

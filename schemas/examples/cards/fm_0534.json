@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0534",
+  "name": "Minar",
+  "description": "",
+  "artwork": "assets/fm/card_0534.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "insect"
+  ],
+  "monster_type": "insect",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 850,
+  "defense": 750,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "neptune",
+  "password": "32539892",
+  "starchip_cost": 35
+}

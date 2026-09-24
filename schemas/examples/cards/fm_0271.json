@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0271",
+  "name": "Megirus Light",
+  "description": "",
+  "artwork": "assets/fm/card_0271.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 900,
+  "defense": 600,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "uranus",
+  "password": "23032273",
+  "starchip_cost": 30
+}

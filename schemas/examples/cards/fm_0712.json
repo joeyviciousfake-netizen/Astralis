@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0712",
+  "name": "Meteor Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0712.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "earth",
+  "level": 6,
+  "attack": 1800,
+  "defense": 2000,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "neptune",
+  "password": "64271667",
+  "starchip_cost": 999999
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0554",
+  "name": "Lava Battleguard",
+  "description": "",
+  "artwork": "assets/fm/card_0554.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1550,
+  "defense": 1800,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "mars",
+  "password": "20394040",
+  "starchip_cost": 999999
+}

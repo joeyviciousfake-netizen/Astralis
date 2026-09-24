@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0101",
+  "name": "Wings of Wicked Flame",
+  "description": "",
+  "artwork": "assets/fm/card_0101.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "pyro"
+  ],
+  "monster_type": "pyro",
+  "attribute": "fire",
+  "level": 2,
+  "attack": 700,
+  "defense": 600,
+  "guardian_star_1": "mars",
+  "guardian_star_2": "saturn",
+  "password": "92944626",
+  "starchip_cost": 30
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0619",
+  "name": "Rock Spirit",
+  "description": "",
+  "artwork": "assets/fm/card_0619.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1650,
+  "defense": 1900,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "mars",
+  "password": "82818645",
+  "starchip_cost": 350
+}

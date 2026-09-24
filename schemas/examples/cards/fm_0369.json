@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0369",
+  "name": "Wall Shadow",
+  "description": "",
+  "artwork": "assets/fm/card_0369.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "dark",
+  "level": 7,
+  "attack": 1600,
+  "defense": 3000,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "neptune",
+  "password": "63162310",
+  "starchip_cost": 999999
+}

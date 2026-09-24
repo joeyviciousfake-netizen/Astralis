@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0007",
+  "name": "Winged Dragon #1",
+  "description": "",
+  "artwork": "assets/fm/card_0007.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "wind",
+  "level": 4,
+  "attack": 1400,
+  "defense": 1200,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "moon",
+  "password": "87796900",
+  "starchip_cost": 999999
+}

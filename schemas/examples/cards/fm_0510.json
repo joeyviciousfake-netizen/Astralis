@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0510",
+  "name": "Laughing Flower",
+  "description": "",
+  "artwork": "assets/fm/card_0510.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "plant"
+  ],
+  "monster_type": "plant",
+  "attribute": "earth",
+  "level": 2,
+  "attack": 900,
+  "defense": 500,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "mercury",
+  "password": "42591472",
+  "starchip_cost": 30
+}

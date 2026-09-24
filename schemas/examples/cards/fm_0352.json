@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0352",
+  "name": "Kanan the Swordmistress",
+  "description": "",
+  "artwork": "assets/fm/card_0352.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1400,
+  "defense": 1400,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "neptune",
+  "password": "12829151",
+  "starchip_cost": 160
+}

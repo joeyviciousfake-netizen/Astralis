@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0304",
+  "name": "Axe of Despair",
+  "description": "",
+  "artwork": "assets/fm/card_0304.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "40619825",
+  "starchip_cost": 800
+}

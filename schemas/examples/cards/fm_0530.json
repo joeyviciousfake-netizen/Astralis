@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0530",
+  "name": "Eldeen",
+  "description": "",
+  "artwork": "assets/fm/card_0530.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "light",
+  "level": 3,
+  "attack": 950,
+  "defense": 1000,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "moon",
+  "password": "06367785",
+  "starchip_cost": 50
+}

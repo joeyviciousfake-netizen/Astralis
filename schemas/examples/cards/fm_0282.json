@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0282",
+  "name": "Mystical Sheep #2",
+  "description": "",
+  "artwork": "assets/fm/card_0282.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast"
+  ],
+  "monster_type": "beast",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 800,
+  "defense": 1000,
+  "guardian_star_1": "venus",
+  "guardian_star_2": "saturn",
+  "password": "83464209",
+  "starchip_cost": 45
+}

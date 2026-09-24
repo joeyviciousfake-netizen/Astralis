@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0269",
+  "name": "Versago the Destroyer",
+  "description": "",
+  "artwork": "assets/fm/card_0269.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 1100,
+  "defense": 900,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "saturn",
+  "password": "50259460",
+  "starchip_cost": 55
+}

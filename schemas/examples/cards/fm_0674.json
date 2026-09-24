@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0674",
+  "name": "Beastry Mirror Ritual",
+  "description": "",
+  "artwork": "assets/fm/card_0674.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ],
+  "password": "81933259",
+  "starchip_cost": 100
+}

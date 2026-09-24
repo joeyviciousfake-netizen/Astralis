@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0468",
+  "name": "Queen Bird",
+  "description": "",
+  "artwork": "assets/fm/card_0468.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "winged-beast"
+  ],
+  "monster_type": "winged-beast",
+  "attribute": "wind",
+  "level": 5,
+  "attack": 1200,
+  "defense": 2000,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "moon",
+  "password": "73081602",
+  "starchip_cost": 260
+}

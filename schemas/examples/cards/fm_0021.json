@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0021",
+  "name": "Exodia the Forbidden",
+  "description": "",
+  "artwork": "assets/fm/card_0021.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 1000,
+  "defense": 1000,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "neptune",
+  "password": "33396948",
+  "starchip_cost": 999999
+}

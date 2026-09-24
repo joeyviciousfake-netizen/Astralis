@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0679",
+  "name": "Novox's Prayer",
+  "description": "",
+  "artwork": "assets/fm/card_0679.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ],
+  "password": "43694075",
+  "starchip_cost": 50
+}

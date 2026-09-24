@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0441",
+  "name": "Mech Bass",
+  "description": "",
+  "artwork": "assets/fm/card_0441.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "water",
+  "level": 5,
+  "attack": 1800,
+  "defense": 1500,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "venus",
+  "password": "50176820",
+  "starchip_cost": 290
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0592",
+  "name": "Muse-A",
+  "description": "",
+  "artwork": "assets/fm/card_0592.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fairy"
+  ],
+  "monster_type": "fairy",
+  "attribute": "light",
+  "level": 3,
+  "attack": 850,
+  "defense": 900,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "mars",
+  "password": "69992868",
+  "starchip_cost": 40
+}

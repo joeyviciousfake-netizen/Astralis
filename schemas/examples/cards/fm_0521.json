@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0521",
+  "name": "Skullbird",
+  "description": "",
+  "artwork": "assets/fm/card_0521.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "winged-beast"
+  ],
+  "monster_type": "winged-beast",
+  "attribute": "wind",
+  "level": 6,
+  "attack": 1900,
+  "defense": 1700,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "venus",
+  "password": "08327462",
+  "starchip_cost": 400
+}

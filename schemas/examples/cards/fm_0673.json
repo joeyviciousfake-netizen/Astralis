@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0673",
+  "name": "War-lion Ritual",
+  "description": "",
+  "artwork": "assets/fm/card_0673.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ],
+  "password": "54539105",
+  "starchip_cost": 100
+}

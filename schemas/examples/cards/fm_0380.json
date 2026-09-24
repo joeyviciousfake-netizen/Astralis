@@ -1,0 +1,20 @@
+{
+  "schema_version": 1,
+  "id": "fm_0380",
+  "name": "Blue-eyes Ultimate Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0380.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "light",
+  "level": 12,
+  "attack": 4500,
+  "defense": 3800,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "venus"
+}

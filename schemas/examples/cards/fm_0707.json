@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0707",
+  "name": "Skull Knight",
+  "description": "",
+  "artwork": "assets/fm/card_0707.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "dark",
+  "level": 7,
+  "attack": 2650,
+  "defense": 2250,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "neptune",
+  "password": "02504891",
+  "starchip_cost": 999999
+}

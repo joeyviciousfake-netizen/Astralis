@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0239",
+  "name": "Vishwar Randi",
+  "description": "",
+  "artwork": "assets/fm/card_0239.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 900,
+  "defense": 700,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "uranus",
+  "password": "78556320",
+  "starchip_cost": 35
+}

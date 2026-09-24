@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0321",
+  "name": "Malevolent Nuzzler",
+  "description": "",
+  "artwork": "assets/fm/card_0321.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "99597615",
+  "starchip_cost": 800
+}

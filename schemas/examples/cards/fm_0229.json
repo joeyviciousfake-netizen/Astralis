@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0229",
+  "name": "Hourglass of Life",
+  "description": "",
+  "artwork": "assets/fm/card_0229.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fairy"
+  ],
+  "monster_type": "fairy",
+  "attribute": "light",
+  "level": 2,
+  "attack": 700,
+  "defense": 600,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "neptune",
+  "password": "08783685",
+  "starchip_cost": 30
+}

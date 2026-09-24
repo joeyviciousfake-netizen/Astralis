@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0292",
+  "name": "Psychic Kappa",
+  "description": "",
+  "artwork": "assets/fm/card_0292.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 2,
+  "attack": 400,
+  "defense": 1000,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "venus",
+  "password": "07892180",
+  "starchip_cost": 30
+}

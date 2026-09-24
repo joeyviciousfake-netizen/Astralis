@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0253",
+  "name": "Angelwitch",
+  "description": "",
+  "artwork": "assets/fm/card_0253.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 800,
+  "defense": 1000,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "neptune",
+  "password": "37160778",
+  "starchip_cost": 45
+}

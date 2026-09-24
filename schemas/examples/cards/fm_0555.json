@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0555",
+  "name": "Tyhone #2",
+  "description": "",
+  "artwork": "assets/fm/card_0555.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "fire",
+  "level": 6,
+  "attack": 1700,
+  "defense": 1900,
+  "guardian_star_1": "mars",
+  "guardian_star_2": "uranus",
+  "password": "56789759",
+  "starchip_cost": 999999
+}

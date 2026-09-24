@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0572",
+  "name": "Empress Judge",
+  "description": "",
+  "artwork": "assets/fm/card_0572.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 6,
+  "attack": 2100,
+  "defense": 1700,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "venus",
+  "password": "15237615",
+  "starchip_cost": 500
+}

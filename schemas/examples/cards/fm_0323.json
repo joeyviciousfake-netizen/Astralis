@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0323",
+  "name": "Book of Secret Arts",
+  "description": "",
+  "artwork": "assets/fm/card_0323.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "91595718",
+  "starchip_cost": 800
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0595",
+  "name": "Fiend Refrection #1",
+  "description": "",
+  "artwork": "assets/fm/card_0595.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "winged-beast"
+  ],
+  "monster_type": "winged-beast",
+  "attribute": "wind",
+  "level": 4,
+  "attack": 1300,
+  "defense": 1400,
+  "guardian_star_1": "venus",
+  "guardian_star_2": "jupiter",
+  "password": "68870276",
+  "starchip_cost": 140
+}

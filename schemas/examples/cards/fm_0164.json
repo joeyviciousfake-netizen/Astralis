@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0164",
+  "name": "Lord of Zemia",
+  "description": "",
+  "artwork": "assets/fm/card_0164.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 4,
+  "attack": 1300,
+  "defense": 1000,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "uranus",
+  "password": "81618817",
+  "starchip_cost": 80
+}

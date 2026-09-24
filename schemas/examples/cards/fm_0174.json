@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0174",
+  "name": "Hurricail",
+  "description": "",
+  "artwork": "assets/fm/card_0174.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "wind",
+  "level": 2,
+  "attack": 900,
+  "defense": 200,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "neptune",
+  "password": "15042735",
+  "starchip_cost": 25
+}

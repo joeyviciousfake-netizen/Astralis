@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0126",
+  "name": "Orion the Battle King",
+  "description": "",
+  "artwork": "assets/fm/card_0126.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fairy"
+  ],
+  "monster_type": "fairy",
+  "attribute": "light",
+  "level": 5,
+  "attack": 1800,
+  "defense": 1500,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "saturn",
+  "password": "02971090",
+  "starchip_cost": 290
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0506",
+  "name": "Gale Dogra",
+  "description": "",
+  "artwork": "assets/fm/card_0506.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "insect"
+  ],
+  "monster_type": "insect",
+  "attribute": "earth",
+  "level": 2,
+  "attack": 650,
+  "defense": 600,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "venus",
+  "password": "16229315",
+  "starchip_cost": 25
+}

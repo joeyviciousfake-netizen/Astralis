@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0140",
+  "name": "Toad Master",
+  "description": "",
+  "artwork": "assets/fm/card_0140.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 3,
+  "attack": 1000,
+  "defense": 1000,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "venus",
+  "password": "62671448",
+  "starchip_cost": 55
+}

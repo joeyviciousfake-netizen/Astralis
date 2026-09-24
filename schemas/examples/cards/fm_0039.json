@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0039",
+  "name": "Curse of Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0039.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "dark",
+  "level": 5,
+  "attack": 2000,
+  "defense": 1500,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "pluto",
+  "password": "28279543",
+  "starchip_cost": 999999
+}

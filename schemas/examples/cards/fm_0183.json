@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0183",
+  "name": "Lucky Trinket",
+  "description": "",
+  "artwork": "assets/fm/card_0183.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "light",
+  "level": 2,
+  "attack": 600,
+  "defense": 800,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "jupiter",
+  "password": "03985011",
+  "starchip_cost": 30
+}

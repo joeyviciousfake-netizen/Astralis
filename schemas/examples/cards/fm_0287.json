@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0287",
+  "name": "Ogre of the Black Shadow",
+  "description": "",
+  "artwork": "assets/fm/card_0287.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast-warrior"
+  ],
+  "monster_type": "beast-warrior",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1200,
+  "defense": 1400,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "saturn",
+  "password": "45121025",
+  "starchip_cost": 120
+}

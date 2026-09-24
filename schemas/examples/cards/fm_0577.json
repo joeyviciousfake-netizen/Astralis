@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0577",
+  "name": "Crow Goblin",
+  "description": "",
+  "artwork": "assets/fm/card_0577.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "winged-beast"
+  ],
+  "monster_type": "winged-beast",
+  "attribute": "wind",
+  "level": 5,
+  "attack": 1850,
+  "defense": 1600,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "mars",
+  "password": "77998771",
+  "starchip_cost": 320
+}

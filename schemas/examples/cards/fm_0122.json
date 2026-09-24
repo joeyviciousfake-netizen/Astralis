@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0122",
+  "name": "Yamatano Dragon Scroll",
+  "description": "",
+  "artwork": "assets/fm/card_0122.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "wind",
+  "level": 2,
+  "attack": 900,
+  "defense": 300,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "venus",
+  "password": "76704943",
+  "starchip_cost": 25
+}

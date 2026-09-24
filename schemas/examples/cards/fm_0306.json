@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0306",
+  "name": "Insect Armor with Laser Cannon",
+  "description": "",
+  "artwork": "assets/fm/card_0306.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "03492538",
+  "starchip_cost": 800
+}

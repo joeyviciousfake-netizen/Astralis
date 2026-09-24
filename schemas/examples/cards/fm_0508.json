@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0508",
+  "name": "Cyber Saurus",
+  "description": "",
+  "artwork": "assets/fm/card_0508.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1800,
+  "defense": 1400,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "sun",
+  "password": "89112729",
+  "starchip_cost": 260
+}

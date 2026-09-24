@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0192",
+  "name": "Key Mace",
+  "description": "",
+  "artwork": "assets/fm/card_0192.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fairy"
+  ],
+  "monster_type": "fairy",
+  "attribute": "light",
+  "level": 1,
+  "attack": 400,
+  "defense": 300,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "saturn",
+  "password": "01929294",
+  "starchip_cost": 15
+}

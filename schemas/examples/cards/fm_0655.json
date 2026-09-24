@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0655",
+  "name": "Cursebreaker",
+  "description": "",
+  "artwork": "assets/fm/card_0655.png",
+  "card_type": "spell",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spell"
+  ],
+  "password": "69666645",
+  "starchip_cost": 10
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0497",
+  "name": "Yado Karu",
+  "description": "",
+  "artwork": "assets/fm/card_0497.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 4,
+  "attack": 900,
+  "defense": 1700,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "mercury",
+  "password": "29380133",
+  "starchip_cost": 120
+}

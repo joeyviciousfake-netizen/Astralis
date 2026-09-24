@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0583",
+  "name": "Weather Report",
+  "description": "",
+  "artwork": "assets/fm/card_0583.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 4,
+  "attack": 950,
+  "defense": 1500,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "mercury",
+  "password": "72053645",
+  "starchip_cost": 120
+}

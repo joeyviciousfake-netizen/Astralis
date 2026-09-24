@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0366",
+  "name": "Labyrinth Wall",
+  "description": "",
+  "artwork": "assets/fm/card_0366.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "rock"
+  ],
+  "monster_type": "rock",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 0,
+  "defense": 3000,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "jupiter",
+  "password": "67284908",
+  "starchip_cost": 200
+}

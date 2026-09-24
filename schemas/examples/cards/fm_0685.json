@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0685",
+  "name": "Acid Trap Hole",
+  "description": "",
+  "artwork": "assets/fm/card_0685.png",
+  "card_type": "trap",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "trap"
+  ],
+  "password": "41356845",
+  "starchip_cost": 999999
+}

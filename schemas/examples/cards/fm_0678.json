@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0678",
+  "name": "Revival of Sennen Genjin",
+  "description": "",
+  "artwork": "assets/fm/card_0678.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ],
+  "password": "16206366",
+  "starchip_cost": 100
+}

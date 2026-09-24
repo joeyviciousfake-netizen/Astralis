@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0318",
+  "name": "Elegant Egotist",
+  "description": "",
+  "artwork": "assets/fm/card_0318.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "90219263",
+  "starchip_cost": 999999
+}

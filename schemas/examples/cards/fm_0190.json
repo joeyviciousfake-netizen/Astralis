@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0190",
+  "name": "Akakieisu",
+  "description": "",
+  "artwork": "assets/fm/card_0190.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 1000,
+  "defense": 800,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "uranus",
+  "password": "38035986",
+  "starchip_cost": 45
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0693",
+  "name": "Contruct of Mask",
+  "description": "",
+  "artwork": "assets/fm/card_0693.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ],
+  "password": "02304453",
+  "starchip_cost": 100
+}

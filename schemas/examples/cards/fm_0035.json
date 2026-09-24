@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0035",
+  "name": "Dark Magician",
+  "description": "",
+  "artwork": "assets/fm/card_0035.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "dark",
+  "level": 7,
+  "attack": 2500,
+  "defense": 2100,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "mars",
+  "password": "46986414",
+  "starchip_cost": 999999
+}

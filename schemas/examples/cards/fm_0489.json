@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0489",
+  "name": "Barrel Lily",
+  "description": "",
+  "artwork": "assets/fm/card_0489.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "plant"
+  ],
+  "monster_type": "plant",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 1100,
+  "defense": 600,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "venus",
+  "password": "67841515",
+  "starchip_cost": 40
+}

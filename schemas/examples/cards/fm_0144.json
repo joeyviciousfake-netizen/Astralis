@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0144",
+  "name": "Djinn the Watcher of the Wind",
+  "description": "",
+  "artwork": "assets/fm/card_0144.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "wind",
+  "level": 3,
+  "attack": 700,
+  "defense": 900,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "mercury",
+  "password": "97843505",
+  "starchip_cost": 35
+}

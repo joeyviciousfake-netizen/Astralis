@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0316",
+  "name": "Electro-whip",
+  "description": "",
+  "artwork": "assets/fm/card_0316.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "37820550",
+  "starchip_cost": 800
+}

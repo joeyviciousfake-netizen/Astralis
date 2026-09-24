@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0395",
+  "name": "Dancing Elf",
+  "description": "",
+  "artwork": "assets/fm/card_0395.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fairy"
+  ],
+  "monster_type": "fairy",
+  "attribute": "wind",
+  "level": 1,
+  "attack": 300,
+  "defense": 200,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "sun",
+  "password": "59983499",
+  "starchip_cost": 10
+}

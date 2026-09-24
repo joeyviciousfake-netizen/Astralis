@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0284",
+  "name": "Tao the Chanter",
+  "description": "",
+  "artwork": "assets/fm/card_0284.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 1200,
+  "defense": 900,
+  "guardian_star_1": "venus",
+  "guardian_star_2": "uranus",
+  "password": "46247516",
+  "starchip_cost": 999999
+}

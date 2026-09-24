@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0415",
+  "name": "Mechanicalchacer",
+  "description": "",
+  "artwork": "assets/fm/card_0415.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "dark",
+  "level": 4,
+  "attack": 1850,
+  "defense": 800,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "jupiter",
+  "password": "07359741",
+  "starchip_cost": 120
+}

@@ -1,0 +1,13 @@
+{
+  "schema_version": 1,
+  "id": "fm_0721",
+  "name": "Dark Magic Ritual",
+  "description": "",
+  "artwork": "assets/fm/card_0721.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ]
+}

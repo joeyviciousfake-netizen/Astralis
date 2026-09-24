@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0187",
+  "name": "Gate Deeg",
+  "description": "",
+  "artwork": "assets/fm/card_0187.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast"
+  ],
+  "monster_type": "beast",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 700,
+  "defense": 800,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "mars",
+  "password": "49258578",
+  "starchip_cost": 30
+}

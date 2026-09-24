@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0482",
+  "name": "Pragtical",
+  "description": "",
+  "artwork": "assets/fm/card_0482.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dinosaur"
+  ],
+  "monster_type": "dinosaur",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1900,
+  "defense": 1500,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "neptune",
+  "password": "33691040",
+  "starchip_cost": 320
+}

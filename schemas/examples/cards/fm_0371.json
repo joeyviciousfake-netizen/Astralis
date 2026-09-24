@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0371",
+  "name": "Sanga of the Thunder",
+  "description": "",
+  "artwork": "assets/fm/card_0371.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "thunder"
+  ],
+  "monster_type": "thunder",
+  "attribute": "light",
+  "level": 7,
+  "attack": 2600,
+  "defense": 2200,
+  "guardian_star_1": "pluto",
+  "guardian_star_2": "mars",
+  "password": "25955164",
+  "starchip_cost": 999999
+}

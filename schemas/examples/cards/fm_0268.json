@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0268",
+  "name": "Sectarian of Secrets",
+  "description": "",
+  "artwork": "assets/fm/card_0268.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "dark",
+  "level": 2,
+  "attack": 700,
+  "defense": 500,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "jupiter",
+  "password": "15507080",
+  "starchip_cost": 25
+}

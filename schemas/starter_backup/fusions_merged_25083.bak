@@ -1,0 +1,23 @@
+{
+  "schema_version": 1,
+  "recipes": [
+    {
+      "id": "fusion_receita_suprema",
+      "input": { "card_a": "card_dragao_branco", "card_b": "card_mago_negro" },
+      "result": "card_dragao_supremo"
+    },
+    {
+      "id": "fusion_receita_quimera",
+      "input": { "card_a": "card_lobo_cinzento", "card_b": "card_guerreiro_ardente" },
+      "result": "card_quimera_chamas"
+    }
+  ],
+  "rules": [
+    {
+      "id": "fusion_regra_dragao_trevas",
+      "when": { "type_a": "dragon", "attribute_b": "dark" },
+      "result": "card_dragao_trevas_comum",
+      "priority": 10
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0480",
+  "name": "Kuwagata α",
+  "description": "",
+  "artwork": "assets/fm/card_0480.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "insect"
+  ],
+  "monster_type": "insect",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1250,
+  "defense": 1000,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "mercury",
+  "password": "60802233",
+  "starchip_cost": 70
+}

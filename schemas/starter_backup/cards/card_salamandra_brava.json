@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_salamandra_brava",
+  "name": "Salamandra Brava",
+  "description": "Cospe fogo quando contrariada.",
+  "artwork": "assets/cards/card_salamandra_brava.png",
+  "card_type": "monster",
+  "monster_type": "pyro",
+  "attribute": "fire",
+  "level": 3,
+  "attack": 1300,
+  "defense": 900,
+  "effects": [],
+  "tags": [
+    "teste",
+    "pyro"
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0425",
+  "name": "Thunder Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0425.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "thunder"
+  ],
+  "monster_type": "thunder",
+  "attribute": "light",
+  "level": 5,
+  "attack": 1600,
+  "defense": 1500,
+  "guardian_star_1": "pluto",
+  "guardian_star_2": "jupiter",
+  "password": "31786629",
+  "starchip_cost": 230
+}

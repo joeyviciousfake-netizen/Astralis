@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0694",
+  "name": "Resurrection of Chakra",
+  "description": "",
+  "artwork": "assets/fm/card_0694.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ],
+  "password": "39399168",
+  "starchip_cost": 100
+}

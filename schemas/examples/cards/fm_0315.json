@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0315",
+  "name": "Dragon Treasure",
+  "description": "",
+  "artwork": "assets/fm/card_0315.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "01435851",
+  "starchip_cost": 800
+}

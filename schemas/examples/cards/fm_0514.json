@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0514",
+  "name": "Brave Scizzar",
+  "description": "",
+  "artwork": "assets/fm/card_0514.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "dark",
+  "level": 4,
+  "attack": 1300,
+  "defense": 1000,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "jupiter",
+  "password": "74277583",
+  "starchip_cost": 80
+}

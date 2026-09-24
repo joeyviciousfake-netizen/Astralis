@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0649",
+  "name": "Hibikime",
+  "description": "",
+  "artwork": "assets/fm/card_0649.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1450,
+  "defense": 1000,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "uranus",
+  "password": "64501875",
+  "starchip_cost": 120
+}

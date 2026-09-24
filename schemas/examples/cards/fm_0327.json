@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0327",
+  "name": "Follow Wind",
+  "description": "",
+  "artwork": "assets/fm/card_0327.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "98252586",
+  "starchip_cost": 800
+}

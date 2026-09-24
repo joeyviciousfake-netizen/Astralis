@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0622",
+  "name": "Ill Witch",
+  "description": "",
+  "artwork": "assets/fm/card_0622.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "light",
+  "level": 5,
+  "attack": 1600,
+  "defense": 1500,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "venus",
+  "password": "81686058",
+  "starchip_cost": 230
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0290",
+  "name": "Moon Envoy",
+  "description": "",
+  "artwork": "assets/fm/card_0290.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "light",
+  "level": 4,
+  "attack": 1100,
+  "defense": 1000,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "saturn",
+  "password": "45909477",
+  "starchip_cost": 60
+}

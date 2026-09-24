@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0299",
+  "name": "Sonic Maid",
+  "description": "",
+  "artwork": "assets/fm/card_0299.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 1200,
+  "defense": 900,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "pluto",
+  "password": "38942059",
+  "starchip_cost": 999999
+}

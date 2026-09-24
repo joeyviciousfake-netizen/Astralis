@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0687",
+  "name": "Goblin Fan",
+  "description": "",
+  "artwork": "assets/fm/card_0687.png",
+  "card_type": "trap",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "trap"
+  ],
+  "password": "04149689",
+  "starchip_cost": 999999
+}

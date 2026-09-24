@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_golem_antigo",
+  "name": "Golem Antigo",
+  "description": "Feito de pedra de templo esquecido.",
+  "artwork": "assets/cards/card_golem_antigo.png",
+  "card_type": "monster",
+  "monster_type": "rock",
+  "attribute": "earth",
+  "level": 7,
+  "attack": 2500,
+  "defense": 2500,
+  "effects": [],
+  "tags": [
+    "teste",
+    "rock"
+  ]
+}

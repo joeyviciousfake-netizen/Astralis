@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0387",
+  "name": "Mystic Lamp",
+  "description": "",
+  "artwork": "assets/fm/card_0387.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "dark",
+  "level": 1,
+  "attack": 400,
+  "defense": 300,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "uranus",
+  "password": "98049915",
+  "starchip_cost": 15
+}

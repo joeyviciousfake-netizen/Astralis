@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0305",
+  "name": "Laser Cannon Armor",
+  "description": "",
+  "artwork": "assets/fm/card_0305.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "77007920",
+  "starchip_cost": 800
+}

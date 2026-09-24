@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0118",
+  "name": "Supporter in the Shadows",
+  "description": "",
+  "artwork": "assets/fm/card_0118.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 1000,
+  "defense": 1000,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "venus",
+  "password": "41422426",
+  "starchip_cost": 55
+}

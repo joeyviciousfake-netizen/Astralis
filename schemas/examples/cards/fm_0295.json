@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0295",
+  "name": "Bio Plant",
+  "description": "",
+  "artwork": "assets/fm/card_0295.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 3,
+  "attack": 600,
+  "defense": 1300,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "moon",
+  "password": "07670542",
+  "starchip_cost": 50
+}

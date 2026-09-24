@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0397",
+  "name": "Leghul",
+  "description": "",
+  "artwork": "assets/fm/card_0397.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "insect"
+  ],
+  "monster_type": "insect",
+  "attribute": "earth",
+  "level": 1,
+  "attack": 300,
+  "defense": 350,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "moon",
+  "password": "12472242",
+  "starchip_cost": 15
+}

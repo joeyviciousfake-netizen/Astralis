@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0568",
+  "name": "Anthrosaurus",
+  "description": "",
+  "artwork": "assets/fm/card_0568.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dinosaur"
+  ],
+  "monster_type": "dinosaur",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 1000,
+  "defense": 850,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "moon",
+  "password": "89904598",
+  "starchip_cost": 45
+}

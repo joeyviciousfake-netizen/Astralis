@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0335",
+  "name": "Yami",
+  "description": "",
+  "artwork": "assets/fm/card_0335.png",
+  "card_type": "spell",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spell"
+  ],
+  "password": "59197169",
+  "starchip_cost": 55
+}

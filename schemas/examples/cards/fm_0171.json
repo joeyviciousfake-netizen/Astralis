@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0171",
+  "name": "Big Eye",
+  "description": "",
+  "artwork": "assets/fm/card_0171.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 4,
+  "attack": 1200,
+  "defense": 1000,
+  "guardian_star_1": "venus",
+  "guardian_star_2": "neptune",
+  "password": "16768387",
+  "starchip_cost": 70
+}

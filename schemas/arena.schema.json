@@ -1,0 +1,61 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Astralis Arena V1",
+  "description": "Contrato de arena: SÓ apresentação (posição XY dos slots + mão + fundo). Nunca regra (R3, D24). Slot tem ID fixo (lado+tipo+índice); lógica só usa ID, desenho usa x/y com fallback p/ grade padrão. hand é opcional (arena antiga sem hand continua válida, runtime usa fallback). Owner: Systems. Ver docs/04_CONTRATO_DADOS.md e docs/13_TABULEIRO_DUELO.md.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1, "description": "Sempre 1 na V1." },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "description": "ID estável snake_case (ex: arena_starter). duel_setup.arena_id e duelist.arena referenciam este ID." },
+    "name": { "type": "string", "minLength": 1, "description": "Nome exibido (pode ser traduzido sem trocar o id)." },
+    "description": { "type": "string", "description": "Texto exibido na galeria/seletor (opcional, só apresentação)." },
+    "background": { "type": "string", "description": "Caminho do fundo, ex: assets/backgrounds/arena_starter.png. Opcional, pode ser placeholder." },
+    "slots": {
+      "type": "array",
+      "description": "20 posições fixas: p0 = você/baixo (duelist1), p1 = rival/cima (duelist2); m = monstro, s = magia; índice 0-4. Ordem livre; IDs únicos. Só XY de desenho, nunca regra.",
+      "minItems": 20,
+      "maxItems": 20,
+      "items": {
+        "type": "object",
+        "properties": {
+          "slot_id": { "type": "string", "pattern": "^(p0|p1)_(m|s)[0-4]$", "description": "ID fixo do slot (ex: p0_m0). Lógica só usa este ID." },
+          "x": { "type": "number", "description": "Posição X do canto do slot em 1920x1080 (só desenho)." },
+          "y": { "type": "number", "description": "Posição Y do canto do slot em 1920x1080 (só desenho)." }
+        },
+        "required": ["slot_id", "x", "y"],
+        "additionalProperties": false
+      }
+    },
+    "hand": {
+      "type": "object",
+      "description": "Posição da mão (só desenho, nunca regra). Opcional: arena sem hand continua válida, runtime usa fallback. p0 = sua mão/baixo, p1 = mão do rival/cima (rival desenha de costas). x/y = centro da mão em 1920x1080; step = distância horizontal entre cartas.",
+      "properties": {
+        "p0": {
+          "type": "object",
+          "description": "Sua mão (baixo). Centro sob o campo.",
+          "properties": {
+            "x": { "type": "number", "minimum": 0, "maximum": 1920 },
+            "y": { "type": "number", "minimum": 0, "maximum": 1080 },
+            "step": { "type": "number", "minimum": 40, "maximum": 200 }
+          },
+          "required": ["x", "y", "step"],
+          "additionalProperties": false
+        },
+        "p1": {
+          "type": "object",
+          "description": "Mão do rival (cima, cartas de costas).",
+          "properties": {
+            "x": { "type": "number", "minimum": 0, "maximum": 1920 },
+            "y": { "type": "number", "minimum": 0, "maximum": 1080 },
+            "step": { "type": "number", "minimum": 40, "maximum": 200 }
+          },
+          "required": ["x", "y", "step"],
+          "additionalProperties": false
+        }
+      },
+      "required": ["p0", "p1"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["schema_version", "id", "name", "slots"],
+  "additionalProperties": false
+}

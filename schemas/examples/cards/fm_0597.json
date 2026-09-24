@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0597",
+  "name": "Pale Beast",
+  "description": "",
+  "artwork": "assets/fm/card_0597.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast"
+  ],
+  "monster_type": "beast",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1500,
+  "defense": 1200,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "neptune",
+  "password": "21263083",
+  "starchip_cost": 140
+}

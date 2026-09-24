@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0536",
+  "name": "Mechaleon",
+  "description": "",
+  "artwork": "assets/fm/card_0536.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "reptile"
+  ],
+  "monster_type": "reptile",
+  "attribute": "water",
+  "level": 2,
+  "attack": 800,
+  "defense": 600,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "saturn",
+  "password": "94412545",
+  "starchip_cost": 30
+}

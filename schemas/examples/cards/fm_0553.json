@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0553",
+  "name": "Mushroom Man #2",
+  "description": "",
+  "artwork": "assets/fm/card_0553.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 1250,
+  "defense": 800,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "uranus",
+  "password": "93900406",
+  "starchip_cost": 55
+}

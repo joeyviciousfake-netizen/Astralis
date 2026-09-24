@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0462",
+  "name": "The Immortal of Thunder",
+  "description": "",
+  "artwork": "assets/fm/card_0462.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "thunder"
+  ],
+  "monster_type": "thunder",
+  "attribute": "light",
+  "level": 4,
+  "attack": 1500,
+  "defense": 1300,
+  "guardian_star_1": "pluto",
+  "guardian_star_2": "sun",
+  "password": "84926738",
+  "starchip_cost": 160
+}

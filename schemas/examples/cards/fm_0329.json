@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0329",
+  "name": "Dragon Capture Jar",
+  "description": "",
+  "artwork": "assets/fm/card_0329.png",
+  "card_type": "spell",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spell"
+  ],
+  "password": "50045299",
+  "starchip_cost": 999999
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0651",
+  "name": "Kunai with Chain",
+  "description": "",
+  "artwork": "assets/fm/card_0651.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "37390589",
+  "starchip_cost": 800
+}

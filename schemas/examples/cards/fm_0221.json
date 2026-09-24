@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0221",
+  "name": "Kumootoko",
+  "description": "",
+  "artwork": "assets/fm/card_0221.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "insect"
+  ],
+  "monster_type": "insect",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 700,
+  "defense": 1400,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "pluto",
+  "password": "56283725",
+  "starchip_cost": 60
+}

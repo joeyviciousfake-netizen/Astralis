@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_urso_pedra",
+  "name": "Urso de Pedra",
+  "description": "Dormiu mil anos e acordou com fome.",
+  "artwork": "assets/cards/card_urso_pedra.png",
+  "card_type": "monster",
+  "monster_type": "beast",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1300,
+  "defense": 1800,
+  "effects": [],
+  "tags": [
+    "teste",
+    "beast"
+  ]
+}

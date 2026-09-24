@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0137",
+  "name": "Mystery Hand",
+  "description": "",
+  "artwork": "assets/fm/card_0137.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 2,
+  "attack": 500,
+  "defense": 500,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "uranus",
+  "password": "62793020",
+  "starchip_cost": 20
+}

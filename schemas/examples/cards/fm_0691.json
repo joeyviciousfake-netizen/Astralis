@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0691",
+  "name": "Revived of Serpent Night Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0691.png",
+  "card_type": "ritual",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "ritual"
+  ],
+  "password": "39411600",
+  "starchip_cost": 50
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0189",
+  "name": "Fusionist",
+  "description": "",
+  "artwork": "assets/fm/card_0189.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast"
+  ],
+  "monster_type": "beast",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 900,
+  "defense": 700,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "moon",
+  "password": "01641882",
+  "starchip_cost": 35
+}

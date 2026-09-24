@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0167",
+  "name": "Ancient Jar",
+  "description": "",
+  "artwork": "assets/fm/card_0167.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "rock"
+  ],
+  "monster_type": "rock",
+  "attribute": "earth",
+  "level": 1,
+  "attack": 400,
+  "defense": 200,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "neptune",
+  "password": "81492226",
+  "starchip_cost": 15
+}

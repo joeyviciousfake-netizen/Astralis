@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0237",
+  "name": "Haniwa",
+  "description": "",
+  "artwork": "assets/fm/card_0237.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "rock"
+  ],
+  "monster_type": "rock",
+  "attribute": "earth",
+  "level": 2,
+  "attack": 500,
+  "defense": 500,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "jupiter",
+  "password": "84285623",
+  "starchip_cost": 20
+}

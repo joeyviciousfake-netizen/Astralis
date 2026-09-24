@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0015",
+  "name": "Flame Swordsman",
+  "description": "",
+  "artwork": "assets/fm/card_0015.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "fire",
+  "level": 5,
+  "attack": 1800,
+  "defense": 1600,
+  "guardian_star_1": "mars",
+  "guardian_star_2": "sun",
+  "password": "45231177",
+  "starchip_cost": 320
+}

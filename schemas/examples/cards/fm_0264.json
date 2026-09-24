@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0264",
+  "name": "Wing Egg Elf",
+  "description": "",
+  "artwork": "assets/fm/card_0264.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fairy"
+  ],
+  "monster_type": "fairy",
+  "attribute": "light",
+  "level": 3,
+  "attack": 500,
+  "defense": 1300,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "mars",
+  "password": "98582704",
+  "starchip_cost": 45
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0261",
+  "name": "Wicked Mirror",
+  "description": "",
+  "artwork": "assets/fm/card_0261.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 2,
+  "attack": 700,
+  "defense": 600,
+  "guardian_star_1": "venus",
+  "guardian_star_2": "jupiter",
+  "password": "15150371",
+  "starchip_cost": 30
+}

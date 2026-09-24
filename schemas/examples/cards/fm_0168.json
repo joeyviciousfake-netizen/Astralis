@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0168",
+  "name": "Darkfire Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0168.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "dark",
+  "level": 4,
+  "attack": 1500,
+  "defense": 1250,
+  "guardian_star_1": "mars",
+  "guardian_star_2": "venus",
+  "password": "17881964",
+  "starchip_cost": 140
+}

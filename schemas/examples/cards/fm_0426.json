@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0426",
+  "name": "Stone D.",
+  "description": "",
+  "artwork": "assets/fm/card_0426.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "rock"
+  ],
+  "monster_type": "rock",
+  "attribute": "earth",
+  "level": 7,
+  "attack": 2000,
+  "defense": 2300,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "mars",
+  "password": "68171737",
+  "starchip_cost": 900
+}

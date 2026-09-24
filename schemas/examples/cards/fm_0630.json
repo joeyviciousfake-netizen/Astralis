@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0630",
+  "name": "Ancient Lizard Warrior",
+  "description": "",
+  "artwork": "assets/fm/card_0630.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "reptile"
+  ],
+  "monster_type": "reptile",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1400,
+  "defense": 1100,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "saturn",
+  "password": "43230671",
+  "starchip_cost": 100
+}

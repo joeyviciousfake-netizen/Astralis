@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0224",
+  "name": "Trap Master",
+  "description": "",
+  "artwork": "assets/fm/card_0224.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "warrior"
+  ],
+  "monster_type": "warrior",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 500,
+  "defense": 1100,
+  "guardian_star_1": "mercury",
+  "guardian_star_2": "moon",
+  "password": "46461247",
+  "starchip_cost": 35
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0232",
+  "name": "Madjinn Gunn",
+  "description": "",
+  "artwork": "assets/fm/card_0232.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 2,
+  "attack": 600,
+  "defense": 800,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "jupiter",
+  "password": "43905751",
+  "starchip_cost": 30
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "id": "fm_0309",
+  "name": "Steel Shell",
+  "description": "",
+  "artwork": "assets/fm/card_0309.png",
+  "card_type": "equip",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "equip"
+  ],
+  "password": "02370081",
+  "starchip_cost": 800
+}

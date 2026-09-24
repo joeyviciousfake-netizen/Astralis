@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0609",
+  "name": "Bladefly",
+  "description": "",
+  "artwork": "assets/fm/card_0609.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "insect"
+  ],
+  "monster_type": "insect",
+  "attribute": "wind",
+  "level": 2,
+  "attack": 600,
+  "defense": 700,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "moon",
+  "password": "28470714",
+  "starchip_cost": 30
+}

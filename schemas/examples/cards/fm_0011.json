@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0011",
+  "name": "Sword Arm of Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0011.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dinosaur"
+  ],
+  "monster_type": "dinosaur",
+  "attribute": "earth",
+  "level": 6,
+  "attack": 1750,
+  "defense": 2030,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "moon",
+  "password": "13069066",
+  "starchip_cost": 1000
+}

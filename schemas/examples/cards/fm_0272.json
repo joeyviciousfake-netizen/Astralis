@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0272",
+  "name": "Mavelus",
+  "description": "",
+  "artwork": "assets/fm/card_0272.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "winged-beast"
+  ],
+  "monster_type": "winged-beast",
+  "attribute": "wind",
+  "level": 4,
+  "attack": 1300,
+  "defense": 900,
+  "guardian_star_1": "mars",
+  "guardian_star_2": "mercury",
+  "password": "59036972",
+  "starchip_cost": 70
+}

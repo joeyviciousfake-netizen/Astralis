@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0520",
+  "name": "Turtle Bird",
+  "description": "",
+  "artwork": "assets/fm/card_0520.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 6,
+  "attack": 1900,
+  "defense": 1700,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "mars",
+  "password": "72929454",
+  "starchip_cost": 400
+}

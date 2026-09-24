@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0522",
+  "name": "Monstrous Bird",
+  "description": "",
+  "artwork": "assets/fm/card_0522.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "winged-beast"
+  ],
+  "monster_type": "winged-beast",
+  "attribute": "wind",
+  "level": 6,
+  "attack": 2000,
+  "defense": 1900,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "mercury",
+  "password": "35712107",
+  "starchip_cost": 550
+}

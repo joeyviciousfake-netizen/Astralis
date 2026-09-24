@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0095",
+  "name": "Crass Clown",
+  "description": "",
+  "artwork": "assets/fm/card_0095.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 4,
+  "attack": 1350,
+  "defense": 1400,
+  "guardian_star_1": "venus",
+  "guardian_star_2": "jupiter",
+  "password": "93889755",
+  "starchip_cost": 140
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0524",
+  "name": "Star Boy",
+  "description": "",
+  "artwork": "assets/fm/card_0524.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "aqua"
+  ],
+  "monster_type": "aqua",
+  "attribute": "water",
+  "level": 2,
+  "attack": 550,
+  "defense": 500,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "mars",
+  "password": "08201910",
+  "starchip_cost": 20
+}

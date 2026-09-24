@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0546",
+  "name": "Wow Warrior",
+  "description": "",
+  "artwork": "assets/fm/card_0546.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fish"
+  ],
+  "monster_type": "fish",
+  "attribute": "water",
+  "level": 4,
+  "attack": 1250,
+  "defense": 900,
+  "guardian_star_1": "neptune",
+  "guardian_star_2": "mars",
+  "password": "69750536",
+  "starchip_cost": 60
+}

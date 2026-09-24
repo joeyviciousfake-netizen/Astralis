@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_serpente_celeste",
+  "name": "Serpente Celeste",
+  "description": "Serpente que mora nas nuvens e desce só para caçar.",
+  "artwork": "assets/cards/card_serpente_celeste.png",
+  "card_type": "monster",
+  "monster_type": "dragon",
+  "attribute": "wind",
+  "level": 6,
+  "attack": 1800,
+  "defense": 1500,
+  "effects": [],
+  "tags": [
+    "teste",
+    "dragon"
+  ]
+}

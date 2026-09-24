@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0383",
+  "name": "Parrot Dragon",
+  "description": "",
+  "artwork": "assets/fm/card_0383.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "dragon"
+  ],
+  "monster_type": "dragon",
+  "attribute": "wind",
+  "level": 5,
+  "attack": 2000,
+  "defense": 1300,
+  "guardian_star_1": "saturn",
+  "guardian_star_2": "sun",
+  "password": "62762898",
+  "starchip_cost": 290
+}

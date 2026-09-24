@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0505",
+  "name": "Prisman",
+  "description": "",
+  "artwork": "assets/fm/card_0505.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "rock"
+  ],
+  "monster_type": "rock",
+  "attribute": "light",
+  "level": 3,
+  "attack": 800,
+  "defense": 1000,
+  "guardian_star_1": "uranus",
+  "guardian_star_2": "jupiter",
+  "password": "80234301",
+  "starchip_cost": 45
+}

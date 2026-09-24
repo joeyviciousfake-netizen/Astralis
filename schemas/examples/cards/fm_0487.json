@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0487",
+  "name": "Flower Wolf",
+  "description": "",
+  "artwork": "assets/fm/card_0487.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "beast"
+  ],
+  "monster_type": "beast",
+  "attribute": "earth",
+  "level": 5,
+  "attack": 1800,
+  "defense": 1400,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "sun",
+  "password": "95952802",
+  "starchip_cost": 260
+}

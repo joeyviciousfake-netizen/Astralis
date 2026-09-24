@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_diabrete_zombador",
+  "name": "Diabrete Zombador",
+  "description": "Ri da sua cara antes, durante e depois.",
+  "artwork": "assets/cards/card_diabrete_zombador.png",
+  "card_type": "monster",
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 2,
+  "attack": 900,
+  "defense": 600,
+  "effects": [],
+  "tags": [
+    "teste",
+    "fiend"
+  ]
+}

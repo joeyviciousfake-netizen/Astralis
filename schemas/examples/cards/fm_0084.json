@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0084",
+  "name": "Reaper of the Cards",
+  "description": "",
+  "artwork": "assets/fm/card_0084.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fiend"
+  ],
+  "monster_type": "fiend",
+  "attribute": "dark",
+  "level": 5,
+  "attack": 1380,
+  "defense": 1930,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "pluto",
+  "password": "33066139",
+  "starchip_cost": 290
+}

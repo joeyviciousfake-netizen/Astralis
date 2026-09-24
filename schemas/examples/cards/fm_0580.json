@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0580",
+  "name": "Patrol Robo",
+  "description": "",
+  "artwork": "assets/fm/card_0580.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "machine"
+  ],
+  "monster_type": "machine",
+  "attribute": "earth",
+  "level": 3,
+  "attack": 1100,
+  "defense": 900,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "uranus",
+  "password": "76775123",
+  "starchip_cost": 55
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0260",
+  "name": "Lunar Queen Elzaim",
+  "description": "",
+  "artwork": "assets/fm/card_0260.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "fairy"
+  ],
+  "monster_type": "fairy",
+  "attribute": "light",
+  "level": 3,
+  "attack": 750,
+  "defense": 1100,
+  "guardian_star_1": "moon",
+  "guardian_star_2": "venus",
+  "password": "62210247",
+  "starchip_cost": 45
+}

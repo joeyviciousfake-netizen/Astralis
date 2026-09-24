@@ -1,0 +1,18 @@
+{
+  "schema_version": 1,
+  "id": "card_drake_ferrugem",
+  "name": "Drake Ferrugem",
+  "description": "Drake teimoso com escamas duras como ferro velho.",
+  "artwork": "assets/cards/card_drake_ferrugem.png",
+  "card_type": "monster",
+  "monster_type": "dragon",
+  "attribute": "fire",
+  "level": 5,
+  "attack": 1700,
+  "defense": 1200,
+  "effects": [],
+  "tags": [
+    "teste",
+    "dragon"
+  ]
+}

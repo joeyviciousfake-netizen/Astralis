@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0128",
+  "name": "LaMoon",
+  "description": "",
+  "artwork": "assets/fm/card_0128.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "spellcaster"
+  ],
+  "monster_type": "spellcaster",
+  "attribute": "light",
+  "level": 5,
+  "attack": 1200,
+  "defense": 1700,
+  "guardian_star_1": "sun",
+  "guardian_star_2": "uranus",
+  "password": "75850803",
+  "starchip_cost": 180
+}

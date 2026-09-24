@@ -1,0 +1,22 @@
+{
+  "schema_version": 1,
+  "id": "fm_0535",
+  "name": "Kamakiriman",
+  "description": "",
+  "artwork": "assets/fm/card_0535.png",
+  "card_type": "monster",
+  "effects": [],
+  "tags": [
+    "fm_original",
+    "insect"
+  ],
+  "monster_type": "insect",
+  "attribute": "earth",
+  "level": 4,
+  "attack": 1150,
+  "defense": 1400,
+  "guardian_star_1": "jupiter",
+  "guardian_star_2": "moon",
+  "password": "68928540",
+  "starchip_cost": 100
+}
