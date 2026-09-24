@@ -3,7 +3,8 @@ extends RefCounted
 
 ## DuelManager — monta o duelo a partir do duel_setup (DADO) e expõe o jogo.
 ## - embaralha cada deck com a seed do setup (determinístico);
-## - mão inicial 5 + compra do turno 1 (doc 13.3: compra inclusive no turno 1);
+## - mão inicial 5 p/ cada lado, SEM carta extra (FM fiel: draw up to five);
+## - todo início de turno completa a mão até 5 (regra no TurnManager DRAW refill);
 ## - LP inicial do setup; ordem first_p1/first_p2/random.
 ## Expõe advance_phase(), estado (get_state) e vencedor (get_winner/is_over).
 ## R1/R2: este é o sistema real; TestHarness/Studio só preparam e observam.
@@ -56,7 +57,8 @@ func _montar(setup: Dictionary, decks: Dictionary, cards: Dictionary) -> void:
 			var dk: Array = (state.players[pi] as Dictionary)["deck"]
 			if not dk.is_empty():
 				((state.players[pi] as Dictionary)["hand"] as Array).append(dk.pop_front())
-	TurnManager.draw_for_current(state)
+	# FM fiel: cada lado começa com 5, SEM carta extra. O refill até 5
+	# acontece todo início de turno (TurnManager DRAW).
 
 
 func _ids_do_deck(deck_id: String) -> Array:

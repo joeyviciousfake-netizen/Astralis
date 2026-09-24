@@ -2,11 +2,13 @@ class_name DuelTurnManager
 extends RefCounted
 
 ## TurnManager — fases DRAW→MAIN→BATTLE→END (doc 13, LOGIC fixa, nesta ordem).
-## - DRAW: compra 1 carta do topo; deck vazio na hora de comprar = derrota (deck out);
+## - DRAW: completa a mão até 5 (FM fiel); deck vazio na hora de completar
+##   = derrota (deck out). Mão já com 5+ não compra nem perde;
 ## - MAIN: 1 invocação normal (regra no SummonSystem);
 ## - BATTLE: 1 ataque por monstro (regra no BattleSystem);
 ## - END: descarta excesso da mão (limite 7, excedente vai ao cemitério)
-##   + checa vitória por LP. Sair do END troca o jogador e compra do novo turno.
+##   + checa vitória por LP. Sair do END troca o jogador e completa a mão
+##   do novo turno até 5.
 
 const DamageSystem := preload("res://duel/damage_system.gd")
 
@@ -17,13 +19,19 @@ static func draw_for_current(state) -> Dictionary:
 	var cur: int = int(state.current_player)
 	var p: Dictionary = state.players[cur] as Dictionary
 	var deck: Array = p["deck"]
-	if deck.is_empty():
-		state.winner = 1 - cur
-		state.over = true
-		return {"ok": false, "erro": "Deck vazio: jogador %d perdeu por deck out." % cur, "deckout": true, "vencedor": int(state.winner)}
-	var carta = deck.pop_front()
-	(p["hand"] as Array).append(carta)
-	return {"ok": true, "erro": "", "mao": (p["hand"] as Array).size()}
+	var mao: Array = p["hand"]
+	# FM fiel: completa a mão até 5. Mão já com 5+ não compra (nem perde).
+	if mao.size() >= 5:
+		return {"ok": true, "erro": "", "mao": mao.size(), "compradas": 0}
+	var compradas := 0
+	while mao.size() < 5:
+		if deck.is_empty():
+			state.winner = 1 - cur
+			state.over = true
+			return {"ok": false, "erro": "Deck vazio: jogador %d perdeu por deck out." % cur, "deckout": true, "vencedor": int(state.winner), "compradas": compradas}
+		mao.append(deck.pop_front())
+		compradas += 1
+	return {"ok": true, "erro": "", "mao": mao.size(), "compradas": compradas}
 
 
 static func discard_excess(state, player_idx: int) -> int:

@@ -58,6 +58,9 @@ var _fusions_data: Dictionary = {"schema_version": 1, "recipes": [], "rules": []
 ## Levantadas p/ fusão (ordem em que levantou, índices da mão p0).
 ## 0 = avulsa (fluxo D24), 1 = bloqueia e avisa, 2+ = combina no confirmar.
 var _levantadas: Array = []
+## Trava simples da animação da fila (só controle, sem regra): evita
+## confirmar 2 fusões ao mesmo tempo; sempre solta no fim (sem travar input).
+var _fusao_animando := false
 var _sel_mao := -1
 var _sel_atk := -1
 var _popup_slot := -1
@@ -151,7 +154,7 @@ func _ready() -> void:
 	_cartas = data.get("cards", {})
 	_fusions_data = _carregar_fusoes()
 	_fala("Duelo começou! Sua vez.")
-	_duel.advance_phase() # DRAW inicial -> MAIN (compra do turno 1 já veio).
+	_duel.advance_phase() # DRAW inicial -> MAIN (mão 5/5 SEM extra, FM fiel).
 	_fase_jogador = FASE_MAO
 	_sub_mao = SUB_MAO_ESCOLHA
 	_mao_idx = -1
@@ -831,11 +834,15 @@ func _executar_summon_fiel(estrela: String) -> void:
 	_atualizar()
 
 
-## FUSÃO FIEL (2+ levantadas): voam ao centro EM ORDEM e resolve par a par
+## FUSÃO FIEL (2+ levantadas): fila calma no centro + resolve par a par
 ## via FusionSystem real (receita -> regra -> equip pendente -> falha).
 ## Fracasso descarta a ACUMULADA (fundida cai, novata fica e continua).
 ## Resultado sempre face p/ cima, vai à zona e conta como a jogada do turno.
+## Só controle/visual: a regra mora no FusionSystem; aqui só anima a fila.
 func _iniciar_fusao() -> void:
+	if _fusao_animando:
+		_fala("Aguarde a fusão terminar.")
+		return
 	_limpar_levantadas()
 	if _levantadas.size() < 2:
 		return
@@ -849,10 +856,29 @@ func _iniciar_fusao() -> void:
 	if slot_livre < 0:
 		_fala("Sem slot vazio no seu campo.")
 		return
-	# Voo ao centro EM ORDEM (só visual + som simples, sem regra nova).
-	_animar_voo_centro(ordem)
+	# Foto das cartas EM ORDEM p/ a fila (só visual; a regra tira da mão depois).
+	var mao_atual: Array = (_st.players[0] as Dictionary)["hand"]
+	var em_ordem: Array = []
+	for h in ordem:
+		var hi := int(h)
+		if hi >= 0 and hi < mao_atual.size() and (mao_atual[hi] is Dictionary):
+			em_ordem.append((mao_atual[hi] as Dictionary).duplicate(true))
+	if em_ordem.size() < 2:
+		return
+	# Prévia par a par (sistema real, sem mexer no estado) só p/ decidir
+	# flash (sucesso) ou chacoalhada (falha) em cada passo da fila.
+	var previa: Dictionary = FusionSystem.resolve_chain(em_ordem, _fusions_data, _cartas)
+	var passos_prev: Array = previa.get("passos", []) as Array if bool(previa.get("ok", false)) else []
+	_fusao_animando = true
+	await _animar_fila_fusao(em_ordem, passos_prev, ordem)
+	# A mesa pode ter acabado no meio da fila (dano/efeito): aborta sem gastar.
+	if bool(_st.over) or int(_st.current_player) != 0 or String(_st.phase) != "MAIN":
+		_fusao_animando = false
+		_atualizar()
+		return
 	var r: Dictionary = FusionSystem.perform_fusion_summon(_st, 0, ordem, slot_livre, _fusions_data, _cartas)
 	if not bool(r.get("ok", false)):
+		_fusao_animando = false
 		var tipo := str(r.get("tipo", ""))
 		if tipo == "equip_pendente":
 			_fala("Equip ainda sem tabela: não fundiu (pendente).")
@@ -864,7 +890,7 @@ func _iniciar_fusao() -> void:
 		_pad_col = 0
 		_atualizar()
 		return
-	# Relata cada passo par a par (fusão/receita/regra ou falha com descarte).
+	# Relata cada passo par a par (o flash/chacoalhada já tocou na fila).
 	var passos: Array = r.get("passos", []) as Array
 	for p in passos:
 		if not (p is Dictionary):
@@ -873,7 +899,6 @@ func _iniciar_fusao() -> void:
 		var tipo_p := str(pd.get("tipo", ""))
 		if tipo_p == "receita" or tipo_p == "regra":
 			_fala("Fusão! %s + %s = %s." % [str(pd.get("a", "")), str(pd.get("b", "")), str(pd.get("result_id", ""))])
-			_flash_fusao()
 		elif tipo_p == "equip_pendente":
 			_fala("Equip pendente: %s + %s não fundiu." % [str(pd.get("a", "")), str(pd.get("b", ""))])
 		else:
@@ -883,6 +908,7 @@ func _iniciar_fusao() -> void:
 		_fala("%d acumulada(s) ao cemitério." % n_desc)
 	_fala("Fundiu %s em Ataque p/ cima!" % str(r.get("carta", "?")))
 	print("[SOM] fusão pronta no slot %d." % int(r.get("slot", -1)))
+	_fusao_animando = false
 	_levantadas = []
 	_mao_idx = -1
 	_sel_mao = -1
@@ -899,41 +925,124 @@ func _iniciar_fusao() -> void:
 	_atualizar()
 
 
-## Voo simples ao centro EM ORDEM (só visual): cria vistas temporárias que
-## voam da mão ao centro, sem mexer na regra. Som = print (sem asset novo).
-func _animar_voo_centro(ordem: Array) -> void:
-	if _st == null:
-		return
+## Sem render (headless ou fora da árvore): pula a animação sem quebrar.
+func _sem_render() -> bool:
 	if not is_inside_tree():
+		return true
+	return DisplayServer.get_name() == "headless"
+
+
+## Fila calma da fusão (só visual + som, sem regra nova):
+## a 1ª voa ao centro e para mais à direita; a 2ª desliza até ela e tenta
+## fundir (flash + som no sucesso, chacoalhada na falha); quem fica (fundida
+## ou novata) ocupa a ponta direita e a próxima vem; até acabar a fila.
+## Passos curtos (~0.3-0.5s), sem travar o input depois (solta a trava no fim).
+## Headless tolera sem render (só prints, sem tween).
+func _animar_fila_fusao(em_ordem: Array, passos: Array, indices_mao: Array) -> void:
+	if em_ordem.size() < 2:
 		return
-	var mao: Array = (_st.players[0] as Dictionary)["hand"]
-	var n: int = mao.size()
-	for k in range(ordem.size()):
-		var hi := int(ordem[k])
-		if hi < 0 or hi >= n:
-			continue
-		var carta = mao[hi]
+	if _sem_render():
+		for k in range(em_ordem.size()):
+			var cid := str((em_ordem[k] as Dictionary).get("id", "")) if em_ordem[k] is Dictionary else "?"
+			print("[SOM] fila fusão %d/%d (%s) sem render." % [k + 1, em_ordem.size(), cid])
+		return
+	var ponta_direita := CENTRO_CARTA + Vector2(90, 0)
+	var n: int = (indices_mao as Array).size()
+	var vistas: Array = []
+	for k in range(em_ordem.size()):
+		var carta = em_ordem[k]
 		if not (carta is Dictionary):
+			vistas.append(null)
 			continue
 		var vista: CardView = CardViewScript.new()
 		add_child(vista)
 		vista.setup(carta as Dictionary)
 		vista.set_facedown(false)
 		vista.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		vista.position = _pos_mao_visual(hi, n)
+		var hi := int(indices_mao[k]) if k < indices_mao.size() else -1
+		var mao_n: int = maxi(int(((_st.players[0] as Dictionary)["hand"] as Array).size()), 1)
+		if hi >= 0 and hi < mao_n:
+			vista.position = _pos_mao_visual(hi, mao_n)
+		else:
+			vista.position = ponta_direita + Vector2(-260, 60)
 		vista.scale = Vector2(LEVANTA_ESCALA, LEVANTA_ESCALA)
 		vista.pivot_offset = CardViewScript.TAM / 2.0
-		print("[SOM] voo %d/%d ao centro (%s)." % [k + 1, ordem.size(), str((carta as Dictionary).get("id", ""))])
-		var tw := vista.create_tween().set_parallel(true)
-		tw.tween_property(vista, "position", CENTRO_CARTA, 0.28).set_delay(0.08 * k).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-		tw.tween_property(vista, "scale", Vector2.ONE, 0.22).set_delay(0.08 * k)
-		tw.tween_callback(vista.queue_free).set_delay(0.08 * k + 0.35)
+		vistas.append(vista)
+	# 1ª voa à ponta direita.
+	var primeira = vistas[0]
+	if is_instance_valid(primeira):
+		print("[SOM] fila 1/%d à direita (%s)." % [vistas.size(), str((em_ordem[0] as Dictionary).get("id", ""))])
+		var tw0 = (primeira as CardView).create_tween().set_parallel(true)
+		tw0.tween_property(primeira, "position", ponta_direita, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tw0.tween_property(primeira, "scale", Vector2.ONE, 0.3)
+		await get_tree().create_timer(0.42).timeout
+	# As próximas deslizam até a ponta e tentam fundir, uma por vez.
+	var dona = primeira
+	for k in range(1, vistas.size()):
+		var nova = vistas[k]
+		if not is_instance_valid(nova):
+			continue
+		if not is_instance_valid(dona):
+			# Dona caiu (falha anterior sem vista): a novata ocupa a ponta.
+			(nova as CardView).position = ponta_direita
+			dona = nova
+			continue
+		print("[SOM] fila %d/%d desliza até a ponta." % [k + 1, vistas.size()])
+		var tw = (nova as CardView).create_tween().set_parallel(true)
+		tw.tween_property(nova, "position", ponta_direita, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tw.tween_property(nova, "scale", Vector2.ONE, 0.3)
+		await get_tree().create_timer(0.42).timeout
+		if not is_instance_valid(nova) or not is_instance_valid(dona):
+			continue
+		var passo: Dictionary = (passos[k - 1] as Dictionary) if (k - 1) < passos.size() and (passos[k - 1] is Dictionary) else {}
+		var tipo_p := str(passo.get("tipo", "falha"))
+		if tipo_p == "receita" or tipo_p == "regra":
+			print("[SOM] fusão! %s + %s." % [str(passo.get("a", "")), str(passo.get("b", ""))])
+			_flash_fusao()
+			(nova as Node).queue_free()
+			# A fundida fica na ponta direita (pisca um pouco e segue).
+			if is_instance_valid(dona):
+				var twf = (dona as CardView).create_tween()
+				twf.tween_property(dona, "scale", Vector2(1.12, 1.12), 0.14)
+				twf.tween_property(dona, "scale", Vector2.ONE, 0.16)
+				await get_tree().create_timer(0.36).timeout
+		else:
+			print("[SOM] não fundiu: chacoalha (%s + %s)." % [str(passo.get("a", "")), str(passo.get("b", ""))])
+			_sacudir_fusao(nova)
+			await get_tree().create_timer(0.36).timeout
+			# A acumulada cai; a novata ocupa a ponta direita e continua.
+			if is_instance_valid(dona):
+				(dona as Node).queue_free()
+			dona = nova
+	# Respira na ponta e limpa a fila (a lógica real já desceu ao campo).
+	await get_tree().create_timer(0.22).timeout
+	for v in vistas:
+		if is_instance_valid(v):
+			(v as Node).queue_free()
+
+
+## Voo simples ao centro EM ORDEM (mantido p/ compat, agora usa a fila).
+func _animar_voo_centro(ordem: Array) -> void:
+	if _st == null or _sem_render() or not is_inside_tree():
+		return
+	var mao: Array = (_st.players[0] as Dictionary)["hand"]
+	var em_ordem: Array = []
+	for h in ordem:
+		var hi := int(h)
+		if hi >= 0 and hi < mao.size() and (mao[hi] is Dictionary):
+			em_ordem.append((mao[hi] as Dictionary).duplicate(true))
+	if em_ordem.size() < 2:
+		return
+	var previa: Dictionary = FusionSystem.resolve_chain(em_ordem, _fusions_data, _cartas)
+	var passos: Array = previa.get("passos", []) as Array if bool(previa.get("ok", false)) else []
+	await _animar_fila_fusao(em_ordem, passos, ordem)
 
 
 ## Flash simples na fusão (só visual): retângulo branco que some.
+## Headless tolera sem render (só som, sem tween).
 func _flash_fusao() -> void:
 	print("[SOM] flash na fusão.")
-	if not is_inside_tree():
+	if _sem_render():
 		return
 	var flash := ColorRect.new()
 	flash.color = Color(1, 1, 1, 0.55)
@@ -946,6 +1055,20 @@ func _flash_fusao() -> void:
 	var tw := flash.create_tween()
 	tw.tween_property(flash, "modulate:a", 0.0, 0.25)
 	tw.tween_callback(flash.queue_free)
+
+
+## Chacoalhada na falha (só visual): balança a carta p/ os lados.
+## Headless tolera sem render.
+func _sacudir_fusao(vista: Control) -> void:
+	print("[SOM] chacoalhada na falha.")
+	if _sem_render() or vista == null or not is_instance_valid(vista):
+		return
+	var x0: float = (vista as Control).position.x
+	var tw := (vista as Control).create_tween()
+	tw.tween_property(vista, "position:x", x0 - 14.0, 0.07)
+	tw.tween_property(vista, "position:x", x0 + 14.0, 0.07)
+	tw.tween_property(vista, "position:x", x0 - 8.0, 0.06)
+	tw.tween_property(vista, "position:x", x0, 0.08)
 
 
 ## Campo (fase de campo, fluxo fiel):
@@ -1682,9 +1805,9 @@ func _ia_inimiga() -> void:
 		_atualizar()
 		return
 	_duel.advance_phase() # BATTLE -> END
-	_duel.advance_phase() # END -> sua DRAW (compra)
+	_duel.advance_phase() # END -> sua DRAW (completa até 5, FM fiel)
 	_duel.advance_phase() # DRAW -> sua MAIN
-	_fala("Seu turno. Comprou 1 carta.")
+	_fala("Seu turno. Mão completada até %d." % (((_st.players[0] as Dictionary)["hand"] as Array).size()))
 	_sel_mao = -1
 	_mao_idx = -1
 	_sel_atk = -1

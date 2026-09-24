@@ -3,7 +3,7 @@ extends GutTest
 ## test_duel_core — GUT sobre o motor real (R2: sem Fake).
 ## Monta o duelo FM de verdade (fm_duelist_01 vs fm_duelist_03, 8000 LP,
 ## seed 42) via DuelManager real e afirma as regras fixas do doc 13
-## (LOGIC fixa): mão 5 + compra turno 1, ordem DRAW→MAIN→BATTLE→END,
+## (LOGIC fixa): mão 5/5 sem extra + refill até 5 no DRAW, ordem DRAW→MAIN→BATTLE→END,
 ## 1 invocação/MAIN, 1 ataque/monstro/BATTLE, dano/cura com teto, LP<=0,
 ## deck out, fim em até 20 turnos e determinismo por seed.
 ## Fixtures FM reais (ex.: fm_0001 Blue-eyes 3000/2500 p/ forte).
@@ -115,16 +115,16 @@ func _rodar_duelo_auto(duel) -> Dictionary:
 	}
 
 
-func test_mao_inicial_5_mais_compra_turno1() -> void:
+func test_mao_inicial_5_sem_extra() -> void:
 	var duel = _novo_duelo()
 	var st = duel.get_state()
 	var cur: int = int(st.current_player)
 	var foe: int = 1 - cur
 	var mao_cur: int = ((st.players[cur] as Dictionary)["hand"] as Array).size()
 	var mao_foe: int = ((st.players[foe] as Dictionary)["hand"] as Array).size()
-	# Doc 13.3: 5 iniciais + 1 compra do turno 1 (sem passe na V1).
+	# FM fiel (draw up to five): 5 p/ cada lado, SEM carta extra no início.
 	assert_eq(mao_foe, 5, "Quem espera começa com 5 cartas na mão.")
-	assert_eq(mao_cur, 6, "Quem começa tem 5 + 1 compra do turno 1 = 6.")
+	assert_eq(mao_cur, 5, "Quem começa tem 5 (sem extra, FM fiel).")
 	# Conservação: cada deck FM tem 40 cartas (mão + deck = 40, campo vazio).
 	for pi in [0, 1]:
 		var p: Dictionary = st.players[pi] as Dictionary
@@ -227,9 +227,17 @@ func test_deck_vazio_na_compra_e_derrota() -> void:
 	var duel = _novo_duelo()
 	var st = duel.get_state()
 	var cur: int = int(st.current_player)
+	# FM fiel: deckout só na hora de COMPLETAR até 5. Mão cheia (5) com
+	# deck vazio não perde; mão curta (4) com deck vazio perde.
+	var r_cheia: Dictionary = TurnManager.draw_for_current(st)
+	assert_true(bool(r_cheia.get("ok", false)), "Mão cheia (5) não precisa completar.")
 	((st.players[cur] as Dictionary)["deck"] as Array).clear()
+	var r_cheia_vazia: Dictionary = TurnManager.draw_for_current(st)
+	assert_true(bool(r_cheia_vazia.get("ok", false)), "Mão cheia com deck vazio não perde (nada a completar).")
+	((st.players[cur] as Dictionary)["hand"] as Array).pop_back()
+	assert_eq(((st.players[cur] as Dictionary)["hand"] as Array).size(), 4, "Preparo: mão com 4 precisa completar.")
 	var r: Dictionary = TurnManager.draw_for_current(st)
-	assert_false(bool(r.get("ok", false)), "Compra com deck vazio falha.")
+	assert_false(bool(r.get("ok", false)), "Completar com deck vazio falha.")
 	assert_true(bool(r.get("deckout", false)), "Flag deckout marcada.")
 	assert_true(duel.is_over(), "Duelo acabou por deck out.")
 	assert_eq(duel.get_winner(), 1 - cur, "Quem não tem carta perde; vence o outro jogador.")
