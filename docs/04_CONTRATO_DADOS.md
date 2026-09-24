@@ -22,7 +22,7 @@ Arquivos podem evoluir. Princípio obrigatório: dados separados da lógica.
 ## 4.2 Schemas compartilhados
 
 Astralis e Studio usam o mesmo contrato:
-Project, Card, Duelist, Deck, Fusion, Effect, Campaign, Scene, Test Scenario Schema.
+Project, Card, Duelist, Deck, Fusion, Effect, Arena (D24: slot_id fixo + x/y só desenho), Campaign, Scene, Test Scenario Schema.
 
 Schema define: tipos, campos, referências, enums, estruturas, versões.
 Studio usa para edição/validação UX. Astralis usa para carregamento/validação execução.
@@ -47,3 +47,8 @@ fusion_dark_magician_001, campaign_chapter_01, scene_castle_intro
 ```
 
 Ex.: `id: card_dark_magician / name: Dark Magician` pode virar `name: Mago Sombrio`, ID permanece. Decks referenciam Card IDs, não duplicam objetos.
+
+## 4.5 Notas V1 (D34, Systems)
+
+- Precedência da vida: `duel_setup.starting_lp` (obrigatório) manda na batalha; `duelist.starting_lp` (opcional) é só sugestão do Studio. Campo opcional = mudança compatível, sem bump de versão (04.3). Runtime lê só o setup hoje e ignora o campo do duelista.
+- Cenas simples (`campaign/scenes/*.json`, formato no README do editor): dado provisório fora do contrato V1 — sem `scene.schema.json` ainda, sem conflito com schemas existentes, runtime ignora (R4). Schema formal + grafo/timeline ficam p/ depois (docs 08).

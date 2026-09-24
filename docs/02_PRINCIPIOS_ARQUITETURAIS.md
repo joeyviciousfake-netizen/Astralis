@@ -50,3 +50,21 @@ Antes de abstrair, perguntar:
 4. Preserva especialização? 5. Pode ser testada?
 
 Evitar: scripting engine, plugin architecture, engine genérica, DI excessivo, ECS complexo sem necessidade, UI framework universal, linguagem própria prematura.
+
+## 2.7 Organização obrigatória (R8)
+
+Todo arquivo nasce dentro da pasta do dono, com nome que diz o que é:
+
+```text
+astralis/duel|core|ui|campaign|debug -> runtime (tela e regra do jogo)
+astralis/testing                     -> qa (GUT mora dentro do projeto; tests/ da raiz é só índice)
+schemas/                             -> systems (contratos + examples/)
+tools/ ci/                           -> qa (scripts de dev, nada de jogo)
+docs/                                -> lead (fonte oficial, sem duplicata)
+```
+
+Proibido: arquivo solto na raiz (salvo `AGENTS.md`), `.tmp`/`.log` no repo,
+pasta de teste fora do lugar, cena/script sem dono, dado fora de `schemas/`.
+Teste descartável vive e morre na mesma sessão: cria isolado, mostra, apaga.
+
+Auditoria: todo fim de sessão, `git status` só mostra trabalho intencional.

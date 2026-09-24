@@ -42,7 +42,7 @@ Falha mostra: expected, actual, trace real, state_before/after, events, erro —
 
 - L1 Project Validation: sem gameplay, checa schema/IDs/refs/assets/tipos.
 - L2 Astralis Test Lab: gameplay real, checa effects/duel/fusion/campaign.
-- L3 GUT: código interno (DataLoader, Validation, GameState, Turn/Battle/Damage/Fusion/Effect, CampaignRunner, Save). Prioridade nesses sistemas.
+- L3 GUT (v9.7.1, testes em `astralis/testing/`, hoje 12 testes): código interno (DataLoader, Validation, GameState, Turn/Battle/Damage/Fusion/Effect, CampaignRunner, Save). Prioridade nesses sistemas.
 
 GUT = dev-oriented ("EffectResolver processa X"). Test Lab = autor-oriented ("esta carta deveria destruir este monstro"). Complementares. Para sistemas críticos: SPEC->TEST->IMPLEMENT->RUN->FIX->REGRESSION; bug vira teste permanente.
 

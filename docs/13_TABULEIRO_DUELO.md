@@ -82,3 +82,17 @@ Dano, compra, descarte, quem venceu, resultado fusão, alvo válido, fase atual.
 - Preview/Test: `launch Astralis with context {duel_setup, seed}` usa mesmo motor (doc 10).
 - Campanha Battle node usa `duel_id` + `on_win/on_lose/retry` (doc 08).
 - V2 futuro (não V1): Extra Deck, standby/main2, mão configurável, turn_limit/draw.
+
+## 13.10 Slots D24 (ID fixo + layout separado + escolha livre)
+
+- ID fixo: `p0/p1 + m/s + 0-4` (lado + tipo + índice). Lógica só usa ID/índice.
+- Posição XY mora em `arenas/arena_*.json` (dado puro, só desenho). Editor futuro move XY sem renomear/apagar.
+- Fallback: sem arena ou arena ruim, usa grade padrão 1920x1080. Nunca quebra o jogo.
+- Jogador escolhe slot livre ao descer da mão (clica carta, depois slot vazio). Rival usa primeiro livre.
+
+## 13.11 Mão D25 (posição editável + rival de costas)
+
+- Posição mora na arena: `hand.p0{x,y,step}` (você, aberta) + `hand.p1{x,y,step}` (rival, de costas). Mover esq/dir = mudar `x` no JSON, sem quebrar regra.
+- Padrão starter: p0(1240,980,95) centrada sob o campo, p1(1240,20,60) mini no topo. Sem `hand`, usa esse padrão.
+- Rival nunca mostra frente: só contagem, de costas, sem clique, sem vazar id/nome.
+- Animação curta presa à carta, sem voo atravessando a tela.

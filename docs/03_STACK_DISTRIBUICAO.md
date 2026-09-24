@@ -7,7 +7,7 @@ ORIGEM: spec v1.1 seções 0, 3, 72, 73, 74, 75-79
 - ASTRALIS: runtime oficial.
 - ASTRALIS STUDIO: editor oficial.
 - GODOT: engine usada para desenvolver Astralis.
-- GODOT MCP: ferramenta de IA para operar Godot durante desenvolvimento.
+- GODOT MCP (Coding-Solo godot-mcp v0.1.1, server `godot` via npx com GODOT_PATH p/ Godot 4.7.2, ~14 ferramentas `godot_*`): ferramenta de IA para operar Godot durante desenvolvimento. Funciona sem editor aberto (headless).
 - GUT: framework de testes durante desenvolvimento.
 - OPENCODE: ambiente de dev assistido por IA.
 
@@ -18,8 +18,8 @@ Godot, Godot MCP, GUT, OpenCode NÃO são produtos que o usuário instala.
 OpenCode, Godot, Godot MCP, GUT, Rust, Tauri, Svelte.
 
 - Godot: só para construir Astralis. Build exportada é o produto. Usuário nunca instala/abre/configura Godot.
-- Godot MCP: criar/modificar recursos, debug, automação. Não faz parte do Astralis/Studio, não é requisito do usuário.
-- GUT: unit/integration/regression do Astralis. Não é gameplay, não vai no produto final, não tem lógica alternativa.
+- Godot MCP (Coding-Solo, oficial D18): rodar projeto, ler saída/erros, ler UID, criar/modificar recursos, automação. Não faz parte do Astralis/Studio, não é requisito do usuário.
+- GUT (v9.7.1, asset 1709 bitwes MIT, testes em `astralis/testing/`): unit/integration/regression do Astralis. Não é gameplay, não vai no produto final, não tem lógica alternativa.
 
 ## 3.3 Product stack (usuário)
 

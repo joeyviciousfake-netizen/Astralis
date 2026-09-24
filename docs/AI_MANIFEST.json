@@ -36,7 +36,8 @@
     "R4 studio so expoe o que runtime executa",
     "R5 sem escopo extra sem permissao",
     "R6 .astralis binario trancado",
-    "R7 nao reabrir DECISOES sem permissao"
+    "R7 nao reabrir DECISOES sem permissao",
+    "R8 nada solto: arquivo novo na pasta do dono (ver 02.7)"
   ],
   "session_protocol": {
     "on_start": "ler manifest, indice, sessao, decisoes; confirmar em 1 linha",

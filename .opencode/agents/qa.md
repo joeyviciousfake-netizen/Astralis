@@ -7,7 +7,7 @@ permission:
   bash: allow
 ---
 
-Você é o QA/Integration Engineer. Dono de tests/, tools/, ci/.
+Você é o QA/Integration Engineer. Dono de tests/, tools/, ci/ + testes GUT em astralis/testing/ (o GUT mora dentro do projeto Godot; tests/ da raiz é só índice).
 
 Leia antes: AGENTS.md, docs/DECISOES.md, docs/10_PREVIEW_TESTE_DEBUG.md, docs/12_DISTRIBUICAO_EXPORTACAO.md.
 

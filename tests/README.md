@@ -11,8 +11,9 @@ e usam os sistemas reais (R2: proibido Fake — DataLoader, ProjectLoader e
 RuntimeValidator de verdade). Framework: GUT 9.7.1 (bitwes, asset 1709),
 pasta `astralis/addons/gut/`, compatível com Godot 4.7.
 
-Teste atual: `astralis/testing/test_loader_validator.gd`
-(10 cartas, 2 duelistas, 2 decks, 0 erros, fusão receita vence regra).
+Testes atuais em `astralis/testing/` (GUT 15/15 verde, 77 asserts):
+- `test_loader_validator.gd` (3): 40 cartas/2 duelistas/2 decks, 0 erros, fusão receita vence regra.
+- `test_duel_core.gd` (12): mão/fases/invocação/ataques/D17 (sem ataque turno 1, só virado em ATK, virada desvira)/dano/LP/deckout/fim em 20 turnos/seed 42.
 
 ## Como rodar os testes (sem abrir janela)
 
@@ -29,7 +30,7 @@ Na raiz do repo, no PowerShell:
 .\Godot\Godot_v4.7.2-stable_win64.exe --headless --path astralis -s res://addons/gut/gut_cmdln.gd -gtest=res://testing/test_loader_validator.gd -gexit
 ```
 
-Resultado esperado: `3/3 passed` + `---- All tests passed! ----`
+Resultado esperado: `15/15 passed` + `---- All tests passed! ----`
 (exit 0 = passou; diferente de 0 = falhou).
 
 ## Como rodar no editor Godot

@@ -42,4 +42,4 @@ Regras: ler spec do domínio, respeitar invariantes, não inventar requisito, n�
 
 Feature nova: 1.comportamento 2.impacto 3.contrato 4.Astralis 5.Studio 6.testes 7.integra 8.documenta. Nunca começar pela UI se runtime não tem capacidade. Ex. nova Action: Systems faz schema, Runtime executa, Editor faz bloco/validação/descrição, QA faz GUT+scenario, Architect checa boundaries.
 
-Dev loop: USER->SPEC->LEAD->{Systems,Runtime,Campaign,Editor,QA} via OpenCode; Godot MCP para operar Godot; GUT para testar Astralis.
+Dev loop: USER->SPEC->LEAD->{Systems,Runtime,Campaign,Editor,QA} via OpenCode; Coding-Solo godot-mcp (server `godot`, headless, Godot 4.7.2) para operar Godot; GUT 9.7.1 (`astralis/testing/`) para testar Astralis.

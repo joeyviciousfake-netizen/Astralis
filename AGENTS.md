@@ -34,6 +34,15 @@ Se o usuário disser só "continue", retome de `SESSAO_ATUAL.próximo_passo`.
 
 Mudança compartilhada (schema, protocolo, formato .astralis) exige atualizar MANIFEST + doc dono + SESSAO.
 
+## 3.1 MAPA + R8 (organização, regra dura)
+
+- `astralis/duel|core|ui|campaign|debug` runtime; `astralis/testing` qa;
+  `schemas/` systems; `tools/ ci/ tests/` qa; `docs/` lead.
+- R8: nada solto — arquivo novo nasce na pasta do dono com nome claro;
+  teste descartável vive e morre na mesma sessão (cria, mostra, apaga);
+  sem `.tmp`/`.log`/pasta velha no repo; `git status` limpo todo fim.
+- R9: commit + push no fim de toda tarefa (ordem do usuário). Nunca acumule trabalho sem commitar.
+
 ## 4. PROTOCOLO DE SESSÃO (anti-perda de contexto)
 
 - INÍCIO: já fez bootstrap acima. Confirme em 1 linha: `Retomando de: <onde_estamos> → <próximo_passo>`.
@@ -43,6 +52,7 @@ Mudança compartilhada (schema, protocolo, formato .astralis) exige atualizar MA
   onde_estamos / acabamos_de_fazer / próximo_passo / travas / data_utc
   ```
   Nunca termine sem atualizar. Nunca deixe próximo_passo vazio.
+- FIM (obrigatório): commit + push (R9) — confira `git status`, `git diff`, commite por área, `git push`.
 - Decisão nova do usuário → anexe em `docs/DECISOES.md` como `Dnn: <decisão> | motivo | impacto | data`.
 
 ## 5. FORMATO DE RESPOSTA PARA HUMANO
