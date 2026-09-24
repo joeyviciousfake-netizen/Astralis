@@ -7,8 +7,8 @@ onde_estamos: "Agentes cientes de GUT+MCP (config corrigida)"
 acabamos_de_fazer: "Runtime e QA agora têm ordem escrita p/ godot_* (MCP) + GUT headless; commitado"
 acabamos_de_fazer: "R9 gravada no AGENTS (commit+push fim de tarefa); 4 commits pushed: jogo + dados FM + studio + docs; git status limpo"
 acabamos_de_fazer: "QA travou 100% controle em test_gamepad.gd (2 testes novos: 11 ações zero teclado/mouse + mesa sem botão clicável via tscn+cena real); sinal clicada confirmado removido (só resta o assert em test_board_layout.gd:329, faz sentido); GUT 42/42 (602 asserts) verde headless 4.7.2, sem Fake, sem mudar regra, R8 ok"
-próximo_passo: "Aguardar ordem do usuario (sugestao: testar a mesa no controle de verdade no app, ou fechar D26 parcial com decisão)"
-travas_e_dúvidas:
+ próximo_passo: "Aguardar ordem do usuario (sugestao: testar a mesa fiel no controle de verdade, ou QA travar o fluxo em GUT permanente)"
+ travas_e_dúvidas:
   - "D34: runtime ainda lê vida do duel_setup (starting_lp do duelista só sugere no Duelo); runtime ainda não lê campaign/scenes nem executa efeitos/fusões na mesa (D30) — Testar fusão e builder de efeito são só-dado, sem fingir (R1/R4 ok)"
   - "D34: jogar_duelo MIGRADO p/ --setup em 2026-09-24 (escreve temp_dir/duel_studio_rapido.json, lança Godot -- --setup <temp>); schemas/examples/duel_setup.json não é mais tocado (hash 41654F… intacto)"
   - "D17 diverge do doc 13: código e decks já estão em 5+5 slots e 40 cartas; doc 13 ainda diz 3+3; revisar doc 13 só após usuário aprovar tela"
@@ -20,7 +20,8 @@ travas_e_dúvidas:
   - "D26 runtime feito em 2026-09-24: sair_duelo sem tela de desistencia (grep vazio, so reporta); posicao_l1/r1 + detalhes + pausar reservados sem acao; sem Fake, regras/schemas intactos"
   - "D26 parcial runtime feito em 2026-09-24: mesa sem mouse/teclado (Buttons viraram Labels sem clique, gui_input/_no_input/clicada/_na_carta_* apagados, fileira Passar só no cursor); project.godot já tinha as 11 ações só-joypad, sem edição; duel_board.gd e main.gd sem input, intactos; regras/schemas/desenho intactos; QA: 1 assert em test_board_layout.gd trocado p/ has_signal (sinal apagado)"
   - "D27 runtime feito em 2026-09-24: sem _btn_passar/FILEIRA_PASSAR, passar_turno no botão 6, _no_start_passar_turno usa advance_phase até trocar jogador; pausar removido; sem Fake, regras/schemas intactos; QA precisa trocar pausar→passar_turno no test_gamepad"
-data_utc: "2026-09-24"
+  - "FLUXO FIEL runtime feito em 2026-09-24: fase da mão travada (carta->centro, esq/dir face, 1 dos 5 slots, menu 2 guardian stars do dado gravada na instância, desce em ATK vertical via Summon real) + fase de campo livre (só próprio+rival+LP) + L1/R1 alterna ATK/DEF via PositionSystem novo (trava se has_attacked) + START passa turno (sem fileira Passar) e na mão não faz nada + não-monstro só avisa sem centro; summon liberou face_down+ATK e guarda guardian_star (aviso p/ lead/systems: lógica compartilhada, schemas intactos); mesa headless 0 SCRIPT ERROR + GUT 42/42 (602 asserts) verde + check descartável 23/23 apagado, R8 ok"
+ data_utc: "2026-09-24"
 versão_docs: "1.5"
 ```
 

@@ -1,20 +1,32 @@
 extends Control
 
-## DuelTable — mesa JOGÁVEL (lógica de verdade, sem Fake R2).
-## A tela só CHAMA os sistemas reais (Duel/Turn/Summon/Battle/Damage) e
-## mostra o resultado: invocar na MAIN, atacar na BATTLE, passar turno
-## na parada "Passar" do cursor, rival com IA simples, LP e vitória/derrota.
-## Regras D17 valendo.
-## Controle 100% gamepad (D26 parcial): SÓ as 11 ações custom de controle
-## (mover_*, confirmar, cancelar, posicao_l1/r1, detalhes, sair_duelo,
-## pausar); sem mouse e sem teclado. L1/R1, detalhes e pausar (START)
-## são reservados, sem ação.
+## DuelTable — mesa JOGÁVEL fiel ao original (lógica de verdade, sem Fake R2).
+## A tela só CHAMA os sistemas reais (Duel/Turn/Summon/Battle/Damage/Position)
+## e mostra o resultado. Turno do jogador tem 2 fases:
+## FASE DA MÃO (trava total, só joypad D19):
+##  1. Confirmar monstro -> vai ao CENTRO e para.
+##  2. Esq/dir alterna face p/ cima / p/ baixo. Confirmar trava a face.
+##  3. Trava nova: só os 5 slots de monstro do próprio lado navegáveis.
+##  4. Confirmar no slot -> menu no centro com as 2 guardian stars
+##     (dado fm guardian_star_1/2, gravada na instância).
+##  5. Carta vai ao slot COM a face escolhida, SEMPRE em Ataque (vertical).
+##     Fim da fase da mão (MAIN -> BATTLE automático).
+## FASE DE CAMPO (livre: próprio campo + campo do rival + LP rival p/ direto):
+##  - Com cursor na própria carta: L1/RB alterna Ataque/Defesa, só se
+##    !has_attacked (trava pós-ataque FM, via PositionSystem real).
+##  - START (pausar, botão 6) passa o turno ao oponente. Sem fileira
+##    "Passar" no cursor (não existe no original). START na fase da mão
+##    não faz nada (tem que descer 1 carta antes).
+## Não-monstro: fluxo mínimo mantido (avisa "Só monstro", sem centro).
+## Controle 100% gamepad (D19): SÓ as 11 ações custom de controle;
+## sem mouse e sem teclado. Desenho 1920x1080 e espelho intactos.
 
 const ProjectLoaderScript := preload("res://core/project_loader.gd")
 const DuelManagerScript := preload("res://duel/duel_manager.gd")
 const TurnManager := preload("res://duel/turn_manager.gd")
 const SummonSystem := preload("res://duel/summon_system.gd")
 const BattleSystem := preload("res://duel/battle_system.gd")
+const PositionSystem := preload("res://duel/position_system.gd")
 const CardViewScript := preload("res://ui/card_view.gd")
 const BoardScript := preload("res://ui/duel_board.gd")
 const BoardLayoutScript := preload("res://core/board_layout.gd")
@@ -26,6 +38,8 @@ const ESCALA_MAO_P1 := 0.55
 ## Voo curto da animação: nasce perto do destino, não do deck oposto.
 const VOO_OFFSET_P0 := Vector2(0, 36)
 const VOO_OFFSET_P1 := Vector2(0, -28)
+## Carta no centro da tela 1920x1080 (centro 960,540 menos metade da carta).
+const CENTRO_CARTA := Vector2(895, 447)
 
 var _duel
 var _st
@@ -37,15 +51,14 @@ var _log: Array = []
 var _arena_layout: Dictionary = {}
 var _arena_data: Dictionary = {}
 
-## Cursor de CONTROLE (D26 parcial, sem regra nova).
-## Fileiras de cima p/ baixo: LP rival -> campo rival -> meu campo
-## -> mão -> Passar (só pelo cursor, sem clique).
-## Esq/dir anda na fileira, cima/baixo troca.
+## Cursor de CONTROLE (D19, sem regra nova).
+## Fileiras de cima p/ baixo: LP rival -> campo rival -> meu campo -> mão.
+## Sem fileira "Passar" (não existe no original; START passa o turno).
+## Esq/dir anda na fileira, cima/baixo troca (só na fase de campo).
 const FILEIRA_RIVAL_LP := 0
 const FILEIRA_RIVAL_CAMPO := 1
 const FILEIRA_MEU_CAMPO := 2
 const FILEIRA_MAO := 3
-const FILEIRA_PASSAR := 4
 const PAD_REPETE := 0.25
 var _pad_fileira := FILEIRA_MAO
 var _pad_col := 0
@@ -54,8 +67,24 @@ var _pad_dir_atual := Vector2i.ZERO
 var _pad_tempo := 0.0
 var _cursor: Panel
 var _popup_botoes: Array = []
-var _lbl_passar: Label
+var _popup_titulo: Label
 var _lbl_novamente: Label
+
+## Fluxo fiel do turno (só controle de tela, regra nos sistemas reais).
+const FASE_MAO := 0
+const FASE_CAMPO := 1
+const SUB_MAO_ESCOLHA := 0
+const SUB_FACE := 1
+const SUB_SLOT := 2
+const SUB_ESTRELA := 3
+var _fase_jogador := FASE_MAO
+var _sub_mao := SUB_MAO_ESCOLHA
+var _mao_idx := -1
+var _face_baixo := false
+var _slot_alvo := -1
+var _estrela_idx := 0
+var _estrela_ops: Array = []
+var _vista_centro: Control = null
 
 var _camada_mao: Control
 var _camada_campo: Control
@@ -71,7 +100,7 @@ var _lbl_fim: Label
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
-	# Sem mouse (D26 parcial): a mesa nunca recebe clique.
+	# Sem mouse (D19): a mesa nunca recebe clique.
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_camada_mao = $Hand
 	_camada_mao.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -98,12 +127,19 @@ func _ready() -> void:
 	_cartas = data.get("cards", {})
 	_fala("Duelo começou! Sua vez.")
 	_duel.advance_phase() # DRAW inicial -> MAIN (compra do turno 1 já veio).
-	_fala("Sua MAIN: escolha a carta e o slot. Passe na parada Passar.")
+	_fase_jogador = FASE_MAO
+	_sub_mao = SUB_MAO_ESCOLHA
+	_mao_idx = -1
+	_sel_mao = -1
+	_sel_atk = -1
+	_pad_fileira = FILEIRA_MAO
+	_pad_col = 0
+	_fala("Sua FASE DA MÃO: escolha o monstro.")
 	_atualizar(true)
 
 
 func _montar_painel() -> void:
-	# LP do rival: só mostra (D26 parcial, sem clique). O cursor usa
+	# LP do rival: só mostra (sem clique). O cursor usa
 	# a fileira RIVAL_LP e o confirmar chama _no_rival_lp().
 	_lbl_rival = Label.new()
 	_lbl_rival.position = Vector2(60, 100)
@@ -117,17 +153,9 @@ func _montar_painel() -> void:
 	_lbl_log.size = Vector2(640, 190)
 	_lbl_log.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_lbl_voce = _rotulo(Vector2(60, 600), 40, Color(0.95, 0.85, 0.55))
-	# Parada "Passar turno" (D26 parcial): só mostra, sem clique.
-	# O cursor usa a fileira PASSAR e o confirmar chama _no_passar_turno().
-	_lbl_passar = Label.new()
-	_lbl_passar.text = "Passar turno"
-	_lbl_passar.position = Vector2(60, 680)
-	_lbl_passar.size = Vector2(430, 70)
-	_lbl_passar.add_theme_font_size_override("font_size", 30)
-	_lbl_passar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_lbl_passar)
-	# Janela de invocação: Ataque / Defesa / Virada. Só mostra (sem clique);
-	# o cursor navega nas opções e o confirmar chama _invocar_como().
+	# Janela central (menu da estrela guardiã no fluxo fiel).
+	# Só mostra (sem clique); o cursor navega nas opções e o confirmar
+	# chama _confirmar_estrela().
 	_popup = PanelContainer.new()
 	_popup.position = Vector2(700, 380)
 	_popup.size = Vector2(440, 380)
@@ -144,12 +172,13 @@ func _montar_painel() -> void:
 	caixa.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_popup.add_child(caixa)
 	var titulo := Label.new()
-	titulo.text = "Invocar como?"
+	titulo.text = "Escolha a estrela guardiã"
 	titulo.add_theme_font_size_override("font_size", 30)
 	titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	titulo.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	caixa.add_child(titulo)
-	for texto_op in ["Ataque (em pé)", "Defesa (deitada)", "Virada p/ baixo", "Cancelar"]:
+	_popup_titulo = titulo
+	for texto_op in ["estrela 1", "estrela 2", "Cancelar", ""]:
 		var b := Label.new()
 		b.text = texto_op
 		b.add_theme_font_size_override("font_size", 24)
@@ -158,6 +187,7 @@ func _montar_painel() -> void:
 		b.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		caixa.add_child(b)
 		_popup_botoes.append(b)
+	_popup_botoes[3].visible = false
 	add_child(_popup)
 	# Fim de jogo.
 	_overlay = PanelContainer.new()
@@ -213,7 +243,7 @@ func _fala(texto: String) -> void:
 	print("[TABLE] " + texto)
 
 
-# ---- cursor de CONTROLE (D26, só input+cursor, sem regra nova) ----
+# ---- cursor de CONTROLE (D19, só input+cursor, sem regra nova) ----
 
 func _criar_cursor() -> void:
 	_cursor = Panel.new()
@@ -244,8 +274,6 @@ func _pad_largura_fileira(f: int) -> int:
 				return 1
 			var n: int = (((_st.players[0] as Dictionary)["hand"]) as Array).size()
 			return maxi(n, 1)
-		FILEIRA_PASSAR:
-			return 1
 	return 1
 
 
@@ -262,24 +290,72 @@ func _pad_ao_trocar(nova: int) -> void:
 	_pad_fileira = nova
 
 
+## Movimento fiel com travas: na FASE DA MÃO o cursor nunca sai do
+## lugar permitido (mão -> centro/face -> 5 slots próprios). Na FASE DE
+## CAMPO anda livre entre LP rival / campo rival / meu campo.
 func _pad_mover(dx: int, dy: int) -> void:
 	if _st == null or bool(_st.over):
 		return
-	# Janela de invocação: só cima/baixo troca a opção.
+	# Menu da estrela no centro: só cima/baixo troca a opção.
 	if _popup.visible:
 		if dy != 0 and _popup_botoes.size() > 0:
-			_pad_popup_idx = posmod(_pad_popup_idx + dy, _popup_botoes.size())
+			var max_idx := 1
+			if _estrela_ops.size() >= 2:
+				max_idx = 2
+			_pad_popup_idx = posmod(_pad_popup_idx + dy, max_idx + 1)
 			_atualizar_cursor()
 		return
+	var meu_turno: bool = int(_st.current_player) == 0
+	# FASE DA MÃO (seu MAIN): trava total.
+	if _fase_jogador == FASE_MAO and meu_turno and String(_st.phase) == "MAIN":
+		match _sub_mao:
+			SUB_FACE:
+				# Esq/dir ALTERNAM face p/ cima / p/ baixo (sem mover cursor).
+				if dx != 0:
+					_face_baixo = not _face_baixo
+					_atualizar_centro_face()
+					_fala("Face p/ baixo." if _face_baixo else "Face p/ cima.")
+					_atualizar_cursor()
+				return
+			SUB_SLOT:
+				# Só os 5 slots de monstro do próprio lado.
+				if dx != 0:
+					_pad_fileira = FILEIRA_MEU_CAMPO
+					_pad_col = posmod(_pad_col + dx, 5)
+					_atualizar_cursor()
+				return
+			_:
+				# Escolha da carta: só a mão anda.
+				if dx != 0:
+					_pad_fileira = FILEIRA_MAO
+					var larg := _pad_largura_fileira(FILEIRA_MAO)
+					if larg > 1:
+						_pad_col = posmod(_pad_col + dx, larg)
+						_atualizar_cursor()
+				return
+	# FASE DE CAMPO (seu turno): livre nos campos + LP rival.
+	if _fase_jogador == FASE_CAMPO and meu_turno:
+		if dx != 0:
+			var larg := _pad_largura_fileira(_pad_fileira)
+			if larg > 1:
+				_pad_col = posmod(_pad_col + dx, larg)
+				_atualizar_cursor()
+		if dy != 0:
+			var nova := clampi(_pad_fileira + dy, FILEIRA_RIVAL_LP, FILEIRA_MEU_CAMPO)
+			if nova != _pad_fileira:
+				_pad_ao_trocar(nova)
+				_atualizar_cursor()
+		return
+	# Fora do seu fluxo (vez do rival): cursor anda livre p/ observar.
 	if dx != 0:
-		var larg := _pad_largura_fileira(_pad_fileira)
-		if larg > 1:
-			_pad_col = posmod(_pad_col + dx, larg)
+		var larg2 := _pad_largura_fileira(_pad_fileira)
+		if larg2 > 1:
+			_pad_col = posmod(_pad_col + dx, larg2)
 			_atualizar_cursor()
 	if dy != 0:
-		var nova := clampi(_pad_fileira + dy, FILEIRA_RIVAL_LP, FILEIRA_PASSAR)
-		if nova != _pad_fileira:
-			_pad_ao_trocar(nova)
+		var nova2 := clampi(_pad_fileira + dy, FILEIRA_RIVAL_LP, FILEIRA_MAO)
+		if nova2 != _pad_fileira:
+			_pad_ao_trocar(nova2)
 			_atualizar_cursor()
 
 
@@ -290,37 +366,50 @@ func _pad_confirmar() -> void:
 		get_tree().reload_current_scene()
 		return
 	if _popup.visible:
-		match _pad_popup_idx:
-			0:
-				_invocar_como(false, "ATK")
-			1:
-				_invocar_como(false, "DEF")
-			2:
-				_invocar_como(true, "DEF")
-			_:
-				_invocar_como(true, "X")
-		_pad_popup_idx = 0
+		_confirmar_estrela()
 		return
-	match _pad_fileira:
-		FILEIRA_MAO:
-			_confirmar_mao()
-			return
-		FILEIRA_MEU_CAMPO:
-			_confirmar_meu_campo()
-			return
-		FILEIRA_RIVAL_CAMPO:
-			_confirmar_alvo_rival(clampi(_pad_col, 0, 4))
-			return
-		FILEIRA_RIVAL_LP:
-			_no_rival_lp()
-			return
-		FILEIRA_PASSAR:
-			_no_passar_turno()
-			return
+	var meu_turno: bool = int(_st.current_player) == 0
+	if not meu_turno:
+		_fala("Aguarde o rival.")
+		return
+	# FASE DA MÃO: sequência centro -> face -> slot -> estrela.
+	if _fase_jogador == FASE_MAO and String(_st.phase) == "MAIN":
+		match _sub_mao:
+			SUB_MAO_ESCOLHA:
+				_fluxo_escolher_carta()
+				return
+			SUB_FACE:
+				_fluxo_travar_face()
+				return
+			SUB_SLOT:
+				_fluxo_escolher_slot()
+				return
+			SUB_ESTRELA:
+				_fala("Escolha a estrela no menu.")
+				return
+		return
+	# FASE DE CAMPO: livre nos campos.
+	if _fase_jogador == FASE_CAMPO:
+		match _pad_fileira:
+			FILEIRA_MEU_CAMPO:
+				_confirmar_meu_campo()
+				return
+			FILEIRA_RIVAL_CAMPO:
+				_confirmar_alvo_rival(clampi(_pad_col, 0, 4))
+				return
+			FILEIRA_RIVAL_LP:
+				_no_rival_lp()
+				return
+			FILEIRA_MAO:
+				_fala("Fase de campo: use seu campo ou o do rival.")
+				return
+		return
+	_fala("Aguarde sua fase.")
 
 
-## Mão (seu turno): confirmar escolhe a carta p/ invocar no seu campo.
-func _confirmar_mao() -> void:
+## 1) Confirmar carta monstro -> ela vai ao CENTRO da tela e para.
+## Não-monstro: fluxo mínimo mantido (só avisa, sem centro).
+func _fluxo_escolher_carta() -> void:
 	if bool(_st.over) or int(_st.current_player) != 0:
 		return
 	if String(_st.phase) != "MAIN":
@@ -329,7 +418,6 @@ func _confirmar_mao() -> void:
 	var mao: Array = (_st.players[0] as Dictionary)["hand"]
 	if _pad_col < 0 or _pad_col >= mao.size():
 		return
-	# Joga a carta do cursor (slot vazio + face + posição).
 	var carta = mao[_pad_col] as Dictionary
 	if str(carta.get("card_type", "")) != "monster":
 		_fala("Só monstro pode ser invocado.")
@@ -337,49 +425,181 @@ func _confirmar_mao() -> void:
 	if SummonSystem.free_monster_slot(_st, 0) < 0:
 		_fala("Sem slot vazio no seu campo.")
 		return
+	_mao_idx = _pad_col
 	_sel_mao = _pad_col
 	_sel_atk = -1
-	_fala("Carta escolhida. Escolha um slot vazio seu.")
-	# Leva o cursor ao campo p/ escolher o slot.
-	_pad_ao_trocar(FILEIRA_MEU_CAMPO)
-	_pad_col = clampi(SummonSystem.free_monster_slot(_st, 0), 0, 4)
+	_face_baixo = false
+	_sub_mao = SUB_FACE
+	_mostrar_centro(carta, false)
+	_fala("Carta no centro. Esq/dir: face p/ cima / p/ baixo. Confirme.")
 	_atualizar()
 
 
-## Campo (D26, fluxo direto, sem mini-menu):
-## - MAIN + carta escolhida = desce no slot (abre Ataque/Defesa/Virada);
+## 2) Confirmar trava a face (escolhida com esq/dir no centro).
+func _fluxo_travar_face() -> void:
+	if _mao_idx < 0:
+		_sub_mao = SUB_MAO_ESCOLHA
+		_atualizar()
+		return
+	_sub_mao = SUB_SLOT
+	_slot_alvo = -1
+	_pad_fileira = FILEIRA_MEU_CAMPO
+	_pad_col = clampi(SummonSystem.free_monster_slot(_st, 0), 0, 4)
+	_fala("Face travada (%s). Escolha 1 dos 5 slots." % ("p/ baixo" if _face_baixo else "p/ cima"))
+	_atualizar_cursor()
+
+
+## 3) Trava nova: 1 dos 5 slots do próprio lado -> abre menu da estrela.
+func _fluxo_escolher_slot() -> void:
+	if _mao_idx < 0:
+		_sub_mao = SUB_MAO_ESCOLHA
+		_atualizar()
+		return
+	var zona: Array = (_st.players[0] as Dictionary)["monster"]
+	var slot := clampi(_pad_col, 0, 4)
+	if slot < 0 or slot >= zona.size():
+		return
+	if zona[slot] != null:
+		_fala("Slot de monstro ocupado.")
+		return
+	_slot_alvo = slot
+	_popup_slot = slot
+	var mao: Array = (_st.players[0] as Dictionary)["hand"]
+	if _mao_idx < 0 or _mao_idx >= mao.size():
+		_fala("Carta saiu da mão.")
+		_sub_mao = SUB_MAO_ESCOLHA
+		_mao_idx = -1
+		_sel_mao = -1
+		_esconder_centro()
+		_atualizar()
+		return
+	var carta = mao[_mao_idx] as Dictionary
+	_estrela_ops = _estrelas_da_carta(carta)
+	_estrela_idx = 0
+	_pad_popup_idx = 0
+	_sub_mao = SUB_ESTRELA
+	_mostrar_popup_estrela()
+	_fala("Escolha 1 das 2 guardian stars.")
+	_atualizar_cursor()
+
+
+## Lê as 2 guardian stars do DADO (fm guardian_star_1/2). Sem inventar:
+## se o dado não tem, usa "—" p/ não travar o fluxo.
+func _estrelas_da_carta(carta: Dictionary) -> Array:
+	var real: Dictionary = {}
+	var cid := str(carta.get("id", ""))
+	if not cid.is_empty() and _cartas.has(cid):
+		real = _cartas[cid] as Dictionary
+	var s1 := str(carta.get("guardian_star_1", real.get("guardian_star_1", "")))
+	var s2 := str(carta.get("guardian_star_2", real.get("guardian_star_2", "")))
+	if s1.strip_edges().is_empty():
+		s1 = "—"
+	if s2.strip_edges().is_empty():
+		s2 = "—"
+	return [s1, s2]
+
+
+func _mostrar_popup_estrela() -> void:
+	if _popup_titulo != null and is_instance_valid(_popup_titulo):
+		_popup_titulo.text = "Escolha a estrela guardiã"
+	for i in range(_popup_botoes.size()):
+		var b = _popup_botoes[i] as Label
+		if i == 0:
+			b.text = str(_estrela_ops[0]) if _estrela_ops.size() > 0 else "—"
+			b.visible = true
+		elif i == 1:
+			b.text = str(_estrela_ops[1]) if _estrela_ops.size() > 1 else "—"
+			b.visible = true
+		elif i == 2:
+			b.text = "Cancelar"
+			b.visible = true
+		else:
+			b.visible = false
+	_popup.visible = true
+
+
+## 4) Menu no centro: 1 das 2 guardian stars -> 5) desce ao slot em Ataque.
+func _confirmar_estrela() -> void:
+	if _sub_mao != SUB_ESTRELA or _mao_idx < 0 or _slot_alvo < 0:
+		_popup.visible = false
+		_pad_popup_idx = 0
+		return
+	if _pad_popup_idx == 2:
+		# Cancelar volta p/ escolha do slot.
+		_popup.visible = false
+		_pad_popup_idx = 0
+		_sub_mao = SUB_SLOT
+		_pad_fileira = FILEIRA_MEU_CAMPO
+		_pad_col = clampi(_slot_alvo, 0, 4)
+		_fala("Escolha 1 dos 5 slots.")
+		_atualizar_cursor()
+		return
+	var estrela := str(_estrela_ops[clampi(_pad_popup_idx, 0, 1)])
+	_executar_summon_fiel(estrela)
+
+
+## 5) Carta vai ao slot COM a face escolhida, SEMPRE em Ataque (vertical).
+func _executar_summon_fiel(estrela: String) -> void:
+	_popup.visible = false
+	_pad_popup_idx = 0
+	if _mao_idx < 0 or _slot_alvo < 0:
+		return
+	var hand_idx := _mao_idx
+	var slot_n := _slot_alvo
+	var face: bool = _face_baixo
+	_popup_slot = -1
+	var r: Dictionary = SummonSystem.normal_summon(_st, 0, hand_idx, slot_n, face, "ATK", estrela)
+	if not bool(r.get("ok", false)):
+		_fala("Não deu: " + str(r.get("erro", "")))
+		_sub_mao = SUB_MAO_ESCOLHA
+		_mao_idx = -1
+		_sel_mao = -1
+		_slot_alvo = -1
+		_esconder_centro()
+		_pad_fileira = FILEIRA_MAO
+		_pad_col = 0
+		_atualizar()
+		return
+	var modo := "virada p/ baixo" if face else "p/ cima"
+	_fala("Invocou %s em Ataque (estrela %s)!" % [modo, estrela])
+	_esconder_centro()
+	_mao_idx = -1
+	_sel_mao = -1
+	_slot_alvo = -1
+	_estrela_ops = []
+	_sub_mao = SUB_MAO_ESCOLHA
+	# Fim da fase da mão: MAIN -> BATTLE automático, entra a fase de campo.
+	_duel.advance_phase()
+	_fase_jogador = FASE_CAMPO
+	_sel_atk = -1
+	_pad_fileira = FILEIRA_MEU_CAMPO
+	_pad_col = clampi(slot_n, 0, 4)
+	_atualizar()
+
+
+## Campo (fase de campo, fluxo fiel):
 ## - BATTLE + sua carta = marca o atacante; BATTLE + slot vazio = avisa.
 func _confirmar_meu_campo() -> void:
 	if bool(_st.over) or int(_st.current_player) != 0:
 		return
-	var fase := String(_st.phase)
-	var slot := clampi(_pad_col, 0, 4)
-	if fase == "MAIN" and _sel_mao >= 0:
-		_no_slot_vazio(slot)
+	if String(_st.phase) != "BATTLE":
+		_fala("Ataque só na sua BATTLE.")
 		return
+	var slot := clampi(_pad_col, 0, 4)
 	var zona: Array = (_st.players[0] as Dictionary)["monster"]
 	if slot < 0 or slot >= zona.size():
 		return
 	if zona[slot] == null:
-		if fase == "MAIN":
-			_fala("Slot vazio. Escolha uma carta da mão primeiro.")
-		else:
-			_fala("Slot vazio, sem atacante.")
+		_fala("Slot vazio, sem atacante.")
 		return
-	if fase == "BATTLE":
-		_sel_atk = slot
-		_sel_mao = -1
-		_fala("Atacante escolhido. Mire no rival ou no LP.")
-		_pad_ao_trocar(FILEIRA_RIVAL_CAMPO)
-		_atualizar()
-		return
-	if fase == "MAIN":
-		_fala("Slot ocupado.")
-	else:
-		_fala("Aguarde sua fase.")
+	_sel_atk = slot
+	_sel_mao = -1
+	_fala("Atacante escolhido. Mire no rival ou no LP.")
+	_pad_ao_trocar(FILEIRA_RIVAL_CAMPO)
+	_atualizar()
 
 
-## Mira do ataque direto (D26): confirmar no campo rival ataca, se há atacante.
+## Mira do ataque (fase de campo): confirmar no campo rival ataca, se há atacante.
 func _confirmar_alvo_rival(alvo_slot: int) -> void:
 	if bool(_st.over) or int(_st.current_player) != 0:
 		return
@@ -396,14 +616,49 @@ func _pad_cancelar() -> void:
 	if _st == null:
 		return
 	if _popup.visible:
+		# Volta do menu da estrela p/ escolha do slot.
 		_popup.visible = false
-		_popup_slot = -1
 		_pad_popup_idx = 0
+		if _fase_jogador == FASE_MAO and _sub_mao == SUB_ESTRELA:
+			_sub_mao = SUB_SLOT
+			_pad_fileira = FILEIRA_MEU_CAMPO
+			_pad_col = clampi(_slot_alvo, 0, 4)
+			_fala("Escolha 1 dos 5 slots.")
+			_atualizar_cursor()
+			return
+		_popup_slot = -1
 		_fala("Invocação cancelada.")
 		_atualizar_cursor()
 		return
-	if _sel_mao >= 0 or _sel_atk >= 0:
+	if _fase_jogador == FASE_MAO and int(_st.current_player) == 0:
+		match _sub_mao:
+			SUB_ESTRELA:
+				_sub_mao = SUB_SLOT
+				_pad_fileira = FILEIRA_MEU_CAMPO
+				_pad_col = clampi(_slot_alvo, 0, 4)
+				_fala("Escolha 1 dos 5 slots.")
+				_atualizar_cursor()
+				return
+			SUB_SLOT:
+				_sub_mao = SUB_FACE
+				_pad_fileira = FILEIRA_MAO
+				_pad_col = clampi(_mao_idx, 0, maxi(_pad_largura_fileira(FILEIRA_MAO) - 1, 0))
+				_fala("Face de novo: esq/dir.")
+				_atualizar_cursor()
+				return
+			SUB_FACE:
+				_sub_mao = SUB_MAO_ESCOLHA
+				_mao_idx = -1
+				_sel_mao = -1
+				_sel_atk = -1
+				_esconder_centro()
+				_pad_fileira = FILEIRA_MAO
+				_fala("Escolha desfeita.")
+				_atualizar()
+				return
+	if _sel_mao >= 0 or _sel_atk >= 0 or _mao_idx >= 0:
 		_sel_mao = -1
+		_mao_idx = -1
 		_sel_atk = -1
 		_fala("Escolha desfeita.")
 		_atualizar()
@@ -431,6 +686,20 @@ func _retangulo_cursor() -> Rect2:
 			b.position -= get_global_rect().position
 			return b.grow(6)
 		return Rect2(_popup.position, _popup.size)
+	# Fase da mão: cursor travado no passo atual (mão / centro / 5 slots).
+	if _fase_jogador == FASE_MAO and int(_st.current_player) == 0 and String(_st.phase) == "MAIN":
+		match _sub_mao:
+			SUB_FACE:
+				return Rect2(CENTRO_CARTA, CardViewScript.TAM)
+			SUB_SLOT, SUB_ESTRELA:
+				return BoardScript.slot_rect(0, "monstro", clampi(_pad_col, 0, 4), _arena_layout)
+			_:
+				var mao0: Array = (_st.players[0] as Dictionary)["hand"]
+				var n0 := mao0.size()
+				if n0 <= 0:
+					return Rect2(Vector2(1140, 980), Vector2(200, 60))
+				var c0 := clampi(_pad_col, 0, n0 - 1)
+				return Rect2(_pos_mao(c0, n0, 0), CardViewScript.TAM)
 	match _pad_fileira:
 		FILEIRA_RIVAL_LP:
 			return Rect2(_lbl_rival.position, _lbl_rival.size)
@@ -445,12 +714,6 @@ func _retangulo_cursor() -> Rect2:
 				return Rect2(Vector2(1140, 980), Vector2(200, 60))
 			var c := clampi(_pad_col, 0, n - 1)
 			return Rect2(_pos_mao(c, n, 0), CardViewScript.TAM)
-		FILEIRA_PASSAR:
-			if is_instance_valid(_lbl_passar):
-				var r: Rect2 = (_lbl_passar as Control).get_global_rect()
-				r.position -= get_global_rect().position
-				return r.grow(6)
-			return Rect2(Vector2(60, 680), Vector2(430, 70))
 	return vazio
 
 
@@ -459,16 +722,28 @@ func _atualizar_cursor() -> void:
 		return
 	# Garante coluna válida se a mão encolheu.
 	var larg := _pad_largura_fileira(_pad_fileira)
-	if larg > 1:
+	if _fase_jogador == FASE_MAO and int((_st.players[0] as Dictionary)["hand"] is Array):
+		if _sub_mao == SUB_SLOT:
+			_pad_col = clampi(_pad_col, 0, 4)
+		elif _sub_mao == SUB_FACE:
+			pass
+		elif larg > 1:
+			_pad_col = clampi(_pad_col, 0, larg - 1)
+		else:
+			_pad_col = 0
+	elif larg > 1:
 		_pad_col = clampi(_pad_col, 0, larg - 1)
 	else:
 		_pad_col = 0
-	_pad_popup_idx = clampi(_pad_popup_idx, 0, maxi(_popup_botoes.size() - 1, 0))
+	_pad_popup_idx = clampi(_pad_popup_idx, 0, 2)
 	var r := _retangulo_cursor()
 	_cursor.position = r.position - Vector2(6, 6)
 	_cursor.size = r.size + Vector2(12, 12)
 	_cursor.visible = true
 	_cursor.move_to_front()
+	if _vista_centro != null and is_instance_valid(_vista_centro):
+		_vista_centro.move_to_front()
+		_cursor.move_to_front()
 
 
 func _process(delta: float) -> void:
@@ -514,11 +789,11 @@ func _unhandled_input(evento: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if evento.is_action_pressed("pausar"):
-		_no_pausar_reservado()
+		_no_start_passar_turno()
 		get_viewport().set_input_as_handled()
 		return
 	if evento.is_action_pressed("posicao_l1") or evento.is_action_pressed("posicao_r1"):
-		_no_posicao_reservada()
+		_alternar_posicao()
 		get_viewport().set_input_as_handled()
 		return
 	if evento.is_action_pressed("detalhes"):
@@ -527,22 +802,97 @@ func _unhandled_input(evento: InputEvent) -> void:
 		return
 
 
-## START reservado (D26): existe no controle, mas não faz nada no jogo.
-func _no_pausar_reservado() -> void:
-	print("[TABLE] pausar reservado (sem ação).")
-	_fala("Pausar: reservado (sem ação).")
+## START (pausar, botão 6): passa o turno ao oponente, sem fileira Passar.
+## Na fase da mão não faz nada (tem que descer 1 carta antes).
+func _no_start_passar_turno() -> void:
+	if _st == null or bool(_st.over):
+		return
+	if int(_st.current_player) != 0:
+		return
+	if _fase_jogador == FASE_MAO:
+		_fala("Desça 1 carta primeiro (START não passa na fase da mão).")
+		print("[TABLE] START na fase da mão: sem ação (tem que descer 1 carta).")
+		return
+	var fase := String(_st.phase)
+	if fase != "MAIN" and fase != "BATTLE":
+		return
+	_sel_mao = -1
+	_mao_idx = -1
+	_sel_atk = -1
+	_popup.visible = false
+	_pad_popup_idx = 0
+	_esconder_centro()
+	var dono := int(_st.current_player)
+	var guarda := 0
+	while int(_st.current_player) == dono and not bool(_st.over) and guarda < 8:
+		_duel.advance_phase()
+		guarda += 1
+	if bool(_st.over):
+		_atualizar()
+		return
+	_pad_ao_trocar(FILEIRA_MEU_CAMPO)
+	_pad_fileira = FILEIRA_MEU_CAMPO
+	_fala("Turno do rival... (START)")
+	_atualizar()
+	_ia_inimiga()
 
 
-## L1/R1 reservados (D26, sem troca de posição na mesa).
-func _no_posicao_reservada() -> void:
-	print("[TABLE] posicao_l1/r1 reservado (sem ação).")
-	_fala("L1/R1: reservado (sem ação).")
+## L1/R1 (posicao_l1/r1): alterna Ataque/Defesa da própria carta com
+## o cursor, só na fase de campo e só se !has_attacked (trava FM).
+func _alternar_posicao() -> void:
+	if _st == null or bool(_st.over):
+		return
+	if int(_st.current_player) != 0:
+		return
+	if _fase_jogador != FASE_CAMPO:
+		_fala("Posição só na fase de campo.")
+		print("[TABLE] posicao_l1/r1 na fase da mão: sem ação.")
+		return
+	if _pad_fileira != FILEIRA_MEU_CAMPO:
+		_fala("Mire numa carta sua p/ trocar Ataque/Defesa.")
+		return
+	var slot := clampi(_pad_col, 0, 4)
+	var r: Dictionary = PositionSystem.toggle_position(_st, 0, slot)
+	if not bool(r.get("ok", false)):
+		_fala("Não deu: " + str(r.get("erro", "")))
+		print("[TABLE] posicao travada: " + str(r.get("erro", "")))
+		return
+	_fala("Agora em %s." % ("Ataque" if str(r.get("position", "ATK")) == "ATK" else "Defesa"))
+	_atualizar()
 
 
-## Detalhes reservado (D26, sem tela de detalhes na mesa).
+## Detalhes reservado (sem tela de detalhes na mesa).
 func _no_detalhes_reservado() -> void:
 	print("[TABLE] detalhes reservado (sem ação).")
 	_fala("Detalhes: reservado (sem ação).")
+
+
+# ---- centro da tela (fluxo fiel) ----
+
+func _mostrar_centro(carta: Dictionary, face_baixo: bool) -> void:
+	_esconder_centro()
+	var vista: CardView = CardViewScript.new()
+	add_child(vista)
+	vista.setup(carta)
+	vista.set_facedown(face_baixo)
+	vista.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vista.position = CENTRO_CARTA
+	vista.scale = Vector2.ONE
+	vista.modulate.a = 1.0
+	_vista_centro = vista
+	_vista_centro.move_to_front()
+	_cursor.move_to_front()
+
+
+func _atualizar_centro_face() -> void:
+	if _vista_centro != null and is_instance_valid(_vista_centro):
+		(_vista_centro as CardView).set_facedown(_face_baixo)
+
+
+func _esconder_centro() -> void:
+	if _vista_centro != null and is_instance_valid(_vista_centro):
+		(_vista_centro as Node).queue_free()
+	_vista_centro = null
 
 
 # ---- desenho a partir do estado real ----
@@ -554,14 +904,17 @@ func _atualizar(com_efeito := false) -> void:
 		(f as Node).queue_free()
 	for f in _camada_campo.get_children():
 		(f as Node).queue_free()
-	_sel_mao = -1 if _sel_mao >= (( _st.players[0] as Dictionary)["hand"] as Array).size() else _sel_mao
+	_sel_mao = -1 if _sel_mao >= ((_st.players[0] as Dictionary)["hand"] as Array).size() else _sel_mao
+	if _fase_jogador == FASE_MAO and _sub_mao != SUB_MAO_ESCOLHA and _mao_idx >= 0:
+		_sel_mao = _mao_idx
 	_desenhar_mao(com_efeito)
 	_desenhar_campo()
 	_lbl_rival.text = "RIVAL — LP %d" % int((_st.players[1] as Dictionary)["lp"])
 	_lbl_voce.text = "VOCÊ — LP %d" % int((_st.players[0] as Dictionary)["lp"])
 	_lbl_mao_rival.text = "Mão do rival: %d cartas" % (((_st.players[1] as Dictionary)["hand"] as Array).size())
 	var vez := "Sua vez" if int(_st.current_player) == 0 else "Vez do rival"
-	_lbl_fase.text = "Turno %d — %s — %s" % [int(_st.turn_number), String(_st.phase), vez]
+	var nome_fase := "MÃO" if _fase_jogador == FASE_MAO and int(_st.current_player) == 0 else String(_st.phase)
+	_lbl_fase.text = "Turno %d — %s — %s" % [int(_st.turn_number), nome_fase, vez]
 	if bool(_st.over):
 		_lbl_fim.text = "VITÓRIA!" if int(_st.winner) == 0 else "DERROTA"
 		_lbl_fim.add_theme_color_override("font_color", Color(0.4, 1.0, 0.5) if int(_st.winner) == 0 else Color(1.0, 0.4, 0.4))
@@ -680,49 +1033,7 @@ func _fantasia_de_inst(m: Dictionary) -> Dictionary:
 	return real
 
 
-# ---- jogadas do jogador (fluxo direto D26 parcial, só controle) ----
-
-func _no_slot_vazio(i: int) -> void:
-	if _st == null or bool(_st.over):
-		return
-	var zona: Array = (_st.players[0] as Dictionary)["monster"]
-	if i < 0 or i >= zona.size():
-		return
-	if zona[i] != null:
-		_fala("Slot de monstro ocupado.")
-		return
-	if _sel_mao < 0:
-		_fala("Escolha uma carta da mão primeiro.")
-		return
-	if SummonSystem.free_monster_slot(_st, 0) < 0 and zona[_sel_mao] == null:
-		pass
-	_popup_slot = i
-	_pad_popup_idx = 0
-	_popup.visible = true
-	_atualizar_cursor()
-
-
-## Face/posição escolhida -> invoca direto (D26, sem estrela guardiã).
-func _invocar_como(face_down: bool, pos: String) -> void:
-	_popup.visible = false
-	_pad_popup_idx = 0
-	if pos == "X" or _sel_mao < 0:
-		return
-	var hand_idx := _sel_mao
-	var slot_n := _popup_slot
-	_popup_slot = -1
-	var r: Dictionary = SummonSystem.normal_summon(_st, 0, hand_idx, slot_n, face_down, pos)
-	if bool(r.get("ok", false)):
-		var modo := "virada p/ baixo" if face_down else ("Ataque" if pos == "ATK" else "Defesa")
-		_fala("Invocou em %s!" % modo)
-	else:
-		_fala("Não deu: " + str(r.get("erro", "")))
-	_sel_mao = -1
-	# Cursor volta p/ mão após a jogada.
-	_pad_fileira = FILEIRA_MAO
-	_pad_col = 0
-	_atualizar()
-
+# ---- jogadas do jogador (fluxo fiel, só controle) ----
 
 func _no_rival_lp() -> void:
 	if bool(_st.over) or int(_st.current_player) != 0:
@@ -758,35 +1069,6 @@ func _atacar(atacante_slot: int, alvo_slot: int) -> void:
 		_fala("Nada acontece.")
 	_sel_atk = -1
 	_atualizar()
-
-
-## Passar turno (D26 parcial): só na parada "Passar" do cursor.
-##MAIN ou BATTLE: avança de verdade via TurnManager até trocar de jogador
-## (descarte do END + checagem + compra valendo), depois o rival joga.
-func _no_passar_turno() -> void:
-	if _st == null or bool(_st.over):
-		return
-	if int(_st.current_player) != 0:
-		return
-	var fase := String(_st.phase)
-	if fase != "MAIN" and fase != "BATTLE":
-		return
-	_sel_mao = -1
-	_sel_atk = -1
-	_popup.visible = false
-	_pad_popup_idx = 0
-	var dono := int(_st.current_player)
-	var guarda := 0
-	while int(_st.current_player) == dono and not bool(_st.over) and guarda < 8:
-		_duel.advance_phase()
-		guarda += 1
-	if bool(_st.over):
-		_atualizar()
-		return
-	_pad_ao_trocar(FILEIRA_MAO)
-	_fala("Turno do rival... (Passar)")
-	_atualizar()
-	_ia_inimiga()
 
 
 # ---- IA simples do rival (usa os mesmos sistemas reais) ----
@@ -845,7 +1127,17 @@ func _ia_inimiga() -> void:
 	_duel.advance_phase() # DRAW -> sua MAIN
 	_fala("Seu turno. Comprou 1 carta.")
 	_sel_mao = -1
+	_mao_idx = -1
 	_sel_atk = -1
+	_slot_alvo = -1
+	_estrela_ops = []
+	_sub_mao = SUB_MAO_ESCOLHA
+	_fase_jogador = FASE_MAO
+	_face_baixo = false
+	_esconder_centro()
+	_popup.visible = false
+	_pad_popup_idx = 0
 	_pad_fileira = FILEIRA_MAO
 	_pad_col = 0
+	_fala("Sua FASE DA MÃO: escolha o monstro.")
 	_atualizar()
