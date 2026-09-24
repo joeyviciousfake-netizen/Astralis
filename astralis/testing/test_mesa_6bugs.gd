@@ -354,6 +354,12 @@ func test_bug6_rival_vazio_menu_LP_dano_ATK_cheio_e_IA_direta() -> void:
 	var slot_atk: int = int(fim["slot"])
 	assert_eq(int(mesa.get("_fase_jogador")), TableScript.FASE_CAMPO, "Preparo: fase de campo.")
 	assert_eq(String(st.phase), "BATTLE", "Preparo: BATTLE da mesa.")
+	# Só organiza dado ANTES de escolher: rival sem monstros + turno liberado
+	# p/ p0 atacar (turno 1 bloqueia, D17; menu só mostra Atacar se can_attack ok).
+	for i in range(5):
+		(st.players[1] as Dictionary)["monster"][i] = null
+	assert_false(BattleSystem.has_monsters(st, 1), "Preparo: rival sem monstros.")
+	st.set("turn_number", 3)
 	# Escolhe o atacante (cursor real no próprio campo).
 	mesa.set("_pad_fileira", TableScript.FILEIRA_MEU_CAMPO)
 	mesa.set("_pad_col", slot_atk)
@@ -361,11 +367,6 @@ func test_bug6_rival_vazio_menu_LP_dano_ATK_cheio_e_IA_direta() -> void:
 	mesa.call("_pad_confirmar")
 	Input.action_release("confirmar")
 	assert_eq(int(mesa.get("_sel_atk")), slot_atk, "Atacante escolhido no próprio campo.")
-	# Só organiza dado: rival sem monstros + turno liberado p/ p0 atacar (turno 1 bloqueia, D17).
-	for i in range(5):
-		(st.players[1] as Dictionary)["monster"][i] = null
-	assert_false(BattleSystem.has_monsters(st, 1), "Preparo: rival sem monstros.")
-	st.set("turn_number", 3)
 	# Mira no campo rival vazio: abre o menu de alvo com o LP.
 	mesa.set("_pad_fileira", TableScript.FILEIRA_RIVAL_CAMPO)
 	mesa.set("_pad_col", 0)

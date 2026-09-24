@@ -720,7 +720,8 @@ func _executar_summon_fiel(estrela: String) -> void:
 
 
 ## Campo (fase de campo, fluxo fiel):
-## - BATTLE + sua carta = marca o atacante; BATTLE + slot vazio = avisa.
+## - BATTLE + sua carta VÁLIDA = marca o atacante; inválida = avisa e esconde "Atacar".
+## - Só mostra "Atacar" se o can_attack real deixar (turno 1, já atacou, virada, DEF, etc.).
 func _confirmar_meu_campo() -> void:
 	if bool(_st.over) or int(_st.current_player) != 0:
 		return
@@ -733,6 +734,14 @@ func _confirmar_meu_campo() -> void:
 		return
 	if zona[slot] == null:
 		_fala("Slot vazio, sem atacante.")
+		return
+	# Menu da carta SÓ com ação válida: consulta o can_attack real e esconde
+	# "Atacar" quando trava (vale p/ qualquer trava, não só turno 1).
+	var pode: Dictionary = BattleSystem.can_attack(_st, 0, slot)
+	if not bool(pode.get("ok", false)):
+		_sel_atk = -1
+		_fala("Não pode atacar: " + str(pode.get("erro", "")))
+		_atualizar()
 		return
 	_sel_atk = slot
 	_sel_mao = -1
@@ -1266,10 +1275,20 @@ func _desenhar_campo() -> void:
 			# Face p/ baixo desce virada de verdade (bug 1): vale p/ os 2 lados.
 			var esconder: bool = bool(m.get("face_down", false))
 			vista.set_facedown(esconder)
+			# Centro do slot = centro da carta (nos 2 lados): o pivô é o centro,
+			# então o centro visual é position+pivô (escala não entra na conta).
+			vista.pivot_offset = CardViewScript.TAM / 2.0
 			vista.scale = Vector2(ESCALA_CAMPO, ESCALA_CAMPO)
-			vista.position = r.get_center() - CardViewScript.TAM / 2.0 * ESCALA_CAMPO
+			vista.position = r.get_center() - CardViewScript.TAM / 2.0
+			# Lado 1 de cabeça p/ cima p/ o rival no topo (frente e verso):
+			# base 180°; DEF soma 90° (deitada, mas virada p/ ele).
+			var base := 0.0
+			if lado == 1:
+				base = PI
 			if str(m.get("position", "ATK")) == "DEF":
-				vista.rotation = PI / 2.0
+				vista.rotation = base + PI / 2.0
+			else:
+				vista.rotation = base
 			vista.set_selected(lado == 0 and i == _sel_atk)
 
 
