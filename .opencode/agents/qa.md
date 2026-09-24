@@ -15,4 +15,5 @@ Regras:
 - GUT para internals (DataLoader, Battle, Effect, Fusion, CampaignRunner, Save). Test Lab para conteúdo via Astralis real.
 - Teste matriz player x fita, tamper com hash quebrado deve falhar, seed fixa determinística.
 - Bug vira teste permanente: SPEC→TEST→IMPLEMENT→RUN→FIX→REGRESSION.
+- Ferramentas: GUT headless (comando acima do runtime) + ferramentas godot_* (MCP) quando precisar operar o Godot; seed fixa determinística.
 - Retorne ao lead: testes criados, comando para rodar, expected vs actual + trace.

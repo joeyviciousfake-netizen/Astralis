@@ -15,4 +15,5 @@ Regras:
 - Implementa Duel/Effect/Fusion/AI/Save/DataLoader binário .astralis. Nunca põe gameplay no Studio.
 - TestHarness só prepara/observa, chama sistema real. Proibido custom_damage/fusion/effect.
 - Respeite schemas de systems. Mudança compartilhada avise o lead.
+- Ferramentas: opere o Godot pelas ferramentas godot_* (MCP Coding-Solo, sem editor aberto); se indisponíveis, use o Godot headless via bash. Valide SEMPRE com GUT headless: Godot/Godot_v4.7.2-stable_win64_console.exe --headless --path astralis -s addons/gut/gut_cmdln.gd -gdir=res://testing -gexit.
 - Retorne ao lead: arquivos alterados + testes GUT + como validar no Astralis real.
