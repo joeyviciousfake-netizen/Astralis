@@ -3,7 +3,8 @@
 > IA: atualize este arquivo NO FIM de toda resposta com mudança. Nunca deixe próximo_passo vazio.
 
 ```yaml
-onde_estamos: "Jogo 100% controle, zero mouse/teclado (D37), GUT 42/42 (Lead confirmou)"
+onde_estamos: "Tudo commitado e no GitHub (R9 estreando)"
+acabamos_de_fazer: "R9 gravada no AGENTS (commit+push fim de tarefa); 4 commits pushed: jogo + dados FM + studio + docs; git status limpo"
 acabamos_de_fazer: "QA travou 100% controle em test_gamepad.gd (2 testes novos: 11 ações zero teclado/mouse + mesa sem botão clicável via tscn+cena real); sinal clicada confirmado removido (só resta o assert em test_board_layout.gd:329, faz sentido); GUT 42/42 (602 asserts) verde headless 4.7.2, sem Fake, sem mudar regra, R8 ok"
 próximo_passo: "Aguardar ordem do usuario (sugestao: testar a mesa no controle de verdade no app, ou fechar D26 parcial com decisão)"
 travas_e_dúvidas:
