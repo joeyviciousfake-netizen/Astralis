@@ -1,0 +1,15 @@
+[package]
+name = "astralis-studio"
+version = "0.1.0"
+description = "Astralis Studio — Editor de Cartas. Dono: Editor Engineer. Só edita dado de carta; jogo é o Astralis (R1/R4)."
+edition = "2021"
+rust-version = "1.77"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-shell = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["preserve_order"] }
