@@ -3,7 +3,8 @@
 > IA: atualize este arquivo NO FIM de toda resposta com mudança. Nunca deixe próximo_passo vazio.
 
 ```yaml
-onde_estamos: "6 bugs da mesa corrigidos e travados, GUT 53/53 (Lead confirmou)"
+onde_estamos: "3 bugs novos da mesa travados em GUT, 56/56 verde (QA)"
+  acabamos_de_fazer_qa_3bugs: "QA travou 3 bugs do runtime em test_mesa_3bugs.gd (menu turno1 não marca+avisa e turno3 marca via can_attack real + centro desenho=centro slot 2 lados + lado1 180 frente/verso e lado0 0, DEF soma 90; mesa/carta reais, sem Fake, sem mudar regra); linha do runtime no bug6 revisada e aprovada (preparo antes de marcar); GUT 56/56 (903 asserts) verde headless 4.7.2 sem SCRIPT ERROR, R8 ok"
 acabamos_de_fazer: "Fase da mão travada (centro/face/slot/estrela, sempre ATK) + campo livre + RB/LB posição + START passa; QA 5 testes; Lead verificou GUT 47/47 verde"
 acabamos_de_fazer: "Runtime e QA agora têm ordem escrita p/ godot_* (MCP) + GUT headless; commitado"
 acabamos_de_fazer: "R9 gravada no AGENTS (commit+push fim de tarefa); 4 commits pushed: jogo + dados FM + studio + docs; git status limpo"
