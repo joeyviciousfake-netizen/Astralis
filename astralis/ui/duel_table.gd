@@ -26,11 +26,13 @@ extends Control
 ## sem mouse e sem teclado. Desenho 1920x1080 e espelho intactos.
 
 const ProjectLoaderScript := preload("res://core/project_loader.gd")
+const DataLoaderScript := preload("res://core/data_loader.gd")
 const DuelManagerScript := preload("res://duel/duel_manager.gd")
 const TurnManager := preload("res://duel/turn_manager.gd")
 const SummonSystem := preload("res://duel/summon_system.gd")
 const BattleSystem := preload("res://duel/battle_system.gd")
 const PositionSystem := preload("res://duel/position_system.gd")
+const FusionSystem := preload("res://duel/fusion_system.gd")
 const CardViewScript := preload("res://ui/card_view.gd")
 const BoardScript := preload("res://ui/duel_board.gd")
 const BoardLayoutScript := preload("res://core/board_layout.gd")
@@ -39,6 +41,10 @@ const ESCALA_CAMPO := 0.85
 ## Mão p1 (rival) em miniatura de costas: cabe no topo (y=20) sem
 ## cobrir os slots do rival. p0 fica tamanho cheio embaixo (y=980).
 const ESCALA_MAO_P1 := 0.55
+## Mão RETA (sem leque): carta levantada (cima) sobe + cresce + vizinhas abrem.
+const LEVANTA_DY := 38.0
+const LEVANTA_ESCALA := 1.15
+const LEVANTA_AFASTAMENTO := 26.0
 ## Voo curto da animação: nasce perto do destino, não do deck oposto.
 const VOO_OFFSET_P0 := Vector2(0, 36)
 const VOO_OFFSET_P1 := Vector2(0, -28)
@@ -48,6 +54,10 @@ const CENTRO_CARTA := Vector2(895, 447)
 var _duel
 var _st
 var _cartas: Dictionary = {}
+var _fusions_data: Dictionary = {"schema_version": 1, "recipes": [], "rules": []}
+## Levantadas p/ fusão (ordem em que levantou, índices da mão p0).
+## 0 = avulsa (fluxo D24), 1 = bloqueia e avisa, 2+ = combina no confirmar.
+var _levantadas: Array = []
 var _sel_mao := -1
 var _sel_atk := -1
 var _popup_slot := -1
@@ -139,11 +149,13 @@ func _ready() -> void:
 	_duel = DuelManagerScript.new_duel(data.get("duel_setup", {}), data.get("decks", {}), data.get("cards", {}))
 	_st = _duel.get_state()
 	_cartas = data.get("cards", {})
+	_fusions_data = _carregar_fusoes()
 	_fala("Duelo começou! Sua vez.")
 	_duel.advance_phase() # DRAW inicial -> MAIN (compra do turno 1 já veio).
 	_fase_jogador = FASE_MAO
 	_sub_mao = SUB_MAO_ESCOLHA
 	_mao_idx = -1
+	_levantadas = []
 	_sel_mao = -1
 	_sel_atk = -1
 	_pad_fileira = FILEIRA_MAO
@@ -255,6 +267,85 @@ func _fala(texto: String) -> void:
 		_log.pop_front()
 	_lbl_log.text = "\n".join(_log)
 	print("[TABLE] " + texto)
+
+
+## FUSÕES (só DADO, nunca regra): lê fusions.json do Starter.
+## A regra mora no FusionSystem real; aqui só carrega p/ passar adiante.
+func _carregar_fusoes() -> Dictionary:
+	var base: String = DataLoaderScript.starter_kit_dir()
+	var res: Dictionary = DataLoaderScript.load_json_file(base.path_join("fusions.json"))
+	if not bool(res.get("ok", false)):
+		print("[TABLE] Aviso: fusões não carregaram (%s), sem fusão." % str(res.get("error", "")))
+		return {"schema_version": 1, "recipes": [], "rules": []}
+	var d = res.get("data", {})
+	if not (d is Dictionary):
+		return {"schema_version": 1, "recipes": [], "rules": []}
+	var out: Dictionary = d as Dictionary
+	if not (out.get("recipes", []) is Array):
+		out["recipes"] = []
+	if not (out.get("rules", []) is Array):
+		out["rules"] = []
+	print("[TABLE] Fusões carregadas: %d receitas + %d regras." % [(out["recipes"] as Array).size(), (out["rules"] as Array).size()])
+	return out
+
+
+# ---- MÃO RETA + LEVANTADAS (só controle/visual, sem regra nova) ----
+
+## Levantada? Ordem 1-based (selo 1,2,3...), 0 = abaixada.
+func _ordem_levantada(hand_idx: int) -> int:
+	var pos := _levantadas.find(hand_idx)
+	if pos < 0:
+		return 0
+	return pos + 1
+
+
+func _eh_levantada(hand_idx: int) -> bool:
+	return _levantadas.has(hand_idx)
+
+
+## Tira índices inválidos (mão encolheu após invocar/fundir/comprar).
+func _limpar_levantadas() -> void:
+	if _st == null:
+		_levantadas = []
+		return
+	var n: int = (((_st.players[0] as Dictionary)["hand"]) as Array).size()
+	var novas: Array = []
+	for h in _levantadas:
+		if h is int and int(h) >= 0 and int(h) < n and not novas.has(int(h)):
+			novas.append(int(h))
+	_levantadas = novas
+
+
+## Cima levanta (só monstro/equip, sem duplicar). Baixo abaixa e renumera sozinho.
+func _levantar_carta(hand_idx: int) -> void:
+	_limpar_levantadas()
+	if _st == null:
+		return
+	var mao: Array = (_st.players[0] as Dictionary)["hand"]
+	if hand_idx < 0 or hand_idx >= mao.size():
+		return
+	if _levantadas.has(hand_idx):
+		return
+	var carta = mao[hand_idx]
+	if not (carta is Dictionary):
+		return
+	var t := str((carta as Dictionary).get("card_type", ""))
+	if t != "monster" and t != "equip":
+		_fala("Só monstro (e equip) levanta p/ fusão.")
+		return
+	_levantadas.append(hand_idx)
+	print("[SOM] levantar carta %d (selo %d)." % [hand_idx, _levantadas.size()])
+	_fala("Levantada %d (%d p/ fundir)." % [_levantadas.size(), _levantadas.size()])
+	_atualizar()
+
+
+func _abaixar_carta(hand_idx: int) -> void:
+	if not _levantadas.has(hand_idx):
+		return
+	_levantadas.erase(hand_idx)
+	print("[SOM] abaixar carta %d." % hand_idx)
+	_fala("Abaixou. Restam %d levantadas." % _levantadas.size())
+	_atualizar()
 
 
 # ---- cursor de CONTROLE (D19, só input+cursor, sem regra nova) ----
@@ -435,7 +526,18 @@ func _pad_mover(dx: int, dy: int) -> void:
 					_atualizar_cursor()
 				return
 			_:
-				# Escolha da carta: só a mão anda.
+				# Escolha da carta: esq/dir anda na mão; cima levanta p/ fusão,
+				# baixo abaixa (selo renumera sozinho). Nunca sai da mão.
+				if dy < 0:
+					_pad_fileira = FILEIRA_MAO
+					_levantar_carta(clampi(_pad_col, 0, maxi(_pad_largura_fileira(FILEIRA_MAO) - 1, 0)))
+					_atualizar_cursor()
+					return
+				if dy > 0:
+					_pad_fileira = FILEIRA_MAO
+					_abaixar_carta(clampi(_pad_col, 0, maxi(_pad_largura_fileira(FILEIRA_MAO) - 1, 0)))
+					_atualizar_cursor()
+					return
 				if dx != 0:
 					_pad_fileira = FILEIRA_MAO
 					var larg := _pad_largura_fileira(FILEIRA_MAO)
@@ -501,9 +603,18 @@ func _pad_confirmar() -> void:
 		_fala("Aguarde o rival.")
 		return
 	# FASE DA MÃO: sequência centro -> face -> slot -> estrela.
+	# Com levantadas: 0 = avulsa (fluxo D24), 1 = bloqueia e avisa, 2+ = combina.
 	if _fase_jogador == FASE_MAO and String(_st.phase) == "MAIN":
 		match _sub_mao:
 			SUB_MAO_ESCOLHA:
+				_limpar_levantadas()
+				if _levantadas.size() == 1:
+					_fala("Só 1 levantada: levante +1 p/ fundir ou abaixe p/ invocar avulsa.")
+					print("[TABLE] Fusão bloqueada: só 1 levantada.")
+					return
+				if _levantadas.size() >= 2:
+					_iniciar_fusao()
+					return
 				_fluxo_escolher_carta()
 				return
 			SUB_FACE:
@@ -709,6 +820,7 @@ func _executar_summon_fiel(estrela: String) -> void:
 	_sel_mao = -1
 	_slot_alvo = -1
 	_estrela_ops = []
+	_levantadas = []
 	_sub_mao = SUB_MAO_ESCOLHA
 	# Fim da fase da mão: MAIN -> BATTLE automático, entra a fase de campo.
 	_duel.advance_phase()
@@ -717,6 +829,123 @@ func _executar_summon_fiel(estrela: String) -> void:
 	_pad_fileira = FILEIRA_MEU_CAMPO
 	_pad_col = clampi(slot_n, 0, 4)
 	_atualizar()
+
+
+## FUSÃO FIEL (2+ levantadas): voam ao centro EM ORDEM e resolve par a par
+## via FusionSystem real (receita -> regra -> equip pendente -> falha).
+## Fracasso descarta a ACUMULADA (fundida cai, novata fica e continua).
+## Resultado sempre face p/ cima, vai à zona e conta como a jogada do turno.
+func _iniciar_fusao() -> void:
+	_limpar_levantadas()
+	if _levantadas.size() < 2:
+		return
+	if bool(_st.over) or int(_st.current_player) != 0:
+		return
+	if String(_st.phase) != "MAIN":
+		_fala("Fusão só na sua MAIN.")
+		return
+	var ordem: Array = _levantadas.duplicate()
+	var slot_livre := SummonSystem.free_monster_slot(_st, 0)
+	if slot_livre < 0:
+		_fala("Sem slot vazio no seu campo.")
+		return
+	# Voo ao centro EM ORDEM (só visual + som simples, sem regra nova).
+	_animar_voo_centro(ordem)
+	var r: Dictionary = FusionSystem.perform_fusion_summon(_st, 0, ordem, slot_livre, _fusions_data, _cartas)
+	if not bool(r.get("ok", false)):
+		var tipo := str(r.get("tipo", ""))
+		if tipo == "equip_pendente":
+			_fala("Equip ainda sem tabela: não fundiu (pendente).")
+			print("[TABLE] Fusão equip pendente: " + str(r.get("erro", "")))
+		else:
+			_fala("Não deu: " + str(r.get("erro", "")))
+		_levantadas = []
+		_pad_fileira = FILEIRA_MAO
+		_pad_col = 0
+		_atualizar()
+		return
+	# Relata cada passo par a par (fusão/receita/regra ou falha com descarte).
+	var passos: Array = r.get("passos", []) as Array
+	for p in passos:
+		if not (p is Dictionary):
+			continue
+		var pd: Dictionary = p as Dictionary
+		var tipo_p := str(pd.get("tipo", ""))
+		if tipo_p == "receita" or tipo_p == "regra":
+			_fala("Fusão! %s + %s = %s." % [str(pd.get("a", "")), str(pd.get("b", "")), str(pd.get("result_id", ""))])
+			_flash_fusao()
+		elif tipo_p == "equip_pendente":
+			_fala("Equip pendente: %s + %s não fundiu." % [str(pd.get("a", "")), str(pd.get("b", ""))])
+		else:
+			_fala("Não fundiu: %s + %s (descarta %s)." % [str(pd.get("a", "")), str(pd.get("b", "")), str(pd.get("a", ""))])
+	var n_desc: int = (r.get("descartes", []) as Array).size()
+	if n_desc > 0:
+		_fala("%d acumulada(s) ao cemitério." % n_desc)
+	_fala("Fundiu %s em Ataque p/ cima!" % str(r.get("carta", "?")))
+	print("[SOM] fusão pronta no slot %d." % int(r.get("slot", -1)))
+	_levantadas = []
+	_mao_idx = -1
+	_sel_mao = -1
+	_sel_atk = -1
+	_slot_alvo = -1
+	_estrela_ops = []
+	_esconder_centro()
+	_sub_mao = SUB_MAO_ESCOLHA
+	# Fim da fase da mão: MAIN -> BATTLE automático, entra a fase de campo.
+	_duel.advance_phase()
+	_fase_jogador = FASE_CAMPO
+	_pad_fileira = FILEIRA_MEU_CAMPO
+	_pad_col = clampi(int(r.get("slot", 0)), 0, 4)
+	_atualizar()
+
+
+## Voo simples ao centro EM ORDEM (só visual): cria vistas temporárias que
+## voam da mão ao centro, sem mexer na regra. Som = print (sem asset novo).
+func _animar_voo_centro(ordem: Array) -> void:
+	if _st == null:
+		return
+	if not is_inside_tree():
+		return
+	var mao: Array = (_st.players[0] as Dictionary)["hand"]
+	var n: int = mao.size()
+	for k in range(ordem.size()):
+		var hi := int(ordem[k])
+		if hi < 0 or hi >= n:
+			continue
+		var carta = mao[hi]
+		if not (carta is Dictionary):
+			continue
+		var vista: CardView = CardViewScript.new()
+		add_child(vista)
+		vista.setup(carta as Dictionary)
+		vista.set_facedown(false)
+		vista.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		vista.position = _pos_mao_visual(hi, n)
+		vista.scale = Vector2(LEVANTA_ESCALA, LEVANTA_ESCALA)
+		vista.pivot_offset = CardViewScript.TAM / 2.0
+		print("[SOM] voo %d/%d ao centro (%s)." % [k + 1, ordem.size(), str((carta as Dictionary).get("id", ""))])
+		var tw := vista.create_tween().set_parallel(true)
+		tw.tween_property(vista, "position", CENTRO_CARTA, 0.28).set_delay(0.08 * k).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tw.tween_property(vista, "scale", Vector2.ONE, 0.22).set_delay(0.08 * k)
+		tw.tween_callback(vista.queue_free).set_delay(0.08 * k + 0.35)
+
+
+## Flash simples na fusão (só visual): retângulo branco que some.
+func _flash_fusao() -> void:
+	print("[SOM] flash na fusão.")
+	if not is_inside_tree():
+		return
+	var flash := ColorRect.new()
+	flash.color = Color(1, 1, 1, 0.55)
+	flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(flash)
+	flash.move_to_front()
+	if _cursor != null and is_instance_valid(_cursor):
+		_cursor.move_to_front()
+	var tw := flash.create_tween()
+	tw.tween_property(flash, "modulate:a", 0.0, 0.25)
+	tw.tween_callback(flash.queue_free)
 
 
 ## Campo (fase de campo, fluxo fiel):
@@ -874,6 +1103,15 @@ func _pad_cancelar() -> void:
 		return
 	if _fase_jogador == FASE_MAO and int(_st.current_player) == 0:
 		match _sub_mao:
+			SUB_MAO_ESCOLHA:
+				# Cancelar abaixa a última levantada (renumera sozinho).
+				if not _levantadas.is_empty():
+					var ultima := int(_levantadas.back())
+					_levantadas.pop_back()
+					print("[SOM] abaixar carta %d (cancelar)." % ultima)
+					_fala("Abaixou a última. Restam %d levantadas." % _levantadas.size())
+					_atualizar()
+					return
 			SUB_ESTRELA:
 				_sub_mao = SUB_SLOT
 				_pad_fileira = FILEIRA_MEU_CAMPO
@@ -941,7 +1179,7 @@ func _retangulo_cursor() -> Rect2:
 				if n0 <= 0:
 					return Rect2(Vector2(1140, 980), Vector2(200, 60))
 				var c0 := clampi(_pad_col, 0, n0 - 1)
-				return Rect2(_pos_mao(c0, n0, 0), CardViewScript.TAM)
+				return Rect2(_pos_mao_visual(c0, n0), CardViewScript.TAM)
 	match _pad_fileira:
 		FILEIRA_RIVAL_LP:
 			return Rect2(_lbl_rival.position, _lbl_rival.size)
@@ -959,7 +1197,7 @@ func _retangulo_cursor() -> Rect2:
 			if n <= 0:
 				return Rect2(Vector2(1140, 980), Vector2(200, 60))
 			var c := clampi(_pad_col, 0, n - 1)
-			return Rect2(_pos_mao(c, n, 0), CardViewScript.TAM)
+			return Rect2(_pos_mao_visual(c, n), CardViewScript.TAM)
 	return vazio
 
 
@@ -1071,6 +1309,7 @@ func _no_start_passar_turno() -> void:
 	_sel_mao = -1
 	_mao_idx = -1
 	_sel_atk = -1
+	_levantadas = []
 	_popup.visible = false
 	_popup_modo = "estrela"
 	_pad_popup_idx = 0
@@ -1160,6 +1399,7 @@ func _atualizar(com_efeito := false) -> void:
 		(f as Node).queue_free()
 	for f in _camada_campo.get_children():
 		(f as Node).queue_free()
+	_limpar_levantadas()
 	_sel_mao = -1 if _sel_mao >= ((_st.players[0] as Dictionary)["hand"] as Array).size() else _sel_mao
 	if _fase_jogador == FASE_MAO and _sub_mao != SUB_MAO_ESCOLHA and _mao_idx >= 0:
 		_sel_mao = _mao_idx
@@ -1182,6 +1422,7 @@ func _atualizar(com_efeito := false) -> void:
 ## Posição da mão vinda da ARENA (só desenho, nunca regra).
 ## lado 0 = p0/embaixo (aberta), 1 = p1/topo (de costas).
 ## x = centro editável esq/dir no JSON, step = espaço entre cartas, y = topo.
+## MÃO RETA: sempre reta (sem leque/curva), centralizada no campo.
 ## Retorna o canto superior VISUAL (já centrado em x).
 func _pos_mao(i: int, n: int, lado: int = 0) -> Vector2:
 	var h: Dictionary = BoardLayoutScript.get_hand(_arena_data, lado)
@@ -1193,20 +1434,61 @@ func _pos_mao(i: int, n: int, lado: int = 0) -> Vector2:
 		larg_carta *= ESCALA_MAO_P1
 	var total := larg_carta + float(maxi(n - 1, 0)) * passo
 	var x := cx - total / 2.0 + float(i) * passo
-	var meio := float(n - 1) / 2.0
-	return Vector2(x, y0 + absf(float(i) - meio) * 10.0)
+	return Vector2(x, y0)
 
 
-## Leque das cartas (giro final). Pequeno p/ não estourar o alvo.
-func _giro_mao(i: int, n: int) -> float:
-	if n <= 1:
-		return 0.0
-	return (float(i) - float(n - 1) / 2.0) * -0.05
+## MÃO RETA: sem leque/rotação (sempre 0). Mantida p/ compat com o desenho.
+func _giro_mao(_i: int, _n: int) -> float:
+	return 0.0
+
+
+## Visual da mão p0 com levantadas: base reta + vizinhas se afastam p/ dar
+## espaço + levantada sobe. Só desenho, nunca regra.
+func _pos_mao_visual(i: int, n: int) -> Vector2:
+	var base := _pos_mao(i, n, 0)
+	var afast := 0.0
+	for lv in _levantadas:
+		var li := int(lv)
+		if i < li:
+			afast -= LEVANTA_AFASTAMENTO
+		elif i > li:
+			afast += LEVANTA_AFASTAMENTO
+	var y := base.y
+	if _eh_levantada(i):
+		y -= LEVANTA_DY
+	return Vector2(base.x + afast, y)
+
+
+## Selo pequeno numerado (1,2,3...) no canto, na ordem em que levantou.
+## Abaixar renumera sozinho (ordem = posição em _levantadas).
+func _por_selo(vista: CardView, ordem: int) -> void:
+	var fundo := Panel.new()
+	fundo.position = Vector2(CardViewScript.TAM.x - 38.0, 4.0)
+	fundo.size = Vector2(32, 32)
+	fundo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var estilo := StyleBoxFlat.new()
+	estilo.bg_color = Color(0.08, 0.06, 0.02, 0.95)
+	estilo.border_color = Color(1.0, 0.9, 0.4)
+	estilo.set_border_width_all(2)
+	estilo.set_corner_radius_all(16)
+	fundo.add_theme_stylebox_override("panel", estilo)
+	vista.add_child(fundo)
+	var num := Label.new()
+	num.text = str(ordem)
+	num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	num.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	num.add_theme_font_size_override("font_size", 22)
+	num.add_theme_color_override("font_color", Color(1.0, 0.9, 0.4))
+	num.position = Vector2(0, 0)
+	num.size = Vector2(32, 32)
+	num.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fundo.add_child(num)
 
 
 func _desenhar_mao(com_efeito: bool) -> void:
 	# p0: aberta na MAIN (carta real, só o cursor escolhe, sem clique).
 	# p1: só contagem, de costas, sem id/nome (nunca vazar dado do rival).
+	# MÃO RETA: sempre retas (sem leque/rotação), centralizadas no campo.
 	var mao: Array = (_st.players[0] as Dictionary)["hand"]
 	var n := mao.size()
 	for i in range(n):
@@ -1214,24 +1496,29 @@ func _desenhar_mao(com_efeito: bool) -> void:
 		_camada_mao.add_child(vista)
 		vista.setup(mao[i] as Dictionary)
 		vista.set_selected(i == _sel_mao)
-		var alvo := _pos_mao(i, n, 0)
-		var giro := _giro_mao(i, n)
-		# Alinhamento: pivô e rotação no centro (setup já põe TAM/2).
+		var alvo := _pos_mao_visual(i, n)
+		var ordem := _ordem_levantada(i)
+		var escala_final := Vector2.ONE
+		if ordem > 0:
+			escala_final = Vector2(LEVANTA_ESCALA, LEVANTA_ESCALA)
+			_por_selo(vista, ordem)
+		# Alinhamento: pivô no centro (setup já põe TAM/2), reta sem giro.
 		vista.pivot_offset = CardViewScript.TAM / 2.0
-		vista.rotation = giro # inicial = final, sem snap de 0.
+		vista.rotation = 0.0
 		if com_efeito:
 			vista.position = alvo + VOO_OFFSET_P0
-			vista.scale = Vector2(0.9, 0.9)
+			vista.scale = escala_final * 0.9
 			vista.modulate.a = 0.0
 			var tw := vista.create_tween().set_parallel(true)
 			tw.tween_property(vista, "position", alvo, 0.25).set_delay(0.05 + i * 0.05).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-			tw.tween_property(vista, "scale", Vector2.ONE, 0.22).set_delay(0.05 + i * 0.05).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+			tw.tween_property(vista, "scale", escala_final, 0.22).set_delay(0.05 + i * 0.05).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 			tw.tween_property(vista, "modulate:a", 1.0, 0.18).set_delay(0.05 + i * 0.05)
 		else:
 			vista.position = alvo
-			vista.scale = Vector2.ONE
+			vista.scale = escala_final
 			vista.modulate.a = 1.0
 	# p1: mini de costas no topo. Só a QUANTIDADE, nunca a carta real.
+	# Também reta (sem leque), centralizada.
 	var n1: int = (((_st.players[1] as Dictionary)["hand"]) as Array).size()
 	var compensa := CardViewScript.TAM / 2.0 * (1.0 - ESCALA_MAO_P1)
 	var escala_mini := Vector2(ESCALA_MAO_P1, ESCALA_MAO_P1)
@@ -1242,9 +1529,8 @@ func _desenhar_mao(com_efeito: bool) -> void:
 		costas.set_facedown(true)
 		costas.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var alvo1 := _pos_mao(j, n1, 1)
-		var giro1 := _giro_mao(j, n1)
 		costas.pivot_offset = CardViewScript.TAM / 2.0
-		costas.rotation = giro1
+		costas.rotation = 0.0
 		var final1 := alvo1 - compensa
 		if com_efeito:
 			costas.position = final1 + VOO_OFFSET_P1
@@ -1403,6 +1689,7 @@ func _ia_inimiga() -> void:
 	_mao_idx = -1
 	_sel_atk = -1
 	_slot_alvo = -1
+	_levantadas = []
 	_estrela_ops = []
 	_popup_modo = "estrela"
 	_sub_mao = SUB_MAO_ESCOLHA
