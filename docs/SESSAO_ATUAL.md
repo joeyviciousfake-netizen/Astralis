@@ -3,7 +3,7 @@
 > IA: atualize este arquivo NO FIM de toda resposta com mudança. Nunca deixe próximo_passo vazio.
 
 ```yaml
-onde_estamos: "Mão reta + fusão fiel na mesa (levantar 1/2+ com selo, cadeia FM, conta como jogada)"
+onde_estamos: "Mao reta + fusao fiel (D25), GUT 69/69 (Lead confirmou)"
   acabamos_de_fazer_runtime_mao_fusao: "Runtime mão reta + fusão fiel em duel_table.gd + fusion_system.gd novo (receita ordem livre primeiro, equip pendente antes da regra, regra tipo+atributo+min_atk por priority D08; cadeia par a par em ordem, falha descarta acumulada, final face p/ cima na zona, conta como jogada; mão sempre reta sem leque, levantada sobe 38px + escala 1.15 + vizinhas afastam 26px, selo 1,2.. renumera, cima levanta/baixo abaixa/cancelar abaixa última, 0=avulsa D24, 1=bloqueia e avisa, 2+=voo ao centro em ordem + flash; só controle, sem mouse/teclado, schemas intactos, espelho e 1920x1080 intactos); mesa headless 0 SCRIPT ERROR + GUT 65/65 (1005 asserts) verde headless 4.7.2, sem Fake, R8 ok"
   acabamos_de_fazer_qa_fusao_fiel: "QA revisou test_fusao_fiel.gd (R2 ok: mesa real + Fusion/Summon/Battle/Duel reais, sem Fake, Input so simula botao; regra/desenho intactos) + completou 4 testes permanentes (cancelar abaixa ultima e renumera, mao centrada cx nos 2 lados sem rotacao, 1 levantada bloqueia e preserva sem gastar jogada, cadeia falha/equip descarta acumulada ao cemiterio e novata desce face-cima ATK contando jogada); GUT 69/69 (1089 asserts) verde headless 4.7.2, 0 SCRIPT ERROR, R8 ok"
   próximo_passo: "Aguardar ordem do usuario (sugestao: testar a mesa com fusao no controle de verdade)"
