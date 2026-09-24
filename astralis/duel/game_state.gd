@@ -2,13 +2,16 @@ class_name DuelGameState
 extends RefCounted
 
 ## GameState — dados puros do duelo (sem regras, sem cena).
-## Zonas por jogador: deck, hand, monster[3], spell[3], graveyard, banished.
+## Zonas por jogador: deck, hand, monster[5], spell[5], graveyard, banished.
 ## + LP, turno/fase atual, vencedor. As regras ficam nos outros sistemas
 ## (TurnManager, SummonSystem, BattleSystem, DamageSystem, DuelManager).
 ## R3: só guarda DADO. Testável sem cena (RefCounted).
+## D17: 5 slots monstro + 5 outros por lado, mão 5, decks 40, jogador (lado 0)
+## não ataca no turno 1. Carta em campo tem face_down + battle_position
+## (ATK vertical / DEF horizontal); virada p/ baixo entra em DEF.
 
-const MONSTER_SLOTS := 3
-const SPELL_SLOTS := 3
+const MONSTER_SLOTS := 5
+const SPELL_SLOTS := 5
 const INITIAL_HAND := 5
 const MAX_HAND := 7
 const PHASES := ["DRAW", "MAIN", "BATTLE", "END"]
@@ -41,8 +44,8 @@ static func _make_player(deck: Array, lp: int) -> Dictionary:
 	return {
 		"deck": deck,
 		"hand": [],
-		"monster": [null, null, null],
-		"spell": [null, null, null],
+		"monster": [null, null, null, null, null],
+		"spell": [null, null, null, null, null],
 		"graveyard": [],
 		"banished": [],
 		"lp": lp,

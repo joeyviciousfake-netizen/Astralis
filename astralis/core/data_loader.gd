@@ -47,6 +47,26 @@ static func _load_folder(folder: String) -> Dictionary:
 			erros.append("Formato inesperado em " + full + " (esperava objeto).")
 	return {"items": out, "erros": erros}
 
+static func setup_override_path() -> String:
+	# Lê --setup <caminho> (ou --setup=<caminho>) dos args de usuário.
+	# Retorna "" se não foi passado. Só leitura de CLI, sem regra nova.
+	var args: PackedStringArray = OS.get_cmdline_user_args()
+	for i in range(args.size()):
+		var a := String(args[i])
+		if a == "--setup" and i + 1 < args.size():
+			return _limpar_caminho(String(args[i + 1]))
+		if a.begins_with("--setup="):
+			return _limpar_caminho(a.trim_prefix("--setup="))
+	return ""
+
+
+static func _limpar_caminho(p: String) -> String:
+	var r := p.strip_edges()
+	if r.length() >= 2 and r.begins_with('"') and r.ends_with('"'):
+		r = r.substr(1, r.length() - 2)
+	return r.strip_edges()
+
+
 static func load_starter_kit() -> Dictionary:
 	var base: String = starter_kit_dir()
 	var cards: Dictionary = {}
@@ -98,6 +118,18 @@ static func load_starter_kit() -> Dictionary:
 			load_errors.append("Formato inesperado em duel_setup.json (esperava objeto).")
 	else:
 		load_errors.append(String(rs.get("error", "")))
+
+	# Override via CLI p/ o Studio lançar duelos sem sobrescrever o starter.
+	# Se --setup foi passado e o arquivo existe e é um objeto válido, usa-o;
+	# senão, mantém o comportamento atual (starter). Sem mudar regra/schema/ID.
+	var override_path: String = setup_override_path()
+	if override_path != "":
+		var ro: Dictionary = load_json_file(override_path)
+		if bool(ro.get("ok", false)) and ro.get("data", {}) is Dictionary and not (ro.get("data", {}) as Dictionary).is_empty():
+			duel_setup = ro.get("data", {})
+			print("[DataLoader] --setup usando: " + override_path)
+		else:
+			print("[DataLoader] Aviso: --setup ignorado (ausente ou inválido): " + override_path + " — usando starter.")
 
 	return {
 		"cards": cards,

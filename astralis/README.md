@@ -1,30 +1,33 @@
-# astralis/ — Runtime (Godot 4.7)
+# astralis/ — Runtime jogável (Godot 4.7, 1920x1080)
 
 Dono: Runtime Engineer. Ver `docs/05_RUNTIME_DUELO.md`, `docs/13_TABULEIRO_DUELO.md`.
-Status: ETAPA 1 — só carregar + validar Starter Kit (sem duelo/efeito/fusão ainda, R5).
+Status: 1ª TELA JOGÁVEL (D22) — duelo real: invocar/atacar/passar, IA do rival, LP, vitória/derrota.
 
 ## O que tem aqui
 
 ```text
 astralis/
-  project.godot            <- projeto Godot "Astralis" (2D, 1280x720)
-  main.tscn / main.gd      <- cena inicial: carrega Starter Kit, valida, imprime no console
-  core/                    <- data_loader.gd, project_loader.gd, runtime_validator.gd
-  duel/ campaign/ ui/      <- vazias por enquanto (.gitkeep)
-  assets/ debug/ testing/  <- vazias por enquanto (.gitkeep)
+  project.godot            <- projeto "Astralis" (2D, 1920x1080, cena inicial = duel_table)
+  main.tscn / main.gd      <- simulação automática do duelo no console (STP)
+  core/                    <- data_loader, project_loader, runtime_validator
+  duel/                    <- game_state, duel_manager, turn_manager, summon/battle/damage_system
+  ui/                      <- duel_board (campo), duel_table (mesa jogável), card_view (carta)
+  testing/                 <- testes GUT (15/15 verde)
+  campaign/ debug/         <- vazias por enquanto (.gitkeep)
+  addons/gut/              <- framework de testes (único addon)
 ```
 
 O programa Godot fica em `Godot/` na raiz (ignorado no git), não aqui.
 
-## Como abrir no Godot
+## Como jogar
 
-1. Abra o Godot 4.7 (arquivo `Godot/Godot_v4.7.2-stable_win64.exe` na raiz do repo).
-2. Clique em **Importar**, escolha a pasta `astralis/` (arquivo `project.godot`).
-3. Aperte **Play** (ou F5). Olhe o console embaixo: deve aparecer `STP: 10 cartas, 2 duelistas...`.
+1. Abra o Godot 4.7 (`Godot/Godot_v4.7.2-stable_win64.exe`) e importe `astralis/`.
+2. Aperte **F5**: o duelo abre na sua vez, cartas voando pra mão.
+3. Clique na carta → slot vazio → Ataque/Defesa/Virada. **Passar** → Batalha → clique no monstro → no rival. Rival joga sozinho.
 
 ## Como rodar sem abrir a janela (headless)
 
-Na raiz do repo, rode no PowerShell:
+Na raiz do repo, no PowerShell:
 
 ```powershell
 .\Godot\Godot_v4.7.2-stable_win64.exe --headless --path astralis --quit-after 5
@@ -33,8 +36,8 @@ Na raiz do repo, rode no PowerShell:
 Saída esperada (sem erros):
 
 ```text
-[Astralis] STP: 10 cartas, 2 duelistas, 2 decks, erros=0
-[Astralis] OK: Starter Kit válido, sem erros.
+[BOARD] Campo pronto: 20 slots (5+5 por lado) + 4 laterais + emblema.
+[TABLE] Duelo começou! Sua vez.
 ```
 
-Se aparecer `ERRO: ...`, a mensagem diz o que falta (ex.: carta que não existe, vida zerada).
+Testes: ver `tests/README.md` (GUT 15/15).
