@@ -298,3 +298,119 @@ func test_mesa_fusao_desce_face_cima_conta_jogada() -> void:
 	assert_true(achou, "Resultado fm_0638 desceu à zona (fluxo normal).")
 	assert_eq(((st.players[0] as Dictionary)["hand"] as Array).size(), mao_antes - 2, "2 levantadas saíram da mão.")
 	assert_true((mesa.get("_levantadas") as Array).is_empty(), "Levantadas limpam após fundir.")
+
+
+func test_cancelar_abaixa_ultima_e_renumera() -> void:
+	# Cancelar abaixa a ÚLTIMA levantada e renumera sozinho (mesa real, só controle).
+	var mesa = await _mesa_nova()
+	var st = mesa.get("_st")
+	var n: int = ((st.players[0] as Dictionary)["hand"] as Array).size()
+	assert_true(n >= 3, "Preparo: mão tem %d cartas." % n)
+	mesa.set("_pad_fileira", TableScript.FILEIRA_MAO)
+	for col in [0, 1, 2]:
+		mesa.set("_pad_col", col)
+		Input.action_press("mover_cima")
+		mesa.call("_pad_mover", 0, -1)
+		Input.action_release("mover_cima")
+	assert_eq((mesa.get("_levantadas") as Array), [0, 1, 2], "Preparo: 3 levantadas em ordem.")
+	assert_eq(int(mesa.call("_ordem_levantada", 2)), 3, "Selo 3 na última.")
+	# Cancelar abaixa a última (2) e renumera o resto.
+	mesa.call("_pad_cancelar")
+	assert_eq((mesa.get("_levantadas") as Array), [0, 1], "Cancelar abaixou a última, restou [0,1].")
+	assert_eq(int(mesa.call("_ordem_levantada", 0)), 1, "Renumera: 0 vira selo 1.")
+	assert_eq(int(mesa.call("_ordem_levantada", 1)), 2, "Renumera: 1 vira selo 2.")
+	assert_eq(int(mesa.call("_ordem_levantada", 2)), 0, "Abaixada sem selo.")
+	mesa.call("_pad_cancelar")
+	assert_eq((mesa.get("_levantadas") as Array), [0], "Cancelar de novo abaixa a última, restou [0].")
+	assert_eq(int(mesa.call("_ordem_levantada", 0)), 1, "Última restante vira selo 1.")
+
+
+func test_mao_centrada_no_cx_sem_rotacao() -> void:
+	# Mão centrada: média dos centros = cx da arena, nos 2 lados, sem rotação.
+	var mesa = await _mesa_nova()
+	var arena: Dictionary = mesa.get("_arena_data")
+	for lado in [0, 1]:
+		var h: Dictionary = BoardLayoutScript.get_hand(arena, lado)
+		var cx := float(h.get("x", 1240.0))
+		var larg := CardViewScript.TAM.x
+		if lado == 1:
+			larg *= TableScript.ESCALA_MAO_P1
+		for n in [1, 3, 5, 7]:
+			var soma := 0.0
+			for i in range(n):
+				var p: Vector2 = mesa.call("_pos_mao", i, n, lado)
+				assert_almost_eq(float(mesa.call("_giro_mao", i, n)), 0.0, 0.001, "Giro 0 lado %d n=%d." % [lado, n])
+				soma += p.x + larg / 2.0
+			var centro := soma / float(n)
+			assert_almost_eq(centro, cx, 0.5, "Mão centrada lado %d n=%d (centro %.0f = cx %.0f)." % [lado, n, centro, cx])
+	# Desenho real: mão dos 2 lados (p0 aberta + p1 costas) toda com rotação 0.
+	mesa.call("_atualizar")
+	await wait_process_frames(2)
+	var camada: Node = mesa.get("_camada_mao")
+	assert_true(camada.get_child_count() > 0, "Mão desenha cartas dos 2 lados.")
+	for v in camada.get_children():
+		assert_almost_eq(float((v as Control).rotation), 0.0, 0.001, "Vista reta dos 2 lados (rotação 0).")
+
+
+func test_1_levantada_bloqueia_e_preserva() -> void:
+	# 1 levantada bloqueia no confirmar, avisa e PRESERVA a levantada (mesa real).
+	var mesa = await _mesa_nova()
+	var st = mesa.get("_st")
+	mesa.set("_pad_fileira", TableScript.FILEIRA_MAO)
+	mesa.set("_pad_col", _indice_monstro_na_mao(st, 0))
+	Input.action_press("mover_cima")
+	mesa.call("_pad_mover", 0, -1)
+	Input.action_release("mover_cima")
+	var alvo: int = _indice_monstro_na_mao(st, 0)
+	assert_eq((mesa.get("_levantadas") as Array), [alvo], "Preparo: 1 levantada.")
+	Input.action_press("confirmar")
+	mesa.call("_pad_confirmar")
+	Input.action_release("confirmar")
+	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_MAO_ESCOLHA, "1 levantada: bloqueia, não sai da mão.")
+	assert_eq((mesa.get("_levantadas") as Array), [alvo], "1 levantada: preserva p/ levantar +1 ou abaixar.")
+	assert_eq(int(mesa.call("_ordem_levantada", alvo)), 1, "1 levantada: selo 1 mantido.")
+	assert_eq(String(st.phase), "MAIN", "1 levantada: não conta como jogada (segue na MAIN).")
+	assert_false(bool(st.normal_summon_used), "1 levantada: não gasta a jogada.")
+
+
+func test_cadeia_falha_cemiterio_novata_desce() -> void:
+	# Cadeia com FALHA via sistema real: fundida cai ao cemitério, novata desce
+	# face p/ cima em ATK e conta como jogada. Equip no meio também descarta.
+	var fus_vazia := {"schema_version": 1, "recipes": [], "rules": []}
+	var a := _carta("id_a", "monster", "dragon", "fire", 1500)
+	var b := _carta("id_b", "monster", "zombie", "dark", 500)
+	var cadeia: Dictionary = FusionSystem.resolve_chain([a, b], fus_vazia, {})
+	assert_true(bool(cadeia.get("ok", false)), "Cadeia com falha resolve.")
+	assert_eq((cadeia.get("descartes", []) as Array), ["id_a"], "Fundida A cai (descartes).")
+	assert_eq(str(cadeia.get("final_id", "")), "id_b", "Novata B fica e é o final.")
+	# Equip no meio: cada falha descarta a acumulada, novata sempre continua.
+	var mon := _carta("m1")
+	var eq := _carta("e1", "equip", "", "", 0)
+	var mon2 := _carta("m2", "monster", "beast", "earth", 800)
+	var cadeia_eq: Dictionary = FusionSystem.resolve_chain([mon, eq, mon2], _fusoes_mini(), {})
+	var passos_eq: Array = cadeia_eq.get("passos", []) as Array
+	assert_eq(passos_eq.size(), 2, "2 passos com equip no meio.")
+	assert_eq(str((passos_eq[0] as Dictionary).get("tipo", "")), "equip_pendente", "1º passo: equip pendente.")
+	assert_eq((cadeia_eq.get("descartes", []) as Array), ["m1", "e1"], "Falhas descartam acumulada em ordem.")
+	assert_eq(str(cadeia_eq.get("final_id", "")), "m2", "Última novata fica e é o final.")
+	# Mesa real: falha desce a novata face p/ cima em ATK, descarte ao cemitério.
+	var mesa = await _mesa_nova()
+	var st = mesa.get("_st")
+	var mao: Array = (st.players[0] as Dictionary)["hand"]
+	mao.append(a.duplicate(true))
+	mao.append(b.duplicate(true))
+	var n: int = mao.size()
+	var ordem := [n - 2, n - 1]
+	var cem_antes: int = ((st.players[0] as Dictionary)["graveyard"] as Array).size()
+	var r: Dictionary = FusionSystem.perform_fusion_summon(st, 0, ordem, 0, fus_vazia, {})
+	assert_true(bool(r.get("ok", false)), "Mesa: falha ainda desce a novata.")
+	assert_eq((r.get("descartes", []) as Array), ["id_a"], "Mesa: fundida ao cemitério.")
+	var zona: Array = (st.players[0] as Dictionary)["monster"]
+	assert_true(zona[0] is Dictionary, "Mesa: novata desceu ao slot 0.")
+	assert_eq(str((zona[0] as Dictionary).get("card_id", "")), "id_b", "Mesa: novata B no slot.")
+	assert_false(bool((zona[0] as Dictionary).get("face_down", true)), "Mesa: falha desce face p/ cima.")
+	assert_eq(str((zona[0] as Dictionary).get("position", "")), "ATK", "Mesa: falha desce em Ataque.")
+	assert_eq(str((zona[0] as Dictionary).get("battle_position", "")), "ATK", "Mesa: battle_position ATK.")
+	assert_true(bool(st.normal_summon_used), "Mesa: falha conta como a jogada.")
+	assert_eq(((st.players[0] as Dictionary)["graveyard"] as Array).size(), cem_antes + 1, "Mesa: 1 descarte ao cemitério.")
+	assert_true(((st.players[0] as Dictionary)["graveyard"] as Array).has("id_a"), "Mesa: fundida id_a no cemitério.")
