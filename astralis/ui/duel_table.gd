@@ -11,7 +11,11 @@ extends Control
 ##     (dado fm guardian_star_1/2, gravada na instância).
 ##  5. Carta vai ao slot COM a face escolhida, SEMPRE em Ataque (vertical).
 ##     Fim da fase da mão (MAIN -> BATTLE automático).
-## FASE DE CAMPO (livre: próprio campo + campo do rival + LP rival p/ direto):
+## FASE DE CAMPO (SÓ os 20 slots do campo, sem LP e sem mão):
+##  - 2 fileiras de monstro + 2 de magia (próprias + rival), por posição
+##    de tela (direita sempre anda p/ direita visível, espelho incluso).
+##  - Cima no topo não sai do lugar. Com campo rival vazio, o menu de alvo
+##    oferece o LP rival (direto com ATK cheio, regra no BattleSystem).
 ##  - Com cursor na própria carta: L1/RB alterna Ataque/Defesa, só se
 ##    !has_attacked (trava pós-ataque FM, via PositionSystem real).
 ##  - START (pausar, botão 6) passa o turno ao oponente. Sem fileira
@@ -59,6 +63,13 @@ const FILEIRA_RIVAL_LP := 0
 const FILEIRA_RIVAL_CAMPO := 1
 const FILEIRA_MEU_CAMPO := 2
 const FILEIRA_MAO := 3
+const FILEIRA_RIVAL_MAGIA := 4
+const FILEIRA_MEU_MAGIA := 5
+## Ordem visual de cima p/ baixo só com os 20 slots do campo (bug 3+5):
+## magia rival (128) -> monstro rival (317) -> meu monstro (600) -> minha magia (789).
+const ORDEM_CAMPO := [4, 1, 2, 5]
+## Ordem livre p/ observar na vez do rival (LP + 20 slots + mão).
+const ORDEM_LIVRE := [0, 4, 1, 2, 5, 3]
 const PAD_REPETE := 0.25
 var _pad_fileira := FILEIRA_MAO
 var _pad_col := 0
@@ -85,6 +96,9 @@ var _slot_alvo := -1
 var _estrela_idx := 0
 var _estrela_ops: Array = []
 var _vista_centro: Control = null
+## Menu central tem 2 modos (mesmo popup, sem regra nova): "estrela" (invocar)
+## ou "alvo" (direto no LP rival com campo vazio, bug 6).
+var _popup_modo := "estrela"
 
 var _camada_mao: Control
 var _camada_campo: Control
@@ -269,6 +283,10 @@ func _pad_largura_fileira(f: int) -> int:
 			return 5
 		FILEIRA_MEU_CAMPO:
 			return 5
+		FILEIRA_RIVAL_MAGIA:
+			return 5
+		FILEIRA_MEU_MAGIA:
+			return 5
 		FILEIRA_MAO:
 			if _st == null:
 				return 1
@@ -277,7 +295,94 @@ func _pad_largura_fileira(f: int) -> int:
 	return 1
 
 
+func _eh_fileira_campo(f: int) -> bool:
+	return f == FILEIRA_RIVAL_MAGIA or f == FILEIRA_RIVAL_CAMPO or f == FILEIRA_MEU_CAMPO or f == FILEIRA_MEU_MAGIA
+
+
+func _lado_tipo_de_fileira(f: int) -> Array:
+	match f:
+		FILEIRA_RIVAL_MAGIA:
+			return [1, "magia"]
+		FILEIRA_RIVAL_CAMPO:
+			return [1, "monstro"]
+		FILEIRA_MEU_CAMPO:
+			return [0, "monstro"]
+		FILEIRA_MEU_MAGIA:
+			return [0, "magia"]
+	return []
+
+
+func _centro_campo(f: int, col: int) -> Vector2:
+	var lt := _lado_tipo_de_fileira(f)
+	if lt.is_empty():
+		return Vector2.ZERO
+	return BoardScript.slot_rect(int(lt[0]), str(lt[1]), clampi(col, 0, 4), _arena_layout).get_center()
+
+
+## Vizinho por POSIÇÃO de tela (bug 4): direita sempre anda p/ direita
+## visível, nos 2 lados. O rival é espelho (índice 0 à direita), então andar
+## por índice espelhava o controle. Aqui anda por X de tela, nunca por índice.
+func _vizinho_horizontal_por_posicao(f: int, col_atual: int, dx: int) -> int:
+	if not _eh_fileira_campo(f):
+		var larg := _pad_largura_fileira(f)
+		if larg > 1:
+			return posmod(col_atual + dx, larg)
+		return 0
+	var atual := _centro_campo(f, col_atual)
+	var melhor := col_atual
+	var melhor_dist := 1e20
+	var achou := false
+	for i in range(5):
+		if i == col_atual:
+			continue
+		var delta := _centro_campo(f, i).x - atual.x
+		if dx > 0 and delta > 1.0 and absf(delta) < melhor_dist:
+			melhor_dist = absf(delta)
+			melhor = i
+			achou = true
+		elif dx < 0 and delta < -1.0 and absf(delta) < melhor_dist:
+			melhor_dist = absf(delta)
+			melhor = i
+			achou = true
+	if achou:
+		return melhor
+	# Na borda: volta p/ o extremo oposto (mesma volta de antes, mas por posição).
+	if dx > 0:
+		var minx := 1e20
+		var mini := col_atual
+		for i in range(5):
+			var cx := _centro_campo(f, i).x
+			if cx < minx:
+				minx = cx
+				mini = i
+		return mini
+	else:
+		var maxx := -1e20
+		var maxi := col_atual
+		for i in range(5):
+			var cx2 := _centro_campo(f, i).x
+			if cx2 > maxx:
+				maxx = cx2
+				maxi = i
+		return maxi
+
+
 func _pad_ao_trocar(nova: int) -> void:
+	# Campo -> campo preserva a COLUNA VISÍVEL (X de tela, bug 4): o espelho
+	# do rival tem o índice invertido, então manter o índice teleportava o
+	# cursor p/ o outro lado. Fora do campo mantém a proporção de antes.
+	if _eh_fileira_campo(_pad_fileira) and _eh_fileira_campo(nova):
+		var atual_x := _centro_campo(_pad_fileira, _pad_col).x
+		var melhor := clampi(_pad_col, 0, 4)
+		var melhor_dist := 1e20
+		for i in range(5):
+			var d := absf(_centro_campo(nova, i).x - atual_x)
+			if d < melhor_dist:
+				melhor_dist = d
+				melhor = i
+		_pad_col = melhor
+		_pad_fileira = nova
+		return
 	var antiga_larg := _pad_largura_fileira(_pad_fileira)
 	var nova_larg := _pad_largura_fileira(nova)
 	if nova_larg <= 1:
@@ -292,16 +397,21 @@ func _pad_ao_trocar(nova: int) -> void:
 
 ## Movimento fiel com travas: na FASE DA MÃO o cursor nunca sai do
 ## lugar permitido (mão -> centro/face -> 5 slots próprios). Na FASE DE
-## CAMPO anda livre entre LP rival / campo rival / meu campo.
+## CAMPO anda SÓ nos 20 slots do campo (bug 3+5): 2 fileiras de monstro +
+## 2 de magia, sem LP e sem mão (cima no topo não sai do lugar).
 func _pad_mover(dx: int, dy: int) -> void:
 	if _st == null or bool(_st.over):
 		return
-	# Menu da estrela no centro: só cima/baixo troca a opção.
+	# Menu central (estrela ou alvo): só cima/baixo troca a opção.
 	if _popup.visible:
 		if dy != 0 and _popup_botoes.size() > 0:
 			var max_idx := 1
-			if _estrela_ops.size() >= 2:
+			if _popup_modo == "estrela":
 				max_idx = 2
+				if _estrela_ops.size() < 2:
+					max_idx = 1
+			else:
+				max_idx = 1
 			_pad_popup_idx = posmod(_pad_popup_idx + dy, max_idx + 1)
 			_atualizar_cursor()
 		return
@@ -318,10 +428,10 @@ func _pad_mover(dx: int, dy: int) -> void:
 					_atualizar_cursor()
 				return
 			SUB_SLOT:
-				# Só os 5 slots de monstro do próprio lado.
+				# Só os 5 slots de monstro do próprio lado, por posição (bug 4).
 				if dx != 0:
 					_pad_fileira = FILEIRA_MEU_CAMPO
-					_pad_col = posmod(_pad_col + dx, 5)
+					_pad_col = _vizinho_horizontal_por_posicao(FILEIRA_MEU_CAMPO, _pad_col, dx)
 					_atualizar_cursor()
 				return
 			_:
@@ -333,29 +443,44 @@ func _pad_mover(dx: int, dy: int) -> void:
 						_pad_col = posmod(_pad_col + dx, larg)
 						_atualizar_cursor()
 				return
-	# FASE DE CAMPO (seu turno): livre nos campos + LP rival.
+	# FASE DE CAMPO (seu turno): SÓ os 20 slots (bug 3+5), por posição (bug 4).
 	if _fase_jogador == FASE_CAMPO and meu_turno:
+		if not _eh_fileira_campo(_pad_fileira):
+			_pad_fileira = FILEIRA_MEU_CAMPO
+			_pad_col = clampi(_pad_col, 0, 4)
 		if dx != 0:
-			var larg := _pad_largura_fileira(_pad_fileira)
-			if larg > 1:
-				_pad_col = posmod(_pad_col + dx, larg)
-				_atualizar_cursor()
+			_pad_col = _vizinho_horizontal_por_posicao(_pad_fileira, _pad_col, dx)
+			_atualizar_cursor()
 		if dy != 0:
-			var nova := clampi(_pad_fileira + dy, FILEIRA_RIVAL_LP, FILEIRA_MEU_CAMPO)
-			if nova != _pad_fileira:
-				_pad_ao_trocar(nova)
+			var idx := ORDEM_CAMPO.find(_pad_fileira)
+			if idx < 0:
+				idx = ORDEM_CAMPO.find(FILEIRA_MEU_CAMPO)
+			var novo_idx := clampi(idx + dy, 0, ORDEM_CAMPO.size() - 1)
+			if novo_idx != idx:
+				_pad_ao_trocar(int(ORDEM_CAMPO[novo_idx]))
 				_atualizar_cursor()
+			# Cima no topo / baixo na base: não sai do lugar (bug 5).
 		return
 	# Fora do seu fluxo (vez do rival): cursor anda livre p/ observar.
 	if dx != 0:
-		var larg2 := _pad_largura_fileira(_pad_fileira)
-		if larg2 > 1:
-			_pad_col = posmod(_pad_col + dx, larg2)
+		if _eh_fileira_campo(_pad_fileira):
+			_pad_col = _vizinho_horizontal_por_posicao(_pad_fileira, _pad_col, dx)
 			_atualizar_cursor()
+		else:
+			var larg2 := _pad_largura_fileira(_pad_fileira)
+			if larg2 > 1:
+				_pad_col = posmod(_pad_col + dx, larg2)
+				_atualizar_cursor()
 	if dy != 0:
-		var nova2 := clampi(_pad_fileira + dy, FILEIRA_RIVAL_LP, FILEIRA_MAO)
-		if nova2 != _pad_fileira:
-			_pad_ao_trocar(nova2)
+		var idx2 := ORDEM_LIVRE.find(_pad_fileira)
+		if idx2 < 0:
+			_pad_fileira = FILEIRA_MAO
+			_pad_col = 0
+			_atualizar_cursor()
+			return
+		var novo2 := clampi(idx2 + dy, 0, ORDEM_LIVRE.size() - 1)
+		if novo2 != idx2:
+			_pad_ao_trocar(int(ORDEM_LIVRE[novo2]))
 			_atualizar_cursor()
 
 
@@ -366,7 +491,10 @@ func _pad_confirmar() -> void:
 		get_tree().reload_current_scene()
 		return
 	if _popup.visible:
-		_confirmar_estrela()
+		if _popup_modo == "alvo":
+			_confirmar_alvo_menu()
+		else:
+			_confirmar_estrela()
 		return
 	var meu_turno: bool = int(_st.current_player) == 0
 	if not meu_turno:
@@ -388,20 +516,26 @@ func _pad_confirmar() -> void:
 				_fala("Escolha a estrela no menu.")
 				return
 		return
-	# FASE DE CAMPO: livre nos campos.
+	# FASE DE CAMPO: SÓ os 20 slots do campo (bug 3+5, sem LP e sem mão).
 	if _fase_jogador == FASE_CAMPO:
 		match _pad_fileira:
 			FILEIRA_MEU_CAMPO:
 				_confirmar_meu_campo()
 				return
+			FILEIRA_MEU_MAGIA:
+				_confirmar_meu_magia()
+				return
 			FILEIRA_RIVAL_CAMPO:
 				_confirmar_alvo_rival(clampi(_pad_col, 0, 4))
+				return
+			FILEIRA_RIVAL_MAGIA:
+				_confirmar_alvo_rival_magia(clampi(_pad_col, 0, 4))
 				return
 			FILEIRA_RIVAL_LP:
 				_no_rival_lp()
 				return
-			FILEIRA_MAO:
-				_fala("Fase de campo: use seu campo ou o do rival.")
+			_:
+				_fala("Fase de campo: use os 20 slots do campo.")
 				return
 		return
 	_fala("Aguarde sua fase.")
@@ -500,6 +634,7 @@ func _estrelas_da_carta(carta: Dictionary) -> Array:
 
 
 func _mostrar_popup_estrela() -> void:
+	_popup_modo = "estrela"
 	if _popup_titulo != null and is_instance_valid(_popup_titulo):
 		_popup_titulo.text = "Escolha a estrela guardiã"
 	for i in range(_popup_botoes.size()):
@@ -516,6 +651,12 @@ func _mostrar_popup_estrela() -> void:
 		else:
 			b.visible = false
 	_popup.visible = true
+	# Menu sempre POR CIMA da carta central (bug 2): popup acima do centro, cursor no topo.
+	if _vista_centro != null and is_instance_valid(_vista_centro):
+		_vista_centro.move_to_front()
+	_popup.move_to_front()
+	if _cursor != null and is_instance_valid(_cursor):
+		_cursor.move_to_front()
 
 
 ## 4) Menu no centro: 1 das 2 guardian stars -> 5) desce ao slot em Ataque.
@@ -541,6 +682,7 @@ func _confirmar_estrela() -> void:
 ## 5) Carta vai ao slot COM a face escolhida, SEMPRE em Ataque (vertical).
 func _executar_summon_fiel(estrela: String) -> void:
 	_popup.visible = false
+	_popup_modo = "estrela"
 	_pad_popup_idx = 0
 	if _mao_idx < 0 or _slot_alvo < 0:
 		return
@@ -594,12 +736,14 @@ func _confirmar_meu_campo() -> void:
 		return
 	_sel_atk = slot
 	_sel_mao = -1
-	_fala("Atacante escolhido. Mire no rival ou no LP.")
+	_fala("Atacante escolhido. Mire no campo rival.")
 	_pad_ao_trocar(FILEIRA_RIVAL_CAMPO)
 	_atualizar()
 
 
 ## Mira do ataque (fase de campo): confirmar no campo rival ataca, se há atacante.
+## Com campo rival vazio, o menu de alvo oferece o LP do rival (bug 6):
+## direto com ATK cheio (regra já existe no BattleSystem).
 func _confirmar_alvo_rival(alvo_slot: int) -> void:
 	if bool(_st.over) or int(_st.current_player) != 0:
 		return
@@ -609,13 +753,102 @@ func _confirmar_alvo_rival(alvo_slot: int) -> void:
 	if _sel_atk < 0:
 		_fala("Escolha seu atacante primeiro (seu campo).")
 		return
-	_atacar(_sel_atk, alvo_slot)
+	if not BattleSystem.has_monsters(_st, 1):
+		_mostrar_popup_alvo()
+		_fala("Rival sem monstros: mire no LP p/ ataque direto.")
+		return
+	var zona: Array = (_st.players[1] as Dictionary)["monster"]
+	var slot := clampi(alvo_slot, 0, 4)
+	if slot < 0 or slot >= zona.size() or zona[slot] == null:
+		_fala("Escolha um monstro rival (slot vazio).")
+		return
+	_atacar(_sel_atk, slot)
+
+
+## Magia própria: só navega (20 slots), sem ação (efeitos fora da mesa, D30).
+func _confirmar_meu_magia() -> void:
+	if bool(_st.over) or int(_st.current_player) != 0:
+		return
+	_fala("Magia: sem ação na mesa (só navega).")
+
+
+## Magia rival: não é alvo de ataque; com campo vazio oferece o direto.
+func _confirmar_alvo_rival_magia(alvo_slot: int) -> void:
+	if bool(_st.over) or int(_st.current_player) != 0:
+		return
+	if String(_st.phase) != "BATTLE":
+		_fala("Ataque só na sua BATTLE.")
+		return
+	if _sel_atk < 0:
+		_fala("Escolha seu atacante primeiro (seu campo).")
+		return
+	if not BattleSystem.has_monsters(_st, 1):
+		_mostrar_popup_alvo()
+		_fala("Rival sem monstros: mire no LP p/ ataque direto.")
+		return
+	_fala("Magia não é alvo: mire num monstro rival.")
+
+
+## Menu de alvo (bug 6): campo rival vazio -> oferece o LP do rival.
+func _mostrar_popup_alvo() -> void:
+	_popup_modo = "alvo"
+	if _popup_titulo != null and is_instance_valid(_popup_titulo):
+		_popup_titulo.text = "Alvo: rival sem monstros"
+	for i in range(_popup_botoes.size()):
+		var b := _popup_botoes[i] as Label
+		if i == 0:
+			b.text = "Atacar LP rival (direto)"
+			b.visible = true
+		elif i == 1:
+			b.text = "Cancelar"
+			b.visible = true
+		else:
+			b.visible = false
+	_pad_popup_idx = 0
+	_popup.visible = true
+	if _vista_centro != null and is_instance_valid(_vista_centro):
+		_vista_centro.move_to_front()
+	_popup.move_to_front()
+	if _cursor != null and is_instance_valid(_cursor):
+		_cursor.move_to_front()
+	_atualizar_cursor()
+
+
+func _confirmar_alvo_menu() -> void:
+	if _popup_modo != "alvo":
+		return
+	if _pad_popup_idx == 1:
+		_popup.visible = false
+		_popup_modo = "estrela"
+		_pad_popup_idx = 0
+		_fala("Ataque direto cancelado. Mire de novo.")
+		_atualizar_cursor()
+		return
+	_popup.visible = false
+	_popup_modo = "estrela"
+	_pad_popup_idx = 0
+	if _sel_atk < 0:
+		_fala("Escolha seu atacante primeiro (seu campo).")
+		_atualizar_cursor()
+		return
+	if BattleSystem.has_monsters(_st, 1):
+		_fala("Rival tem monstros: direto bloqueado.")
+		_atualizar_cursor()
+		return
+	_atacar(_sel_atk, -1)
 
 
 func _pad_cancelar() -> void:
 	if _st == null:
 		return
 	if _popup.visible:
+		if _popup_modo == "alvo":
+			_popup.visible = false
+			_popup_modo = "estrela"
+			_pad_popup_idx = 0
+			_fala("Ataque direto cancelado. Mire de novo.")
+			_atualizar_cursor()
+			return
 		# Volta do menu da estrela p/ escolha do slot.
 		_popup.visible = false
 		_pad_popup_idx = 0
@@ -703,10 +936,14 @@ func _retangulo_cursor() -> Rect2:
 	match _pad_fileira:
 		FILEIRA_RIVAL_LP:
 			return Rect2(_lbl_rival.position, _lbl_rival.size)
+		FILEIRA_RIVAL_MAGIA:
+			return BoardScript.slot_rect(1, "magia", clampi(_pad_col, 0, 4), _arena_layout)
 		FILEIRA_RIVAL_CAMPO:
 			return BoardScript.slot_rect(1, "monstro", clampi(_pad_col, 0, 4), _arena_layout)
 		FILEIRA_MEU_CAMPO:
 			return BoardScript.slot_rect(0, "monstro", clampi(_pad_col, 0, 4), _arena_layout)
+		FILEIRA_MEU_MAGIA:
+			return BoardScript.slot_rect(0, "magia", clampi(_pad_col, 0, 4), _arena_layout)
 		FILEIRA_MAO:
 			var mao: Array = (_st.players[0] as Dictionary)["hand"]
 			var n := mao.size()
@@ -736,14 +973,20 @@ func _atualizar_cursor() -> void:
 	else:
 		_pad_col = 0
 	_pad_popup_idx = clampi(_pad_popup_idx, 0, 2)
+	if _popup.visible and _popup_modo == "alvo":
+		_pad_popup_idx = clampi(_pad_popup_idx, 0, 1)
 	var r := _retangulo_cursor()
 	_cursor.position = r.position - Vector2(6, 6)
 	_cursor.size = r.size + Vector2(12, 12)
 	_cursor.visible = true
-	_cursor.move_to_front()
+	# Ordem certa (bug 2): centro embaixo, menu POR CIMA do centro, cursor no topo.
 	if _vista_centro != null and is_instance_valid(_vista_centro):
 		_vista_centro.move_to_front()
-		_cursor.move_to_front()
+	if _popup.visible:
+		_popup.move_to_front()
+	if _overlay != null and is_instance_valid(_overlay) and _overlay.visible:
+		_overlay.move_to_front()
+	_cursor.move_to_front()
 
 
 func _process(delta: float) -> void:
@@ -820,6 +1063,7 @@ func _no_start_passar_turno() -> void:
 	_mao_idx = -1
 	_sel_atk = -1
 	_popup.visible = false
+	_popup_modo = "estrela"
 	_pad_popup_idx = 0
 	_esconder_centro()
 	var dono := int(_st.current_player)
@@ -880,7 +1124,10 @@ func _mostrar_centro(carta: Dictionary, face_baixo: bool) -> void:
 	vista.scale = Vector2.ONE
 	vista.modulate.a = 1.0
 	_vista_centro = vista
+	# Menu sempre POR CIMA da carta central (bug 2): centro embaixo, popup acima.
 	_vista_centro.move_to_front()
+	if _popup.visible:
+		_popup.move_to_front()
 	_cursor.move_to_front()
 
 
@@ -1016,7 +1263,8 @@ func _desenhar_campo() -> void:
 			var vista: CardView = CardViewScript.new()
 			_camada_campo.add_child(vista)
 			vista.setup(_fantasia_de_inst(m))
-			var esconder: bool = lado == 1 and bool(m.get("face_down", false))
+			# Face p/ baixo desce virada de verdade (bug 1): vale p/ os 2 lados.
+			var esconder: bool = bool(m.get("face_down", false))
 			vista.set_facedown(esconder)
 			vista.scale = Vector2(ESCALA_CAMPO, ESCALA_CAMPO)
 			vista.position = r.get_center() - CardViewScript.TAM / 2.0 * ESCALA_CAMPO
@@ -1106,8 +1354,14 @@ func _ia_inimiga() -> void:
 			break
 		if zona[s] == null:
 			continue
+		# Com seu campo vazio, ataca direto no seu LP (vale p/ os 2 lados, bug 6).
+		# Dano = ATK cheio (regra já existe no BattleSystem).
 		var alvo := BattleSystem.first_monster_slot(_st, 0)
-		var ra: Dictionary = BattleSystem.attack(_st, 1, s, 0, alvo)
+		var ra: Dictionary
+		if alvo < 0:
+			ra = BattleSystem.attack(_st, 1, s, 0, -1)
+		else:
+			ra = BattleSystem.attack(_st, 1, s, 0, alvo)
 		if bool(ra.get("ok", false)):
 			if bool(ra.get("direto", false)):
 				_fala("Rival direto: %d em você!" % int(ra.get("dano", 0)))
@@ -1131,6 +1385,7 @@ func _ia_inimiga() -> void:
 	_sel_atk = -1
 	_slot_alvo = -1
 	_estrela_ops = []
+	_popup_modo = "estrela"
 	_sub_mao = SUB_MAO_ESCOLHA
 	_fase_jogador = FASE_MAO
 	_face_baixo = false

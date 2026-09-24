@@ -8,8 +8,9 @@ acabamos_de_fazer: "Fase da mão travada (centro/face/slot/estrela, sempre ATK) 
 acabamos_de_fazer: "Runtime e QA agora têm ordem escrita p/ godot_* (MCP) + GUT headless; commitado"
 acabamos_de_fazer: "R9 gravada no AGENTS (commit+push fim de tarefa); 4 commits pushed: jogo + dados FM + studio + docs; git status limpo"
 acabamos_de_fazer: "QA travou 100% controle em test_gamepad.gd (2 testes novos: 11 ações zero teclado/mouse + mesa sem botão clicável via tscn+cena real); sinal clicada confirmado removido (só resta o assert em test_board_layout.gd:329, faz sentido); GUT 42/42 (602 asserts) verde headless 4.7.2, sem Fake, sem mudar regra, R8 ok"
- acabamos_de_fazer: "QA travou fluxo fiel FM em test_fluxo_fiel.gd (5 testes: cursor preso na mão, desce em ATK p/cima e p/baixo c/ estrela, RB/LB pós-ataque, START mão/campo); GUT 47/47 (682 asserts) verde headless 4.7.2, sem Fake, sem mudar regra, R8 ok"
- próximo_passo: "Aguardar ordem do usuario (sugestao: testar a mesa fiel no controle de verdade)"
+  acabamos_de_fazer: "QA travou fluxo fiel FM em test_fluxo_fiel.gd (5 testes: cursor preso na mão, desce em ATK p/cima e p/baixo c/ estrela, RB/LB pós-ataque, START mão/campo); GUT 47/47 (682 asserts) verde headless 4.7.2, sem Fake, sem mudar regra, R8 ok"
+  acabamos_de_fazer: "Runtime 6 bugs da mesa em duel_table.gd (face p/baixo desce virada p/ os 2 lados + menu estrela/alvo sempre POR CIMA do centro + campo com 20 slots magia inclusa + horizontal por posição de tela sem espelhar + trava SÓ no campo sem fugir p/ LP + direto com campo vazio p/ os 2 lados via menu alvo + IA direta; duel/ intacto, schemas intactos, sem Fake, só controle); check descartável 6/6 criado-mostrado-apagado (R8) + GUT 47/47 (682) verde headless 4.7.2 sem SCRIPT ERROR"
+  próximo_passo: "Aguardar ordem do usuario (sugestao: testar a mesa fiel no controle de verdade)"
  travas_e_dúvidas:
   - "D34: runtime ainda lê vida do duel_setup (starting_lp do duelista só sugere no Duelo); runtime ainda não lê campaign/scenes nem executa efeitos/fusões na mesa (D30) — Testar fusão e builder de efeito são só-dado, sem fingir (R1/R4 ok)"
   - "D34: jogar_duelo MIGRADO p/ --setup em 2026-09-24 (escreve temp_dir/duel_studio_rapido.json, lança Godot -- --setup <temp>); schemas/examples/duel_setup.json não é mais tocado (hash 41654F… intacto)"
