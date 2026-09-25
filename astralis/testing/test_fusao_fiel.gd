@@ -1,4 +1,4 @@
-extends GutTest
+extends "res://testing/astralis_test_base.gd"
 
 ## test_fusao_fiel — GUT da mão reta + fusão fiel (runtime, sem Fake R2).
 ## Trava o que o runtime fez (duel_table.gd + fusion_system.gd):
@@ -11,31 +11,12 @@ extends GutTest
 ##    conta como a jogada. Só controle (Input simula botão, método real anda).
 ## Usa mesa real (duel_table.tscn) + sistemas reais (Duel/Summon/Fusion).
 ## Seed fixa 42 (duel_setup). Bug aqui vira teste permanente.
+## Helpers (_mesa_nova/_indice_monstro_na_mao) vêm de astralis_test_base.gd.
 
-const ProjectLoaderScript := preload("res://core/project_loader.gd")
-const DuelManagerScript := preload("res://duel/duel_manager.gd")
-const SummonSystem := preload("res://duel/summon_system.gd")
 const FusionSystem := preload("res://duel/fusion_system.gd")
-const TableScript := preload("res://ui/duel_table.gd")
 const BoardLayoutScript := preload("res://core/board_layout.gd")
 const CardViewScript := preload("res://ui/card_view.gd")
-const MesaScene := preload("res://ui/duel_table.tscn")
-
-
-func _mesa_nova():
-	var mesa: Node = MesaScene.instantiate()
-	add_child_autofree(mesa)
-	await wait_process_frames(4)
-	return mesa
-
-
-func _indice_monstro_na_mao(st, player_idx: int) -> int:
-	var mao: Array = (st.players[player_idx] as Dictionary)["hand"]
-	for i in range(mao.size()):
-		var c = mao[i]
-		if c is Dictionary and str((c as Dictionary).get("card_type", "")) == "monster":
-			return i
-	return -1
+# TableScript e MesaScene vêm da base (astralis_test_base.gd) - R8: uma cópia só.
 
 
 func _fusoes_mini() -> Dictionary:

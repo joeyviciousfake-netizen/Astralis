@@ -1,4 +1,4 @@
-extends GutTest
+extends "res://testing/astralis_test_base.gd"
 
 ## test_ia_ataque — GUT permanente da escolha de ataque da IA (rival).
 ## Trava a regra nova do runtime (duel_table.gd: FindKiller + FindBestAttack)
@@ -10,37 +10,9 @@ extends GutTest
 ## (4) empate ATK vs ATK -> ataca e os dois caem (dano 0);
 ## (5) _ia_bonus_guardia retorna 0 (guardiã adiada).
 ## Bug aqui vira teste permanente.
+## Helpers (_mesa_nova/_limpar_campo/_inst) vêm de astralis_test_base.gd.
 
 const BattleSystem := preload("res://duel/battle_system.gd")
-const MesaScene := preload("res://ui/duel_table.tscn")
-
-
-func _mesa_nova():
-	var mesa: Node = MesaScene.instantiate()
-	add_child_autofree(mesa)
-	await wait_process_frames(4)
-	return mesa
-
-
-# Só organiza dado; a regra testada é sempre a da mesa real.
-func _limpar_campo(st) -> void:
-	for i in range(5):
-		(st.players[0] as Dictionary)["monster"][i] = null
-		(st.players[1] as Dictionary)["monster"][i] = null
-
-
-func _inst(atk: int, pos: String = "ATK", face_down: bool = false, def: int = 1000) -> Dictionary:
-	return {
-		"card_id": "trava",
-		"nome": "Trava",
-		"atk": atk,
-		"def": def,
-		"position": pos,
-		"battle_position": pos,
-		"face_down": face_down,
-		"has_attacked": false,
-		"guardian_star": "",
-	}
 
 
 func test_campo_vazio_direto_com_mais_forte() -> void:

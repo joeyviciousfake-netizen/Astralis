@@ -186,6 +186,11 @@ static func starter_arena_path() -> String:
 ## Caminho da arena <arena_id>.json na pasta do --project (se válido)
 ## ou na embutida. Sem --project (ou pasta inválida), volta o starter
 ## de sempre. Nunca quebra: ausente cai na grade padrão em load_arena_data.
+## D29: schemas/examples/ é SÓ TESTE. Com base de PROJETO (--project) e a
+## arena ausente lá, NÃO lê de examples/ — devolve "" e a mesa usa a grade
+## padrão embutida (default_layout/default_hand), que tem os MESMOS números
+## do arena_starter.json (x 780/969/1158/1347/1536, y 600/789/317/128,
+## mão p0 1240/980/95 e p1 1240/20/60). Só DESENHO: nenhuma regra muda.
 static func project_arena_path(arena_id: String = "arena_starter") -> String:
 	var aid := arena_id.strip_edges()
 	if aid.is_empty():
@@ -194,9 +199,12 @@ static func project_arena_path(arena_id: String = "arena_starter") -> String:
 	var cand: String = base.path_join("arenas").path_join(aid + ".json")
 	if FileAccess.file_exists(cand):
 		return cand
-	if base != DataLoaderScript.starter_kit_dir():
-		print("[ARENA] Arena '%s' não achada no --project, usando embutida." % aid)
-	return starter_arena_path()
+	if base == DataLoaderScript.starter_kit_dir():
+		# Sem --project: a base É a embutida (exemplos), então o starter
+		# continua valendo (é o caso dos testes).
+		return starter_arena_path()
+	print("[ARENA] Arena '%s' não existe no projeto: usando a grade padrão." % aid)
+	return ""
 
 
 ## Converte valor do layout em Vector2. Aceita Vector2, Array [x,y] ou Dict {x,y}.
@@ -236,7 +244,11 @@ static func get_pos(layout: Dictionary, slot: String, fallback: Vector2 = Vector
 ## slots vazio + hand fallback + aviso PT-BR.
 static func load_arena_data(path: String) -> Dictionary:
 	var vazio := {"slots": {}, "hand": {"p0": default_hand(0), "p1": default_hand(1)}}
-	if path.is_empty() or not FileAccess.file_exists(path):
+	if path.is_empty():
+		# Projeto sem arena: usa a grade padrão (mesmos números do starter).
+		print("[ARENA] Sem arena no projeto: usando a grade padrão.")
+		return vazio
+	if not FileAccess.file_exists(path):
 		push_warning("[ARENA] Arquivo não encontrado: %s. Usando grade padrão." % path)
 		print("[ARENA] Arquivo não encontrado, usando grade padrão: " + path)
 		return vazio

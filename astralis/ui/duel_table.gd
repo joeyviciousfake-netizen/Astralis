@@ -36,9 +36,7 @@ extends Control
 ## sem mouse e sem teclado. Desenho 1920x1080 e espelho intactos.
 
 const ProjectLoaderScript := preload("res://core/project_loader.gd")
-const DataLoaderScript := preload("res://core/data_loader.gd")
 const DuelManagerScript := preload("res://duel/duel_manager.gd")
-const TurnManager := preload("res://duel/turn_manager.gd")
 const SummonSystem := preload("res://duel/summon_system.gd")
 const BattleSystem := preload("res://duel/battle_system.gd")
 const PositionSystem := preload("res://duel/position_system.gd")
@@ -82,7 +80,6 @@ var _fusao_descartes: Array = []
 var _fusao_passos: Array = []
 var _sel_mao := -1
 var _sel_atk := -1
-var _popup_slot := -1
 var _log: Array = []
 var _arena_layout: Dictionary = {}
 var _arena_data: Dictionary = {}
@@ -125,7 +122,6 @@ var _sub_mao := SUB_MAO_ESCOLHA
 var _mao_idx := -1
 var _face_baixo := false
 var _slot_alvo := -1
-var _estrela_idx := 0
 var _estrela_ops: Array = []
 var _vista_centro: Control = null
 ## Menu central tem 2 modos (mesmo popup, sem regra nova): "estrela" (invocar)
@@ -148,6 +144,11 @@ func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
 	# Sem mouse (D19): a mesa nunca recebe clique.
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# O campo (Board) também: sem handler ligado ele não fazia nada, mas
+	# a garantia do D19 é estrutural — nenhum Control da mesa é clicável.
+	var board: Node = get_node_or_null(^"Board")
+	if board is Control:
+		(board as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_camada_mao = $Hand
 	_camada_mao.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_camada_mao.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -174,7 +175,7 @@ func _ready() -> void:
 	_duel = DuelManagerScript.new_duel(data.get("duel_setup", {}), data.get("decks", {}), data.get("cards", {}))
 	_st = _duel.get_state()
 	_cartas = data.get("cards", {})
-	_fusions_data = _carregar_fusoes()
+	_fusions_data = _fusoes_do_data(data)
 	_fala("Duelo começou! Sua vez.")
 	_duel.advance_phase() # DRAW inicial -> MAIN (mão 5/5 SEM extra, FM fiel).
 	_fase_jogador = FASE_MAO
@@ -198,8 +199,9 @@ func _ready() -> void:
 
 
 func _montar_painel() -> void:
-	# LP do rival: só mostra (sem clique). O cursor usa
-	# a fileira RIVAL_LP e o confirmar chama _no_rival_lp().
+	# LP do rival: só mostra (sem clique). A fileira RIVAL_LP existe, mas
+	# o cursor nunca chega nela (FASE_DE_CAMPO força fileira de campo); o
+	# ataque direto acontece pelo MENU de alvo ao mirar no campo vazio.
 	_lbl_rival = Label.new()
 	_lbl_rival.position = Vector2(60, 100)
 	_lbl_rival.size = Vector2(430, 70)
@@ -302,18 +304,18 @@ func _fala(texto: String) -> void:
 	print("[TABLE] " + texto)
 
 
-## FUSÕES (só DADO, nunca regra): lê fusions.json da pasta do --project
-## (se válido) ou da embutida. A regra mora no FusionSystem real.
-func _carregar_fusoes() -> Dictionary:
-	var base: String = DataLoaderScript.project_base_dir()
-	var res: Dictionary = DataLoaderScript.load_json_file(base.path_join("fusions.json"))
-	if not bool(res.get("ok", false)):
-		print("[TABLE] Aviso: fusões não carregaram (%s), sem fusão." % str(res.get("error", "")))
+## FUSÕES (só DADO, nunca regra): usa o que o DataLoader JÁ leu e validou
+## (data["fusions"]). NÃO relê o fusions.json do disco — 2,3 MB / 25 mil
+## receitas eram parseados 2x por boot e a 1ª cópia jogada fora.
+## A regra mora no FusionSystem real. Vazio/ausente = lista vazia + aviso
+## PT-BR (o jogo nunca quebra por causa de fusão).
+func _fusoes_do_data(data: Dictionary) -> Dictionary:
+	var bruto = data.get("fusions", null)
+	if not (bruto is Dictionary) or (bruto as Dictionary).is_empty():
+		print("[TABLE] Aviso: fusões não vieram no projeto (sem fusão).")
 		return {"schema_version": 1, "recipes": [], "rules": []}
-	var d = res.get("data", {})
-	if not (d is Dictionary):
-		return {"schema_version": 1, "recipes": [], "rules": []}
-	var out: Dictionary = d as Dictionary
+	# Cópia rasa: normaliza as listas sem mexer no dict do DataLoader.
+	var out: Dictionary = (bruto as Dictionary).duplicate()
 	if not (out.get("recipes", []) is Array):
 		out["recipes"] = []
 	if not (out.get("rules", []) is Array):
@@ -524,6 +526,11 @@ func _pad_ao_trocar(nova: int) -> void:
 ## CAMPO anda SÓ nos 20 slots do campo (bug 3+5): 2 fileiras de monstro +
 ## 2 de magia, sem LP e sem mão (cima no topo não sai do lugar).
 func _pad_mover(dx: int, dy: int) -> void:
+	# SEM guarda de fusão aqui de propósito: durante a fila o _sub_mao já é
+	# SUB_SLOT, e este ramo só mexe no cursor (_pad_fileira/_pad_col) — não
+	# escreve _sub_mao nem _slot_alvo. O slot da fusão foi copiado numa
+	# variável local ANTES do await (em _fluxo_escolher_slot_fusao), então
+	# o cursor andando durante a animação não troca o alvo nem reinicia nada.
 	if _st == null or bool(_st.over):
 		return
 	# Menu central (estrela ou alvo): só cima/baixo troca a opção.
@@ -665,6 +672,9 @@ func _pad_confirmar() -> void:
 				return
 		return
 	# FASE DE CAMPO: SÓ os 20 slots do campo (bug 3+5, sem LP e sem mão).
+	# A fileira do LP rival NÃO tem caso aqui: em FASE_DE_CAMPO o cursor é
+	# forçado para uma fileira de campo, e o ataque direto existe só pelo
+	# menu de alvo que abre ao mirar no campo rival vazio (bug 6).
 	if _fase_jogador == FASE_CAMPO:
 		match _pad_fileira:
 			FILEIRA_MEU_CAMPO:
@@ -679,14 +689,10 @@ func _pad_confirmar() -> void:
 			FILEIRA_RIVAL_MAGIA:
 				_confirmar_alvo_rival_magia(clampi(_pad_col, 0, 4))
 				return
-			FILEIRA_RIVAL_LP:
-				_no_rival_lp()
-				return
 			_:
 				_fala("Fase de campo: use os 20 slots do campo.")
 				return
 		return
-	_fala("Aguarde sua fase.")
 
 
 ## 1) Confirmar carta monstro -> ela vai ao CENTRO da tela e para.
@@ -745,7 +751,6 @@ func _fluxo_escolher_slot() -> void:
 		return
 	_slot_alvo = slot
 	_combinando = false
-	_popup_slot = slot
 	var mao: Array = (_st.players[0] as Dictionary)["hand"]
 	if _mao_idx < 0 or _mao_idx >= mao.size():
 		_fala("Carta saiu da mão.")
@@ -757,7 +762,6 @@ func _fluxo_escolher_slot() -> void:
 		return
 	var carta = mao[_mao_idx] as Dictionary
 	_estrela_ops = _estrelas_da_carta(carta)
-	_estrela_idx = 0
 	_pad_popup_idx = 0
 	_sub_mao = SUB_ESTRELA
 	_mostrar_popup_estrela()
@@ -809,7 +813,7 @@ func _carta_completa_do_campo(inst: Dictionary) -> Dictionary:
 	if not cid.is_empty() and _cartas.has(cid):
 		base = (_cartas[cid] as Dictionary).duplicate(true)
 	else:
-		base = {"id": cid, "name": str(inst.get("nome", cid)), "card_type": "monster", "monster_type": "beast", "attribute": "earth", "attack": int(inst.get("atk", 0)), "defense": int(inst.get("def", 0))}
+		base = {"id": cid, "name": _nome_da_inst(inst, cid), "card_type": "monster", "monster_type": "beast", "attribute": "earth", "attack": int(inst.get("atk", 0)), "defense": int(inst.get("def", 0))}
 	if str(base.get("id", "")).is_empty():
 		base["id"] = cid
 	return base
@@ -860,6 +864,15 @@ func _mostrar_popup_estrela() -> void:
 ## 4) Menu no centro: 1 das 2 guardian stars -> desce ao slot em Ataque.
 ## Avulsa desce COM a face; combinação desce face-up (FINAL já pronto).
 func _confirmar_estrela() -> void:
+	# Fusão animando: NÃO entra no menu. Sem esta guarda, o "Cancelar" daqui
+	# escreveria _sub_mao = SUB_SLOT no meio da fila e o próximo confirmar
+	# cairia em _fluxo_escolher_slot_fusao por cima da fila que já está
+	# rodando (2º await _animar_fila_fusao). A 1ª corrotina continuaria viva
+	# e o estado da mão ficaria inconsistente. A fila termina e aí sim o menu
+	# abre (a própria fila chama _mostrar_popup_estrela no fim).
+	if _fusao_animando: # Barreira de reentrada (ver comentário acima).
+		_fala("Aguarde a fusão terminar.")
+		return
 	if _sub_mao != SUB_ESTRELA or _slot_alvo < 0:
 		_popup.visible = false
 		_pad_popup_idx = 0
@@ -901,7 +914,6 @@ func _executar_summon_fiel(estrela: String) -> void:
 	var hand_idx := _mao_idx
 	var slot_n := _slot_alvo
 	var face: bool = _face_baixo
-	_popup_slot = -1
 	var p: Dictionary = _st.players[0] as Dictionary
 	var mao: Array = p["hand"]
 	var zona: Array = p["monster"]
@@ -974,9 +986,9 @@ func _executar_summon_fiel(estrela: String) -> void:
 		var tipo_res := str(real.get("card_type", dado.get("card_type", "monster")))
 		if tipo_res == "monster":
 			mao.remove_at(hand_idx)
-			var atk_f := clampi(int(real.get("attack", dado.get("attack", 0))), 0, 9999)
-			var def_f := clampi(int(real.get("defense", dado.get("defense", 0))), 0, 9999)
-			zona[slot_n] = {"card_id": rid, "nome": str(real.get("name", dado.get("name", rid))), "atk": atk_f, "def": def_f, "position": "ATK", "battle_position": "ATK", "face_down": face, "guardian_star": estrela, "has_attacked": false}
+			# Instância: construtor ÚNICO do motor (SummonSystem), nunca
+			# literal montado na tela (R1 — o formato vive em 1 lugar só).
+			zona[slot_n] = SummonSystem.construir_instancia(dado, face, "ATK", estrela, real, rid)
 			_st.normal_summon_used = true
 			_fala("Fusão com campo! %s + %s = %s." % [nome_campo, str(carta_mao.get("id", "?")), rid])
 			var modo2 := "virada p/ baixo" if face else "p/ cima"
@@ -985,17 +997,13 @@ func _executar_summon_fiel(estrela: String) -> void:
 		else:
 			(p["graveyard"] as Array).append(str(ocupante.get("card_id", "")))
 			mao.remove_at(hand_idx)
-			var atk_h := clampi(int(carta_mao.get("attack", 0)), 0, 9999)
-			var def_h := clampi(int(carta_mao.get("defense", 0)), 0, 9999)
-			zona[slot_n] = {"card_id": str(carta_mao.get("id", "")), "nome": str(carta_mao.get("name", "?")), "atk": atk_h, "def": def_h, "position": "ATK", "battle_position": "ATK", "face_down": face, "guardian_star": estrela, "has_attacked": false}
+			zona[slot_n] = SummonSystem.construir_instancia(carta_mao, face, "ATK", estrela)
 			_st.normal_summon_used = true
 			_fala("Resultado %s não é monstro: %s descartado, a da mão desce." % [rid, nome_campo])
 	else:
 		(p["graveyard"] as Array).append(str(ocupante.get("card_id", "")))
 		mao.remove_at(hand_idx)
-		var atk_h2 := clampi(int(carta_mao.get("attack", 0)), 0, 9999)
-		var def_h2 := clampi(int(carta_mao.get("defense", 0)), 0, 9999)
-		zona[slot_n] = {"card_id": str(carta_mao.get("id", "")), "nome": str(carta_mao.get("name", "?")), "atk": atk_h2, "def": def_h2, "position": "ATK", "battle_position": "ATK", "face_down": face, "guardian_star": estrela, "has_attacked": false}
+		zona[slot_n] = SummonSystem.construir_instancia(carta_mao, face, "ATK", estrela)
 		_st.normal_summon_used = true
 		_fala("Não fundiu: %s descartado." % nome_campo)
 		var modo3 := "virada p/ baixo" if face else "p/ cima"
@@ -1051,18 +1059,14 @@ func _iniciar_escolha_slot_fusao() -> void:
 	_atualizar_cursor()
 
 
-## Compat: fluxo antigo chamava _iniciar_fusao direto (slot livre + desce).
-## Mantido p/ não quebrar chamada externa; agora vai ao slot primeiro.
-func _iniciar_fusao() -> void:
-	_iniciar_escolha_slot_fusao()
-
-
 ## Slot da fusão escolhido -> fila no centro -> FINAL + menu da estrela.
 func _fluxo_escolher_slot_fusao() -> void:
 	if not _combinando:
 		_fluxo_escolher_slot()
 		return
 	if _fusao_animando:
+		# Barreira de reentrada: sem ela, um 2º fluxo de fusão roda por cima
+		# da fila que já está animando (2º await _animar_fila_fusao).
 		_fala("Aguarde a fusão terminar.")
 		return
 	_limpar_levantadas()
@@ -1083,7 +1087,6 @@ func _fluxo_escolher_slot_fusao() -> void:
 	if slot < 0 or slot >= zona.size():
 		return
 	_slot_alvo = slot
-	_popup_slot = slot
 	var mao_atual: Array = (_st.players[0] as Dictionary)["hand"]
 	var em_ordem: Array = []
 	for h in ordem:
@@ -1149,7 +1152,6 @@ func _fluxo_escolher_slot_fusao() -> void:
 		_fala("%d acumulada(s) ao cemitério." % _fusao_descartes.size())
 	_fusao_animando = false
 	_estrela_ops = _estrelas_da_carta(_fusao_final)
-	_estrela_idx = 0
 	_pad_popup_idx = 0
 	_sub_mao = SUB_ESTRELA
 	_mostrar_popup_estrela()
@@ -1234,13 +1236,13 @@ func _executar_fusao_fiel(estrela: String) -> void:
 			_fala("Não fundiu com campo: %s descartado." % nome_campo)
 			print("[SOM] encontro da fusão falhou no slot %d." % slot_n)
 	var real_f: Dictionary = (_cartas.get(descer_id, {}) as Dictionary) if _cartas.has(descer_id) else descer_carta
-	var atk_f := clampi(int(real_f.get("attack", descer_carta.get("attack", 0))), 0, 9999)
-	var def_f := clampi(int(real_f.get("defense", descer_carta.get("defense", 0))), 0, 9999)
-	zona[slot_n] = {"card_id": descer_id, "nome": str(real_f.get("name", descer_carta.get("name", descer_id))), "atk": atk_f, "def": def_f, "position": "ATK", "battle_position": "ATK", "face_down": false, "guardian_star": estrela, "has_attacked": false}
+	# Instância: construtor ÚNICO do motor (SummonSystem), nunca literal
+	# montado na tela (R1 — o formato vive em 1 lugar só). Face p/ cima
+	# porque a combinação sempre desce virada (D24/D25).
+	zona[slot_n] = SummonSystem.construir_instancia(descer_carta, false, "ATK", estrela, real_f, descer_id)
 	_st.normal_summon_used = true
 	_fala("Fundiu %s em Ataque p/ cima (estrela %s)!" % [descer_id, estrela])
 	print("[SOM] fusão pronta no slot %d." % slot_n)
-	_popup_slot = -1
 	_combinando = false
 	_fusao_ordem = []
 	_fusao_final = {}
@@ -1259,9 +1261,6 @@ func _executar_fusao_fiel(estrela: String) -> void:
 	_pad_fileira = FILEIRA_MEU_CAMPO
 	_pad_col = clampi(slot_n, 0, 4)
 	_atualizar()
-
-
-## (Fluxo antigo removido: agora fusão vai ao slot primeiro + estrela no fim.)
 
 
 ## Sem render (headless ou fora da árvore): pula a animação sem quebrar.
@@ -1286,7 +1285,6 @@ func _animar_fila_fusao(em_ordem: Array, passos: Array, indices_mao: Array) -> v
 			print("[SOM] fila fusão %d/%d (%s) sem render." % [k + 1, em_ordem.size(), cid])
 		return
 	var ponta_direita := CENTRO_CARTA + Vector2(90, 0)
-	var n: int = (indices_mao as Array).size()
 	var vistas: Array = []
 	for k in range(em_ordem.size()):
 		var carta = em_ordem[k]
@@ -1360,7 +1358,8 @@ func _animar_fila_fusao(em_ordem: Array, passos: Array, indices_mao: Array) -> v
 			(v as Node).queue_free()
 
 
-## Voo simples ao centro EM ORDEM (mantido p/ compat, agora usa a fila).
+## Voo ao centro EM ORDEM. Hoje só o teste de animação chama (a mesa usa
+## _animar_fila_fusao direto): mantida p/ não quebrar esse teste.
 func _animar_voo_centro(ordem: Array) -> void:
 	if _st == null or _sem_render() or not is_inside_tree():
 		return
@@ -1541,6 +1540,10 @@ func _confirmar_alvo_menu() -> void:
 func _pad_cancelar() -> void:
 	if _st == null:
 		return
+	# 1ª TRAVA da função, de propósito: com a fila da fusão rodando, nenhum
+	# caminho de cancelar pode reescrever _sub_mao (= SUB_SLOT no cancel do
+	# menu da estrela, linha ~1554, e ~1575), senão o confirmar seguinte
+	# reentraria em _fluxo_escolher_slot_fusao por cima da fila.
 	if _fusao_animando:
 		_fala("Aguarde a fusão terminar.")
 		return
@@ -1562,7 +1565,6 @@ func _pad_cancelar() -> void:
 			_fala("Escolha 1 dos 5 slots (%s)." % _resumo_slots())
 			_atualizar_cursor()
 			return
-		_popup_slot = -1
 		_fala("Invocação cancelada.")
 		_atualizar_cursor()
 		return
@@ -1923,7 +1925,8 @@ func _pos_mao(i: int, n: int, lado: int = 0) -> Vector2:
 	return Vector2(x, y0)
 
 
-## MÃO RETA: sem leque/rotação (sempre 0). Mantida p/ compat com o desenho.
+## MÃO RETA: sem leque/rotação (sempre 0 — D25). O desenho põe rotação 0
+## direto; esta função existe p/ o teste de mão reta continuar travando.
 func _giro_mao(_i: int, _n: int) -> float:
 	return 0.0
 
@@ -2066,28 +2069,22 @@ func _desenhar_campo() -> void:
 
 ## O motor guarda a instância enxuta; a tela veste com os dados reais da carta.
 func _fantasia_de_inst(m: Dictionary) -> Dictionary:
-	var real: Dictionary = _cartas.get(str(m.get("card_id", "")), {}) as Dictionary
+	var cid := str(m.get("card_id", ""))
+	var real: Dictionary = _cartas.get(cid, {}) as Dictionary
 	if real.is_empty():
-		return {"name": str(m.get("nome", "?")), "monster_type": "beast", "attribute": "earth", "attack": int(m.get("atk", 0)), "defense": int(m.get("def", 0)), "card_type": "monster"}
+		return {"name": _nome_da_inst(m, cid), "monster_type": "beast", "attribute": "earth", "attack": int(m.get("atk", 0)), "defense": int(m.get("def", 0)), "card_type": "monster"}
 	return real
 
 
+## Nome da instância p/ tela: o "nome" do motor; vazio = cai no card_id
+## (a instância real sempre traz o nome, mas carta fora do _cartas
+##  mostrava linha em branco sem esta rede).
+func _nome_da_inst(inst: Dictionary, cid: String) -> String:
+	var nome := str(inst.get("nome", ""))
+	return nome if not nome.is_empty() else (cid if not cid.is_empty() else "?")
+
+
 # ---- jogadas do jogador (fluxo fiel, só controle) ----
-
-func _no_rival_lp() -> void:
-	if bool(_st.over) or int(_st.current_player) != 0:
-		return
-	if String(_st.phase) != "BATTLE":
-		_fala("Ataque só na sua BATTLE.")
-		return
-	if _sel_atk < 0:
-		_fala("Escolha seu atacante primeiro (seu campo).")
-		return
-	if BattleSystem.has_monsters(_st, 1):
-		_fala("Ataque direto só sem monstros rivais.")
-		return
-	_atacar(_sel_atk, -1)
-
 
 func _atacar(atacante_slot: int, alvo_slot: int) -> void:
 	var r: Dictionary = BattleSystem.attack(_st, 0, atacante_slot, 1, alvo_slot)
@@ -2252,8 +2249,17 @@ func _primeiro_monstro(jogador: int) -> int:
 	return -1
 
 
+## Turno do RIVAL (IA). É async e chamada sem await (fire-and-forget).
+## Se o jogador confirmar no overlay de fim de jogo, reload_current_scene()
+## libera este nó: os timers acordam depois e get_tree() pode estar nulo.
+## Por isso há guarda `is_inside_tree()` no topo e logo após CADA await.
+## Nenhum outro comportamento da IA muda por causa disso.
 func _ia_inimiga() -> void:
+	if not is_inside_tree():
+		return
 	await get_tree().create_timer(0.7).timeout
+	if not is_inside_tree():
+		return
 	if bool(_st.over):
 		_atualizar()
 		return
@@ -2266,6 +2272,8 @@ func _ia_inimiga() -> void:
 			_fala("Rival invocou em Ataque.")
 	_atualizar()
 	await get_tree().create_timer(0.7).timeout
+	if not is_inside_tree():
+		return
 	if bool(_st.over):
 		_atualizar()
 		return
@@ -2293,6 +2301,8 @@ func _ia_inimiga() -> void:
 			_fala("Rival atacou: nada acontece.")
 		_atualizar()
 		await get_tree().create_timer(0.7).timeout
+		if not is_inside_tree():
+			return
 	if bool(_st.over):
 		_atualizar()
 		return

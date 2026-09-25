@@ -1,4 +1,4 @@
-extends GutTest
+extends "res://testing/astralis_test_base.gd"
 
 ## test_mesa_6bugs — GUT permanente dos 6 bugs da mesa (runtime, só duel_table.gd).
 ## Trava o que o runtime corrigiu em 2026-09-24 (só controle/desenho, sem regra nova):
@@ -12,103 +12,12 @@ extends GutTest
 ## Sem Fake (R2). Sem gamepad físico: Input.action_press só simula o botão;
 ## quem anda é o método real da mesa. Seed fixa 42 (duel_setup).
 ## Bug aqui vira teste permanente.
+## Helpers (_novo_duelo/_indice_monstro_na_mao/_garantir_monstros_na_mao/
+## _mesa_nova/_fluxo_completo_ate_campo) vêm de astralis_test_base.gd.
 
-const ProjectLoaderScript := preload("res://core/project_loader.gd")
-const DuelManagerScript := preload("res://duel/duel_manager.gd")
-const SummonSystem := preload("res://duel/summon_system.gd")
 const BattleSystem := preload("res://duel/battle_system.gd")
-const TableScript := preload("res://ui/duel_table.gd")
-const MesaScene := preload("res://ui/duel_table.tscn")
-
-
-func _novo_duelo():
-	var state: Dictionary = ProjectLoaderScript.load_initial_state()
-	var data: Dictionary = state.get("data", {})
-	return DuelManagerScript.new_duel(data.get("duel_setup", {}), data.get("decks", {}), data.get("cards", {}))
-
-
-func _indice_monstro_na_mao(st, player_idx: int) -> int:
-	var mao: Array = (st.players[player_idx] as Dictionary)["hand"]
-	for i in range(mao.size()):
-		var c = mao[i]
-		if c is Dictionary and str((c as Dictionary).get("card_type", "")) == "monster":
-			return i
-	return -1
-
-
-func _contar_monstros_na_mao(st, player_idx: int) -> int:
-	var n := 0
-	for c in ((st.players[player_idx] as Dictionary)["hand"] as Array):
-		if c is Dictionary and str((c as Dictionary).get("card_type", "")) == "monster":
-			n += 1
-	return n
-
-
-# Só organiza dado; a regra testada continua sendo a do motor real.
-func _garantir_monstros_na_mao(st, player_idx: int, quantos: int) -> void:
-	var p: Dictionary = st.players[player_idx] as Dictionary
-	var mao: Array = p["hand"]
-	var deck: Array = p["deck"]
-	var k := 0
-	while _contar_monstros_na_mao(st, player_idx) < quantos and k < deck.size():
-		var c = deck[k]
-		if c is Dictionary and str((c as Dictionary).get("card_type", "")) == "monster":
-			mao.append(c)
-			deck.remove_at(k)
-		else:
-			k += 1
-
-
-func _mesa_nova():
-	var mesa: Node = MesaScene.instantiate()
-	add_child_autofree(mesa)
-	await wait_process_frames(4)
-	return mesa
-
-
-# Roda o fluxo fiel completo na mesa real via confirmar de verdade:
-# carta -> centro (face) -> slot -> estrela -> campo. O botão é só simulado
-# (Input.action_press); quem anda é o método real da mesa.
-func _fluxo_completo_ate_campo(mesa: Node, face_baixo: bool, estrela_idx: int) -> Dictionary:
-	var st = mesa.get("_st")
-	var mao_antes: int = ((st.players[0] as Dictionary)["hand"] as Array).size()
-	var idx: int = _indice_monstro_na_mao(st, 0)
-	assert_true(idx >= 0, "Preparo: mão tem monstro p/ o fluxo fiel.")
-	mesa.set("_pad_fileira", TableScript.FILEIRA_MAO)
-	mesa.set("_pad_col", idx)
-	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
-	Input.action_release("confirmar")
-	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_FACE, "Carta foi ao centro (trava a face).")
-	if face_baixo:
-		Input.action_press("mover_dir")
-		mesa.call("_pad_mover", 1, 0)
-		Input.action_release("mover_dir")
-	assert_eq(bool(mesa.get("_face_baixo")), face_baixo, "Face escolhida: p/ baixo = %s." % str(face_baixo))
-	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
-	Input.action_release("confirmar")
-	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_SLOT, "Face travada, escolhe 1 dos 5 slots.")
-	var slot: int = SummonSystem.free_monster_slot(st, 0)
-	assert_true(slot >= 0, "Preparo: há slot livre no próprio campo.")
-	mesa.set("_pad_col", slot)
-	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
-	Input.action_release("confirmar")
-	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_ESTRELA, "Slot escolhido, abre o menu da estrela.")
-	assert_true((mesa.get("_popup") as Control).visible, "Menu da estrela abriu no centro.")
-	var ops: Array = mesa.get("_estrela_ops")
-	assert_eq(ops.size(), 2, "Menu traz as 2 guardian stars do dado.")
-	if estrela_idx == 1:
-		Input.action_press("mover_baixo")
-		mesa.call("_pad_mover", 0, 1)
-		Input.action_release("mover_baixo")
-	assert_eq(int(mesa.get("_pad_popup_idx")), estrela_idx, "Cursor do menu na estrela %d." % (estrela_idx + 1))
-	var esperada := str(ops[estrela_idx])
-	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
-	Input.action_release("confirmar")
-	return {"slot": slot, "estrela": esperada, "mao_antes": mao_antes}
+# ProjectLoaderScript/DuelManagerScript/SummonSystem/TableScript/MesaScene
+# vêm da base (astralis_test_base.gd) - R8: uma cópia só.
 
 
 func test_bug1_face_baixo_desce_escondida_nos_2_lados() -> void:

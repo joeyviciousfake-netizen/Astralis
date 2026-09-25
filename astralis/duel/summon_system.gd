@@ -11,6 +11,42 @@ extends RefCounted
 ## - guardian_star opcional (dado fm guardian_star_1/2) gravado na instância.
 ## R3: ATK/DEF/estrelas vêm do dado; a permissão é fixa.
 
+
+## CONSTRUTOR ÚNICO E PÚBLICO da instância de monstro no campo (R1).
+## Todo mundo que escreve no campo passa por aqui: este normal_summon,
+## o FusionSystem e a mesa (ui/duel_table.gd). O FORMATO do literal do
+## campo existe SÓ neste lugar: campo novo = 1 edição, não 4.
+## - carta: o DADO da carta (id/name/attack/defense);
+## - dado_real (opcional): o DADO de cards_db por cima de carta (mesma carta,
+##   mais completa). Só troca os campos que existem lá, então o resto
+##   continua vindo de carta;
+## - id_forcado (opcional): id do resultado quando vem da cadeia/resolução
+##   (a fusão resolve o id antes do DADO completo).
+static func construir_instancia(carta: Dictionary, face_down: bool, position: String, guardian_star: String, dado_real: Dictionary = {}, id_forcado: String = "") -> Dictionary:
+	var fonte: Dictionary = {}
+	if dado_real.is_empty():
+		fonte = carta
+	else:
+		fonte = (carta as Dictionary).duplicate(true)
+		for chave in dado_real:
+			fonte[chave] = dado_real[chave]
+	var cid := id_forcado
+	if cid.is_empty():
+		cid = str(fonte.get("id", ""))
+	var pos_final: String = position.to_upper()
+	return {
+		"card_id": cid,
+		"nome": str(fonte.get("name", "")),
+		"atk": clampi(int(fonte.get("attack", 0)), 0, 9999),
+		"def": clampi(int(fonte.get("defense", 0)), 0, 9999),
+		"position": pos_final,
+		"battle_position": pos_final,
+		"face_down": face_down,
+		"guardian_star": str(guardian_star),
+		"has_attacked": false,
+	}
+
+
 static func free_monster_slot(state, player_idx: int) -> int:
 	var zona: Array = (state.players[player_idx] as Dictionary)["monster"]
 	for i in range(zona.size()):
@@ -53,18 +89,8 @@ static func normal_summon(state, player_idx: int, hand_index: int, slot_index: i
 	var mao: Array = p["hand"]
 	var zona: Array = p["monster"]
 	var carta: Dictionary = mao[hand_index] as Dictionary
-	var pos_final: String = position.to_upper()
-	var inst := {
-		"card_id": str(carta.get("id", "")),
-		"nome": str(carta.get("name", "")),
-		"atk": clampi(int(carta.get("attack", 0)), 0, 9999),
-		"def": clampi(int(carta.get("defense", 0)), 0, 9999),
-		"position": pos_final,
-		"battle_position": pos_final,
-		"face_down": face_down,
-		"guardian_star": str(guardian_star),
-		"has_attacked": false,
-	}
+	var inst: Dictionary = construir_instancia(carta, face_down, position, guardian_star)
+	var pos_final: String = str(inst.get("position", "ATK"))
 	mao.remove_at(hand_index)
 	zona[slot_index] = inst
 	state.normal_summon_used = true

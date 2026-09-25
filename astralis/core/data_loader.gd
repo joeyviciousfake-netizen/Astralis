@@ -47,6 +47,15 @@ static func _load_folder(folder: String) -> Dictionary:
 			erros.append("Formato inesperado em " + full + " (esperava objeto).")
 	return {"items": out, "erros": erros}
 
+## Memo do --project: a base é resolvida/validada UMA vez por boot. O jogo
+## chama project_base_dir() 2x (load_starter_kit e
+## BoardLayout.project_arena_path); sem isto a validação da pasta e o print
+## saíam duplicados no log. Só o --project é memoizado: o --setup é lido uma
+## vez só, em load_starter_kit (linha ~200), e NÃO entra aqui.
+static var _base_memo := ""
+static var _base_memo_pronto := false
+
+
 static func setup_override_path() -> String:
 	# Lê --setup <caminho> (ou --setup=<caminho>) dos args de usuário.
 	# Retorna "" se não foi passado. Só leitura de CLI, sem regra nova.
@@ -108,15 +117,25 @@ static func project_base_dir() -> String:
 	# arenas, duel_setup, efeitos) é lido de lá; sem o argumento,
 	# tudo como hoje (pasta examples/ embutida). Pasta inexistente
 	# ou inválida = avisa em PT-BR e usa a embutida. Sem regra/schema.
+	# MEMOIZADO: resolvido/validado/avisado só na 1ª chamada (o jogo
+	# chama 2x por boot); da 2ª em diante devolve o MESMO resultado,
+	# sem refazer pasta nem repetir a mensagem no log.
+	if _base_memo_pronto:
+		return _base_memo
 	var pedido := project_override_path()
 	if pedido.is_empty():
-		return starter_kit_dir()
+		_base_memo = starter_kit_dir()
+		_base_memo_pronto = true
+		return _base_memo
 	var abs := _resolver_abs(pedido)
 	if pasta_projeto_valida(pedido):
 		print("[DataLoader] --project usando: " + abs)
-		return abs
-	print("[DataLoader] Aviso: --project ignorado (pasta inexistente ou inválida): " + pedido + " — usando embutida.")
-	return starter_kit_dir()
+		_base_memo = abs
+	else:
+		print("[DataLoader] Aviso: --project ignorado (pasta inexistente ou inválida): " + pedido + " — usando embutida.")
+		_base_memo = starter_kit_dir()
+	_base_memo_pronto = true
+	return _base_memo
 
 
 static func _limpar_caminho(p: String) -> String:
@@ -184,6 +203,10 @@ static func load_starter_kit() -> Dictionary:
 	# Arenas (só DADO p/ o desenho, nunca regra — D24/R3).
 	# Pasta arenas/ ausente = silêncio (a mesa usa a grade padrão);
 	# só arquivo quebrado vira erro. Sem mudar regra/schema.
+	# ATENÇÃO: hoje o dict "arenas" (abaixo) NÃO é consumido por ninguém —
+	# a mesa lê a arena por CAMINHO (BoardLayout.project_arena_path), não
+	# pelo dict. Fica carregado p/ o contrato e p/ o QA olhar; não é
+	# duplicata de leitura, é só um campo não usado ainda.
 	var ra: Dictionary = _load_folder(base.path_join("arenas"))
 	arenas = ra.get("items", {})
 	for e in ra.get("erros", []):
@@ -193,12 +216,16 @@ static func load_starter_kit() -> Dictionary:
 	# Override via CLI p/ o Studio lançar duelos sem sobrescrever o starter.
 	# Se --setup foi passado e o arquivo existe e é um objeto válido, usa-o;
 	# senão, mantém o comportamento atual (starter). Sem mudar regra/schema/ID.
+	# O caminho passa pelo MESMO _resolver_abs do --project: assim res://,
+	# user:// e caminho relativo (raiz do repo) funcionam igual aqui — sem
+	# isso o mesmo caminho aceito no --project caía no aviso de "ignorado".
 	var override_path: String = setup_override_path()
 	if override_path != "":
-		var ro: Dictionary = load_json_file(override_path)
+		var override_abs: String = _resolver_abs(override_path)
+		var ro: Dictionary = load_json_file(override_abs)
 		if bool(ro.get("ok", false)) and ro.get("data", {}) is Dictionary and not (ro.get("data", {}) as Dictionary).is_empty():
 			duel_setup = ro.get("data", {})
-			print("[DataLoader] --setup usando: " + override_path)
+			print("[DataLoader] --setup usando: " + override_abs)
 		else:
 			print("[DataLoader] Aviso: --setup ignorado (ausente ou inválido): " + override_path + " — usando starter.")
 

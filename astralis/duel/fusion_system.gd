@@ -12,6 +12,11 @@ extends RefCounted
 ##   jogada do turno (normal_summon_used).
 ## R3: tudo vem do DADO (fusions.json + cards); a ordem/prioridade é LOGIC fixa.
 
+## A instância do campo tem UM só construtor (SummonSystem.construir_instancia),
+## o mesmo usado pelo normal_summon e pela mesa. Aqui só passamos o DADO
+## resolvido (DADO de cards_db por cima do resultado da cadeia) + a estrela.
+const SummonSystem := preload("res://duel/summon_system.gd")
+
 static func _id_carta(carta: Dictionary) -> String:
 	return str(carta.get("id", ""))
 
@@ -245,20 +250,8 @@ static func perform_fusion_summon(state, player_idx: int, hand_indices_ordered: 
 		for c in em_ordem:
 			mao.append(c)
 		return {"ok": false, "erro": "Equip ainda sem tabela: resultado %s não desce (pendente)." % final_id, "tipo": "equip_pendente", "passos": cadeia.get("passos", []), "descartes": cadeia.get("descartes", [])}
-	var atk_f := clampi(int(real.get("attack", final_card.get("attack", 0))), 0, 9999)
-	var def_f := clampi(int(real.get("defense", final_card.get("defense", 0))), 0, 9999)
 	var estrela := str(real.get("guardian_star_1", final_card.get("guardian_star_1", "")))
-	var inst := {
-		"card_id": final_id,
-		"nome": str(real.get("name", final_card.get("name", "?"))),
-		"atk": atk_f,
-		"def": def_f,
-		"position": "ATK",
-		"battle_position": "ATK",
-		"face_down": false,
-		"guardian_star": estrela,
-		"has_attacked": false,
-	}
+	var inst: Dictionary = SummonSystem.construir_instancia(final_card, false, "ATK", estrela, real, final_id)
 	zona[slot_idx] = inst
 	state.normal_summon_used = true
 	var cem: Array = p["graveyard"]

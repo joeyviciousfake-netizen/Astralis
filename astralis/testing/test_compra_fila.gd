@@ -1,4 +1,4 @@
-extends GutTest
+extends "res://testing/astralis_test_base.gd"
 
 ## test_compra_fila — GUT da compra FM fiel + fila de fusão (runtime, sem Fake R2).
 ## Trava o que o runtime mudou (sem mudar regra, só prepara dado e observa):
@@ -8,56 +8,12 @@ extends GutTest
 ## 4) animação em fila da mesa é só visual: cadeia igual + headless ok.
 ## Sistemas e cena REAIS (Duel/Summon/Fusion/Turn + duel_table.tscn). Seed fixa 42.
 ## Bug aqui vira teste permanente.
+## Helpers (_novo_duelo/_garantir_monstros_na_mao/_indice_monstro_na_mao/
+## _mesa_nova) vêm de astralis_test_base.gd.
 
-const ProjectLoaderScript := preload("res://core/project_loader.gd")
-const DuelManagerScript := preload("res://duel/duel_manager.gd")
 const TurnManager := preload("res://duel/turn_manager.gd")
-const SummonSystem := preload("res://duel/summon_system.gd")
 const FusionSystem := preload("res://duel/fusion_system.gd")
-const MesaScene := preload("res://ui/duel_table.tscn")
-
-
-# Monta um duelo novo de verdade: conteúdo FM + duel_setup (seed 42).
-func _novo_duelo():
-	var state: Dictionary = ProjectLoaderScript.load_initial_state()
-	var data: Dictionary = state.get("data", {})
-	return DuelManagerScript.new_duel(data.get("duel_setup", {}), data.get("decks", {}), data.get("cards", {}))
-
-
-func _indice_monstro_na_mao(st, player_idx: int) -> int:
-	var mao: Array = (st.players[player_idx] as Dictionary)["hand"]
-	for i in range(mao.size()):
-		var c = mao[i]
-		if c is Dictionary and str((c as Dictionary).get("card_type", "")) == "monster":
-			return i
-	return -1
-
-
-# Só organiza dado; a regra testada continua sendo a do motor real.
-func _garantir_monstros_na_mao(st, player_idx: int, quantos: int) -> void:
-	var p: Dictionary = st.players[player_idx] as Dictionary
-	var mao: Array = p["hand"]
-	var deck: Array = p["deck"]
-	var k := 0
-	var contados := 0
-	for c in mao:
-		if c is Dictionary and str((c as Dictionary).get("card_type", "")) == "monster":
-			contados += 1
-	while contados < quantos and k < deck.size():
-		var c = deck[k]
-		if c is Dictionary and str((c as Dictionary).get("card_type", "")) == "monster":
-			mao.append(c)
-			deck.remove_at(k)
-			contados += 1
-		else:
-			k += 1
-
-
-func _mesa_nova():
-	var mesa: Node = MesaScene.instantiate()
-	add_child_autofree(mesa)
-	await wait_process_frames(4)
-	return mesa
+# ProjectLoaderScript/DuelManagerScript/SummonSystem/MesaScene vêm da base.
 
 
 func test_inicio_5_5_sem_extra() -> void:

@@ -1,4 +1,4 @@
-extends GutTest
+extends "res://testing/astralis_test_base.gd"
 
 ## test_gamepad — GUT do controle 100% gamepad na mesa (D26, R2: sem Fake).
 ## Usa o InputMap real (project.godot) + o script real da mesa
@@ -9,9 +9,8 @@ extends GutTest
 ## sem controle clicável (sinal clicada removido de verdade).
 ## Bug aqui vira teste permanente.
 
-const TableScript := preload("res://ui/duel_table.gd")
 const CardViewScript := preload("res://ui/card_view.gd")
-const MesaScene := preload("res://ui/duel_table.tscn")
+# TableScript e MesaScene vêm da base (astralis_test_base.gd) - R8: uma cópia só.
 
 const ACOES_CONTROLE := [
 	"mover_cima", "mover_baixo", "mover_esq", "mover_dir",

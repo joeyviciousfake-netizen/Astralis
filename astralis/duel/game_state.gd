@@ -9,12 +9,9 @@ extends RefCounted
 ## D17: 5 slots monstro + 5 outros por lado, mão 5, decks 40, jogador (lado 0)
 ## não ataca no turno 1. Carta em campo tem face_down + battle_position
 ## (ATK vertical / DEF horizontal); virada p/ baixo entra em DEF.
-
-const MONSTER_SLOTS := 5
-const SPELL_SLOTS := 5
-const INITIAL_HAND := 5
-const MAX_HAND := 7
-const PHASES := ["DRAW", "MAIN", "BATTLE", "END"]
+## Os números de zona (5/5), mão (5) e descarte (7) NÃO moram aqui: cada
+## sistema usa o seu literal no ponto da regra (TurnManager 5 e 7), então
+## este arquivo guarda só o DADO puro da partida.
 
 var players: Array = []
 var current_player: int = 0
@@ -51,19 +48,3 @@ static func _make_player(deck: Array, lp: int) -> Dictionary:
 		"lp": lp,
 		"max_lp": lp,
 	}
-
-
-func get_player(idx: int) -> Dictionary:
-	return players[idx] as Dictionary
-
-
-func opponent_of(idx: int) -> int:
-	return 1 - idx
-
-
-func is_over() -> bool:
-	return over
-
-
-func get_winner() -> int:
-	return winner

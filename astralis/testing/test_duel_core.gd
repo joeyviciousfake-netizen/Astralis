@@ -1,4 +1,4 @@
-extends GutTest
+extends "res://testing/astralis_test_base.gd"
 
 ## test_duel_core — GUT sobre o motor real (R2: sem Fake).
 ## Monta o duelo FM de verdade (fm_duelist_01 vs fm_duelist_03, 8000 LP,
@@ -8,54 +8,13 @@ extends GutTest
 ## deck out, fim em até 20 turnos e determinismo por seed.
 ## Fixtures FM reais (ex.: fm_0001 Blue-eyes 3000/2500 p/ forte).
 ## Bug aqui vira teste permanente.
+## Helpers (_novo_duelo/_indice_monstro_na_mao/_garantir_monstros_na_mao/
+## _contar_monstros_na_mao) vêm de astralis_test_base.gd.
 
-const ProjectLoaderScript := preload("res://core/project_loader.gd")
-const DuelManagerScript := preload("res://duel/duel_manager.gd")
 const TurnManager := preload("res://duel/turn_manager.gd")
-const SummonSystem := preload("res://duel/summon_system.gd")
 const BattleSystem := preload("res://duel/battle_system.gd")
 const DamageSystem := preload("res://duel/damage_system.gd")
-
-
-# Monta um duelo novo de verdade: conteúdo FM + duel_setup (seed 42).
-func _novo_duelo():
-	var state: Dictionary = ProjectLoaderScript.load_initial_state()
-	var data: Dictionary = state.get("data", {})
-	return DuelManagerScript.new_duel(data.get("duel_setup", {}), data.get("decks", {}), data.get("cards", {}))
-
-
-func _indice_monstro_na_mao(st, player_idx: int) -> int:
-	var mao: Array = (st.players[player_idx] as Dictionary)["hand"]
-	for i in range(mao.size()):
-		var c = mao[i]
-		if c is Dictionary and str((c as Dictionary).get("card_type", "")) == "monster":
-			return i
-	return -1
-
-
-func _contar_monstros_na_mao(st, player_idx: int) -> int:
-	var n := 0
-	var mao: Array = (st.players[player_idx] as Dictionary)["hand"]
-	for c in mao:
-		if c is Dictionary and str((c as Dictionary).get("card_type", "")) == "monster":
-			n += 1
-	return n
-
-
-# Prepara: garante N monstros na mão puxando do topo do próprio deck.
-# Só organiza dado; a regra testada continua sendo a do motor real.
-func _garantir_monstros_na_mao(st, player_idx: int, quantos: int) -> void:
-	var p: Dictionary = st.players[player_idx] as Dictionary
-	var mao: Array = p["hand"]
-	var deck: Array = p["deck"]
-	var k := 0
-	while _contar_monstros_na_mao(st, player_idx) < quantos and k < deck.size():
-		var c = deck[k]
-		if c is Dictionary and str((c as Dictionary).get("card_type", "")) == "monster":
-			mao.append(c)
-			deck.remove_at(k)
-		else:
-			k += 1
+# ProjectLoaderScript/DuelManagerScript/SummonSystem vêm da base.
 
 
 # Mesma jogada automática do main.gd (só prepara/observa, R2).

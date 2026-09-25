@@ -1,4 +1,4 @@
-extends GutTest
+extends "res://testing/astralis_test_base.gd"
 
 ## test_loader_validator — GUT real sobre os sistemas de verdade (R2: sem Fake).
 ## Conteúdo 100% FM original: 722 fm_* em schemas/examples/cards/,
@@ -6,8 +6,8 @@ extends GutTest
 ## duel_setup = fm_duelist_01 (Simon Muran) vs fm_duelist_03 (Jono), 8000 LP.
 ## Customs card_* vivem só em schemas/starter_backup/. Bug vira teste permanente.
 
-const ProjectLoaderScript := preload("res://core/project_loader.gd")
 const RuntimeValidatorScript := preload("res://core/runtime_validator.gd")
+# ProjectLoaderScript vem da base (astralis_test_base.gd) - R8: uma cópia só.
 
 var _data: Dictionary = {}
 var _counts: Dictionary = {}
