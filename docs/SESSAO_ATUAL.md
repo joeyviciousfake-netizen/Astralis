@@ -4,7 +4,7 @@
 > Bloco YAML único, chaves ÚNICAS (o bug de chaves repetidas foi corrigido em 2026-09-25).
 
 ```yaml
-onde_estamos: "Importar .apack corrigido (argumento camelCase). Detalhe em f_apack_import. Estado: cargo 88/88, build + check 0. Git pronto p/ commit."
+onde_estamos: "Roundtrip .apack CONFIRMADO pelo usuario no dev (2026-09-25). Tudo certo: exportar com destino + importar o mesmo .apack + .json legado. Git limpo e pushado."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 f_importar_bug: "EDITOR: 'Importar pack' nao fazia NADA ao clicar (usuario reclamou). Diagnostico provado no DOM: +page.svelte:87-90 disparava o CustomEvent 'astralis:importar-pack' NO MESMO TICK da troca de aba; o ExportStudio so monta na 1a visita (lazy-mount, por performance: as 8 abas juntas travavam o navegador com 25 mil receitas) e registra o listener no onMount — entao o evento disparava no vazio, arquivoPack era null, ZERO feedback. Nao era o pack, nao era lentidao (import real = 1,02 s de 180 s de timeout), nao era navegador, nao era bug do Rust. CORRIGIDO: irImportar virou async com await tick() entre setTab e dispatchEvent (menor diff, nao quebra o lazy-mount; conferido no Svelte 5.57.1 que onMount entra na fila que tick() drena). Alem disso: (a) preventivo — os 2 inputs type=file do projeto usavam class='hidden' (= display:none), que pode nao abrir dialogo no WebView2 do Tauri; trocados pelo padrao invisivel-mas-renderizado (fixed 1x1, opacity 0, pointer-events none); (b) campo 'erros' morto removido (vinha sempre vazio, o bloco {#each} nunca renderizava) em vez de fabricar lista; (c) texto errado corrigido: dizia '50 repetido(s) do proprio pack' mas eram 50 fusoes A+A (mesma carta nos 2 lados, que NUNCA disparam) — agora sao 2 contadores separados com texto certo; (d) avisos com teto de 30 e chave de {#each} trocada de texto por indice (dois avisos iguais quebravam o Svelte). cargo 55 -> 58 (+3 testes). PRECISA PROVAR COM AS MAOS: que o seletor de arquivo abre no WebView2."
@@ -33,7 +33,7 @@ estado_gut: "102 testes / 1544 asserts em 12 arquivos + astralis_test_base.gd (+
 estado_cargo: "88 testes Rust (87 + 1 extensao apack). ZERO teste de frontend ainda."
 estado_dados: "schemas/examples = 722 fm_* / 39 duelistas / 39 decks (40 cada) / 25081 receitas / 0 regras / arena_starter / duel_fm_abertura 8000LP. pack = 25131 receitas (25081 + 50 A+A que nunca disparam). starter_backup = 40 cartas custom SO de teste. PROJETO DO EDITOR = astralis-studio/projects/default/ (sempre vazio no boot, so via Importar)."
 
-próximo_passo: "Usuario TESTA ROUNDTRIP NO DEV (app.bat opcao 1, nao o exe): Exportar pack, importar o MESMO .apack e confere faixa verde; depois .json antigo. Se falhar, mandar texto exato."
+próximo_passo: "Usuario escolhe a proxima: jogar no Campo de Testes p/ valer, motor de efeitos (D30, maior buraco), fita .astralis trancada, ou effects.json entrar no pack V2. Aguardando ordem."
 
 # ---------- TRAVAS (regras, nao dividas) ----------
 travas:
