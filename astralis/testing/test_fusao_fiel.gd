@@ -255,7 +255,9 @@ func test_fusion_cadeia_descarta_acumulada() -> void:
 
 func test_mesa_fusao_desce_face_cima_conta_jogada() -> void:
 	# Mesa real com receita FM de verdade: fm_0002+fm_0008=fm_0638.
-	# 2+ levantadas no confirmar voam ao centro EM ORDEM e descem face p/ cima.
+	# Fluxo novo: 2+ levantadas no confirmar -> ESCOLHE O SLOT PRIMEIRO
+	# (vazio ou ocupado) -> fila ao centro EM ORDEM -> FINAL + menu da estrela
+	# -> desce face p/ cima em Ataque.
 	var mesa = await _mesa_nova()
 	var st = mesa.get("_st")
 	var cartas: Dictionary = mesa.get("_cartas")
@@ -280,11 +282,28 @@ func test_mesa_fusao_desce_face_cima_conta_jogada() -> void:
 	mesa.call("_pad_mover", 0, -1)
 	Input.action_release("mover_cima")
 	assert_eq((mesa.get("_levantadas") as Array), [i_a, i_b], "Preparo: 2 levantadas EM ORDEM.")
-	# Confirmar combina (sem SCRIPT ERROR headless).
+	# Confirmar: escolhe o SLOT primeiro (não desce direto).
+	Input.action_press("confirmar")
+	mesa.call("_pad_confirmar")
+	Input.action_release("confirmar")
+	await wait_process_frames(2)
+	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_SLOT, "Fusão: confirmar pede o slot primeiro.")
+	assert_true(bool(mesa.get("_combinando")), "Fusão: marca combinando no slot.")
+	assert_true(str((mesa.get("_log") as Array).back()).contains("slots") or str((mesa.get("_log") as Array).back()).contains("Slot"), "Fusão: mostra slots (fala '%s')." % str((mesa.get("_log") as Array).back()))
+	# Escolhe o slot 0 vazio -> fila + FINAL + menu da estrela.
+	mesa.set("_pad_col", 0)
 	Input.action_press("confirmar")
 	mesa.call("_pad_confirmar")
 	Input.action_release("confirmar")
 	await wait_process_frames(6)
+	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_ESTRELA, "Fusão: fila pronta, abre o menu da estrela (igual ao da avulsa).")
+	assert_false((mesa.get("_fusao_final") as Dictionary).is_empty(), "Fusão: FINAL calculado antes da estrela.")
+	# Estrela no fim da combinação (menu igual ao da avulsa).
+	mesa.set("_pad_popup_idx", 0)
+	Input.action_press("confirmar")
+	mesa.call("_pad_confirmar")
+	Input.action_release("confirmar")
+	await wait_process_frames(4)
 	assert_eq(int(mesa.get("_fase_jogador")), TableScript.FASE_CAMPO, "Fusão: entra na fase de campo.")
 	assert_eq(String(st.phase), "BATTLE", "Fusão: MAIN -> BATTLE (conta como a jogada).")
 	assert_true(bool(st.normal_summon_used), "Fusão conta como a jogada do turno.")
