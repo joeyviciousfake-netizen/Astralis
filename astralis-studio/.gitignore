@@ -6,9 +6,8 @@ src-tauri/target/
 src-tauri/gen/
 
 # Conteúdo do projeto do editor (D29): abre vazio e só enche por Importar
-# pack. O esqueleto (projects/default/**/.gitkeep, README.md, fusions.json e
-# effects.json VAZIOS) continua versionado — o que entra importado não vai
-# para o git.
+# pack. O esqueleto (projects/default/**/.gitkeep + README.md) continua
+# versionado — o que entra importado não vai para o git.
 projects/default/backups/
 projects/default/cards/*
 projects/default/duelists/*
@@ -27,5 +26,14 @@ projects/default/duel_setup.json
 !projects/default/scenes/.gitkeep
 !projects/default/assets/*/.gitkeep
 !projects/default/README.md
-!projects/default/fusions.json
-!projects/default/effects.json
+
+# fusions.json e effects.json são GERADOS, não versionados: o esqueleto vazio
+# nasce em garantir_projeto() (src-tauri/src/main.rs, main.rs:205) na
+# primeira leitura, e depois de Importar um pack o fusions.json vira ~2,3 MB —
+# versionar isso suja o git status e cria risco de commitar conteúdo
+# importado pelo usuário (R8/R9).
+# Para tirar o esqueleto do índice (o arquivo continua no disco):
+#   git rm --cached astralis-studio/projects/default/fusions.json
+#   git rm --cached astralis-studio/projects/default/effects.json
+projects/default/fusions.json
+projects/default/effects.json

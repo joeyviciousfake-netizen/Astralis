@@ -27,7 +27,7 @@
   let idEdit = $state("");
   let nomeEdit = $state("");
   let listaEdit = $state<string[]>([]);
-  let fieldErrors = $state<Array<{ campo: string; mensagem: string }>>([]);
+  let fieldErrors = $state<Array<{ campo: string; mensagem: string; nivel: string }>>([]);
   const flash = $state({ msg: "", ok: false });
 
   let lista = $derived(store.decks ?? []);
@@ -116,9 +116,17 @@
     fieldErrors = [];
     try {
       const erros = await store.validate(build());
-      fieldErrors = erros;
+      fieldErrors = erros.map((e) => ({ ...e, nivel: e.nivel ?? "erro" }));
+      // Aviso (ex.: o projeto ainda não tem a carta citada) não é erro: mesmo
+      // tratamento do editor de Cartas, senão o projeto vazio do D29 apareceria
+      // aqui como erro mesmo não bloqueando nada.
+      const qtdErro = fieldErrors.filter((e) => e.nivel !== "aviso").length;
+      const qtdAviso = fieldErrors.length - qtdErro;
       const extra = contagem === 40 ? "" : ` (aviso: ${avisoContagem})`;
-      setFlash(erros.length ? `${erros.length} erro(s) — veja a lista` : `Deck válido${extra}`, !erros.length && contagem === 40);
+      const resumo = [qtdErro ? `${qtdErro} erro(s)` : "", qtdAviso ? `${qtdAviso} aviso(s)` : ""]
+        .filter(Boolean)
+        .join(" e ");
+      setFlash(resumo ? `${resumo} — veja a lista` : `Deck válido${extra}`, !qtdErro);
     } catch (e) {
       setFlash(`Falha ao validar: ${errMsg(e)}`, false);
     }
@@ -212,7 +220,7 @@
       {#if fieldErrors.length}
         <div class="mt-2 shrink-0 rounded-xl border border-rose-900/60 bg-rose-950/20 divide-y divide-rose-900/40 max-h-28 overflow-y-auto">
           {#each fieldErrors as fe (fe.campo + fe.mensagem)}
-            <p class="px-3 py-1.5 text-xs text-rose-200"><span class="font-bold">{fe.campo}:</span> {fe.mensagem}</p>
+            <p class="px-3 py-1.5 text-xs {fe.nivel === 'aviso' ? 'text-amber-200' : 'text-rose-200'}">{#if fe.nivel === 'aviso'}<span class="font-bold">Aviso:</span>{:else}<span class="font-bold">{fe.campo}:</span>{/if} {fe.mensagem}</p>
           {/each}
         </div>
       {/if}

@@ -112,7 +112,7 @@ export function useDuelists() {
       dropsInflight.delete(d.id);
       return String(res?.mensagem ?? "Duelista salvo");
     },
-    async validate(d: Duelist): Promise<Array<{ campo: string; mensagem: string }>> {
+    async validate(d: Duelist): Promise<Array<{ campo: string; mensagem: string; nivel?: string }>> {
       const { file: _drop, ...data } = d;
       return invokeLoad("validar_duelista", { duelista: data });
     },

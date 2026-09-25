@@ -231,48 +231,62 @@ fn pasta_cartas() -> Result<PathBuf, String> {
     projeto_sub("cards")
 }
 
-// ---- GATE DE EFEITOS DA CARTA (R4) ----
-// O que a carta pode citar = o que está em projects/default/effects.json.
-// Antes o gate era fail-open: `if !conhecidos.is_empty() && !conhecidos…`
-// — e como o projeto nasce VAZIO (D29), a lista ficava sempre vazia e a
-// checamento INTEIRA pulava (qualquer id inventado passava). Agora o
-// catálogo distingue os dois estados e o gate vive num helper só.
+// ---- GATE DE CATÁLOGO (R4) ----
+// O que a carta / o deck / o duelista / a fusão pode citar = o que o PROJETO
+// tem de verdade (efeitos em effects.json; cartas/decks/arenas nas pastas).
+// Antes CADA ponto fazia `if !lista.is_empty() && !lista.contains(id)` —
+// fail-open: como o projeto nasce VAZIO (D29), a lista ficava sempre vazia e
+// a checamento INTEIRA pulava (qualquer id inventado passava). Agora o
+// catálogo distingue os dois estados e todo gate passa pelo mesmo helper.
 #[derive(Debug, Clone, PartialEq)]
-enum CatalogoEfeitos {
-    /// effects.json existe e lista efeitos: id fora da lista é ERRO.
-    Listado(Vec<String>),
-    /// effects.json ausente, sem "effects" ou com lista vazia (projeto novo):
-    /// a carta não pode citar efeito nenhum — mas isso é AVISO, não erro.
+enum Catalogo {
+    /// O projeto TEM itens: id fora da lista é ERRO.
+    Listado(std::collections::HashSet<String>),
+    /// Projeto novo/zerado (sem arquivo, sem a lista, ou lista vazia): ainda
+    /// não dá para dizer "não existe" — só "ainda não tem". É AVISO, porque
+    /// erro aqui travaria o projeto em branco do D29 logo no primeiro clique.
     Vazio,
 }
 
-impl CatalogoEfeitos {
+impl Catalogo {
+    fn de_set(ids: &std::collections::HashSet<String>) -> Catalogo {
+        if ids.is_empty() {
+            Catalogo::Vazio
+        } else {
+            Catalogo::Listado(ids.clone())
+        }
+    }
+
+    fn de_ids(ids: impl IntoIterator<Item = String>) -> Catalogo {
+        Catalogo::de_set(&ids.into_iter().collect())
+    }
+
     fn tem(&self, id: &str) -> bool {
         match self {
-            CatalogoEfeitos::Listado(lista) => lista.iter().any(|x| x == id),
-            CatalogoEfeitos::Vazio => false,
+            Catalogo::Listado(lista) => lista.contains(id),
+            Catalogo::Vazio => false,
         }
     }
 }
 
 // Lê projects/default/effects.json UMA vez por validação. Todo mundo que
 // precisa do gate usa isto (nada de ler o arquivo espalhado pelos comandos).
-fn catalogo_efeitos() -> CatalogoEfeitos {
+fn catalogo_efeitos() -> Catalogo {
     match pasta_projeto() {
         Ok(p) => catalogo_efeitos_de(&p),
-        Err(_) => CatalogoEfeitos::Vazio,
+        Err(_) => Catalogo::Vazio,
     }
 }
 
-fn catalogo_efeitos_de(proj: &std::path::Path) -> CatalogoEfeitos {
+fn catalogo_efeitos_de(proj: &std::path::Path) -> Catalogo {
     let caminho = proj.join("effects.json");
     let texto = match std::fs::read_to_string(&caminho) {
         Ok(t) => t,
-        Err(_) => return CatalogoEfeitos::Vazio,
+        Err(_) => return Catalogo::Vazio,
     };
     let v: serde_json::Value = match serde_json::from_str(&texto) {
         Ok(v) => v,
-        Err(_) => return CatalogoEfeitos::Vazio,
+        Err(_) => return Catalogo::Vazio,
     };
     let ids: Vec<String> = match v.get("effects") {
         Some(serde_json::Value::Array(lista)) => lista
@@ -281,35 +295,46 @@ fn catalogo_efeitos_de(proj: &std::path::Path) -> CatalogoEfeitos {
             .collect(),
         _ => Vec::new(),
     };
-    if ids.is_empty() {
-        CatalogoEfeitos::Vazio
-    } else {
-        CatalogoEfeitos::Listado(ids)
-    }
+    Catalogo::de_ids(ids)
 }
 
-/// GATE ÚNICO do R4 para efeito citado na carta — todos os pontos que
-/// checam isso usam ESTA função, para não voltar a divergir.
+/// GATE ÚNICO do R4 para "este id existe no projeto?" — efeitos na carta,
+/// deck no duelista, carta no deck e na fusão, arena no duelo. Sem este
+/// helper os pontos voltam a ser fail-open um a um (o bug que ele fecha).
 /// - catálogo listado + id na lista -> None (vale a pena).
-/// - catálogo listado + id fora -> ERRO com o nome do efeito e onde corrigir.
-/// - catálogo vazio (projeto sem efeitos) -> AVISO: a carta não pode citar
-///   efeito nenhum, e o texto diz onde cadastrar (aba Efeitos / modelo).
-fn checar_efeito_da_carta(catalogo: &CatalogoEfeitos, id: &str) -> Option<ErroValidacao> {
+/// - catálogo listado + id fora -> ERRO (msg_erro já vem com o id e onde clicar).
+/// - catálogo vazio (projeto novo, D29) -> AVISO: o projeto ainda não tem nada
+///   cadastrado, e msg_vazio diz onde resolver. NUNCA erro aqui: barra-error
+///   quebraria o fluxo de quem acabou de abrir o editor em branco.
+fn checar_catalogo(
+    catalogo: &Catalogo,
+    id: &str,
+    campo: &str,
+    campo_id: &str,
+    msg_erro: &str,
+    msg_vazio: &str,
+) -> Option<ErroValidacao> {
     if catalogo.tem(id) {
         return None;
     }
-    match catalogo {
-        CatalogoEfeitos::Listado(_) => Some(erro(
-            "Efeitos",
-            "field-effects",
-            &format!("Efeito \"{id}\" não existe neste projeto (só vale o que o Astralis sabe executar). Clique em Efeitos e escolha um modelo da lista — ou crie o efeito na aba Efeitos."),
-        )),
-        CatalogoEfeitos::Vazio => Some(aviso(
-            "Efeitos",
-            "field-effects",
-            &format!("Efeito \"{id}\" não pode existir ainda: este projeto não tem nenhum efeito cadastrado. Clique na aba Efeitos e pegue um modelo da galeria (ou crie o seu) antes de salvar a carta."),
-        )),
-    }
+    Some(match catalogo {
+        Catalogo::Listado(_) => erro(campo, campo_id, msg_erro),
+        Catalogo::Vazio => aviso(campo, campo_id, msg_vazio),
+    })
+}
+
+/// O gate de efeito da carta É o gate único, com os textos do efeito (mesmo
+/// formato de antes: id fora da lista = erro; projeto sem efeitos = aviso
+/// dizendo onde pegar um modelo da galeria).
+fn checar_efeito_da_carta(catalogo: &Catalogo, id: &str) -> Option<ErroValidacao> {
+    checar_catalogo(
+        catalogo,
+        id,
+        "Efeitos",
+        "field-effects",
+        &format!("Efeito \"{id}\" não existe neste projeto (só vale o que o Astralis sabe executar). Clique em Efeitos e escolha um modelo da lista — ou crie o efeito na aba Efeitos."),
+        &format!("Efeito \"{id}\" não pode existir ainda: este projeto não tem nenhum efeito cadastrado. Clique na aba Efeitos e pegue um modelo da galeria (ou crie o seu) antes de salvar a carta."),
+    )
 }
 
 fn inteiro_em(v: &serde_json::Value, chave: &str) -> Option<i64> {
@@ -521,7 +546,7 @@ fn lancar_astralis_com_setup(setup: &std::path::Path) -> Result<String, String> 
 // Espelha schemas/card.schema.json com mensagens em PT-BR simples dizendo
 // onde clicar (mesmo texto do frontend em src/lib/validacao.js).
 // `catalogo` é o gate de efeitos (R4) — sai de `catalogo_efeitos()`.
-fn checar_carta(carta: &serde_json::Value, catalogo: &CatalogoEfeitos) -> Vec<ErroValidacao> {
+fn checar_carta(carta: &serde_json::Value, catalogo: &Catalogo) -> Vec<ErroValidacao> {
     let mut erros: Vec<ErroValidacao> = Vec::new();
 
     if !carta.is_object() {
@@ -840,7 +865,7 @@ fn ler_deck(deck_id: String) -> Result<DeckLido, String> {
 // Espelha schemas/duelist.schema.json com mensagens em PT-BR simples dizendo
 // onde clicar. Vida (starting_lp) é dado do duelista (doc 05 §5.3); quem usa
 // em batalha é o Astralis via duel_setup (Duelo rápido sugere esse valor).
-fn checar_duelista(d: &serde_json::Value, decks: &std::collections::HashSet<String>) -> Vec<ErroValidacao> {
+fn checar_duelista(d: &serde_json::Value, decks: &Catalogo) -> Vec<ErroValidacao> {
     let mut erros: Vec<ErroValidacao> = Vec::new();
     if !d.is_object() {
         return vec![erro("Duelista", "field-name", "Duelista vazio. Clique em Criar novo para começar.")];
@@ -859,8 +884,17 @@ fn checar_duelista(d: &serde_json::Value, decks: &std::collections::HashSet<Stri
     }
     match d.get("deck_id").and_then(|v| v.as_str()) {
         Some(deck) if eh_id_snake(deck) => {
-            if !decks.is_empty() && !decks.contains(deck) {
-                erros.push(erro("Deck", "field-deck", &format!("Deck \"{deck}\" não existe. Clique em Deck e escolha um da lista — ou crie na aba Decks.")));
+            // Gate único (R4): projeto COM decks e id fora da lista é erro;
+            // projeto ainda sem nenhum deck é aviso (D29 abre vazio).
+            if let Some(e) = checar_catalogo(
+                decks,
+                deck,
+                "Deck",
+                "field-deck",
+                &format!("Deck \"{deck}\" não existe. Clique em Deck e escolha um da lista — ou crie na aba Decks."),
+                &format!("Deck \"{deck}\" não pode existir ainda: este projeto não tem nenhum deck cadastrado. Clique na aba Decks e monte um baralho antes."),
+            ) {
+                erros.push(e);
             }
         }
         _ => erros.push(erro("Deck", "field-deck", "Falta o Deck. Clique em Deck e escolha um da lista.")),
@@ -920,7 +954,7 @@ fn salvar_duelista(duelista: serde_json::Value) -> Result<ResultadoOk, String> {
     if !eh_id_snake(&id) {
         return Err("ID inválido: use só letra minúscula, número e underline — exemplo: duelist_meu_rival.".to_string());
     }
-    let decks = ids_de_projeto("decks").unwrap_or_default();
+    let decks = Catalogo::de_set(&ids_de_projeto("decks").unwrap_or_default());
     let erros = checar_duelista(&duelista, &decks);
     let bloqueios = so_erros(&erros);
     if !bloqueios.is_empty() {
@@ -937,7 +971,7 @@ fn salvar_duelista(duelista: serde_json::Value) -> Result<ResultadoOk, String> {
 
 #[tauri::command]
 fn validar_duelista(duelista: serde_json::Value) -> Vec<ErroValidacao> {
-    let decks = ids_de_projeto("decks").unwrap_or_default();
+    let decks = Catalogo::de_set(&ids_de_projeto("decks").unwrap_or_default());
     checar_duelista(&duelista, &decks)
 }
 
@@ -984,7 +1018,7 @@ fn jogar_carta(carta: serde_json::Value) -> Result<ResultadoOk, String> {
 // Espelha schemas/deck.schema.json. Alvo do jogo: 40 cartas (doc 14 conta
 // "contador 40"); schema aceita 20..60, então fora disso é ERRO e diferente
 // de 40 é só AVISO mostrado na tela (não trava o salvar).
-fn checar_deck(deck: &serde_json::Value, cartas: &std::collections::HashSet<String>) -> Vec<ErroValidacao> {
+fn checar_deck(deck: &serde_json::Value, cartas: &Catalogo) -> Vec<ErroValidacao> {
     let mut erros: Vec<ErroValidacao> = Vec::new();
     if !deck.is_object() {
         return vec![erro("Deck", "field-name", "Deck vazio. Clique em Criar novo para começar.")];
@@ -1009,8 +1043,17 @@ fn checar_deck(deck: &serde_json::Value, cartas: &std::collections::HashSet<Stri
             for c in lista {
                 match c.as_str() {
                     Some(id) if eh_id_snake(id) => {
-                        if !cartas.is_empty() && !cartas.contains(id) {
-                            erros.push(erro("Cartas", "field-cards", &format!("Carta \"{id}\" não existe no projeto. Remova ela do deck (clique no ✕) ou crie a carta na aba Cartas.")));
+                        // Gate único (R4): projeto COM cartas e id fora da
+                        // lista é erro; projeto sem nenhuma carta é aviso.
+                        if let Some(e) = checar_catalogo(
+                            cartas,
+                            id,
+                            "Cartas",
+                            "field-cards",
+                            &format!("Carta \"{id}\" não existe no projeto. Remova ela do deck (clique no ✕) ou crie a carta na aba Cartas."),
+                            &format!("Carta \"{id}\" não pode existir ainda: este projeto não tem nenhuma carta cadastrada. Importe um pack (botão Importar… no topo, aba Exportar) ou crie a carta na aba Cartas."),
+                        ) {
+                            erros.push(e);
                         }
                     }
                     _ => erros.push(erro("Cartas", "field-cards", "Tem uma carta com nome inválido no deck. Remova ela (clique no ✕) e adicione de novo pela busca.")),
@@ -1034,7 +1077,7 @@ fn salvar_deck(deck: serde_json::Value) -> Result<ResultadoOk, String> {
     if !eh_id_snake(&id) {
         return Err("ID inválido: use só letra minúscula, número e underline — exemplo: deck_meu_baralho.".to_string());
     }
-    let cartas = cartas_ids().unwrap_or_default();
+    let cartas = Catalogo::de_set(&cartas_ids().unwrap_or_default());
     let erros = checar_deck(&deck, &cartas);
     let bloqueios = so_erros(&erros);
     if !bloqueios.is_empty() {
@@ -1052,7 +1095,7 @@ fn salvar_deck(deck: serde_json::Value) -> Result<ResultadoOk, String> {
 
 #[tauri::command]
 fn validar_deck(deck: serde_json::Value) -> Vec<ErroValidacao> {
-    let cartas = cartas_ids().unwrap_or_default();
+    let cartas = Catalogo::de_set(&cartas_ids().unwrap_or_default());
     checar_deck(&deck, &cartas)
 }
 
@@ -1065,7 +1108,7 @@ fn caminho_fusoes() -> Result<std::path::PathBuf, String> {
     projeto_arquivo("fusions.json")
 }
 
-fn checar_fusoes(dado: &serde_json::Value, cartas: &std::collections::HashSet<String>) -> Vec<ErroValidacao> {
+fn checar_fusoes(dado: &serde_json::Value, cartas: &Catalogo) -> Vec<ErroValidacao> {
     let mut erros: Vec<ErroValidacao> = Vec::new();
     if !dado.is_object() {
         return vec![erro("Fusões", "field-recipes", "Arquivo de fusões vazio. Adicione uma receita A+B=C para começar.")];
@@ -1092,8 +1135,15 @@ fn checar_fusoes(dado: &serde_json::Value, cartas: &std::collections::HashSet<St
                 for (qual, id) in [("carta A", a.as_str()), ("carta B", b.as_str())] {
                     if !eh_id_snake(id) {
                         erros.push(erro(&onde, "field-recipes", &format!("{onde}: {qual} inválida. Escolha duas cartas da lista.")));
-                    } else if !cartas.is_empty() && !cartas.contains(id) {
-                        erros.push(erro(&onde, "field-recipes", &format!("{onde}: carta \"{id}\" não existe no projeto. Escolha outra na lista.")));
+                    } else if let Some(e) = checar_catalogo(
+                        cartas,
+                        id,
+                        &onde,
+                        "field-recipes",
+                        &format!("{onde}: carta \"{id}\" não existe no projeto. Escolha outra na lista."),
+                        &format!("{onde}: carta \"{id}\" não pode existir ainda: este projeto não tem nenhuma carta cadastrada. Importe um pack (botão Importar… no topo, aba Exportar) ou crie a carta na aba Cartas."),
+                    ) {
+                        erros.push(e);
                     }
                 }
                 if !a.is_empty() && a == b {
@@ -1101,8 +1151,15 @@ fn checar_fusoes(dado: &serde_json::Value, cartas: &std::collections::HashSet<St
                 }
                 match r.get("result").and_then(|v| v.as_str()) {
                     Some(id) if eh_id_snake(id) => {
-                        if !cartas.is_empty() && !cartas.contains(id) {
-                            erros.push(erro(&onde, "field-recipes", &format!("{onde}: resultado \"{id}\" não existe no projeto. Crie a carta na aba Cartas ou escolha outra.")));
+                        if let Some(e) = checar_catalogo(
+                            cartas,
+                            id,
+                            &onde,
+                            "field-recipes",
+                            &format!("{onde}: resultado \"{id}\" não existe no projeto. Crie a carta na aba Cartas ou escolha outra."),
+                            &format!("{onde}: resultado \"{id}\" não pode existir ainda: este projeto não tem nenhuma carta cadastrada. Importe um pack (botão Importar… no topo, aba Exportar) ou crie a carta na aba Cartas."),
+                        ) {
+                            erros.push(e);
                         }
                     }
                     _ => erros.push(erro(&onde, "field-recipes", &format!("{onde} sem resultado. Escolha a carta que nasce da fusão."))),
@@ -1129,8 +1186,15 @@ fn checar_fusoes(dado: &serde_json::Value, cartas: &std::collections::HashSet<St
                 }
                 match r.get("result").and_then(|v| v.as_str()) {
                     Some(id) if eh_id_snake(id) => {
-                        if !cartas.is_empty() && !cartas.contains(id) {
-                            erros.push(erro(&onde, "field-rules", &format!("{onde}: resultado \"{id}\" não existe no projeto. Crie a carta na aba Cartas ou escolha outra.")));
+                        if let Some(e) = checar_catalogo(
+                            cartas,
+                            id,
+                            &onde,
+                            "field-rules",
+                            &format!("{onde}: resultado \"{id}\" não existe no projeto. Crie a carta na aba Cartas ou escolha outra."),
+                            &format!("{onde}: resultado \"{id}\" não pode existir ainda: este projeto não tem nenhuma carta cadastrada. Importe um pack (botão Importar… no topo, aba Exportar) ou crie a carta na aba Cartas."),
+                        ) {
+                            erros.push(e);
                         }
                     }
                     _ => erros.push(erro(&onde, "field-rules", &format!("{onde} sem resultado. Escolha a carta que nasce da fusão."))),
@@ -1157,7 +1221,7 @@ fn ler_fusoes() -> Result<serde_json::Value, String> {
 
 #[tauri::command]
 fn salvar_fusoes(dado: serde_json::Value) -> Result<ResultadoOk, String> {
-    let cartas = cartas_ids().unwrap_or_default();
+    let cartas = Catalogo::de_set(&cartas_ids().unwrap_or_default());
     let erros = checar_fusoes(&dado, &cartas);
     let bloqueios = so_erros(&erros);
     if !bloqueios.is_empty() {
@@ -1533,6 +1597,21 @@ fn listar_arenas() -> Vec<String> {
     v
 }
 
+/// Gate da arena do duelo rápido (R4) — o gate único com os textos da arena.
+/// Fica em função própria porque `jogar_duelo` é o único gate que devolve
+/// Result<…, String> (erro x aviso, e não lista de níveis), e assim os dois
+/// lados são testáveis sem abrir o jogo.
+fn checar_arena_do_duelo(catalogo: &Catalogo, arena: &str) -> Option<ErroValidacao> {
+    checar_catalogo(
+        catalogo,
+        arena,
+        "Arena",
+        "field-arena",
+        &format!("Arena \"{arena}\" não existe neste projeto. Clique em Duelo, aperte Avançado e escolha uma arena da lista."),
+        &format!("Este projeto ainda não tem arena própria: o Astralis vai usar a arena padrão dele ({arena}). Para usar a sua, coloque um arquivo .json em projects/default/arenas/."),
+    )
+}
+
 #[tauri::command]
 fn jogar_duelo(pedido: PedidoDuelo) -> Result<ResultadoOk, String> {
     if !eh_id_snake(&pedido.duelista1) || !eh_id_snake(&pedido.duelista2) {
@@ -1549,9 +1628,19 @@ fn jogar_duelo(pedido: PedidoDuelo) -> Result<ResultadoOk, String> {
         return Err("Ordem de turno inválida. Escolha quem começa na lista.".to_string());
     }
     let arena = if pedido.arena.trim().is_empty() { "arena_starter".to_string() } else { pedido.arena.trim().to_string() };
-    let arenas = arenas_ids();
-    if !arenas.is_empty() && !arenas.contains(&arena) {
-        return Err(format!("Arena \"{arena}\" não existe. Escolha uma da lista."));
+    // Gate único (R4) também na arena — com uma diferença real: aqui não pode
+    // ser só erro. O projeto do editor NUNCA traz arena (o pack não tem) e a
+    // própria lista de arenas oferece "arena_starter" quando não há nenhuma
+    // (listar_arenas). Então: projeto COM arenas e id fora = erro; projeto
+    // SEM arena nenhuma = aviso que viaja na mensagem de sucesso do duelo —
+    // o jogo usa a arena padrão dele. Barra-error aqui deixaria ninguém jogar
+    // depois do D29.
+    let arenas = Catalogo::de_set(&arenas_ids());
+    let checagem_arena = checar_arena_do_duelo(&arenas, &arena);
+    if let Some(e) = &checagem_arena {
+        if eh_erro(e) {
+            return Err(e.mensagem.clone());
+        }
     }
     let pasta_duel = projeto_sub("duelists")?;
     let deck_de = |duel_id: &str| -> Result<String, String> {
@@ -1584,11 +1673,18 @@ fn jogar_duelo(pedido: PedidoDuelo) -> Result<ResultadoOk, String> {
     let _ = limpar_setups_antigos(agora, SETUP_MAX_IDADE_SEGS);
     let temp = novo_setup_temporario(agora);
     escrever_json_valor(&temp, &setup, "duelo rápido (temporário)")?;
+    // O aviso de arena (projeto sem arena própria) não trava o jogo: entra
+    // na mensagem de sucesso, igual ao aviso que o jogar_carta imprime.
+    let aviso_txt = checagem_arena
+        .iter()
+        .filter(|e| !eh_erro(e))
+        .map(|e| format!("\nAviso:\n- {}", e.mensagem))
+        .collect::<String>();
     match lancar_astralis_com_setup(&temp) {
         Ok(msg) => Ok(ResultadoOk {
             ok: true,
             file: temp.to_string_lossy().to_string(),
-            mensagem: format!("Duelo rápido salvo no temporário ({}) e {msg}", temp.display()),
+            mensagem: format!("Duelo rápido salvo no temporário ({}) e {msg}{aviso_txt}", temp.display()),
         }),
         Err(e) => Err(format!("Duelo rápido salvo no temporário, mas {e}")),
     }
@@ -1743,9 +1839,11 @@ fn validar_projeto() -> Result<ResultadoProjeto, String> {
     // Decks + duelistas (refs cruzadas).
     let mut ids_decks: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut err_decks = 0;
+    let mut avisos_decks = 0;
     let mut n_decks = 0;
     let mut fora_do_alvo = 0;
     if let Ok(entries) = std::fs::read_dir(proj.join("decks")) {
+        let catalogo_cartas = Catalogo::de_set(&ids_cartas);
         for e in entries.flatten() {
             let p = e.path();
             if p.extension().and_then(|x| x.to_str()) != Some("json") {
@@ -1757,7 +1855,11 @@ fn validar_projeto() -> Result<ResultadoProjeto, String> {
                     if let Some(id) = v.get("id").and_then(|x| x.as_str()) {
                         ids_decks.insert(id.to_string());
                     }
-                    err_decks += checar_deck(&v, &ids_cartas).len();
+                    // Só ERRO conta como erro aqui: aviso (projeto sem a carta
+                    // citada) não pode virar "projeto com erro" no relatório.
+                    let revisao = checar_deck(&v, &catalogo_cartas);
+                    err_decks += so_erros(&revisao).len();
+                    avisos_decks += so_avisos(&revisao).len();
                     if let Some(serde_json::Value::Array(l)) = v.get("cards") {
                         if l.len() != 40 {
                             fora_do_alvo += 1;
@@ -1769,7 +1871,7 @@ fn validar_projeto() -> Result<ResultadoProjeto, String> {
         }
     }
     erros += err_decks;
-    avisos += fora_do_alvo;
+    avisos += fora_do_alvo + avisos_decks;
     itens.push(ItemProjeto {
         area: "Decks".to_string(),
         ok: n_decks > 0 && err_decks == 0,
@@ -1778,8 +1880,10 @@ fn validar_projeto() -> Result<ResultadoProjeto, String> {
 
     let mut ids_duelistas: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut err_duel = 0;
+    let mut avisos_duel = 0;
     let mut n_duel = 0;
     if let Ok(entries) = std::fs::read_dir(proj.join("duelists")) {
+        let catalogo_decks = Catalogo::de_set(&ids_decks);
         for e in entries.flatten() {
             let p = e.path();
             if p.extension().and_then(|x| x.to_str()) != Some("json") {
@@ -1791,13 +1895,16 @@ fn validar_projeto() -> Result<ResultadoProjeto, String> {
                     if let Some(id) = v.get("id").and_then(|x| x.as_str()) {
                         ids_duelistas.insert(id.to_string());
                     }
-                    err_duel += checar_duelista(&v, &ids_decks).len();
+                    let revisao = checar_duelista(&v, &catalogo_decks);
+                    err_duel += so_erros(&revisao).len();
+                    avisos_duel += so_avisos(&revisao).len();
                 }
                 None => err_duel += 1,
             }
         }
     }
     erros += err_duel;
+    avisos += avisos_duel;
     itens.push(ItemProjeto {
         area: "Duelistas".to_string(),
         ok: n_duel > 0 && err_duel == 0,
@@ -1807,7 +1914,9 @@ fn validar_projeto() -> Result<ResultadoProjeto, String> {
     // Fusões.
     match std::fs::read_to_string(proj.join("fusions.json")).ok().and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok()) {
         Some(v) => {
-            let n = checar_fusoes(&v, &ids_cartas).len();
+            let revisao = checar_fusoes(&v, &Catalogo::de_set(&ids_cartas));
+            let n = so_erros(&revisao).len();
+            avisos += so_avisos(&revisao).len();
             erros += n;
             let nrec = v.get("recipes").and_then(|x| x.as_array()).map(|a| a.len()).unwrap_or(0);
             let nrul = v.get("rules").and_then(|x| x.as_array()).map(|a| a.len()).unwrap_or(0);
@@ -1884,7 +1993,7 @@ fn validar_projeto() -> Result<ResultadoProjeto, String> {
         if avisos == 0 {
             "Projeto válido de ponta a ponta. Empacotamento (.astralis + zip) vem depois — por ora nada foi empacotado.".to_string()
         } else {
-            format!("Projeto válido com {avisos} aviso(s) (decks fora do alvo 40; carta citando efeito que o projeto ainda não tem). Empacotamento (.astralis + zip) vem depois — por ora nada foi empacotado.")
+            format!("Projeto válido com {avisos} aviso(s) (ex.: decks fora do alvo 40, ou item que cita algo que o projeto ainda não tem). Empacotamento (.astralis + zip) vem depois — por ora nada foi empacotado.")
         }
     } else {
         format!("Projeto com {erros} erro(s) — arrume nas abas (clique em Validar em cada uma) e volte aqui. Nada foi empacotado.")
@@ -2089,7 +2198,7 @@ fn importar_pack_para(
     pasta_duelistas: &std::path::Path,
     pasta_decks: &std::path::Path,
     caminho_fusoes: &std::path::Path,
-    catalogo: &CatalogoEfeitos,
+    catalogo: &Catalogo,
 ) -> Result<ResultadoImportacao, String> {
     let tem_cartas = pack_tem_lista(pack, "cartas", "cards");
     let tem_duelistas = pack_tem_lista(pack, "duelistas", "duelists");
@@ -2177,7 +2286,13 @@ fn importar_pack_para(
     }
     for d in &lista_duelistas {
         let id = d.get("id").and_then(|v| v.as_str()).unwrap_or("?").to_string();
-        let errs = checar_duelista(d, &todos_decks);
+        let revisao = checar_duelista(d, &Catalogo::de_set(&todos_decks));
+        // Mesmo tratamento das cartas: aviso (pack sem o deck citado) viaja
+        // na lista de avisos; só ERRO recusa o pack inteiro.
+        for a in so_avisos(&revisao) {
+            avisos.push(format!("Duelista \"{id}\": {}", a.mensagem));
+        }
+        let errs = so_erros(&revisao);
         if errs.is_empty() {
             duelistas_ok.push((d, id));
         } else if erros.len() < 30 {
@@ -2190,7 +2305,11 @@ fn importar_pack_para(
     }
     for d in &lista_decks {
         let id = d.get("id").and_then(|v| v.as_str()).unwrap_or("?").to_string();
-        let errs = checar_deck(d, &todas_cartas);
+        let revisao = checar_deck(d, &Catalogo::de_set(&todas_cartas));
+        for a in so_avisos(&revisao) {
+            avisos.push(format!("Deck \"{id}\": {}", a.mensagem));
+        }
+        let errs = so_erros(&revisao);
         if errs.is_empty() {
             decks_ok.push((d, id));
         } else if erros.len() < 30 {
@@ -2742,13 +2861,20 @@ fn main() {
 mod testes {
     use super::*;
 
-    // Catálogo de efeitos sem nenhum efeito (projeto novo — D29).
-    fn sem_efeitos() -> CatalogoEfeitos {
-        CatalogoEfeitos::Vazio
+    // Catálogo sem nenhum item (projeto novo/zerado — D29).
+    fn sem_efeitos() -> Catalogo {
+        catalogo(&[])
     }
 
-    fn com_efeitos(ids: &[&str]) -> CatalogoEfeitos {
-        CatalogoEfeitos::Listado(ids.iter().map(|s| s.to_string()).collect())
+    // Catálogo com itens (o projeto já tem o que foi citado).
+    fn com_efeitos(ids: &[&str]) -> Catalogo {
+        catalogo(ids)
+    }
+
+    // Catálogo de QUALQUER pasta do projeto (cartas/decks/arenas/efeitos):
+    // vazio = projeto zerado (D29), com ids = projeto com conteúdo.
+    fn catalogo(ids: &[&str]) -> Catalogo {
+        Catalogo::de_ids(ids.iter().map(|s| s.to_string()))
     }
 
     #[test]
@@ -2868,10 +2994,10 @@ mod testes {
             "efeitos",
         )
         .unwrap();
-        assert_eq!(catalogo_efeitos_de(&dir), CatalogoEfeitos::Vazio);
+        assert_eq!(catalogo_efeitos_de(&dir), catalogo(&[]));
         // Sem o arquivo -> Vazio.
         std::fs::remove_file(dir.join("effects.json")).unwrap();
-        assert_eq!(catalogo_efeitos_de(&dir), CatalogoEfeitos::Vazio);
+        assert_eq!(catalogo_efeitos_de(&dir), catalogo(&[]));
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -2922,7 +3048,7 @@ mod testes {
 
     #[test]
     fn duelista_vazio_reclama_obrigatorios() {
-        let erros = checar_duelista(&serde_json::json!({}), &std::collections::HashSet::new());
+        let erros = checar_duelista(&serde_json::json!({}), &catalogo(&[]));
         let campos: Vec<&str> = erros.iter().map(|e| e.campo.as_str()).collect();
         for c in ["Versão", "ID", "Nome", "Deck", "Estilo de jogo"] {
             assert!(campos.contains(&c), "faltou erro de {c}");
@@ -2931,8 +3057,7 @@ mod testes {
 
     #[test]
     fn duelista_valido_passa() {
-        let mut decks = std::collections::HashSet::new();
-        decks.insert("deck_starter_hero".to_string());
+        let decks = catalogo(&["deck_starter_hero"]);
         let d = serde_json::json!({
             "schema_version": 1, "id": "duelist_teste", "name": "Teste",
             "deck_id": "deck_starter_hero", "starting_lp": 4000,
@@ -2943,28 +3068,25 @@ mod testes {
 
     #[test]
     fn duelista_deck_fantasma_barra() {
-        let mut decks = std::collections::HashSet::new();
-        decks.insert("deck_outro".to_string());
+        let decks = catalogo(&["deck_outro"]);
         let d = serde_json::json!({
             "schema_version": 1, "id": "duelist_teste", "name": "Teste",
             "deck_id": "deck_fantasma",
             "ai_preset": { "dificuldade": "facil", "agressividade": 30, "uso_fusao": 20, "protecao_lp": 60 }
         });
         let erros = checar_duelista(&d, &decks);
-        assert!(erros.iter().any(|e| e.campo == "Deck"));
+        assert!(so_erros(&erros).iter().any(|e| e.campo == "Deck"));
     }
 
     #[test]
     fn deck_curto_barra() {
-        let cartas: std::collections::HashSet<String> =
-            ["card_a".to_string()].into_iter().collect();
         let d = serde_json::json!({
             "schema_version": 1, "id": "deck_teste", "name": "Teste",
             "cards": ["card_a", "card_fantasma"]
         });
-        let erros = checar_deck(&d, &cartas);
+        let erros = checar_deck(&d, &catalogo(&["card_a"]));
         assert!(erros.iter().any(|e| e.mensagem.contains("20 a 60")));
-        assert!(erros.iter().any(|e| e.mensagem.contains("card_fantasma")));
+        assert!(so_erros(&erros).iter().any(|e| e.mensagem.contains("card_fantasma")));
     }
 
     #[test]
@@ -2978,14 +3100,13 @@ mod testes {
 
     #[test]
     fn fusao_vazia_reclama_listas() {
-        let erros = checar_fusoes(&serde_json::json!({}), &std::collections::HashSet::new());
+        let erros = checar_fusoes(&serde_json::json!({}), &catalogo(&[]));
         assert!(erros.iter().any(|e| e.campo == "Receitas" || e.mensagem.contains("Receitas")));
     }
 
     #[test]
     fn fusao_receita_igual_barra() {
-        let mut cartas = std::collections::HashSet::new();
-        cartas.insert("card_a".to_string());
+        let cartas = catalogo(&["card_a"]);
         let dado = serde_json::json!({
             "schema_version": 1,
             "recipes": [{ "id": "fusion_x", "input": { "card_a": "card_a", "card_b": "card_a" }, "result": "card_a" }],
@@ -3001,7 +3122,7 @@ mod testes {
             "schema_version": 1, "recipes": [],
             "rules": [{ "id": "fusion_r", "when": {}, "result": "card_a", "priority": 1 }]
         });
-        let erros = checar_fusoes(&dado, &std::collections::HashSet::new());
+        let erros = checar_fusoes(&dado, &catalogo(&[]));
         assert!(erros.iter().any(|e| e.mensagem.contains("sem condição")));
     }
 
@@ -3058,6 +3179,155 @@ mod testes {
         ef["actions"] = serde_json::json!([{ "action": "modify_attack", "amount": -500 }]);
         let erros = checar_um_efeito(&ef, "Efeito");
         assert!(erros.iter().any(|e| e.mensagem.contains("duração")));
+    }
+
+    // ---- Gate de catálogo: os 3 estados, ponto por ponto (o fail-open) ----
+    // Mesmo formato do gate de efeitos: projeto VAZIO = aviso (D29 abre
+    // vazio, barra-error quebraria o fluxo), projeto COM itens = erro quando
+    // o id não está na lista, id na lista = passa.
+
+    fn deck_de_20(carta: &str) -> serde_json::Value {
+        let cartas: Vec<serde_json::Value> = (0..20).map(|_| serde_json::json!(carta)).collect();
+        serde_json::json!({"schema_version": 1, "id": "deck_teste", "name": "Teste", "cards": cartas})
+    }
+
+    fn duelista_com_deck(deck: &str) -> serde_json::Value {
+        serde_json::json!({
+            "schema_version": 1, "id": "duelist_teste", "name": "Teste",
+            "deck_id": deck,
+            "ai_preset": { "dificuldade": "facil", "agressividade": 30, "uso_fusao": 20, "protecao_lp": 60 }
+        })
+    }
+
+    // Ponto 1: duelista -> deck (era `!decks.is_empty() && !decks.contains`).
+    #[test]
+    fn gate_deck_do_duelista() {
+        let vazio = checar_duelista(&duelista_com_deck("deck_x"), &catalogo(&[]));
+        assert!(so_erros(&vazio).is_empty(), "projeto sem deck não pode virar erro: {vazio:?}");
+        let avisos = so_avisos(&vazio);
+        assert_eq!(avisos.len(), 1, "tem que avisar: {vazio:?}");
+        assert!(avisos[0].mensagem.contains("deck_x"), "o aviso cita o id: {}", avisos[0].mensagem);
+        assert!(avisos[0].mensagem.contains("não tem nenhum deck cadastrado"), "{}", avisos[0].mensagem);
+        assert!(avisos[0].mensagem.contains("aba Decks"), "{}", avisos[0].mensagem);
+
+        let fora = checar_duelista(&duelista_com_deck("deck_x"), &catalogo(&["deck_outro"]));
+        let erros = so_erros(&fora);
+        assert_eq!(erros.len(), 1, "fora da lista tem que ser ERRO: {fora:?}");
+        assert!(erros[0].mensagem.contains("deck_x"), "{}", erros[0].mensagem);
+        assert!(erros[0].mensagem.contains("aba Decks"), "{}", erros[0].mensagem);
+
+        assert!(checar_duelista(&duelista_com_deck("deck_x"), &catalogo(&["deck_x"])).is_empty());
+    }
+
+    // Ponto 2: deck -> cartas (era `!cartas.is_empty() && !cartas.contains`).
+    #[test]
+    fn gate_carta_do_deck() {
+        let vazio = checar_deck(&deck_de_20("card_x"), &catalogo(&[]));
+        assert!(so_erros(&vazio).is_empty(), "projeto sem carta não pode virar erro: {vazio:?}");
+        let avisos = so_avisos(&vazio);
+        assert_eq!(avisos.len(), 20, "uma linha por carta citada: {vazio:?}");
+        assert!(avisos[0].mensagem.contains("card_x"), "{}", avisos[0].mensagem);
+        assert!(avisos[0].mensagem.contains("não tem nenhuma carta cadastrada"), "{}", avisos[0].mensagem);
+        assert!(avisos[0].mensagem.contains("aba Cartas"), "{}", avisos[0].mensagem);
+
+        let fora = checar_deck(&deck_de_20("card_x"), &catalogo(&["card_outra"]));
+        let erros = so_erros(&fora);
+        assert_eq!(erros.len(), 20, "fora da lista tem que ser ERRO: {fora:?}");
+        assert!(erros[0].mensagem.contains("card_x"), "{}", erros[0].mensagem);
+        assert!(erros[0].mensagem.contains("aba Cartas"), "{}", erros[0].mensagem);
+
+        assert!(checar_deck(&deck_de_20("card_x"), &catalogo(&["card_x"])).is_empty());
+    }
+
+    // Ponto 3: fusão -> carta A/B da receita (o `else if` da receita).
+    #[test]
+    fn gate_cartas_da_receita() {
+        let receita = |a: &str, b: &str, res: &str| serde_json::json!({
+            "schema_version": 1,
+            "recipes": [{ "id": "fusion_x", "input": { "card_a": a, "card_b": b }, "result": res }],
+            "rules": []
+        });
+
+        let vazio = checar_fusoes(&receita("card_x", "card_y", "card_x"), &catalogo(&[]));
+        assert!(so_erros(&vazio).is_empty(), "projeto sem carta não pode virar erro: {vazio:?}");
+        let avisos = so_avisos(&vazio);
+        assert_eq!(avisos.len(), 3, "A, B e resultado: {vazio:?}");
+        assert!(avisos.iter().all(|a| a.mensagem.contains("Receita 1")), "{avisos:?}");
+        assert!(avisos.iter().all(|a| a.mensagem.contains("não tem nenhuma carta cadastrada")), "{avisos:?}");
+
+        let fora = checar_fusoes(&receita("card_x", "card_y", "card_x"), &catalogo(&["card_outra"]));
+        let erros = so_erros(&fora);
+        assert_eq!(erros.len(), 3, "fora da lista tem que ser ERRO: {fora:?}");
+        assert!(erros[0].mensagem.contains("card_x"), "{}", erros[0].mensagem);
+        assert!(erros[2].mensagem.contains("card_x"), "{}", erros[2].mensagem);
+
+        assert!(checar_fusoes(&receita("card_x", "card_y", "card_x"), &catalogo(&["card_x", "card_y"])).is_empty());
+    }
+
+    // Ponto 4: fusão -> resultado da receita (só o resultado fora da lista).
+    #[test]
+    fn gate_resultado_da_receita() {
+        let receita = serde_json::json!({
+            "schema_version": 1,
+            "recipes": [{ "id": "fusion_x", "input": { "card_a": "card_a", "card_b": "card_b" }, "result": "card_fantasma" }],
+            "rules": []
+        });
+
+        let vazio = checar_fusoes(&receita, &catalogo(&[]));
+        assert!(so_erros(&vazio).is_empty(), "projeto sem carta não pode virar erro: {vazio:?}");
+        let avisos = so_avisos(&vazio);
+        assert_eq!(avisos.len(), 3, "A, B e resultado: {vazio:?}");
+        assert!(avisos[2].mensagem.contains("resultado"), "o aviso do resultado: {}", avisos[2].mensagem);
+        assert!(avisos[2].mensagem.contains("não tem nenhuma carta cadastrada"), "{}", avisos[2].mensagem);
+
+        let fora = checar_fusoes(&receita, &catalogo(&["card_a", "card_b"]));
+        let erros = so_erros(&fora);
+        assert_eq!(erros.len(), 1, "só o resultado está fora: {fora:?}");
+        assert!(erros[0].mensagem.contains("card_fantasma"), "{}", erros[0].mensagem);
+        assert!(erros[0].mensagem.contains("aba Cartas"), "{}", erros[0].mensagem);
+
+        assert!(checar_fusoes(&receita, &catalogo(&["card_a", "card_b", "card_fantasma"])).is_empty());
+    }
+
+    // Ponto 5: fusão -> resultado da regra genérica.
+    #[test]
+    fn gate_resultado_da_regra() {
+        let regra = serde_json::json!({
+            "schema_version": 1, "recipes": [],
+            "rules": [{ "id": "fusion_r", "when": { "type_a": "dragon" }, "result": "card_fantasma", "priority": 1 }]
+        });
+
+        let vazio = checar_fusoes(&regra, &catalogo(&[]));
+        assert!(so_erros(&vazio).is_empty(), "projeto sem carta não pode virar erro: {vazio:?}");
+        let avisos = so_avisos(&vazio);
+        assert_eq!(avisos.len(), 1, "só o resultado da regra: {vazio:?}");
+        assert!(avisos[0].mensagem.contains("resultado"), "{}", avisos[0].mensagem);
+        assert!(avisos[0].campo == "Regra 1", "{}", avisos[0].campo);
+
+        let fora = checar_fusoes(&regra, &catalogo(&["card_a"]));
+        let erros = so_erros(&fora);
+        assert_eq!(erros.len(), 1, "só o resultado está fora: {fora:?}");
+        assert!(erros[0].mensagem.contains("card_fantasma"), "{}", erros[0].mensagem);
+        assert!(erros[0].campo == "Regra 1", "{}", erros[0].campo);
+
+        assert!(checar_fusoes(&regra, &catalogo(&["card_fantasma"])).is_empty());
+    }
+
+    // Ponto 6: arena do duelo rápido (o gate que NÃO pode virar erro sozinho:
+    // o projeto nunca traz arena e a lista oferece arena_starter).
+    #[test]
+    fn gate_arena_do_duelo() {
+        let vazio = checar_arena_do_duelo(&catalogo(&[]), "arena_starter").expect("sem arena = aviso");
+        assert!(!eh_erro(&vazio), "projeto sem arena não pode travar o duelo: {vazio:?}");
+        assert!(vazio.mensagem.contains("arena_starter"), "{}", vazio.mensagem);
+        assert!(vazio.mensagem.contains("projects/default/arenas/"), "{}", vazio.mensagem);
+
+        let fora = checar_arena_do_duelo(&catalogo(&["arena_x"]), "arena_y").expect("fora da lista = erro");
+        assert!(eh_erro(&fora), "projeto COM arenas e id errado tem que barrar: {fora:?}");
+        assert!(fora.mensagem.contains("arena_y"), "{}", fora.mensagem);
+        assert!(fora.mensagem.contains("Avançado"), "{}", fora.mensagem);
+
+        assert!(checar_arena_do_duelo(&catalogo(&["arena_x"]), "arena_x").is_none());
     }
 
     #[test]
@@ -3351,7 +3621,7 @@ mod testes {
     #[test]
     fn fusoes_vazias_passam() {
         let dado = serde_json::json!({"schema_version": 1, "recipes": [], "rules": []});
-        assert!(checar_fusoes(&dado, &std::collections::HashSet::new()).is_empty());
+        assert!(checar_fusoes(&dado, &catalogo(&[])).is_empty());
     }
 
     #[test]

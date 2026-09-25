@@ -75,6 +75,10 @@ dado mora em `astralis-studio/projects/default/` (criado vazio: `cards/`,
 `effects.json` vazios válidos). `schemas/examples/` é o jogo embutido — o
 editor nunca lê nem escreve lá.
 
+`fusions.json` e `effects.json` são **gerados e não versionados** (o
+esqueleto vazio nasce sozinho na primeira leitura, em `garantir_projeto()`):
+o conteúdo importado nunca entra no git.
+
 - **Importar** (botão 📥 ao lado do Exportar + seção no topo da aba Exportar):
   escolhe um `.json` pack, valida contra os schemas (cartas/duelistas/decks/
   fusões + refs, erros em PT-BR), mostra "X cartas, Y duelistas, Z decks,
@@ -138,14 +142,18 @@ só dos modelos de `projects/default/effects.json` (R4: só o que o Astralis sab
 executar). `salvar_carta` é igual aos outros `salvar_*`: carta inválida **não**
 vai para o disco (`Arruma antes de salvar:\n- …`).
 
-Regra do efeito, com os três estados (o gate antigo era "fail-open" e deixava
-passar qualquer id inventado depois do boot):
+Regra do gate de catálogo (o gate antigo era "fail-open" e deixava passar
+qualquer id inventado depois do boot), com os três estados:
 
-| Projeto | Carta cita efeito | Resultado |
+| Projeto | Item citando outro (efeito na carta, deck no duelista, carta no deck e na fusão, arena no duelo) | Resultado |
 | --- | --- | --- |
-| sem `effects.json` / lista vazia | id qualquer | **AVISO**: a carta não pode citar efeito até você cadastrar um modelo (aba Efeitos) |
-| com efeitos | id cadastrado | passa |
-| com efeitos | id fora da lista | **ERRO** com o nome do efeito e onde corrigir |
+| lista vazia (projeto novo) | id qualquer | **AVISO**: o projeto ainda não tem isso, e o texto diz onde resolver (importar pack / criar na aba) |
+| lista com itens | id cadastrado | passa |
+| lista com itens | id fora da lista | **ERRO** com o nome do item e onde corrigir |
+
+A arena do Duelo é a única exceção: projeto sem arena nenhuma não barra o
+duelo (aviso na mensagem de sucesso, o jogo usa a arena padrão dele), senão
+ninguém jogaria depois do D29.
 
 ## Como o Jogar chama o Astralis
 

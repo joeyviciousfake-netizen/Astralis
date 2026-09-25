@@ -72,7 +72,7 @@ export function useDecks() {
       else decks = [...decks, { ...d }];
       return String(res?.mensagem ?? "Deck salvo");
     },
-    async validate(d: Deck): Promise<Array<{ campo: string; mensagem: string }>> {
+    async validate(d: Deck): Promise<Array<{ campo: string; mensagem: string; nivel?: string }>> {
       const { file: _drop, ...data } = d;
       return invokeLoad("validar_deck", { deck: data });
     },

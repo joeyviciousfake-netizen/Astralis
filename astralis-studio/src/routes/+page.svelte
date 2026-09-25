@@ -38,6 +38,11 @@
   let isLoading = $derived(store.loading);
   let faseCarga = $derived(store.fase);
   let hasError = $derived(store.error);
+  // Aviso de boot (D29): o editor abre APAGANDO o conteúdo do projeto, sem
+  // backup. A mensagem do comando preparar_boot ("Projeto zerado (N arquivos
+  // apagados), sem backup") aparecia só no Rust — o frontend jogava fora. Agora
+  // vira uma faixa junto do convite "projeto vazio": informa, não bloqueia.
+  let avisoBoot = $state("");
   const playFlash = createSaveFlash(8000);
   const playMsg = $derived(playFlash.saveMsg);
   const playOk = $derived(playFlash.saveOk);
@@ -93,7 +98,10 @@
     // Boot em 2 tempos: primeiro a lista (1 invoke) + nomes de duelistas em
     // paralelo; a validação roda em background DEPOIS (não trava a abertura).
     void (async () => {
-      try { await invoke("preparar_boot"); } catch { /* navegador: snapshot vazio */ }
+      try {
+        const r = await invoke<{ limpou?: boolean; mensagem?: string }>("preparar_boot");
+        if (r?.limpou && r.mensagem) avisoBoot = r.mensagem;
+      } catch { /* navegador: snapshot vazio */ }
       await Promise.all([store.loadAll(), duelists.ensureNamesLoaded()]);
       void v.refresh(store.cards);
     })();
@@ -198,6 +206,12 @@
         <span class="text-lg">📥</span>
         <p class="text-xs text-zinc-300">Projeto vazio — nada carregado. Importe um pack para começar.</p>
         <button class="ml-auto shrink-0 px-3 py-1.5 rounded-full bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition" onclick={irImportar}>Importar pack…</button>
+      </div>
+    {/if}
+    {#if avisoBoot}
+      <div class="shrink-0 rounded-xl border border-amber-900/60 bg-amber-950/30 px-4 py-3">
+        <p class="text-xs font-semibold text-amber-200">Atenção: abrir o Studio limpa o projeto</p>
+        <p class="text-xs text-amber-300/90 whitespace-pre-line">{avisoBoot}</p>
       </div>
     {/if}
     {#if playMsg}<p class="shrink-0 text-xs whitespace-pre-line {playOk ? 'text-emerald-400 bg-emerald-950/30 border-emerald-900/50' : 'text-amber-300 bg-amber-950/30 border-amber-900/50'} border rounded-lg px-3 py-2">{playMsg}</p>{/if}
