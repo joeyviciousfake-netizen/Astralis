@@ -110,38 +110,41 @@
     class="w-full overflow-hidden"
     style="aspect-ratio: 59 / 86; border-radius: 4.5cqw; background: {MOLDURA[acab].fundo}; padding: 3.2cqw; box-shadow: 0 10px 30px rgba(0,0,0,0.55), inset 0 0 0 0.6cqw {MOLDURA[acab].brilho};"
   >
-    <div class="w-full h-full flex flex-col" style="gap: 1.8cqw;">
-      <!-- Barra de nome + orbe de atributo -->
-      <div class="relative shrink-0 flex items-center" style="padding-right: 9cqw;">
+    <div class="w-full h-full flex flex-col" style="gap: 1.2cqw;">
+      <!-- Barra de nome + orbe de atributo (fina, igual à referência) -->
+      <div class="relative shrink-0 flex items-center" style="padding-right: 8.2cqw;">
         <div
           class="w-full overflow-hidden"
-          style="background: linear-gradient(180deg, #f7ead0, #e9d3a3); border-radius: 1.6cqw; border: 0.5cqw solid #3d2a12; box-shadow: inset 0 0 2cqw rgba(90, 60, 20, 0.45); padding: 1.2cqw 2.4cqw;"
+          style="background: linear-gradient(180deg, #f7ead0, #e9d3a3); border-radius: 1.6cqw; border: 0.5cqw solid #3d2a12; box-shadow: inset 0 0 2cqw rgba(90, 60, 20, 0.45); padding: 0.7cqw 2.4cqw;"
         >
           <p
             class="truncate"
-            style="font-family: Georgia, 'Times New Roman', serif; font-weight: 700; font-size: 4.4cqw; color: #2a1c08; line-height: 1.25;"
+            style="font-family: Georgia, 'Times New Roman', serif; font-weight: 700; font-size: 3.7cqw; color: #2a1c08; line-height: 1.25;"
             title={nome || "(sem nome)"}
           >{nome || "(sem nome)"}</p>
         </div>
         <div
           class="absolute flex items-center justify-center"
-          style="right: 0; top: 50%; translate: 0 -50%; width: 9.5cqw; height: 9.5cqw; border-radius: 9999px; background: {orbe.fundo}; border: 0.6cqw solid #2a1c08; box-shadow: 0 0.5cqw 1.5cqw rgba(0,0,0,0.5); font-size: 4.6cqw;"
+          style="right: 0; top: 50%; translate: 0 -50%; width: 8.6cqw; height: 8.6cqw; border-radius: 9999px; background: {orbe.fundo}; border: 0.6cqw solid #2a1c08; box-shadow: 0 0.5cqw 1.5cqw rgba(0,0,0,0.5); font-size: 4.2cqw;"
           title="Atributo: {attrName(atributo)}"
         >{orbe.icone}</div>
       </div>
 
-      <!-- Estrelas de nível -->
-      <div class="shrink-0 flex items-center justify-end" style="gap: 0.8cqw; min-height: 4.6cqw;" title="Nível {estrelas}">
+      <!-- Estrelas de nível (fileira compacta, à direita) -->
+      <div class="shrink-0 flex items-center justify-end" style="gap: 0.6cqw; min-height: 3.6cqw;" title="Nível {estrelas}">
         {#each Array(estrelas) as _, i (i)}
-          <span style="font-size: 4.2cqw; line-height: 1; color: #ff9d0a; text-shadow: 0 0 1cqw rgba(255,157,10,0.8), 0 0.3cqw 0.6cqw rgba(0,0,0,0.6);">★</span>
+          <span style="font-size: 3.4cqw; line-height: 1; color: #ff9d0a; text-shadow: 0 0 1cqw rgba(255,157,10,0.8), 0 0.3cqw 0.6cqw rgba(0,0,0,0.6);">★</span>
         {/each}
       </div>
 
-      <!-- Janela da arte (clica e troca) -->
+      <!-- Janela da arte: QUADRADO PERFEITO 1/1, largura interna útil cheia
+           (de borda a borda da área interna, como na referência Evil HERO).
+           shrink-0 + aspect-ratio travam o quadrado; a caixa de texto abaixo
+           absorve o que sobrar (flex:1). -->
       <button
         type="button"
-        class="relative w-full overflow-hidden text-left transition"
-        style="flex: 1 1 34%; min-height: 0; border-radius: 1.2cqw; border: 1.2cqw solid #3d2a12; outline: 0.5cqw solid {MOLDURA[acab].brilho}; background: #101014; cursor: pointer;"
+        class="relative w-full shrink-0 overflow-hidden text-left transition"
+        style="flex: 0 0 auto; aspect-ratio: 1 / 1; width: 100%; min-height: 0; border-radius: 1.2cqw; border: 1cqw solid #3d2a12; outline: 0.5cqw solid {MOLDURA[acab].brilho}; background: #101014; cursor: pointer;"
         onclick={() => { pedidoArte += 1; }}
         title="Clique para trocar a imagem (abre o seletor de PNG)"
         aria-label="Trocar imagem da carta"
@@ -164,29 +167,33 @@
         >✏️ trocar imagem</span>
       </button>
 
-      <!-- Linha de tipo -->
-      <div class="shrink-0" style="background: linear-gradient(180deg, #f7ead0, #e9d3a3); border-radius: 1.2cqw; border: 0.5cqw solid #3d2a12; padding: 1cqw 2.4cqw;">
-        <p class="truncate" style="font-family: Georgia, 'Times New Roman', serif; font-size: 3.4cqw; color: #2a1c08; line-height: 1.3;">[{monsterTypeName(tipoMonstro)}/{temEfeito ? "Efeito" : "Normal"}]</p>
+      <!-- Linha de tipo (fina) -->
+      <div class="shrink-0" style="background: linear-gradient(180deg, #f7ead0, #e9d3a3); border-radius: 1.2cqw; border: 0.5cqw solid #3d2a12; padding: 0.6cqw 2.4cqw;">
+        <p class="truncate" style="font-family: Georgia, 'Times New Roman', serif; font-size: 3cqw; color: #2a1c08; line-height: 1.3;">[{monsterTypeName(tipoMonstro)}/{temEfeito ? "Efeito" : "Normal"}]</p>
       </div>
 
-      <!-- Caixa de texto de efeito -->
-      <div class="w-full overflow-y-auto" style="flex: 1 1 26%; min-height: 0; background: linear-gradient(180deg, #f7ead0, #efdcb2); border-radius: 1.2cqw; border: 0.5cqw solid #3d2a12; box-shadow: inset 0 0 2cqw rgba(90, 60, 20, 0.35); padding: 1.6cqw 2.4cqw;">
-        {#if (descricao ?? "").trim()}
-          <p style="font-family: Georgia, 'Times New Roman', serif; font-size: 3.2cqw; color: #2a1c08; line-height: 1.45; white-space: pre-line;">{(descricao ?? "").trim()}</p>
-        {:else}
-          <p style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 3.2cqw; color: #8a7a55; line-height: 1.45;">(sem texto — comum no pack FM)</p>
-        {/if}
-      </div>
+      <!-- Bloco texto + ATK/DEF: a caixa ocupa o que sobra (flex:1) e a
+           barra ATK/DEF vai colada no fim dela, sem vão (como na carta real). -->
+      <div class="w-full flex flex-col" style="flex: 1 1 auto; min-height: 0;">
+        <!-- Caixa de texto de efeito -->
+        <div class="w-full overflow-y-auto" style="flex: 1 1 auto; min-height: 0; background: linear-gradient(180deg, #f7ead0, #efdcb2); border-radius: 1.2cqw 1.2cqw 0 0; border: 0.5cqw solid #3d2a12; border-bottom: 0; box-shadow: inset 0 0 2cqw rgba(90, 60, 20, 0.35); padding: 1.2cqw 2.4cqw;">
+          {#if (descricao ?? "").trim()}
+            <p style="font-family: Georgia, 'Times New Roman', serif; font-size: 3.1cqw; color: #2a1c08; line-height: 1.4; white-space: pre-line;">{(descricao ?? "").trim()}</p>
+          {:else}
+            <p style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 3.1cqw; color: #8a7a55; line-height: 1.4;">(sem texto — comum no pack FM)</p>
+          {/if}
+        </div>
 
-      <!-- Barra ATK/DEF -->
-      <div class="shrink-0 flex items-center justify-end" style="background: linear-gradient(180deg, #f7ead0, #e9d3a3); border-radius: 1.2cqw; border: 0.5cqw solid #3d2a12; padding: 1cqw 2.4cqw; gap: 3cqw;">
-        <p style="font-family: Georgia, 'Times New Roman', serif; font-weight: 700; font-size: 4cqw; color: #2a1c08; line-height: 1.2;">ATK/{atk} DEF/{def}</p>
+        <!-- Barra ATK/DEF colada no fim da caixa -->
+        <div class="shrink-0 flex items-center justify-end" style="background: linear-gradient(180deg, #f7ead0, #e9d3a3); border-radius: 0 0 1.2cqw 1.2cqw; border: 0.5cqw solid #3d2a12; border-top: 0.3cqw solid #3d2a12; padding: 0.7cqw 2.4cqw; gap: 3cqw;">
+          <p style="font-family: Georgia, 'Times New Roman', serif; font-weight: 700; font-size: 3.4cqw; color: #2a1c08; line-height: 1.2;">ATK/{atk} DEF/{def}</p>
+        </div>
       </div>
 
       <!-- Número embaixo -->
       <div class="shrink-0 flex items-center justify-between" style="padding: 0 1cqw;">
-        <p class="truncate" style="font-size: 2.6cqw; font-family: ui-monospace, monospace; color: rgba(255,255,255,0.75);" title={idCarta}>{idCarta || "···"}</p>
-        <p style="font-size: 2.6cqw; color: rgba(255,255,255,0.55);">Nv {estrelas} • {attrName(atributo)}</p>
+        <p class="truncate" style="font-size: 2.3cqw; font-family: ui-monospace, monospace; color: rgba(255,255,255,0.75);" title={idCarta}>{idCarta || "···"}</p>
+        <p style="font-size: 2.3cqw; color: rgba(255,255,255,0.55);">Nv {estrelas} • {attrName(atributo)}</p>
       </div>
     </div>
   </div>
