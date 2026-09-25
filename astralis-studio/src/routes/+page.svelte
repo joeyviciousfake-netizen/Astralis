@@ -4,6 +4,7 @@
   // Religado: sem ISO — Cartas (JSON real), Duelistas (leitura), Cenas (em
   // breve). Jogar lança o Astralis de verdade (preview unificado, doc 10).
   import { onMount } from "svelte";
+  import { invoke } from "@tauri-apps/api/core";
   import { useCards } from "$lib/stores/cards.svelte";
   import CardStudio from "$lib/components/CardStudio.svelte";
   import DuelistsStudio from "$lib/components/DuelistsStudio.svelte";
@@ -84,9 +85,14 @@
 
   onMount(() => {
     setTab("cards");
+    // Boot VAZIO (ordem do usuário, D29): guarda a sessão anterior em
+    // backups/sessao_* (comando preparar_boot) ANTES da primeira listagem;
+    // depois lista normal (vazio + convite "Importe um pack para começar").
+    // No navegador o invoke falha e cai no snapshot (o build sai vazio).
     // Boot em 2 tempos: primeiro a lista (1 invoke) + nomes de duelistas em
     // paralelo; a validação roda em background DEPOIS (não trava a abertura).
     void (async () => {
+      try { await invoke("preparar_boot"); } catch { /* navegador: snapshot vazio */ }
       await Promise.all([store.loadAll(), duelists.ensureNamesLoaded()]);
       void v.refresh(store.cards);
     })();
