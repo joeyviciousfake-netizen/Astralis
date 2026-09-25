@@ -6,6 +6,7 @@
   // é binário trancado, nunca JSON em texto).
   import { useSectionShell } from "$lib/section";
   import { invokeSave, errMsg } from "$lib/stores/ipc";
+  import { save } from "@tauri-apps/plugin-dialog";
   import { useCards } from "$lib/stores/cards.svelte";
   import { useDuelists } from "$lib/stores/duelists.svelte";
   import { useDecks } from "$lib/stores/decks.svelte";
@@ -242,13 +243,25 @@
 
   // ---- EXPORTAR PACK (.apack V1) ----
   // Empacota o projeto atual num arquivo único .apack (textos + imagens, com
-  // dedup) e baixa no navegador. Antes valida o projeto: com erro, não
-  // empacota (mesma regra do botão Exportar). O checklist "testou?" é só da
-  // fita final (.astralis) — pack de criação é arquivo aberto de trabalho.
-  // DEF-2: todo caminho termina com mensagem visível, nunca silêncio.
+  // dedup). Antes valida o projeto: com erro, não empacota (mesma regra do
+  // botão Exportar). O checklist "testou?" é só da fita final (.astralis) —
+  // pack de criação é arquivo aberto de trabalho.
+  // Destino: o usuário ESCOLHE no diálogo salvar nativo (sugestão
+  // studio_pack_<data>_<hora>.apack) e o Rust grava direto no caminho — a
+  // mensagem mostra o caminho final, nunca "baixou (não sei onde)".
+  // DEF-2: todo caminho termina com mensagem visível, nunca silêncio
+  // (cancelar o diálogo = "Exportação cancelada.").
   let expMsg = $state("");
   let expOk = $state(false);
   let exportandoPack = $state(false);
+
+  // Sugestão inicial do diálogo salvar (editável): o nome final é o que o
+  // usuário confirmar — o Rust só garante o `.apack` no fim se faltar.
+  function nomeSugeridoPack(): string {
+    const d = new Date();
+    const p = (n: number) => String(n).padStart(2, "0");
+    return `studio_pack_${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}.apack`;
+  }
 
   async function exportarPack() {
     expMsg = "";
@@ -264,23 +277,28 @@
         expMsg = `Não exportei: o projeto tem ${v.erros} erro(s). ${v.mensagem} Corrija nas abas e clique de novo.`;
         return;
       }
-      const r: { nome: string; dados_base64: string; mensagem: string; avisos: string[] } =
-        await invokeSave("exportar_apack", {}, 180000);
-      if (!r.dados_base64) {
-        expMsg = "O Rust devolveu o pack vazio (não era para acontecer). Clique em Exportar pack de novo.";
+      // 1. Onde salvar? Diálogo nativo (o usuário escolhe a pasta e o nome).
+      let destino: string | null;
+      try {
+        destino = await save({
+          defaultPath: nomeSugeridoPack(),
+          filters: [{ name: "Pack Astralis", extensions: ["apack"] }],
+        });
+      } catch (e) {
+        // Diálogo indisponível (build sem o plugin): cai no download antigo.
+        await exportarPackDownload();
         return;
       }
-      const bytes = base64ParaBytes(r.dados_base64);
-      const url = URL.createObjectURL(new Blob([bytes.buffer as ArrayBuffer], { type: "application/zip" }));
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = r.nome || "studio_pack.apack";
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      if (!destino) {
+        expMsg = "Exportação cancelada.";
+        return;
+      }
+      // 2. O Rust empacota e grava DIRETO no caminho escolhido (sem base64,
+      // sem download do navegador) e devolve o caminho final + contagens.
+      const r: { caminho: string; mensagem: string; avisos: string[]; bytes: number } =
+        await invokeSave("exportar_apack_para", { caminho: destino }, 180000);
       expOk = true;
-      expMsg = `${r.mensagem}\nArquivo baixado: ${a.download} (${bytes.length} bytes). Para conferir, importe ele de volta no botão Importar acima.`;
+      expMsg = `Pack salvo em ${r.caminho} — ${r.mensagem} (${r.bytes} bytes). Para conferir, importe ele de volta no botão Importar acima.`;
       if (r.avisos.length) {
         expMsg += `\nAvisos:\n- ${r.avisos.join("\n- ")}`;
       }
@@ -288,6 +306,31 @@
       expMsg = `Não deu para exportar: ${errMsg(e)}`;
     } finally {
       exportandoPack = false;
+    }
+  }
+
+  // Fallback: diálogo salvar indisponível — empacota via `exportar_apack` e
+  // baixa pelo navegador (cai na pasta Downloads, sem escolha de destino).
+  async function exportarPackDownload() {
+    const r: { nome: string; dados_base64: string; mensagem: string; avisos: string[] } =
+      await invokeSave("exportar_apack", {}, 180000);
+    if (!r.dados_base64) {
+      expMsg = "O Rust devolveu o pack vazio (não era para acontecer). Clique em Exportar pack de novo.";
+      return;
+    }
+    const bytes = base64ParaBytes(r.dados_base64);
+    const url = URL.createObjectURL(new Blob([bytes.buffer as ArrayBuffer], { type: "application/zip" }));
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = r.nome || "studio_pack.apack";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    expOk = true;
+    expMsg = `${r.mensagem}\nArquivo baixado: ${a.download} — ele cai na pasta Downloads do navegador (o diálogo de destino estava indisponível). (${bytes.length} bytes). Para conferir, importe ele de volta no botão Importar acima.`;
+    if (r.avisos.length) {
+      expMsg += `\nAvisos:\n- ${r.avisos.join("\n- ")}`;
     }
   }
 </script>

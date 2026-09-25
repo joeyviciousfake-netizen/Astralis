@@ -3002,6 +3002,16 @@ struct ResultadoApack {
     avisos: Vec<String>,
 }
 
+// Resposta do exportar COM destino: o caminho final (para a tela mostrar onde
+// caiu) + a mesma mensagem de contagens + avisos + tamanho em bytes.
+#[derive(Debug, serde::Serialize)]
+struct ResultadoApackSalvo {
+    caminho: String,
+    mensagem: String,
+    avisos: Vec<String>,
+    bytes: u64,
+}
+
 // Lê os *.json de uma pasta do projeto em ordem (para o .apack sair
 // determinístico). JSON quebrado = erro com o nome do arquivo (nunca pula em
 // silêncio).
@@ -3029,13 +3039,16 @@ fn ler_jsons_da_pasta(pasta: &std::path::Path, o_que: &str) -> Result<Vec<serde_
     Ok(itens)
 }
 
-// Empacota o projeto atual num .apack V1 (data/pack.json + assets/ com dedup +
-// manifest + contagens). O pack.json é montado das pastas do projeto nas
-// mesmas chaves PT que o importar entende (exportar → importar = roundtrip).
-// Projeto vazio = erro (nada para empacotar). Asset citado sem arquivo no
-// disco = aviso (igual ao Python). Sem capa V1 (o Studio não tem slot de capa).
-#[tauri::command]
-fn exportar_apack() -> Result<ResultadoApack, String> {
+// Núcleo do exportar: monta os bytes do .apack V1 + mensagem PT-BR com as
+// contagens + avisos. Usado pelos DOIS comandos abaixo (download via base64 e
+// gravação direta no caminho que o usuário escolheu no diálogo salvar).
+struct ApackMontado {
+    bytes: Vec<u8>,
+    mensagem: String,
+    avisos: Vec<String>,
+}
+
+fn montar_apack_bytes() -> Result<ApackMontado, String> {
     let proj = pasta_projeto()?;
     let cartas = ler_jsons_da_pasta(&proj.join("cards"), "carta")?;
     let duelistas = ler_jsons_da_pasta(&proj.join("duelists"), "duelista")?;
@@ -3075,7 +3088,6 @@ fn exportar_apack() -> Result<ResultadoApack, String> {
 
     let pronto = apack::montar_apack(&pack, &pack_raw, &achados, None, "studio", "1")?;
     let c = &pronto.manifest.counts;
-    let nome = format!("studio_pack_{}.apack", carimbo_data_hora());
     let mut mensagem = format!(
         "Pack exportado: {} cartas, {} duelistas, {} decks, {} fusões ({} regras) + {} imagem(ns) ({} bytes).",
         c.cartas, c.duelistas, c.decks, c.fusoes_recipes, c.fusoes_rules, c.assets, c.assets_bytes
@@ -3094,7 +3106,52 @@ fn exportar_apack() -> Result<ResultadoApack, String> {
     if !pronto.faltando.is_empty() {
         mensagem.push_str(&format!(" {} referência(s) sem imagem (aviso, não erro).", pronto.faltando.len()));
     }
-    Ok(ResultadoApack { nome, dados_base64: apack::codificar_base64(&pronto.bytes), mensagem, avisos })
+    Ok(ApackMontado { bytes: pronto.bytes, mensagem, avisos })
+}
+
+// Empacota o projeto atual num .apack V1 (data/pack.json + assets/ com dedup +
+// manifest + contagens). O pack.json é montado das pastas do projeto nas
+// mesmas chaves PT que o importar entende (exportar → importar = roundtrip).
+// Projeto vazio = erro (nada para empacotar). Asset citado sem arquivo no
+// disco = aviso (igual ao Python). Sem capa V1 (o Studio não tem slot de capa).
+#[tauri::command]
+fn exportar_apack() -> Result<ResultadoApack, String> {
+    let m = montar_apack_bytes()?;
+    let nome = format!("studio_pack_{}.apack", carimbo_data_hora());
+    Ok(ResultadoApack { nome, dados_base64: apack::codificar_base64(&m.bytes), mensagem: m.mensagem, avisos: m.avisos })
+}
+
+// Garante o `.apack` no fim do caminho: o diálogo salvar do Windows nem sempre
+// completa a extensão sozinho, e sem ela o arquivo saía sem extensão (o botão
+// Importar nem listava). Maiúscula também vale (`.APACK`).
+fn garantir_extensao_apack(caminho: &str) -> String {
+    if caminho.to_lowercase().ends_with(".apack") {
+        caminho.to_string()
+    } else {
+        format!("{caminho}.apack")
+    }
+}
+
+// Exportar COM destino escolhido: o frontend abre o diálogo salvar nativo e
+// manda o caminho para cá; o Rust grava os bytes direto nele (sem base64,
+// sem download do navegador). Devolve o caminho final para a tela mostrar
+// onde o pack caiu. Caminho vazio = erro (o cancelar do diálogo o frontend
+// trata antes, com "Exportação cancelada.").
+#[tauri::command]
+fn exportar_apack_para(caminho: String) -> Result<ResultadoApackSalvo, String> {
+    let destino = garantir_extensao_apack(caminho.trim());
+    if destino.trim().is_empty() || destino == ".apack" {
+        return Err("Sem destino: escolha onde salvar no diálogo e confirme.".to_string());
+    }
+    let m = montar_apack_bytes()?;
+    std::fs::write(&destino, &m.bytes)
+        .map_err(|e| format!("Não consegui salvar em {destino}: {e}"))?;
+    Ok(ResultadoApackSalvo {
+        caminho: destino,
+        mensagem: m.mensagem,
+        avisos: m.avisos,
+        bytes: m.bytes.len() as u64,
+    })
 }
 
 // ---- ASSETS (blocos 1 e 8) ----
@@ -3449,6 +3506,7 @@ fn debug_push_batch(
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(DiagnosticoIpc::default())
         .invoke_handler(tauri::generate_handler![
             listar_cartas,
@@ -3479,6 +3537,7 @@ fn main() {
             importar_pack,
             importar_apack,
             exportar_apack,
+            exportar_apack_para,
             preparar_boot,
             debug_push_batch
         ])
@@ -3515,6 +3574,13 @@ mod testes {
         assert!(!eh_id_snake("1abc"));
         assert!(!eh_id_snake("com espaco"));
         assert!(!eh_id_snake(""));
+    }
+
+    #[test]
+    fn destino_apack_garante_extensao() {
+        assert_eq!(garantir_extensao_apack("C:\\packs\\meu_pack"), "C:\\packs\\meu_pack.apack");
+        assert_eq!(garantir_extensao_apack("C:\\packs\\meu_pack.apack"), "C:\\packs\\meu_pack.apack");
+        assert_eq!(garantir_extensao_apack("C:\\packs\\MEU.APACK"), "C:\\packs\\MEU.APACK");
     }
 
     #[test]
