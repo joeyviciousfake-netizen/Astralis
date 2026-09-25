@@ -1,6 +1,11 @@
 <script lang="ts">
   // CardPreview — carta de MONSTRO estilo Yu-Gi-Oh (só visual, sem gameplay).
   // Proporção oficial 59mm x 86mm (~0.686): só a proporção, não o tamanho.
+  // Medidas do scan real (Blue-Eyes 813x1200, W=100 H=100, topo=%H, lados=%W):
+  // moldura borda escura ~1,2% / nome top 3,5% h6,5% laterais 3,5% / orbe
+  // diam 9%W centro x91% top 3% / estrelas top 11,5% diam 6,5%W à direita
+  // até x92% / arte quadrada top 16,5% lat 9→91% (82%W=56,3%H) / texto
+  // top 74% bottom 95% lat 6→94% / rodapé 96→98,5%.
   // Barra de nome + orbe de atributo, estrelas = level, janela da arte com
   // moldura (clicar abre o seletor de imagem existente), linha de tipo, caixa
   // de efeito (description), barra ATK/DEF e número embaixo.
@@ -60,14 +65,14 @@
 
   let estrelas = $derived(Math.min(12, Math.max(1, Math.floor(Number(nivel) || 1))));
 
-  const ORBE: Record<string, { icone: string; fundo: string }> = {
-    light: { icone: "☀", fundo: "radial-gradient(circle at 35% 30%, #fff7cc, #f5b301 60%, #8a5a00)" },
-    dark: { icone: "🌙", fundo: "radial-gradient(circle at 35% 30%, #d8b4fe, #6d28d9 60%, #2e1065)" },
-    fire: { icone: "🔥", fundo: "radial-gradient(circle at 35% 30%, #fecaca, #dc2626 60%, #450a0a)" },
-    water: { icone: "💧", fundo: "radial-gradient(circle at 35% 30%, #bae6fd, #0284c7 60%, #082f49)" },
-    earth: { icone: "⛰", fundo: "radial-gradient(circle at 35% 30%, #fde68a, #b45309 60%, #451a03)" },
-    wind: { icone: "🌀", fundo: "radial-gradient(circle at 35% 30%, #bbf7d0, #16a34a 60%, #052e16)" },
-    divine: { icone: "✨", fundo: "radial-gradient(circle at 35% 30%, #ffffff, #eab308 60%, #713f12)" },
+  const ORBE: Record<string, { kanji: string; en: string; fundo: string }> = {
+    light: { kanji: "光", en: "LIGHT", fundo: "radial-gradient(circle at 35% 30%, #fff7cc, #f5b301 60%, #8a5a00)" },
+    dark: { kanji: "闇", en: "DARK", fundo: "radial-gradient(circle at 35% 30%, #d8b4fe, #6d28d9 60%, #2e1065)" },
+    fire: { kanji: "炎", en: "FIRE", fundo: "radial-gradient(circle at 35% 30%, #fecaca, #dc2626 60%, #450a0a)" },
+    water: { kanji: "水", en: "WATER", fundo: "radial-gradient(circle at 35% 30%, #bae6fd, #0284c7 60%, #082f49)" },
+    earth: { kanji: "地", en: "EARTH", fundo: "radial-gradient(circle at 35% 30%, #fde68a, #b45309 60%, #451a03)" },
+    wind: { kanji: "風", en: "WIND", fundo: "radial-gradient(circle at 35% 30%, #bbf7d0, #16a34a 60%, #052e16)" },
+    divine: { kanji: "神", en: "DIVINE", fundo: "radial-gradient(circle at 35% 30%, #ffffff, #eab308 60%, #713f12)" },
   };
   let orbe = $derived(ORBE[atributo] ?? ORBE.earth);
 
@@ -105,46 +110,56 @@
 </script>
 
 <div class="w-full max-w-[320px] mx-auto" style="container-type: inline-size;">
-  <!-- Carta: proporção oficial 59/86 -->
+  <!-- Carta: proporção oficial 59/86. Palco absoluto em % da carta
+       (topo=%H, lados=%W). Moldura item 1: borda escura fina ~1,2%W
+       (border) + respiro interno ~3% (conteúdo começa em 3,5%+). -->
   <div
-    class="w-full overflow-hidden"
-    style="aspect-ratio: 59 / 86; border-radius: 4.5cqw; background: {MOLDURA[acab].fundo}; padding: 3.2cqw; box-shadow: 0 10px 30px rgba(0,0,0,0.55), inset 0 0 0 0.6cqw {MOLDURA[acab].brilho};"
+    class="w-full relative overflow-hidden"
+    style="aspect-ratio: 59 / 86; border-radius: 4.5cqw; background: {MOLDURA[acab].fundo}; border: 1.2cqw solid #1c130a; box-shadow: 0 10px 30px rgba(0,0,0,0.55), inset 0 0 0 0.6cqw {MOLDURA[acab].brilho};"
   >
-    <div class="w-full h-full flex flex-col" style="gap: 1.2cqw;">
-      <!-- Barra de nome + orbe de atributo (fina, igual à referência) -->
-      <div class="relative shrink-0 flex items-center" style="padding-right: 8.2cqw;">
+    <div class="absolute inset-0">
+      <!-- 2. Barra de nome: top 3,5% H, altura 6,5% H, laterais 3,5% W.
+           Serifada negrito marrom, ~3,8%H; bege claro com relevo.
+           Padding direito reserva o orbe (centro x91%). -->
+      <div class="absolute" style="left: 3.5%; top: 3.5%; width: 93%; height: 6.5%;">
         <div
-          class="w-full overflow-hidden"
-          style="background: linear-gradient(180deg, #f7ead0, #e9d3a3); border-radius: 1.6cqw; border: 0.5cqw solid #3d2a12; box-shadow: inset 0 0 2cqw rgba(90, 60, 20, 0.45); padding: 0.7cqw 2.4cqw;"
+          class="w-full h-full overflow-hidden flex items-center"
+          style="background: linear-gradient(180deg, #f7ead0, #e9d3a3); border-radius: 1.6cqw; border: 0.5cqw solid #3d2a12; box-shadow: inset 0 0.4cqw 1cqw rgba(90, 60, 20, 0.45), inset 0 -0.4cqw 0.8cqw rgba(255,255,255,0.5); padding: 0.4cqw 10cqw 0.4cqw 2.4cqw;"
         >
           <p
             class="truncate"
-            style="font-family: Georgia, 'Times New Roman', serif; font-weight: 700; font-size: 3.7cqw; color: #2a1c08; line-height: 1.25;"
+            style="font-family: Georgia, 'Times New Roman', serif; font-weight: 700; font-size: 5.4cqw; color: #2a1c08; line-height: 1.15;"
             title={nome || "(sem nome)"}
           >{nome || "(sem nome)"}</p>
         </div>
-        <div
-          class="absolute flex items-center justify-center"
-          style="right: 0; top: 50%; translate: 0 -50%; width: 8.6cqw; height: 8.6cqw; border-radius: 9999px; background: {orbe.fundo}; border: 0.6cqw solid #2a1c08; box-shadow: 0 0.5cqw 1.5cqw rgba(0,0,0,0.5); font-size: 4.2cqw;"
-          title="Atributo: {attrName(atributo)}"
-        >{orbe.icone}</div>
       </div>
 
-      <!-- Estrelas de nível (fileira compacta, à direita) -->
-      <div class="shrink-0 flex items-center justify-end" style="gap: 0.6cqw; min-height: 3.6cqw;" title="Nível {estrelas}">
+      <!-- 3. Orbe de atributo: diâmetro 9%W, centro x≈91% (left 86,5%),
+           top ≈3%H sobrepondo a barra; kanji + rótulo pequeno em cima. -->
+      <div
+        class="absolute flex flex-col items-center justify-center"
+        style="left: 86.5%; top: 3%; width: 9%; aspect-ratio: 1 / 1; border-radius: 9999px; background: {orbe.fundo}; border: 0.6cqw solid #2a1c08; box-shadow: 0 0.5cqw 1.5cqw rgba(0,0,0,0.5);"
+        title="Atributo: {attrName(atributo)}"
+      >
+        <span style="font-size: 1.4cqw; line-height: 1; color: #fff; opacity: 0.9; font-weight: 700; letter-spacing: 0.02em;">{orbe.en}</span>
+        <span style="font-size: 4.2cqw; line-height: 1.05; color: #fff; text-shadow: 0 0.2cqw 0.4cqw rgba(0,0,0,0.6);">{orbe.kanji}</span>
+      </div>
+
+      <!-- 4. Estrelas: fileira top ≈11,5%H, cada ★ ~6,5%W, grupo à
+           DIREITA terminando em x≈92% (right 8%). N = level do dado. -->
+      <div class="absolute flex items-center justify-end" style="left: 3.5%; right: 8%; top: 11.5%; gap: 0.6cqw;" title="Nível {estrelas}">
         {#each Array(estrelas) as _, i (i)}
-          <span style="font-size: 3.4cqw; line-height: 1; color: #ff9d0a; text-shadow: 0 0 1cqw rgba(255,157,10,0.8), 0 0.3cqw 0.6cqw rgba(0,0,0,0.6);">★</span>
+          <span style="font-size: 6.5cqw; line-height: 1; color: #ff9d0a; text-shadow: 0 0 1cqw rgba(255,157,10,0.8), 0 0.3cqw 0.6cqw rgba(0,0,0,0.6);">★</span>
         {/each}
       </div>
 
-      <!-- Janela da arte: QUADRADO PERFEITO 1/1, largura interna útil cheia
-           (de borda a borda da área interna, como na referência Evil HERO).
-           shrink-0 + aspect-ratio travam o quadrado; a caixa de texto abaixo
-           absorve o que sobrar (flex:1). -->
+      <!-- 5. Arte QUADRADA: top 16,5%H, laterais 9%→91% (largura 82%W),
+           altura igual (82%W ≈56,3%H, termina ~72,8%). Moldura metálica
+           ~1,2%W (border) + fio escuro interno (overlay). Cover. -->
       <button
         type="button"
-        class="relative w-full shrink-0 overflow-hidden text-left transition"
-        style="flex: 0 0 auto; aspect-ratio: 1 / 1; width: 100%; min-height: 0; border-radius: 1.2cqw; border: 1cqw solid #3d2a12; outline: 0.5cqw solid {MOLDURA[acab].brilho}; background: #101014; cursor: pointer;"
+        class="absolute overflow-hidden text-left transition"
+        style="left: 9%; top: 16.5%; width: 82%; aspect-ratio: 1 / 1; border-radius: 1.2cqw; border: 1.2cqw solid #8a7d64; background: #101014; cursor: pointer; padding: 0;"
         onclick={() => { pedidoArte += 1; }}
         title="Clique para trocar a imagem (abre o seletor de PNG)"
         aria-label="Trocar imagem da carta"
@@ -162,38 +177,46 @@
           </span>
         {/if}
         <span
+          class="absolute pointer-events-none"
+          style="inset: 0; box-shadow: inset 0 0 0 0.4cqw #1a1208;"
+        ></span>
+        <span
           class="absolute"
           style="right: 1.6cqw; bottom: 1.4cqw; font-size: 3cqw; background: rgba(0,0,0,0.65); color: #fff; border-radius: 9999px; padding: 0.8cqw 2.2cqw; border: 0.3cqw solid rgba(255,255,255,0.35);"
         >✏️ trocar imagem</span>
       </button>
 
-      <!-- Linha de tipo (fina) -->
-      <div class="shrink-0" style="background: linear-gradient(180deg, #f7ead0, #e9d3a3); border-radius: 1.2cqw; border: 0.5cqw solid #3d2a12; padding: 0.6cqw 2.4cqw;">
-        <p class="truncate" style="font-family: Georgia, 'Times New Roman', serif; font-size: 3cqw; color: #2a1c08; line-height: 1.3;">[{monsterTypeName(tipoMonstro)}/{temEfeito ? "Efeito" : "Normal"}]</p>
+      <!-- 6. Caixa de texto: top ≈74%, bottom ≈95% (h 21%), lat 6%→94%.
+           Pergaminho; quadradinhos vermelhos ~2%W nos 4 cantos; tipo
+           negrito ~2,2%H; texto ~2%H; divisória; ATK/DEF ~2,6%H à direita. -->
+      <div
+        class="absolute overflow-hidden"
+        style="left: 6%; top: 74%; width: 88%; height: 21%; background: linear-gradient(180deg, #f7ead0, #efdcb2); border-radius: 1.2cqw; border: 0.5cqw solid #3d2a12; box-shadow: inset 0 0 2cqw rgba(90, 60, 20, 0.35);"
+      >
+        <span class="absolute" style="left: 0.8cqw; top: 0.8cqw; width: 2cqw; height: 2cqw; background: #b91c1c; border: 0.3cqw solid #7f1d1d; border-radius: 0.3cqw;"></span>
+        <span class="absolute" style="right: 0.8cqw; top: 0.8cqw; width: 2cqw; height: 2cqw; background: #b91c1c; border: 0.3cqw solid #7f1d1d; border-radius: 0.3cqw;"></span>
+        <span class="absolute" style="left: 0.8cqw; bottom: 0.8cqw; width: 2cqw; height: 2cqw; background: #b91c1c; border: 0.3cqw solid #7f1d1d; border-radius: 0.3cqw;"></span>
+        <span class="absolute" style="right: 0.8cqw; bottom: 0.8cqw; width: 2cqw; height: 2cqw; background: #b91c1c; border: 0.3cqw solid #7f1d1d; border-radius: 0.3cqw;"></span>
+        <div class="w-full h-full flex flex-col" style="padding: 1.8cqw 3.4cqw 1.4cqw;">
+          <p class="truncate" style="font-family: Georgia, 'Times New Roman', serif; font-weight: 700; font-size: 3.2cqw; color: #2a1c08; line-height: 1.3;">[{monsterTypeName(tipoMonstro)}/{temEfeito ? "Efeito" : "Normal"}]</p>
+          <div class="w-full overflow-y-auto" style="flex: 1 1 auto; min-height: 0; margin-top: 0.8cqw;">
+            {#if (descricao ?? "").trim()}
+              <p style="font-family: Georgia, 'Times New Roman', serif; font-size: 2.9cqw; color: #2a1c08; line-height: 1.4; white-space: pre-line;">{(descricao ?? "").trim()}</p>
+            {:else}
+              <p style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 2.9cqw; color: #8a7a55; line-height: 1.4;">(sem texto — comum no pack FM)</p>
+            {/if}
+          </div>
+          <div style="border-top: 0.3cqw solid #3d2a12; margin-top: 1cqw; padding-top: 0.8cqw;">
+            <p class="text-right" style="font-family: Georgia, 'Times New Roman', serif; font-weight: 700; font-size: 3.8cqw; color: #2a1c08; line-height: 1.2;">ATK/{atk} DEF/{def}</p>
+          </div>
+        </div>
       </div>
 
-      <!-- Bloco texto + ATK/DEF: a caixa ocupa o que sobra (flex:1) e a
-           barra ATK/DEF vai colada no fim dela, sem vão (como na carta real). -->
-      <div class="w-full flex flex-col" style="flex: 1 1 auto; min-height: 0;">
-        <!-- Caixa de texto de efeito -->
-        <div class="w-full overflow-y-auto" style="flex: 1 1 auto; min-height: 0; background: linear-gradient(180deg, #f7ead0, #efdcb2); border-radius: 1.2cqw 1.2cqw 0 0; border: 0.5cqw solid #3d2a12; border-bottom: 0; box-shadow: inset 0 0 2cqw rgba(90, 60, 20, 0.35); padding: 1.2cqw 2.4cqw;">
-          {#if (descricao ?? "").trim()}
-            <p style="font-family: Georgia, 'Times New Roman', serif; font-size: 3.1cqw; color: #2a1c08; line-height: 1.4; white-space: pre-line;">{(descricao ?? "").trim()}</p>
-          {:else}
-            <p style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 3.1cqw; color: #8a7a55; line-height: 1.4;">(sem texto — comum no pack FM)</p>
-          {/if}
-        </div>
-
-        <!-- Barra ATK/DEF colada no fim da caixa -->
-        <div class="shrink-0 flex items-center justify-end" style="background: linear-gradient(180deg, #f7ead0, #e9d3a3); border-radius: 0 0 1.2cqw 1.2cqw; border: 0.5cqw solid #3d2a12; border-top: 0.3cqw solid #3d2a12; padding: 0.7cqw 2.4cqw; gap: 3cqw;">
-          <p style="font-family: Georgia, 'Times New Roman', serif; font-weight: 700; font-size: 3.4cqw; color: #2a1c08; line-height: 1.2;">ATK/{atk} DEF/{def}</p>
-        </div>
-      </div>
-
-      <!-- Número embaixo -->
-      <div class="shrink-0 flex items-center justify-between" style="padding: 0 1cqw;">
-        <p class="truncate" style="font-size: 2.3cqw; font-family: ui-monospace, monospace; color: rgba(255,255,255,0.75);" title={idCarta}>{idCarta || "···"}</p>
-        <p style="font-size: 2.3cqw; color: rgba(255,255,255,0.55);">Nv {estrelas} • {attrName(atributo)}</p>
+      <!-- 7. Microtexto de rodapé: 96→98,5%H (top 96% h 2,5%),
+           nº da carta à esquerda + copyright à direita, minúsculo. -->
+      <div class="absolute flex items-center justify-between" style="left: 3.5%; right: 3.5%; top: 96%; height: 2.5%;">
+        <p class="truncate" style="font-size: 1.9cqw; font-family: ui-monospace, monospace; color: rgba(255,255,255,0.8);" title={idCarta}>{idCarta || "···"}</p>
+        <p style="font-size: 1.9cqw; color: rgba(255,255,255,0.6); white-space: nowrap;">© ASTRALIS</p>
       </div>
     </div>
   </div>
