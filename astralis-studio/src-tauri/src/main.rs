@@ -1,8 +1,10 @@
 // Astralis Studio — backend Tauri REAL (dono: Editor Engineer).
 //
 // O que este backend faz (e o que NÃO faz):
-// - FAZ: ler/escrever/validar DADO de carta em schemas/examples/cards/*.json
-//   e lançar o Astralis de verdade (preview unificado, doc 10).
+// - FAZ: ler/escrever/validar DADO do projeto do editor em
+//   astralis-studio/projects/default/ (boot VAZIO: só o que importar aparece)
+//   e lançar o Astralis de verdade com --project <pasta> (preview unificado,
+//   doc 10). Nunca lê nem escreve em schemas/examples/ (jogo embutido).
 // - NÃO FAZ: calcular jogo, dano, efeito, fusão ou turno (R1). O editor nunca
 //   simula; só prepara dado e pede execução ao Astralis (R4).
 //
@@ -58,9 +60,9 @@ fn eh_id_snake(s: &str) -> bool {
         .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '_')
 }
 
-// Acha a raiz do repo (pasta que contém schemas/examples/cards) subindo a
-// partir do exe e do diretório atual. Funciona no `cargo tauri dev`, no exe
-// em src-tauri/target/release/ e no bundle instalado dentro do repo.
+// Acha a raiz do repo (pasta que contém astralis/ + Godot/) subindo a partir
+// do exe e do diretório atual. Só para LANCAR o jogo (exe + pasta astralis).
+// O DADO do editor mora em astralis-studio/projects/default/ (pasta_projeto).
 fn raiz_projeto() -> Option<PathBuf> {
     let mut bases: Vec<PathBuf> = Vec::new();
     if let Ok(exe) = std::env::current_exe() {
@@ -89,38 +91,108 @@ fn raiz_projeto() -> Option<PathBuf> {
         }
     }
     for b in bases {
-        if b.join("schemas").join("examples").join("cards").is_dir() {
+        if b.join("astralis").is_dir() {
             return Some(b);
         }
     }
     None
 }
 
-fn pasta_cartas() -> Result<PathBuf, String> {
-    pasta_exemplos(&["schemas", "examples", "cards"])
-}
-
-fn pasta_exemplos(sub: &[&str]) -> Result<PathBuf, String> {
-    match raiz_projeto() {
-        Some(mut r) => {
-            r.extend(sub);
-            if r.is_dir() {
-                Ok(r)
-            } else {
-                Err("Não achei a pasta schemas/examples a partir daqui. Rode o app de dentro do projeto Astralis.".to_string())
+// Acha a pasta astralis-studio/ (dona do projeto do editor) subindo a partir
+// do exe e do diretório atual. Funciona no `cargo tauri dev`, no exe em
+// src-tauri/target/release/ e no bundle instalado dentro do repo.
+fn raiz_studio() -> Option<PathBuf> {
+    let mut bases: Vec<PathBuf> = Vec::new();
+    if let Ok(exe) = std::env::current_exe() {
+        let mut p = exe.as_path();
+        for _ in 0..10 {
+            match p.parent() {
+                Some(par) => {
+                    p = par;
+                    bases.push(p.to_path_buf());
+                }
+                None => break,
             }
         }
-        None => Err("Não achei a pasta schemas/examples a partir daqui. Rode o app de dentro do projeto Astralis.".to_string()),
     }
+    if let Ok(cwd) = std::env::current_dir() {
+        let mut p = cwd.as_path();
+        bases.push(p.to_path_buf());
+        for _ in 0..8 {
+            match p.parent() {
+                Some(par) => {
+                    p = par;
+                    bases.push(p.to_path_buf());
+                }
+                None => break,
+            }
+        }
+    }
+    for b in &bases {
+        if b.file_name().and_then(|n| n.to_str()) == Some("astralis-studio") {
+            return Some(b.clone());
+        }
+        if b.join("astralis-studio").is_dir() {
+            return Some(b.join("astralis-studio"));
+        }
+    }
+    None
+}
+
+// Projeto do editor: astralis-studio/projects/default/ (boot VAZIO — só o que
+// importar aparece). Cria a estrutura se faltar (pastas + fusions/effects
+// vazios válidos). Todo comando de dado lê/escreve AQUI, nunca no jogo.
+fn pasta_projeto() -> Result<PathBuf, String> {
+    let studio = raiz_studio().ok_or_else(|| "Não achei a pasta astralis-studio/ a partir daqui. Rode o app de dentro do projeto Astralis.".to_string())?;
+    let proj = studio.join("projects").join("default");
+    garantir_projeto(&proj)?;
+    Ok(proj)
+}
+
+fn garantir_projeto(proj: &std::path::Path) -> Result<(), String> {
+    for sub in [
+        "cards", "duelists", "decks", "arenas", "scenes",
+        "assets/cards", "assets/portraits", "assets/backgrounds", "backups",
+    ] {
+        std::fs::create_dir_all(proj.join(sub))
+            .map_err(|e| format!("Não consegui criar projects/default/{sub}: {e}"))?;
+    }
+    for (nome, base) in [
+        ("fusions.json", "{\"schema_version\": 1, \"recipes\": [], \"rules\": []}\n"),
+        ("effects.json", "{\"schema_version\": 1, \"effects\": []}\n"),
+    ] {
+        let arq = proj.join(nome);
+        if !arq.is_file() {
+            std::fs::write(&arq, base)
+                .map_err(|e| format!("Não consegui criar projects/default/{nome}: {e}"))?;
+        }
+    }
+    Ok(())
+}
+
+fn projeto_sub(sub: &str) -> Result<PathBuf, String> {
+    let proj = pasta_projeto()?;
+    let p = proj.join(sub);
+    std::fs::create_dir_all(&p)
+        .map_err(|e| format!("Não consegui abrir projects/default/{sub}: {e}"))?;
+    Ok(p)
+}
+
+fn projeto_arquivo(nome: &str) -> Result<PathBuf, String> {
+    Ok(pasta_projeto()?.join(nome))
+}
+
+fn pasta_cartas() -> Result<PathBuf, String> {
+    projeto_sub("cards")
 }
 
 // IDs de efeito que o Astralis sabe executar (R4): lidos de
-// schemas/examples/effects.json. Se o arquivo faltar, volta vazio e a
+// projects/default/effects.json. Se o arquivo faltar, volta vazio e a
 // checagem de "efeito desconhecido" é pulada (sem travar o resto).
 fn efeitos_conhecidos() -> Vec<String> {
-    let caminho = match raiz_projeto() {
-        Some(r) => r.join("schemas").join("examples").join("effects.json"),
-        None => return Vec::new(),
+    let caminho = match pasta_projeto() {
+        Ok(p) => p.join("effects.json"),
+        Err(_) => return Vec::new(),
     };
     let texto = match std::fs::read_to_string(&caminho) {
         Ok(t) => t,
@@ -160,7 +232,7 @@ fn escrever_json_valor(caminho: &std::path::Path, valor: &serde_json::Value, o_q
         .map_err(|e| format!("Não consegui salvar {o_que} em {}: {e}", caminho.display()))
 }
 
-// IDs de carta que existem de verdade em schemas/examples/cards/*.json.
+// IDs de carta que existem de verdade em projects/default/cards/*.json.
 // Usado para conferir refs de deck/fusão (R4: só vale o que existe).
 fn cartas_ids() -> Result<std::collections::HashSet<String>, String> {
     let pasta = pasta_cartas()?;
@@ -205,8 +277,8 @@ fn cartas_por_id() -> Result<std::collections::HashMap<String, serde_json::Value
     Ok(mapa)
 }
 
-fn ids_de_pasta(sub: &[&str]) -> Result<std::collections::HashSet<String>, String> {
-    let pasta = pasta_exemplos(sub)?;
+fn ids_de_projeto(sub: &str) -> Result<std::collections::HashSet<String>, String> {
+    let pasta = projeto_sub(sub)?;
     let mut ids = std::collections::HashSet::new();
     let entries = std::fs::read_dir(&pasta)
         .map_err(|e| format!("Não consegui abrir {}: {e}", pasta.display()))?;
@@ -231,12 +303,24 @@ fn ids_de_pasta(sub: &[&str]) -> Result<std::collections::HashSet<String>, Strin
 }
 
 fn arenas_ids() -> std::collections::HashSet<String> {
-    ids_de_pasta(&["schemas", "examples", "arenas"]).unwrap_or_default()
+    ids_de_projeto("arenas").unwrap_or_default()
 }
 
-// Lança o Astralis de verdade com um setup rápido externo (--setup <temp>).
-// O jogo já aceita: Godot --path astralis -- --setup "caminho". Nunca toca no
-// schemas/examples/duel_setup.json do repo (starter intacto).
+// Monta o trecho do jogo: --project <pasta do editor> (+ --setup <temp> no
+// duelo, por cima). O jogo lê TUDO da pasta do --project (doc: runtime
+// --project). Sem fingir: quem executa é o Astralis (R1/R4).
+fn montar_args_jogo(projeto: &str, setup: Option<&str>) -> Vec<String> {
+    let mut args = vec!["--project".to_string(), projeto.to_string()];
+    if let Some(s) = setup {
+        args.push("--setup".to_string());
+        args.push(s.to_string());
+    }
+    args
+}
+
+// Lança o Astralis de verdade com um setup rápido externo (--setup <temp>)
+// POR CIMA do projeto do editor (--project <projects/default>).
+// O jogo já aceita os dois. Nunca toca no duel_setup do jogo (starter intacto).
 fn lancar_astralis_com_setup(setup: &std::path::Path) -> Result<String, String> {
     let raiz = raiz_projeto().ok_or_else(|| "Não achei a raiz do projeto para lançar o jogo.".to_string())?;
     let godot = raiz.join("Godot").join("Godot_v4.7.2-stable_win64.exe");
@@ -247,11 +331,14 @@ fn lancar_astralis_com_setup(setup: &std::path::Path) -> Result<String, String> 
     if !projeto.is_dir() {
         return Err("Não achei a pasta astralis/ do jogo.".to_string());
     }
+    let pasta_ed = pasta_projeto()?;
+    let extra = montar_args_jogo(&pasta_ed.to_string_lossy(), Some(&setup.to_string_lossy()));
     let status = std::process::Command::new("cmd")
-        .args(["/C", "start", "", &godot.to_string_lossy(), "--path", &projeto.to_string_lossy(), "--", "--setup", &setup.to_string_lossy()])
+        .args(["/C", "start", "", &godot.to_string_lossy(), "--path", &projeto.to_string_lossy(), "--"])
+        .args(&extra)
         .spawn();
     match status {
-        Ok(_) => Ok("Astralis aberto de verdade. Bom jogo!".to_string()),
+        Ok(_) => Ok("Astralis aberto de verdade (lendo projects/default + setup do duelo). Bom jogo!".to_string()),
         Err(e) => Err(format!("O jogo não abriu: {e}")),
     }
 }
@@ -485,7 +572,7 @@ fn salvar_carta(carta: serde_json::Value) -> Result<ResultadoOk, String> {
     Ok(ResultadoOk {
         ok: true,
         file: file.clone(),
-        mensagem: format!("Salvo em schemas/examples/cards/{file} (dado puro, sem mexer no jogo)."),
+        mensagem: format!("Salvo em projects/default/cards/{file} (dado puro, sem mexer no jogo)."),
     })
 }
 
@@ -537,7 +624,7 @@ fn listar_arquivos(pasta: &std::path::Path, o_que: &str) -> Result<Vec<DuelistaA
 // Somente leitura: o Studio mostra duelistas/decks, nunca edita (R1/R4).
 #[tauri::command]
 fn listar_duelistas() -> Result<Vec<DuelistaArquivo>, String> {
-    let pasta = pasta_exemplos(&["schemas", "examples", "duelists"])?;
+    let pasta = projeto_sub("duelists")?;
     listar_arquivos(&pasta, "duelista")
 }
 
@@ -546,10 +633,10 @@ fn ler_deck(deck_id: String) -> Result<DeckLido, String> {
     if !eh_id_snake(&deck_id) {
         return Err("ID de deck inválido.".to_string());
     }
-    let pasta = pasta_exemplos(&["schemas", "examples", "decks"])?;
+    let pasta = projeto_sub("decks")?;
     let caminho = pasta.join(format!("{deck_id}.json"));
     let texto = std::fs::read_to_string(&caminho)
-        .map_err(|_| format!("Deck \"{deck_id}\" não encontrado em schemas/examples/decks/."))?;
+        .map_err(|_| format!("Deck \"{deck_id}\" não encontrado em projects/default/decks/."))?;
     let v: serde_json::Value =
         serde_json::from_str(&texto).map_err(|e| format!("{deck_id}.json tem JSON quebrado: {e}"))?;
     let nome = v.get("name").and_then(|x| x.as_str()).unwrap_or(&deck_id).to_string();
@@ -646,24 +733,24 @@ fn salvar_duelista(duelista: serde_json::Value) -> Result<ResultadoOk, String> {
     if !eh_id_snake(&id) {
         return Err("ID inválido: use só letra minúscula, número e underline — exemplo: duelist_meu_rival.".to_string());
     }
-    let decks = ids_de_pasta(&["schemas", "examples", "decks"]).unwrap_or_default();
+    let decks = ids_de_projeto("decks").unwrap_or_default();
     let erros = checar_duelista(&duelista, &decks);
     if !erros.is_empty() {
         let lista: Vec<String> = erros.iter().map(|e| format!("- {}", e.mensagem)).collect();
         return Err(format!("Arruma antes de salvar:\n{}", lista.join("\n")));
     }
-    let pasta = pasta_exemplos(&["schemas", "examples", "duelists"])?;
+    let pasta = projeto_sub("duelists")?;
     let file = escrever_duelista(&pasta, &duelista, &id)?;
     Ok(ResultadoOk {
         ok: true,
         file: file.clone(),
-        mensagem: format!("Salvo em schemas/examples/duelists/{file} (dado puro, sem mexer no jogo)."),
+        mensagem: format!("Salvo em projects/default/duelists/{file} (dado puro, sem mexer no jogo)."),
     })
 }
 
 #[tauri::command]
 fn validar_duelista(duelista: serde_json::Value) -> Vec<ErroValidacao> {
-    let decks = ids_de_pasta(&["schemas", "examples", "decks"]).unwrap_or_default();
+    let decks = ids_de_projeto("decks").unwrap_or_default();
     checar_duelista(&duelista, &decks)
 }
 
@@ -691,16 +778,21 @@ fn jogar_carta(carta: serde_json::Value) -> Result<ResultadoOk, String> {
     if !projeto.is_dir() {
         return Err("Salvei a carta, mas não achei a pasta astralis/ do jogo.".to_string());
     }
+    let pasta_ed = pasta_projeto()
+        .map_err(|e| format!("Salvei a carta, mas {e}"))?;
+    let extra = montar_args_jogo(&pasta_ed.to_string_lossy(), None);
 
     // Lança via shell (cmd start): janela normal, processo solto do Studio.
+    // O jogo lê TUDO de projects/default/ via --project (só o que importar).
     let status = std::process::Command::new("cmd")
-        .args(["/C", "start", "", &godot.to_string_lossy(), "--path", &projeto.to_string_lossy()])
+        .args(["/C", "start", "", &godot.to_string_lossy(), "--path", &projeto.to_string_lossy(), "--"])
+        .args(&extra)
         .spawn();
     match status {
         Ok(_) => Ok(ResultadoOk {
             ok: true,
             file,
-            mensagem: "Carta salva e Astralis aberto de verdade. Bom jogo!".to_string(),
+            mensagem: "Carta salva e Astralis aberto de verdade (lendo projects/default). Bom jogo!".to_string(),
         }),
         Err(e) => Err(format!("Salvei a carta, mas o jogo não abriu: {e}")),
     }
@@ -750,7 +842,7 @@ fn checar_deck(deck: &serde_json::Value, cartas: &std::collections::HashSet<Stri
 
 #[tauri::command]
 fn listar_decks() -> Result<Vec<DuelistaArquivo>, String> {
-    let pasta = pasta_exemplos(&["schemas", "examples", "decks"])?;
+    let pasta = projeto_sub("decks")?;
     listar_arquivos(&pasta, "deck")
 }
 
@@ -766,13 +858,13 @@ fn salvar_deck(deck: serde_json::Value) -> Result<ResultadoOk, String> {
         let lista: Vec<String> = erros.iter().map(|e| format!("- {}", e.mensagem)).collect();
         return Err(format!("Arruma antes de salvar:\n{}", lista.join("\n")));
     }
-    let pasta = pasta_exemplos(&["schemas", "examples", "decks"])?;
+    let pasta = projeto_sub("decks")?;
     let destino = pasta.join(format!("{id}.json"));
     escrever_json_valor(&destino, &deck, &format!("deck {id}"))?;
     Ok(ResultadoOk {
         ok: true,
         file: format!("{id}.json"),
-        mensagem: format!("Salvo em schemas/examples/decks/{id}.json (dado puro, sem mexer no jogo)."),
+        mensagem: format!("Salvo em projects/default/decks/{id}.json (dado puro, sem mexer no jogo)."),
     })
 }
 
@@ -783,13 +875,12 @@ fn validar_deck(deck: serde_json::Value) -> Vec<ErroValidacao> {
 }
 
 // ---- FUSÕES (bloco 3) ----
-// Formato preservado de schemas/examples/fusions.json:
+// Formato preservado de projects/default/fusions.json:
 // { schema_version, recipes: [{id, input:{card_a,card_b}, result}], rules: [...] }.
 // Testar fusão NÃO executa jogo (R1): só confere o dado — receita exata vence,
 // regra genérica é fallback por prioridade, ordem de A/B não importa.
 fn caminho_fusoes() -> Result<std::path::PathBuf, String> {
-    let raiz = raiz_projeto().ok_or_else(|| "Não achei a raiz do projeto. Rode o app de dentro do projeto Astralis.".to_string())?;
-    Ok(raiz.join("schemas").join("examples").join("fusions.json"))
+    projeto_arquivo("fusions.json")
 }
 
 fn checar_fusoes(dado: &serde_json::Value, cartas: &std::collections::HashSet<String>) -> Vec<ErroValidacao> {
@@ -876,6 +967,9 @@ fn checar_fusoes(dado: &serde_json::Value, cartas: &std::collections::HashSet<St
 #[tauri::command]
 fn ler_fusoes() -> Result<serde_json::Value, String> {
     let caminho = caminho_fusoes()?;
+    if !caminho.is_file() {
+        return Ok(serde_json::json!({"schema_version": 1, "recipes": [], "rules": []}));
+    }
     ler_arquivo_json(&caminho, "fusions.json")
 }
 
@@ -892,7 +986,7 @@ fn salvar_fusoes(dado: serde_json::Value) -> Result<ResultadoOk, String> {
     Ok(ResultadoOk {
         ok: true,
         file: "fusions.json".to_string(),
-        mensagem: "Salvo em schemas/examples/fusions.json (dado puro, sem mexer no jogo).".to_string(),
+        mensagem: "Salvo em projects/default/fusions.json (dado puro, sem mexer no jogo).".to_string(),
     })
 }
 
@@ -1016,13 +1110,12 @@ fn testar_fusao(card_a: String, card_b: String) -> Result<ResultadoFusao, String
 }
 
 // ---- EFEITOS (bloco 4) ----
-// Galeria + builder salvam o MESMO dado de schemas/examples/effects.json
+// Galeria + builder salvam o MESMO dado de projects/default/effects.json
 // (blocos trigger→conditions→target→actions→flow, effect.schema.json).
 // SEM Testar/Play de efeito: o motor não existe no runtime (R4) — a tela
 // avisa "execução vem depois". Aqui só valida o dado.
 fn caminho_efeitos() -> Result<std::path::PathBuf, String> {
-    let raiz = raiz_projeto().ok_or_else(|| "Não achei a raiz do projeto. Rode o app de dentro do projeto Astralis.".to_string())?;
-    Ok(raiz.join("schemas").join("examples").join("effects.json"))
+    projeto_arquivo("effects.json")
 }
 
 const TRIGGERS_OK: [&str; 6] = ["card_summoned", "card_destroyed", "turn_started", "turn_finished", "attack_started", "damage_dealt"];
@@ -1139,6 +1232,9 @@ fn checar_efeitos(dado: &serde_json::Value) -> Vec<ErroValidacao> {
 #[tauri::command]
 fn ler_efeitos() -> Result<serde_json::Value, String> {
     let caminho = caminho_efeitos()?;
+    if !caminho.is_file() {
+        return Ok(serde_json::json!({"schema_version": 1, "effects": []}));
+    }
     ler_arquivo_json(&caminho, "effects.json")
 }
 
@@ -1154,7 +1250,7 @@ fn salvar_efeitos(dado: serde_json::Value) -> Result<ResultadoOk, String> {
     Ok(ResultadoOk {
         ok: true,
         file: "effects.json".to_string(),
-        mensagem: "Salvo em schemas/examples/effects.json (dado puro, sem mexer no jogo).".to_string(),
+        mensagem: "Salvo em projects/default/effects.json (dado puro, sem mexer no jogo).".to_string(),
     })
 }
 
@@ -1166,8 +1262,9 @@ fn validar_efeito(efeito: serde_json::Value) -> Vec<ErroValidacao> {
 // ---- DUELO RÁPIDO (bloco 5) ----
 // Preview unificado (doc 10): valida, escreve o setup rápido num arquivo
 // temporário do SO (std::env::temp_dir()/duel_studio_rapido.json) e lança o
-// Godot passando --setup <temp> (o jogo já aceita). Nunca toca no
-// schemas/examples/duel_setup.json do repo (starter intacto).
+// Godot com --project <projects/default> + --setup <temp> (o jogo já aceita
+// os dois: lê o projeto e põe o setup por cima). Nunca toca no duel_setup do
+// jogo (starter intacto).
 // O editor nunca simula duelo (R1).
 #[derive(Debug, serde::Deserialize)]
 struct PedidoDuelo {
@@ -1215,7 +1312,7 @@ fn jogar_duelo(pedido: PedidoDuelo) -> Result<ResultadoOk, String> {
     if !arenas.is_empty() && !arenas.contains(&arena) {
         return Err(format!("Arena \"{arena}\" não existe. Escolha uma da lista."));
     }
-    let pasta_duel = pasta_exemplos(&["schemas", "examples", "duelists"])?;
+    let pasta_duel = projeto_sub("duelists")?;
     let deck_de = |duel_id: &str| -> Result<String, String> {
         let caminho = pasta_duel.join(format!("{duel_id}.json"));
         let v = ler_arquivo_json(&caminho, &format!("duelista {duel_id}"))?;
@@ -1224,7 +1321,7 @@ fn jogar_duelo(pedido: PedidoDuelo) -> Result<ResultadoOk, String> {
     };
     let deck1 = deck_de(&pedido.duelista1)?;
     let deck2 = deck_de(&pedido.duelista2)?;
-    let decks = ids_de_pasta(&["schemas", "examples", "decks"])?;
+    let decks = ids_de_projeto("decks")?;
     for (duel_id, deck) in [(&pedido.duelista1, &deck1), (&pedido.duelista2, &deck2)] {
         if !decks.contains(deck) {
             return Err(format!("Deck \"{deck}\" do duelista \"{duel_id}\" não existe. Abra a aba Decks e confira."));
@@ -1247,20 +1344,19 @@ fn jogar_duelo(pedido: PedidoDuelo) -> Result<ResultadoOk, String> {
         Ok(msg) => Ok(ResultadoOk {
             ok: true,
             file: temp.to_string_lossy().to_string(),
-            mensagem: format!("Duelo rápido salvo no temporário ({}) e {msg} O starter do projeto continua intacto.", temp.display()),
+            mensagem: format!("Duelo rápido salvo no temporário ({}) e {msg}", temp.display()),
         }),
         Err(e) => Err(format!("Duelo rápido salvo no temporário, mas {e}")),
     }
 }
 
 // ---- CENAS SIMPLES (bloco 6) ----
-// JSON simples em campaign/scenes/<id>.json (formato no README do editor;
-// schema formal fica p/ depois). Sem grafo/timeline agora: só lista de falas
-// (personagem, texto, fundo opcional). Sem Play de cena (o Astralis ainda não
-// lê esse formato — R4, sem fingir).
+// JSON simples em projects/default/scenes/<id>.json (formato no README do
+// editor; schema formal fica p/ depois). Sem grafo/timeline agora: só lista de
+// falas (personagem, texto, fundo opcional). Sem Play de cena (o Astralis ainda
+// não lê esse formato — R4, sem fingir).
 fn pasta_cenas() -> Result<std::path::PathBuf, String> {
-    let raiz = raiz_projeto().ok_or_else(|| "Não achei a raiz do projeto. Rode o app de dentro do projeto Astralis.".to_string())?;
-    Ok(raiz.join("campaign").join("scenes"))
+    projeto_sub("scenes")
 }
 
 fn checar_cena(cena: &serde_json::Value) -> Vec<ErroValidacao> {
@@ -1320,13 +1416,13 @@ fn salvar_cena(cena: serde_json::Value) -> Result<ResultadoOk, String> {
         return Err(format!("Arruma antes de salvar:\n{}", lista.join("\n")));
     }
     let pasta = pasta_cenas()?;
-    std::fs::create_dir_all(&pasta).map_err(|e| format!("Não consegui criar campaign/scenes/: {e}"))?;
+    std::fs::create_dir_all(&pasta).map_err(|e| format!("Não consegui criar projects/default/scenes/: {e}"))?;
     let destino = pasta.join(format!("{id}.json"));
     escrever_json_valor(&destino, &cena, &format!("cena {id}"))?;
     Ok(ResultadoOk {
         ok: true,
         file: format!("{id}.json"),
-        mensagem: format!("Salva em campaign/scenes/{id}.json (dado simples; grafo/timeline vêm depois)."),
+        mensagem: format!("Salva em projects/default/scenes/{id}.json (dado simples; grafo/timeline vêm depois)."),
     })
 }
 
@@ -1356,8 +1452,7 @@ struct ResultadoProjeto {
 
 #[tauri::command]
 fn validar_projeto() -> Result<ResultadoProjeto, String> {
-    let raiz = raiz_projeto().ok_or_else(|| "Não achei a raiz do projeto. Rode o app de dentro do projeto Astralis.".to_string())?;
-    let exemplos = raiz.join("schemas").join("examples");
+    let proj = pasta_projeto()?;
     let mut itens: Vec<ItemProjeto> = Vec::new();
     let mut erros: usize = 0;
     let mut avisos: usize = 0;
@@ -1366,7 +1461,7 @@ fn validar_projeto() -> Result<ResultadoProjeto, String> {
     let mut n_cartas = 0;
     let mut err_cartas = 0;
     let mut ids_cartas: std::collections::HashSet<String> = std::collections::HashSet::new();
-    let pasta_c = exemplos.join("cards");
+    let pasta_c = proj.join("cards");
     if let Ok(entries) = std::fs::read_dir(&pasta_c) {
         let conhecidos = efeitos_conhecidos();
         for e in entries.flatten() {
@@ -1398,7 +1493,7 @@ fn validar_projeto() -> Result<ResultadoProjeto, String> {
     let mut err_decks = 0;
     let mut n_decks = 0;
     let mut fora_do_alvo = 0;
-    if let Ok(entries) = std::fs::read_dir(exemplos.join("decks")) {
+    if let Ok(entries) = std::fs::read_dir(proj.join("decks")) {
         for e in entries.flatten() {
             let p = e.path();
             if p.extension().and_then(|x| x.to_str()) != Some("json") {
@@ -1432,7 +1527,7 @@ fn validar_projeto() -> Result<ResultadoProjeto, String> {
     let mut ids_duelistas: std::collections::HashSet<String> = std::collections::HashSet::new();
     let mut err_duel = 0;
     let mut n_duel = 0;
-    if let Ok(entries) = std::fs::read_dir(exemplos.join("duelists")) {
+    if let Ok(entries) = std::fs::read_dir(proj.join("duelists")) {
         for e in entries.flatten() {
             let p = e.path();
             if p.extension().and_then(|x| x.to_str()) != Some("json") {
@@ -1458,7 +1553,7 @@ fn validar_projeto() -> Result<ResultadoProjeto, String> {
     });
 
     // Fusões.
-    match std::fs::read_to_string(exemplos.join("fusions.json")).ok().and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok()) {
+    match std::fs::read_to_string(proj.join("fusions.json")).ok().and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok()) {
         Some(v) => {
             let n = checar_fusoes(&v, &ids_cartas).len();
             erros += n;
@@ -1473,7 +1568,7 @@ fn validar_projeto() -> Result<ResultadoProjeto, String> {
     }
 
     // Efeitos.
-    match std::fs::read_to_string(exemplos.join("effects.json")).ok().and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok()) {
+    match std::fs::read_to_string(proj.join("effects.json")).ok().and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok()) {
         Some(v) => {
             let n = checar_efeitos(&v).len();
             erros += n;
@@ -1486,8 +1581,10 @@ fn validar_projeto() -> Result<ResultadoProjeto, String> {
         }
     }
 
-    // duel_setup: refs + LP.
-    match std::fs::read_to_string(exemplos.join("duel_setup.json")).ok().and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok()) {
+    // duel_setup: opcional no projeto do editor (o Duelo rápido monta o setup
+    // na hora e passa --setup por cima). Ausente = neutro; presente com refs
+    // quebradas = erro de dado.
+    match std::fs::read_to_string(proj.join("duel_setup.json")).ok().and_then(|t| serde_json::from_str::<serde_json::Value>(&t).ok()) {
         Some(v) => {
             let mut n = 0;
             for lado in ["duelist1", "duelist2"] {
@@ -1507,13 +1604,12 @@ fn validar_projeto() -> Result<ResultadoProjeto, String> {
             itens.push(ItemProjeto { area: "Duelo".to_string(), ok: n == 0, detalhe: if n == 0 { "setup aponta para duelistas/decks que existem".to_string() } else { format!("{n} problemas no duel_setup.json") } });
         }
         None => {
-            erros += 1;
-            itens.push(ItemProjeto { area: "Duelo".to_string(), ok: false, detalhe: "duel_setup.json quebrado ou sumido".to_string() });
+            itens.push(ItemProjeto { area: "Duelo".to_string(), ok: true, detalhe: "sem setup salvo (o Duelo rápido monta na hora)".to_string() });
         }
     }
 
     // Cenas (não travam nada no jogo ainda, mas contam como erro de dado).
-    let pasta_s = raiz.join("campaign").join("scenes");
+    let pasta_s = proj.join("scenes");
     let mut n_cenas = 0;
     let mut err_cenas = 0;
     if let Ok(entries) = std::fs::read_dir(&pasta_s) {
@@ -1548,9 +1644,9 @@ fn validar_projeto() -> Result<ResultadoProjeto, String> {
 // Lê um .json pack (file picker no frontend, conteúdo via invoke), valida TUDO
 // antes de mexer em nada (pack inválido = erro e o projeto continua intacto)
 // e SUBSTITUI o conteúdo do projeto pelo conteúdo do pack: cartas/duelistas/
-// decks viram arquivos em schemas/examples/... (o que não está no pack é
+// decks viram arquivos em projects/default/... (o que não está no pack é
 // apagado) e fusions.json é trocado inteiro pelo do pack. Antes de substituir,
-// copia o conteúdo atual para schemas/examples/backups/pack_<data>_<hora>/.
+// copia o conteúdo atual para projects/default/backups/pack_<data>_<hora>/.
 // Só dado, nada de jogo (R1/R4). Resumo em PT-BR com contagens + "backup em".
 // Formato aceito: chaves PT (cartas/duelistas/decks/fusoes, ex. FM Original
 // Pack) ou EN (cards/duelists/decks/fusions). `equips` não tem schema V1
@@ -1617,11 +1713,14 @@ fn carimbo_data_hora() -> String {
     format!("{:04}{:02}{:02}_{:02}{:02}{:02}", ano, m, d, resto / 3600, (resto % 3600) / 60, resto % 60)
 }
 
-// Rótulo curto para mostrar ao usuário: "schemas/examples/backups/pack_..."
+// Rótulo curto para mostrar ao usuário: "projects/default/backups/pack_..."
 // quando der, senão o caminho completo.
 fn rotulo_backup(dir: &std::path::Path) -> String {
     let s = dir.to_string_lossy().replace('\\', "/");
-    if let Some(pos) = s.find("schemas/examples/backups") {
+    if let Some(pos) = s.find("projects/default/backups") {
+        return s[pos..].to_string();
+    }
+    if let Some(pos) = s.find("astralis-studio/projects/default/backups") {
         return s[pos..].to_string();
     }
     if let Some(pos) = s.find("backups/pack_") {
@@ -1652,16 +1751,16 @@ fn backup_pasta_json(origem: &std::path::Path, destino: &std::path::Path) -> usi
 }
 
 // Copia o conteúdo atual (cartas/duelistas/decks/fusions.json) para
-// <examples>/backups/pack_<data>_<hora>/. Devolve (pasta, rótulo). Não apaga
-// nem altera nada do projeto — só copia.
+// <projects/default>/backups/pack_<data>_<hora>/. Devolve (pasta, rótulo).
+// Não apaga nem altera nada do projeto — só copia.
 fn backup_conteudo_atual(
     pasta_cartas: &std::path::Path,
     pasta_duelistas: &std::path::Path,
     pasta_decks: &std::path::Path,
     caminho_fusoes: &std::path::Path,
 ) -> Result<(std::path::PathBuf, String), String> {
-    let exemplos = pasta_cartas.parent().ok_or_else(|| "Não achei a pasta schemas/examples a partir daqui.".to_string())?;
-    let raiz_backups = exemplos.join("backups");
+    let projeto = pasta_cartas.parent().ok_or_else(|| "Não achei a pasta projects/default a partir daqui.".to_string())?;
+    let raiz_backups = projeto.join("backups");
     std::fs::create_dir_all(&raiz_backups)
         .map_err(|e| format!("Não consegui criar a pasta de backup em {}: {e}", raiz_backups.display()))?;
     let carimbo = carimbo_data_hora();
@@ -1710,14 +1809,14 @@ fn importar_pack_valor(pack: &serde_json::Value, nome: &str) -> Result<Resultado
         Some(serde_json::Value::Number(n)) if n.as_i64() == Some(1) => {}
         _ => return Err(format!("\"{nome}\" não é um pack V1: falta \"schema_version\": 1 no começo do arquivo.")),
     }
-    let raiz = raiz_projeto().ok_or_else(|| "Não achei a raiz do projeto. Rode o app de dentro do projeto Astralis.".to_string())?;
-    let pasta_cartas = raiz.join("schemas").join("examples").join("cards");
-    let pasta_duelistas = raiz.join("schemas").join("examples").join("duelists");
-    let pasta_decks = raiz.join("schemas").join("examples").join("decks");
-    let caminho_fusoes = raiz.join("schemas").join("examples").join("fusions.json");
+    let proj = pasta_projeto()?;
+    let pasta_cartas = proj.join("cards");
+    let pasta_duelistas = proj.join("duelists");
+    let pasta_decks = proj.join("decks");
+    let caminho_fusoes = proj.join("fusions.json");
     for (p, rotulo) in [(&pasta_cartas, "cartas"), (&pasta_duelistas, "duelistas"), (&pasta_decks, "decks")] {
         if !p.is_dir() {
-            return Err(format!("Não achei a pasta schemas/examples/{rotulo} a partir daqui. Rode o app de dentro do projeto Astralis."));
+            return Err(format!("Não achei a pasta projects/default/{rotulo} a partir daqui. Rode o app de dentro do projeto Astralis."));
         }
     }
 
@@ -2049,8 +2148,9 @@ fn importar_pack(conteudo: String, nome: String) -> Result<ResultadoImportacao, 
 
 // ---- ASSETS (blocos 1 e 8) ----
 // Arrastar PNG para carta/duelista/cena: valida, copia para
-// astralis/assets/<cards|portraits|backgrounds>/ e devolve o caminho para
-// referenciar no dado. Sem arte, a tela mostra placeholder cinza (frontend).
+// projects/default/assets/<cards|portraits|backgrounds>/ e devolve o caminho
+// para referenciar no dado (relativo à pasta do projeto, que o jogo lê via
+// --project). Sem arte, a tela mostra placeholder cinza (frontend).
 #[derive(Debug, serde::Deserialize)]
 struct PedidoAsset {
     #[serde(default)]
@@ -2128,8 +2228,8 @@ fn importar_asset(pedido: PedidoAsset) -> Result<ResultadoOk, String> {
     if limpo.len() > 60 {
         limpo.truncate(60);
     }
-    let raiz = raiz_projeto().ok_or_else(|| "Não achei a raiz do projeto. Rode o app de dentro do projeto Astralis.".to_string())?;
-    let pasta = raiz.join("astralis").join("assets").join(subpasta);
+    let proj = pasta_projeto()?;
+    let pasta = proj.join("assets").join(subpasta);
     std::fs::create_dir_all(&pasta)
         .map_err(|e| format!("Não consegui criar a pasta de artes: {e}"))?;
     let destino = pasta.join(format!("{limpo}.png"));
@@ -2139,7 +2239,7 @@ fn importar_asset(pedido: PedidoAsset) -> Result<ResultadoOk, String> {
     Ok(ResultadoOk {
         ok: true,
         file: relativo.clone(),
-        mensagem: format!("Imagem salva em astralis/{relativo} e ligada aqui. Se apagar a arte, a tela mostra um cinza no lugar."),
+        mensagem: format!("Imagem salva em projects/default/{relativo} e ligada aqui. Se apagar a arte, a tela mostra um cinza no lugar."),
     })
 }
 
@@ -2645,6 +2745,30 @@ mod testes {
         assert!(!dir.join("cards").join("card_pack_nova.json").exists());
         assert!(!dir.join("backups").exists());
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn projeto_mora_em_projects_default() {
+        let p = pasta_projeto().unwrap();
+        assert!(p.ends_with("projects/default"), "projeto fora do lugar: {}", p.display());
+        for sub in ["cards", "duelists", "decks", "arenas"] {
+            assert!(p.join(sub).is_dir(), "faltou projects/default/{sub}");
+        }
+    }
+
+    #[test]
+    fn args_jogo_levam_project() {
+        assert_eq!(montar_args_jogo("P", None), vec!["--project".to_string(), "P".to_string()]);
+        assert_eq!(
+            montar_args_jogo("P", Some("S")),
+            vec!["--project".to_string(), "P".to_string(), "--setup".to_string(), "S".to_string()]
+        );
+    }
+
+    #[test]
+    fn fusoes_vazias_passam() {
+        let dado = serde_json::json!({"schema_version": 1, "recipes": [], "rules": []});
+        assert!(checar_fusoes(&dado, &std::collections::HashSet::new()).is_empty());
     }
 
     #[test]
