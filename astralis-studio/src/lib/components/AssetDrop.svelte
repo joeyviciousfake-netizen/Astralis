@@ -1,6 +1,6 @@
 <script lang="ts">
   // AssetDrop — arrastar PNG para carta/duelista/cena (doc 09/14).
-  // Importa o arquivo para astralis/assets/... via comando Rust importar_asset
+  // Importa o arquivo para projects/default/assets/... via comando Rust importar_asset
   // e devolve o caminho para referenciar no dado. Sem arte, quem mostra é um
   // placeholder cinza automático (quem usa este componente desenha o cinza).
   // Erros sempre em PT-BR dizendo onde clicar.

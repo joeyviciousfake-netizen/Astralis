@@ -3,7 +3,7 @@
   // SIMPLES: nome, retrato (arrastar PNG), deck (select), vida + arquétipo num
   // clique (Bravo | Equilibrado | Defensor). AVANÇADO: 3 sliders + dropdown de
   // dificuldade + arena/música. Mesmo dado, mesma validação (Rust espelha o
-  // duelist.schema.json). Salva em schemas/examples/duelists/ via Tauri.
+  // duelist.schema.json). Salva em projects/default/duelists/ via Tauri.
   // Duplicar antes de Criar (doc 14). Vida é dado do duelista (doc 05 §5.3); a
   // batalha de verdade usa o duel_setup — o Duelo rápido sugere este valor.
   import { useDuelists } from "$lib/stores/duelists.svelte";

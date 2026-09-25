@@ -1,7 +1,7 @@
 <script lang="ts">
   // ScenesStudio — editor simples de cenas (docs 08/09 + bloco 6).
   // Lista de cenas + editor de falas (personagem, texto, fundo), salvando JSON
-  // simples em campaign/scenes/. Sem grafo/timeline agora; sem Play de cena
+  // simples em projects/default/scenes/. Sem grafo/timeline agora; sem Play de cena
   // (o Astralis ainda não lê esse formato — R4). Formato no README do editor.
   import { useCenas } from "$lib/stores/scenes.svelte";
   import type { Cena } from "$lib/stores/scenes.svelte";

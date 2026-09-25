@@ -36,7 +36,7 @@
   // ---- IMPORTAR PACK (.json) ----
   // File picker → valida TUDO antes de mexer em nada (pack inválido = erro e
   // o projeto continua intacto) → backup automático do conteúdo atual para
-  // schemas/examples/backups/pack_<data>_<hora>/ → SUBSTITUI o conteúdo do
+  // projects/default/backups/pack_<data>_<hora>/ → SUBSTITUI o conteúdo do
   // projeto pelo conteúdo do pack (o que não está no pack é apagado;
   // fusions.json é trocado inteiro). Só dado, nada de jogo (R1/R4).
   // Precisa do app (escreve arquivos): no navegador é só leitura.

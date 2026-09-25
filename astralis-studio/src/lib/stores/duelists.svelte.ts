@@ -99,7 +99,7 @@ export function useDuelists() {
     getById(id: string): Duelist | null {
       return duelistsFull.find((d) => d.id === id) ?? null;
     },
-    // Salva o duelista no disco (schemas/examples/duelists/<id>.json via Rust,
+    // Salva o duelista no disco (projects/default/duelists/<id>.json via Rust,
     // que valida antes). Atualiza a lista local.
     async save(d: Duelist) {
       const { file: _drop, ...data } = d;

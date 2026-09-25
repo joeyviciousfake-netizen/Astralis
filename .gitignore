@@ -12,7 +12,8 @@ build/
 dist/
 
 # Backups automáticos do botão IMPORTAR do Studio (gerados na hora, com data/hora)
-schemas/examples/backups/
+astralis-studio/projects/default/backups/
+astralis-studio/projects/*/backups/
 
 # Studio (Rust/Tauri/Svelte)
 astralis-studio/target/

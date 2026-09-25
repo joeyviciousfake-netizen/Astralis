@@ -169,7 +169,7 @@ export function useCards() {
       } catch (e) { if (gen === generation) error = errMsg(e); }
       finally { if (gen === generation) { loading = false; fase = null; } }
     },
-    // Salva a carta no disco (schemas/examples/cards/<id>.json via Rust).
+    // Salva a carta no disco (projects/default/cards/<id>.json via Rust).
     async update(card: Card) {
       const { file: _drop, ...data } = card;
       try {

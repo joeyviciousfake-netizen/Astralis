@@ -3,7 +3,7 @@
   // SIMPLES: lista de receitas A+B=C + botão Testar (= confere o dado contra
   // as cartas: receita exata vence, regra é fallback; NÃO executa jogo — o
   // motor de fusão não existe no runtime). AVANÇADO: aba Regras com selects
-  // tipo+atributo→resultado + prioridade. Salva schemas/examples/fusions.json
+  // tipo+atributo→resultado + prioridade. Salva projects/default/fusions.json
   // via Tauri preservando o formato atual.
   import { useFusions } from "$lib/stores/fusions.svelte";
   import type { FusionRecipe, FusionRule } from "$lib/stores/fusions.svelte";

@@ -74,7 +74,7 @@ export function useEffects() {
     setLocal(next: EffectsFile) {
       dado = next;
     },
-    // Salva o arquivo inteiro (schemas/examples/effects.json via Rust, que
+    // Salva o arquivo inteiro (projects/default/effects.json via Rust, que
     // valida cada bloco antes). Formato preservado.
     async save(next: EffectsFile) {
       const res: { mensagem?: unknown } = await invokeSave("salvar_efeitos", { dado: { schema_version: 1, effects: next.effects } });

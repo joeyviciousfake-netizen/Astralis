@@ -62,7 +62,7 @@ export function useDecks() {
     getById(id: string): Deck | null {
       return decks.find((d) => d.id === id) ?? null;
     },
-    // Salva o deck no disco (schemas/examples/decks/<id>.json via Rust, que
+    // Salva o deck no disco (projects/default/decks/<id>.json via Rust, que
     // valida: 20..60 cartas + IDs precisam existir). Atualiza a lista local.
     async save(d: Deck) {
       const { file: _drop, ...data } = d;

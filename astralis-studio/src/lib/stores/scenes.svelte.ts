@@ -1,6 +1,6 @@
 import { invokeLoad, invokeSave, errMsg } from "$lib/stores/ipc";
 
-// Cenas simples (bloco 6): JSON em campaign/scenes/<id>.json.
+// Cenas simples (bloco 6): JSON em projects/default/scenes/<id>.json.
 // Formato documentado no README do editor; schema formal fica p/ depois.
 // Sem grafo/timeline agora: só lista de falas. Sem Play (o Astralis ainda não
 // lê esse formato — R4, sem fingir).
@@ -59,7 +59,7 @@ export function useCenas() {
     getById(id: string): Cena | null {
       return cenas.find((c) => c.id === id) ?? null;
     },
-    // Salva em campaign/scenes/<id>.json via Rust (valida antes).
+    // Salva em projects/default/scenes/<id>.json via Rust (valida antes).
     async save(c: Cena) {
       const { file: _drop, ...data } = c;
       const res: { mensagem?: unknown } = await invokeSave("salvar_cena", { cena: data });

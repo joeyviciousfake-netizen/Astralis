@@ -50,28 +50,39 @@ em http://localhost:1420. `npm run build` confere o build estático (gera `build
   + ▶ Jogar; Avançado (seed, arena, ordem). Salva `duel_setup.json` temporário
   e abre o Godot com ele.
 - **Cenas** (`ScenesStudio.svelte`): lista + editor de falas (personagem, texto,
-  fundo) com prévia de leitura, salvando em `campaign/scenes/`. Sem
+  fundo) com prévia de leitura, salvando em `projects/default/scenes/`. Sem
   grafo/timeline e sem Play (formato ainda não lido pelo Astralis).
 - **Exportar** (`ExportStudio.svelte`): plataforma + Aberto/Protegido +
   checklist "testou?" + Exportar (só valida o projeto e avisa que o
   empacotamento `.astralis`+zip vem depois — sem fingir).
+## Projeto do editor (boot vazio)
+
+O Studio abre VAZIO: nada carregado, só mostra o que você importar. Todo o
+dado mora em `astralis-studio/projects/default/` (criado vazio: `cards/`,
+`duelists/`, `decks/`, `arenas/`, `scenes/`, `assets/`, `fusions.json` e
+`effects.json` vazios válidos). `schemas/examples/` é o jogo embutido — o
+editor nunca lê nem escreve lá.
+
 - **Importar** (botão 📥 ao lado do Exportar + seção no topo da aba Exportar):
   escolhe um `.json` pack, valida contra os schemas (cartas/duelistas/decks/
   fusões + refs, erros em PT-BR), mostra "X cartas, Y duelistas, Z decks,
-  W fusões importados" e incorpora ao projeto (arquivos em
-  `schemas/examples/...` + merge em `fusions.json` sem duplicar, com `.bak`
-  antes). Equips do pack são ignorados com aviso (sem schema V1, o jogo
-  ignora). No navegador é só leitura — importar precisa do app via `app.bat`.
+  W fusões substituídos" e SUBSTITUI o projeto (arquivos em
+  `projects/default/...`, `fusions.json` trocado inteiro, backup automático
+  em `projects/default/backups/pack_<data>_<hora>/`). Equips do pack são
+  ignorados com aviso (sem schema V1, o jogo ignora). No navegador é só
+  leitura — importar precisa do app via `app.bat`.
 - **Validação** (`ValidationPanel.svelte`): relatório por carta, selo clicável.
 
 ## Artes (arrastar PNG)
 
 Arrastar um PNG para carta/duelista/cena importa via comando `importar_asset`:
-valida PNG ≤ 5 MB, copia para `astralis/assets/<cards|portraits|backgrounds>/`
-e referencia no dado. Sem arte, a tela mostra placeholder cinza automático.
+valida PNG ≤ 5 MB, copia para
+`projects/default/assets/<cards|portraits|backgrounds>/` e referencia no dado
+(relativo à pasta do projeto, que o jogo lê via `--project`). Sem arte, a
+tela mostra placeholder cinza automático.
 No navegador (sem app) dá só para ver — importar precisa do app via `app.bat`.
 
-## Formato da cena simples (aba Cenas, `campaign/scenes/<id>.json`)
+## Formato da cena simples (aba Cenas, `projects/default/scenes/<id>.json`)
 
 ```json
 {
@@ -87,8 +98,8 @@ No navegador (sem app) dá só para ver — importar precisa do app via `app.bat
 ```
 
 Regras: `id` snake_case (vira o nome do arquivo), `name` como aparece na
-lista, `background` é o fundo padrão (PNG em `astralis/assets/backgrounds/`),
-`lines` precisa de pelo menos 1 fala com `character` + `text` (fundo por fala
+lista, `background` é o fundo padrão (PNG em
+`projects/default/assets/backgrounds/`), `lines` precisa de pelo menos 1 fala com `character` + `text` (fundo por fala
 é opcional e troca só naquela fala). Sem grafo/timeline agora (vêm depois);
 schema formal fica p/ depois. Sem Play de cena: o Astralis ainda não lê esse
 formato (R4 — sem fingir execução).
@@ -100,31 +111,34 @@ no navegador tudo é somente-leitura — salvar/validar/jogar/importar precisam
 do app):
 
 ```text
-cartas     -> schemas/examples/cards/<id>.json      (salvar_carta)
-duelistas  -> schemas/examples/duelists/<id>.json   (salvar_duelista)
-decks      -> schemas/examples/decks/<id>.json      (salvar_deck)
-fusões     -> schemas/examples/fusions.json         (salvar_fusoes, inteiro)
-efeitos    -> schemas/examples/effects.json         (salvar_efeitos, inteiro)
-duelo      -> schemas/examples/duel_setup.json      (jogar_duelo, temporário)
-cenas      -> campaign/scenes/<id>.json             (salvar_cena)
-artes      -> astralis/assets/<cards|portraits|backgrounds>/ (importar_asset)
+cartas     -> projects/default/cards/<id>.json      (salvar_carta)
+duelistas  -> projects/default/duelists/<id>.json   (salvar_duelista)
+decks      -> projects/default/decks/<id>.json      (salvar_deck)
+fusões     -> projects/default/fusions.json         (salvar_fusoes, inteiro)
+efeitos    -> projects/default/effects.json         (salvar_efeitos, inteiro)
+duelo      -> temporário do SO                      (jogar_duelo, --setup por cima)
+cenas      -> projects/default/scenes/<id>.json     (salvar_cena)
+artes      -> projects/default/assets/<cards|portraits|backgrounds>/ (importar_asset)
 ```
 
 Só edita **dado** (R1/R3). Validação espelha `schemas/card.schema.json`; efeitos só dos
-modelos de `schemas/examples/effects.json` (R4: só o que o Astralis sabe executar).
+modelos de `projects/default/effects.json` (R4: só o que o Astralis sabe executar).
 
 ## Como o Jogar chama o Astralis
 
-Preview unificado (doc 10): salva o dado e lança o Astralis de verdade — o
-editor nunca calcula jogo (R1/R4), só prepara dado + abre o jogo:
+Preview unificado (doc 10): salva o dado e lança o Astralis de verdade com o
+projeto do editor — o editor nunca calcula jogo (R1/R4), só prepara dado +
+abre o jogo:
 
 ```text
-jogar_carta -> valida tudo -> salva <id>.json -> cmd start Godot --path astralis
-jogar_duelo -> valida refs  -> salva duel_setup.json (temporário, o jogo lê
-               esse arquivo) -> cmd start Godot --path astralis
+jogar_carta -> valida tudo -> salva <id>.json -> cmd start Godot --path astralis -- --project "<projects/default>"
+jogar_duelo -> valida refs  -> salva duel_setup.json temporário -> cmd start Godot --path astralis -- --project "<projects/default>" --setup <temp>
 ```
 
-Comandos Rust em `src-tauri/src/main.rs` (+ 24 testes `cargo test`): cartas
+O jogo lê TUDO da pasta do `--project` e põe o `--setup` por cima (só no
+duelo). Contexto mínimo V1, sem seed na carta (seed fixa 42 no duelo).
+
+Comandos Rust em `src-tauri/src/main.rs` (+ testes `cargo test`): cartas
 (listar/salvar/validar/jogar), duelistas (listar/salvar/validar + `ler_deck`
 leitura), decks (listar/salvar/validar), fusões (ler/salvar/testar = só dado),
 efeitos (ler/salvar/validar, sem executar), duelo (listar_arenas/jogar_duelo),

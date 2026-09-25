@@ -84,7 +84,7 @@ export function useFusions() {
     setLocal(next: FusionsFile) {
       dado = next;
     },
-    // Salva o arquivo inteiro (schemas/examples/fusions.json via Rust, que
+    // Salva o arquivo inteiro (projects/default/fusions.json via Rust, que
     // valida receitas + regras antes). Formato preservado.
     async save(next: FusionsFile) {
       const res: { mensagem?: unknown } = await invokeSave("salvar_fusoes", { dado: { schema_version: 1, recipes: next.recipes, rules: next.rules } });

@@ -186,6 +186,13 @@
     {#if isLoading}<p class="shrink-0 text-xs text-zinc-500 flex items-center gap-2"><span class="w-3 h-3 border-2 border-zinc-700 border-t-violet-600 rounded-full animate-spin"></span>{faseCarga ?? "Carregando…"} {#if cardsLen}({cardsLen}…){/if}</p>{/if}
     {#if !isLoading && validPct !== null}<p class="shrink-0 text-xs text-zinc-500 flex items-center gap-2"><span class="w-3 h-3 border-2 border-zinc-700 border-t-violet-600 rounded-full animate-spin"></span>Validando projeto… {validPct}% (a lista já funciona)</p>{/if}
     {#if hasError}<p class="shrink-0 text-xs text-red-400 bg-red-950/30 border border-red-900/50 rounded-lg px-3 py-2">{hasError}</p>{/if}
+    {#if !isLoading && !hasError && cardsLen === 0}
+      <div class="shrink-0 flex items-center gap-3 rounded-xl border border-dashed border-zinc-700 bg-zinc-900/40 px-4 py-3">
+        <span class="text-lg">📥</span>
+        <p class="text-xs text-zinc-300">Projeto vazio — nada carregado. Importe um pack para começar.</p>
+        <button class="ml-auto shrink-0 px-3 py-1.5 rounded-full bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition" onclick={irImportar}>Importar pack…</button>
+      </div>
+    {/if}
     {#if playMsg}<p class="shrink-0 text-xs whitespace-pre-line {playOk ? 'text-emerald-400 bg-emerald-950/30 border-emerald-900/50' : 'text-amber-300 bg-amber-950/30 border-amber-900/50'} border rounded-lg px-3 py-2">{playMsg}</p>{/if}
 
     <div class="flex-1 min-h-0 flex flex-col overflow-hidden">

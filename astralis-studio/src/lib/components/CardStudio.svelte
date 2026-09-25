@@ -4,9 +4,10 @@
   // ↺ por campo, preview, Salvar/Validar/Duplicar/Criar/Jogar).
   // Dado 100% Astralis: schemas/card.schema.json via comandos Tauri
   // listar_cartas/salvar_carta/validar_carta/jogar_carta (R1/R4).
-  import { useCards } from "$lib/stores/cards.svelte";
-  import type { Card, CardTypeGroup } from "$lib/stores/cards.svelte";
-  import { useValidate } from "$lib/stores/validate.svelte";
+import { useCards } from "$lib/stores/cards.svelte";
+import type { Card, CardTypeGroup } from "$lib/stores/cards.svelte";
+import { useValidate } from "$lib/stores/validate.svelte";
+import { useEffects } from "$lib/stores/effects.svelte";
   import { useSectionShell } from "$lib/section";
   import { errMsg } from "$lib/stores/ipc";
   import { invoke } from "@tauri-apps/api/core";
@@ -18,9 +19,14 @@
 
   let store = useCards();
   const v = useValidate();
+  const effStore = useEffects();
+  // Modelos de efeito: do PROJETO (app via ler_efeitos), snapshot só como
+  // leitura de reserva no navegador. Projeto vazio = select vazio (R4: só o
+  // que o Astralis sabe executar — e só o que importar).
+  let modelosEfeitos = $derived(effStore.dado.effects.length ? effStore.dado.effects : KNOWN_EFFECTS);
 
   const detailFlash = useSectionShell({
-    mount: () => {},
+    mount: () => { void effStore.ensureLoaded(); },
     onIso: () => { store.selectedId = null; lastSyncId = null; },
     onSave: () => {
       if (store.selected) save().catch((e) => detailFlash.flashSave(`Falha ao salvar carta: ${errMsg(e)}`, false));
@@ -369,7 +375,7 @@
     effectsEdit = effectsEdit.filter((e) => e !== id);
   }
   function effectLabel(id: string) {
-    const k = KNOWN_EFFECTS.find((e) => e.id === id);
+    const k = modelosEfeitos.find((e) => e.id === id);
     return k?.name ? `${k.name} (${id})` : id;
   }
 </script>
@@ -482,6 +488,12 @@
               </button>
             {/each}
           </div>
+        </div>
+      {:else if !store.cards.length && !store.loading}
+        <div class="p-4 text-center">
+          <p class="text-xs text-zinc-400">Projeto vazio — nada carregado.</p>
+          <p class="mt-1 text-xs text-zinc-500">Importe um pack para começar.</p>
+          <button class="mt-2 px-3 py-1.5 rounded-full bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition" onclick={() => window.dispatchEvent(new CustomEvent("astralis:importar-pack"))}>📥 Importar pack…</button>
         </div>
       {:else}
         <p class="p-4 text-xs text-zinc-500 text-center">Nenhuma carta — ajuste a busca ou crie uma nova.</p>
@@ -650,7 +662,7 @@
           <div class="flex gap-1.5">
             <select class="flex-1 px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 text-sm focus:outline-none" bind:value={effectPick}>
               <option value="">Escolher modelo…</option>
-              {#each KNOWN_EFFECTS as k (k.id)}
+              {#each modelosEfeitos as k (k.id)}
                 <option value={k.id}>{k.name ?? k.id} ({k.id})</option>
               {/each}
             </select>

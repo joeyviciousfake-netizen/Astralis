@@ -1,6 +1,7 @@
 // Sincroniza o dado do repo para o snapshot usado pelo build estático.
-// Lê (somente leitura): schemas/examples/cards/*.json, effects.json,
-// duelists/, decks/ e fusions.json (só contagem).
+// Lê (somente leitura) o PROJETO DO EDITOR em projects/default/ (boot vazio:
+// só o que importar aparece — o snapshot sai vazio até importar): cards/*.json,
+// effects.json, duelists/, decks/ e fusions.json (só contagem).
 // Escreve (gerado, ignorado no git): astralis-studio/src/generated/cards-snapshot.json
 // Roda sozinho via `predev` / `prebuild` (npm install + npm run dev/build).
 //
@@ -12,11 +13,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const STUDIO = path.resolve(__dirname, '..');
-const CARDS_DIR = path.resolve(STUDIO, '..', 'schemas', 'examples', 'cards');
-const DUELISTS_DIR = path.resolve(STUDIO, '..', 'schemas', 'examples', 'duelists');
-const DECKS_DIR = path.resolve(STUDIO, '..', 'schemas', 'examples', 'decks');
-const EFFECTS_FILE = path.resolve(STUDIO, '..', 'schemas', 'examples', 'effects.json');
-const FUSIONS_FILE = path.resolve(STUDIO, '..', 'schemas', 'examples', 'fusions.json');
+const PROJETO = path.resolve(STUDIO, 'projects', 'default');
+const CARDS_DIR = path.join(PROJETO, 'cards');
+const DUELISTS_DIR = path.join(PROJETO, 'duelists');
+const DECKS_DIR = path.join(PROJETO, 'decks');
+const EFFECTS_FILE = path.join(PROJETO, 'effects.json');
+const FUSIONS_FILE = path.join(PROJETO, 'fusions.json');
 const OUT_DIR = path.resolve(STUDIO, 'src', 'generated');
 const OUT_FILE = path.resolve(OUT_DIR, 'cards-snapshot.json');
 

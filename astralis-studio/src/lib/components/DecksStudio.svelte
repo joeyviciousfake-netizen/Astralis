@@ -2,7 +2,7 @@
   // DecksStudio — editor de decks (doc 14 §14.2).
   // SIMPLES: busca de cartas + duplo clique adiciona, lista do deck com ✕,
   // contador x/40 + aviso. AVANÇADO: filtros da busca, validar (alvo 40? IDs
-  // existem?). Salva em schemas/examples/decks/ via Tauri (Rust valida
+  // existem?). Salva em projects/default/decks/ via Tauri (Rust valida
   // 20..60 + IDs reais). Duplicar antes de Criar (doc 14).
   import { useDecks } from "$lib/stores/decks.svelte";
   import type { Deck } from "$lib/stores/decks.svelte";

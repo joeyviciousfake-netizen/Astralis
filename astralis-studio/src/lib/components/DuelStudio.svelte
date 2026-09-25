@@ -22,8 +22,8 @@
     },
   });
 
-  let d1 = $state("duelist_hero");
-  let d2 = $state("duelist_rival");
+  let d1 = $state("");
+  let d2 = $state("");
   let vida = $state(4000);
   let vidaSugerida = $state(false);
   let avancado = $state(false);
@@ -56,6 +56,13 @@
       ultimoQuick = quick.nonce;
       trocarD1(quick.d1);
       if (quick.d2) d2 = quick.d2;
+    }
+    // Projeto vazio = sem duelista fixo: quando a lista carrega, escolhe os
+    // dois primeiros; sem nada importado os selects ficam vazios (convite).
+    const lista = duelistsStore.duelists;
+    if (lista.length) {
+      if (!d1 || !lista.some((d) => d.id === d1)) trocarD1(lista[0].id);
+      if (!d2 || !lista.some((d) => d.id === d2)) d2 = (lista[1] ?? lista[0]).id;
     }
     const d = duelistsStore.getById(d1);
     if (d && !vidaSugerida && d.starting_lp && d.starting_lp > 0) {
@@ -122,6 +129,7 @@
       <label class="block rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
         <span class="text-[10px] tracking-widest text-zinc-500 font-semibold">JOGADOR 1</span>
         <select class="mt-1 w-full px-2.5 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-sm" value={d1} onchange={(e) => trocarD1((e.target as HTMLSelectElement).value)}>
+          {#if !duelistsStore.duelists.length}<option value="">— importe um pack —</option>{/if}
           {#each duelistsStore.duelists as d (d.id)}<option value={d.id}>{d.name}</option>{/each}
         </select>
         <span class="block mt-1 text-[11px] text-zinc-500">🂠 {deckNome(d1)}</span>
@@ -130,11 +138,19 @@
       <label class="block rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
         <span class="text-[10px] tracking-widest text-zinc-500 font-semibold">JOGADOR 2</span>
         <select class="mt-1 w-full px-2.5 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-sm" bind:value={d2}>
+          {#if !duelistsStore.duelists.length}<option value="">— importe um pack —</option>{/if}
           {#each duelistsStore.duelists as d (d.id)}<option value={d.id}>{d.name}</option>{/each}
         </select>
         <span class="block mt-1 text-[11px] text-zinc-500">🂠 {deckNome(d2)}</span>
       </label>
     </div>
+
+    {#if !duelistsStore.duelists.length && !duelistsStore.loading}
+      <div class="mt-2 rounded-xl border border-dashed border-zinc-700 bg-zinc-900/40 px-4 py-3 text-center">
+        <p class="text-xs text-zinc-300">Sem duelistas — importe um pack para começar.</p>
+        <button class="mt-2 px-3 py-1.5 rounded-full bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition" onclick={() => window.dispatchEvent(new CustomEvent("astralis:importar-pack"))}>📥 Importar pack…</button>
+      </div>
+    {/if}
 
     <div class="mt-2 grid sm:grid-cols-2 gap-2">
       <label class="block rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
@@ -169,6 +185,6 @@
       onclick={jogar}
     >{jogando ? "Abrindo o Astralis…" : "▶ Jogar agora"}</button>
     {#if msg}<p class="mt-2 text-xs rounded-lg px-3 py-2 border whitespace-pre-line {ok ? 'text-emerald-300 bg-emerald-950/30 border-emerald-900/50' : 'text-amber-300 bg-amber-950/30 border-amber-900/50'}">{msg}</p>{/if}
-    <p class="mt-2 text-[11px] text-zinc-600">O Play escreve o setup rápido num arquivo temporário e abre o Astralis com ele (o starter do projeto continua intacto). {avancado ? `Seed ${seed} • ${arena} • ${ordemNome(ordem)}.` : ""}</p>
+    <p class="mt-2 text-[11px] text-zinc-600">O Play escreve o setup rápido num arquivo temporário e abre o Astralis com ele por cima do projeto (projects/default via --project). {avancado ? `Seed ${seed} • ${arena} • ${ordemNome(ordem)}.` : ""}</p>
   </div>
 </div>
