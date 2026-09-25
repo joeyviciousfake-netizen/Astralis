@@ -2107,7 +2107,138 @@ func _atacar(atacante_slot: int, alvo_slot: int) -> void:
 	_atualizar()
 
 
-# ---- IA simples do rival (usa os mesmos sistemas reais) ----
+# ---- Escolha de ataque da IA (FM fiel: FindKiller + FindBestAttack) ----
+# Regras do original (decomp: ai_script_find_killer.c + ai_script_find_best_attack.c):
+# 1) Seu campo vazio -> direto com o ATK não-usado mais forte.
+# 2) FindKiller: p/ cada seu monstro, o rival não-usado mais FRACO que vence
+#    (ATK vs ATK ou ATK vs DEF, diferença > 0; empate NÃO vence, igual ao código).
+# 3) Sem kill -> FindBestAttack: maior margem (atk - atk do alvo) SÓ contra
+#    seus monstros em Ataque face-up (DEF e viradas ignoradas); só ataca se margem >= 0.
+# 4) Guardiã ±500 ADIADO: stats crus abaixo. PONTO EXATO p/ ligar depois =
+#    _ia_bonus_guardia() (hoje retorna 0; quando ligar, some no `d` do Killer
+#    e na `margem` do Best, igual ao Duel_CalcGuardianStarMatchup do original).
+# Só ESCOLHA (atacante+alvo). Invocação, fases e dano intactos; o ataque real
+# continua no BattleSystem.attack (sem Fake, sem schema novo).
+func _ia_bonus_guardia(_estrela_atac: String, _estrela_alvo: String) -> int:
+	# PONTO EXATO DA GUARDIÃ: trocar `return 0` pelo ±500 do original
+	# (Duel_CalcGuardianStarMatchup: +500 se a estrela do atacante vence a do
+	# alvo, -500 se perde, 0 senão; ciclos 1-6 e 7-10). Hoje sempre 0 (adiado).
+	return 0
+
+
+func _ia_atk_bruto(m: Dictionary) -> int:
+	return clampi(int(m.get("atk", 0)), 0, 9999)
+
+
+func _ia_valor_alvo(alvo: Dictionary) -> int:
+	# Alvo em ATK vale ATK; em DEF (inclui virada p/ baixo, que entra em DEF)
+	# vale DEF. Cru (sem guardiã; ver _ia_bonus_guardia).
+	var pos := str(alvo.get("position", "ATK"))
+	if pos == "ATK":
+		return clampi(int(alvo.get("atk", 0)), 0, 9999)
+	return clampi(int(alvo.get("def", 0)), 0, 9999)
+
+
+func _ia_atacantes_usaveis() -> Array:
+	# Rival não-usado: em campo, face-up em ATK e sem has_attacked.
+	# (can_attack da fase/vez vale na hora do BattleSystem.attack real.)
+	var fora: Array = []
+	var zona: Array = (_st.players[1] as Dictionary)["monster"]
+	for s in range(zona.size()):
+		var m = zona[s]
+		if not (m is Dictionary):
+			continue
+		if bool((m as Dictionary).get("face_down", false)):
+			continue
+		if str((m as Dictionary).get("position", "ATK")) != "ATK":
+			continue
+		if bool((m as Dictionary).get("has_attacked", false)):
+			continue
+		fora.append(s)
+	return fora
+
+
+func _ia_mais_forte_usavel(usaveis: Array) -> int:
+	var melhor := -1
+	var melhor_atk := -1
+	var zona: Array = (_st.players[1] as Dictionary)["monster"]
+	for s in usaveis:
+		var m: Dictionary = zona[int(s)] as Dictionary
+		var a := _ia_atk_bruto(m)
+		if a > melhor_atk:
+			melhor_atk = a
+			melhor = int(s)
+	return melhor
+
+
+func _ia_find_killer_para(alvo_slot: int, usaveis: Array) -> int:
+	# Um alvo (seu monstro): o rival não-usado mais FRACO cujo
+	# (ATK + guardiã) - valor_do_alvo > 0. Empate (== 0) NÃO vence.
+	var zona_r: Array = (_st.players[1] as Dictionary)["monster"]
+	var zona_p: Array = (_st.players[0] as Dictionary)["monster"]
+	if alvo_slot < 0 or alvo_slot >= zona_p.size() or zona_p[alvo_slot] == null:
+		return -1
+	var alvo: Dictionary = zona_p[alvo_slot] as Dictionary
+	var alvo_val := _ia_valor_alvo(alvo)
+	var estrela_alvo := str(alvo.get("guardian_star", ""))
+	var melhor := -1
+	var melhor_atk := 10000 # CARD_STAT_MAX do original: quer o mais fraco que vence
+	for s in usaveis:
+		var m: Dictionary = zona_r[int(s)] as Dictionary
+		var d := _ia_atk_bruto(m) - alvo_val + _ia_bonus_guardia(str(m.get("guardian_star", "")), estrela_alvo)
+		if d > 0:
+			var a := _ia_atk_bruto(m)
+			if a < melhor_atk:
+				melhor_atk = a
+				melhor = int(s)
+	return melhor
+
+
+func _ia_escolher_ataque() -> Array:
+	# Retorna [] (passar) ou [atacante_slot, alvo_slot] (alvo -1 = direto).
+	# Ordem FM: 1) direto se seu campo vazio; 2) Killer por alvo; 3) Best.
+	var usaveis: Array = _ia_atacantes_usaveis()
+	if usaveis.is_empty():
+		return []
+	# 1) Seu campo vazio -> direto com o ATK não-usado mais forte.
+	if not BattleSystem.has_monsters(_st, 0):
+		var forte := _ia_mais_forte_usavel(usaveis)
+		if forte < 0:
+			return []
+		return [forte, -1]
+	# 2) FindKiller: p/ cada seu monstro (ordem de slots), o mais fraco que mata.
+	var zona_p: Array = (_st.players[0] as Dictionary)["monster"]
+	for alvo in range(zona_p.size()):
+		if zona_p[alvo] == null:
+			continue
+		var killer := _ia_find_killer_para(alvo, usaveis)
+		if killer >= 0:
+			return [killer, alvo]
+	# 3) FindBestAttack: maior margem SÓ contra seus ATK face-up; margem >= 0.
+	var melhor_atac := -1
+	var melhor_alvo := -1
+	var melhor_margem := -1
+	var zona_r: Array = (_st.players[1] as Dictionary)["monster"]
+	for s in usaveis:
+		var m: Dictionary = zona_r[int(s)] as Dictionary
+		var atk: int = _ia_atk_bruto(m)
+		var estrela_atac := str(m.get("guardian_star", ""))
+		for alvo2 in range(zona_p.size()):
+			var t = zona_p[alvo2]
+			if not (t is Dictionary):
+				continue
+			if bool((t as Dictionary).get("face_down", false)):
+				continue
+			if str((t as Dictionary).get("position", "ATK")) != "ATK":
+				continue
+			var margem := atk - clampi(int((t as Dictionary).get("atk", 0)), 0, 9999) + _ia_bonus_guardia(estrela_atac, str((t as Dictionary).get("guardian_star", "")))
+			if margem > melhor_margem:
+				melhor_margem = margem
+				melhor_atac = int(s)
+				melhor_alvo = alvo2
+	if melhor_atac >= 0 and melhor_margem >= 0:
+		return [melhor_atac, melhor_alvo]
+	return []
 
 func _primeiro_monstro(jogador: int) -> int:
 	var mao: Array = (_st.players[jogador] as Dictionary)["hand"]
@@ -2136,29 +2267,27 @@ func _ia_inimiga() -> void:
 		_atualizar()
 		return
 	_duel.advance_phase() # MAIN -> BATTLE
-	var zona: Array = (_st.players[1] as Dictionary)["monster"]
-	for s in range(zona.size()):
-		if bool(_st.over):
+	var _guarda_ia := 0
+	while not bool(_st.over) and _guarda_ia < 5:
+		_guarda_ia += 1
+		var escolha: Array = _ia_escolher_ataque()
+		if escolha.is_empty():
 			break
-		if zona[s] == null:
-			continue
-		# Com seu campo vazio, ataca direto no seu LP (vale p/ os 2 lados, bug 6).
-		# Dano = ATK cheio (regra já existe no BattleSystem).
-		var alvo := BattleSystem.first_monster_slot(_st, 0)
-		var ra: Dictionary
-		if alvo < 0:
-			ra = BattleSystem.attack(_st, 1, s, 0, -1)
+		var s: int = int(escolha[0])
+		var alvo: int = int(escolha[1])
+		var ra: Dictionary = BattleSystem.attack(_st, 1, s, 0, alvo)
+		if not bool(ra.get("ok", false)):
+			break
+		if bool(ra.get("direto", false)):
+			_fala("Rival direto: %d em você!" % int(ra.get("dano", 0)))
+		elif bool(ra.get("destruiu_alvo", false)) and bool(ra.get("destruiu_atacante", false)):
+			_fala("Rival atacou: empate, os dois caíram.")
+		elif bool(ra.get("destruiu_alvo", false)):
+			_fala("Rival destruiu seu monstro (%d de dano)." % int(ra.get("dano", 0)))
+		elif bool(ra.get("destruiu_atacante", false)):
+			_fala("Rival quebrou a cara no seu monstro!")
 		else:
-			ra = BattleSystem.attack(_st, 1, s, 0, alvo)
-		if bool(ra.get("ok", false)):
-			if bool(ra.get("direto", false)):
-				_fala("Rival direto: %d em você!" % int(ra.get("dano", 0)))
-			elif bool(ra.get("destruiu_alvo", false)):
-				_fala("Rival destruiu seu monstro (%d de dano)." % int(ra.get("dano", 0)))
-			elif bool(ra.get("destruiu_atacante", false)):
-				_fala("Rival quebrou a cara no seu monstro!")
-			else:
-				_fala("Rival atacou: empate, os dois caíram.")
+			_fala("Rival atacou: nada acontece.")
 		_atualizar()
 		await get_tree().create_timer(0.7).timeout
 	if bool(_st.over):
