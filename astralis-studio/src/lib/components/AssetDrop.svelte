@@ -12,12 +12,25 @@
     value = "",
     rotulo = "Arraste um PNG aqui ou clique para escolher",
     onimport = null,
+    escondido = false,
+    acionar = 0,
+    onarquivo = null,
   }: {
     tipo: "carta" | "duelista" | "cena";
     sugestao?: string;
     value?: string;
     rotulo?: string;
     onimport?: ((caminho: string) => void) | null;
+    // escondido=true: não desenha a caixa de arrastar (só o seletor invisível
+    // + a msg). O clique vem de fora: o pai incrementa `acionar` e este
+    // componente abre o seletor. Usado pela janela da arte do CardPreview
+    // (clicar na arte da carta abre o mesmo seletor, mesmo fluxo).
+    escondido?: boolean;
+    acionar?: number;
+    // onarquivo: avisa na hora que o usuário escolheu o arquivo (antes do
+    // upload terminar) para a prévia mostrar a imagem na hora. Só visual —
+    // o caminho que salva continua vindo do onimport.
+    onarquivo?: ((f: File) => void) | null;
   } = $props();
 
   let arrastando = $state(false);
@@ -35,8 +48,23 @@
     return base.replace(/^[^a-z]+/, "") || (tipo === "carta" ? "arte_carta" : tipo === "duelista" ? "arte_retrato" : "arte_fundo");
   }
 
+  // Abertura externa (modo escondido): o pai incrementa `acionar` para abrir
+  // o seletor. Guarda o último valor num `let` comum (não reativo) para não
+  // reabrir nem abrir no mount (acionar=0 inicial nunca abre).
+  let ultimoAcionamento = 0;
+  $effect(() => {
+    const pedido = acionar;
+    if (pedido !== ultimoAcionamento) {
+      ultimoAcionamento = pedido;
+      if (pedido > 0) inputEl?.click();
+    }
+  });
+
   async function enviarArquivo(f: File) {
     msg = "";
+    // Avisa a prévia na hora (vale até no navegador: a imagem local aparece
+    // mesmo sem importar — só visual, nada salva sem o Salvar da tela).
+    try { onarquivo?.(f); } catch { /* prévia nunca quebra o envio */ }
     if (!emTauri()) {
       ok = false;
       msg = "Para importar, abra o app pelo app.bat (no navegador dá só para ver).";
@@ -82,6 +110,7 @@
   }
 </script>
 
+{#if !escondido}
 <div
   role="button"
   tabindex="0"
@@ -101,6 +130,7 @@
     <p class="mt-0.5 text-[10px] text-zinc-600">PNG até 5 MB • vira cinza automático se faltar</p>
   {/if}
 </div>
+{/if}
 <!-- Seletor de arquivo: tem que estar RENDERIZADO, só invisível.
      O `class="hidden"` do Tailwind é display:none, e existem versões de
      WebView2 em que input.click() num input com display:none NÃO abre o
