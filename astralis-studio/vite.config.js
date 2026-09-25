@@ -23,7 +23,12 @@ export default defineConfig(async () => ({
         }
       : undefined,
     watch: {
-      ignored: ["**/src-tauri/**"],
+      // projects/ recebe ~722 writes + fusions.json de ~2,3 MB a cada Importar
+      // pack: sem ignorar, o Vite entende como mudança de fonte e dá full
+      // reload no WebView — e o onMount do +page chamava preparar_boot de
+      // novo (antes da flag 1x por processo, isso apagava o importado e a
+      // tela "abria zerada"). Dado de trabalho não é fonte: nunca observa.
+      ignored: ["**/src-tauri/**", "**/projects/**"],
     },
   },
   test: {

@@ -23,7 +23,29 @@
     arquivoPack.click();
   }
 
-  useSectionShell({ mount: () => {}, extra: [["astralis:importar-pack", abrirImportacao]] });
+  // Faixa verde sobrevive a reloads no MESMO processo/janela (HMR/F5 no dev):
+  // sessionStorage morre ao FECHAR a janela (regra do usuário: fechar apaga)
+  // mas atravessa reloads — e o disco também mantém (boot 1x por processo no
+  // Rust), então a contagem restaurada nunca é fantasma. Sem isto o impMsg e
+  // o resumo eram só memória do componente e sumiam a cada reload.
+  const CHAVE_RESUMO_IMPORT = "astralis:resumo-import";
+  function salvarResumoSessao() {
+    try {
+      sessionStorage.setItem(CHAVE_RESUMO_IMPORT, JSON.stringify({ impMsg, impOk, resumo }));
+    } catch { /* sessão cheia/bloqueada: a faixa só não persiste */ }
+  }
+  function restaurarResumoSessao() {
+    try {
+      const cru = sessionStorage.getItem(CHAVE_RESUMO_IMPORT);
+      if (!cru) return;
+      const v = JSON.parse(cru) as { impMsg?: unknown; impOk?: unknown; resumo?: unknown };
+      if (typeof v.impMsg === "string" && v.impMsg) impMsg = v.impMsg;
+      impOk = v.impOk === true;
+      if (v.resumo && typeof v.resumo === "object") resumo = v.resumo as ResumoPack;
+    } catch { /* sessão corrompida: começa sem faixa */ }
+  }
+
+  useSectionShell({ mount: () => { restaurarResumoSessao(); }, extra: [["astralis:importar-pack", abrirImportacao]] });
 
   let plataforma = $state("windows");
   let modo = $state("protegido");
@@ -86,6 +108,7 @@
     if (!arq) {
       impOk = false;
       impMsg = "Nenhum arquivo chegou ao editor (o seletor abriu mas voltou vazio). Clique em “Escolher pack (.json)” de novo e confirme o arquivo.";
+      salvarResumoSessao();
       return;
     }
     impMsg = "";
@@ -93,6 +116,7 @@
     resumo = null;
     if (!emTauri()) {
       impMsg = "Para importar, abra o app via app.bat (no navegador é só leitura — importar escreve arquivos no projeto).";
+      salvarResumoSessao();
       return;
     }
     importando = true;
@@ -121,8 +145,10 @@
       } catch (e2) {
         impMsg += ` (Recarregue a aba para ver os novos dados: ${errMsg(e2)})`;
       }
+      salvarResumoSessao();
     } catch (e) {
       impMsg = `Não deu para importar (${faseImp}): ${errMsg(e)}`;
+      salvarResumoSessao();
     } finally {
       importando = false;
     }

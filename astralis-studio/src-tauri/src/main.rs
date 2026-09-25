@@ -20,6 +20,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct CartaArquivo {
@@ -2847,10 +2848,62 @@ fn preparar_boot_para(proj: &std::path::Path) -> Result<ResultadoBoot, String> {
     })
 }
 
+// ---- BOOT 1x POR PROCESSO (regra do usuário, sem reabrir D29) ----
+// Abrir o app (processo novo) = SEMPRE zera (D29, via preparar_boot_para).
+// Reload da página no dev (HMR / F5: o processo Tauri continua vivo, só o
+// JS recarrega e o onMount do +page.svelte chama preparar_boot DE NOVO) =
+// NÃO zera: só garante o esqueleto e mantém o que está no disco. Sem esta
+// flag, cada reload pós-import apagava as 722 cartas + 25k fusões e a tela
+// "abria zerada". Processo novo = flag nasce false = zera de novo (prod
+// intacto: fechar e abrir zera).
+static BOOT_JA_FEITO: AtomicBool = AtomicBool::new(false);
+
+fn contar_arquivos_projeto(proj: &std::path::Path) -> usize {
+    let mut n = 0;
+    for sub in ["cards", "duelists", "decks", "arenas", "scenes"] {
+        if let Ok(entries) = std::fs::read_dir(proj.join(sub)) {
+            n += entries
+                .flatten()
+                .filter(|e| {
+                    let p = e.path();
+                    p.is_file() && p.extension().and_then(|x| x.to_str()) == Some("json")
+                })
+                .count();
+        }
+    }
+    for nome in ["fusions.json", "effects.json", "duel_setup.json"] {
+        if proj.join(nome).is_file() {
+            n += 1;
+        }
+    }
+    n
+}
+
+// Núcleo testável do boot 1x: a 1ª chamada do processo delega ao
+// preparar_boot_para (que zera de verdade, D29); as seguintes só garantem o
+// esqueleto sem apagar nada. `ja_feito` é o BOOT_JA_FEITO no app e uma flag
+// fresca nos testes.
+fn preparar_boot_uma_vez(
+    proj: &std::path::Path,
+    ja_feito: &AtomicBool,
+) -> Result<ResultadoBoot, String> {
+    if ja_feito.swap(true, Ordering::SeqCst) {
+        garantir_projeto(proj)?;
+        let n = contar_arquivos_projeto(proj);
+        return Ok(ResultadoBoot {
+            limpou: false,
+            mensagem: format!(
+                "Sessão já aberta — {n} arquivo(s) mantido(s) (reload não apaga; fechar e abrir zera)."
+            ),
+        });
+    }
+    preparar_boot_para(proj)
+}
+
 #[tauri::command]
 fn preparar_boot() -> Result<ResultadoBoot, String> {
     let proj = pasta_projeto()?;
-    preparar_boot_para(&proj)
+    preparar_boot_uma_vez(&proj, &BOOT_JA_FEITO)
 }
 
 // ---- DIAGNÓSTICO DE IPC (o frontend manda lote a cada 2s) ----
@@ -3955,6 +4008,37 @@ mod testes {
         // Esqueleto válido segue de pé.
         let f: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(base.join("fusions.json")).unwrap()).unwrap();
         assert_eq!(f.get("recipes").and_then(|v| v.as_array()).map(|a| a.len()), Some(0));
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn boot_uma_vez_segunda_chamada_mesmo_processo_nao_apaga() {
+        // Reload no dev (HMR/F5: mesmo processo Tauri vivo, onMount do
+        // +page.svelte chama preparar_boot de novo) NÃO pode apagar o que foi
+        // importado. 1ª chamada zera (D29); 2ª com conteúdo mantém tudo.
+        let base = projeto_boot_teste("uma-vez");
+        escrever_json_valor(&base.join("cards").join("card_x.json"), &carta_pack_valida("card_x", "X"), "base").unwrap();
+        let flag = AtomicBool::new(false);
+        let r1 = preparar_boot_uma_vez(&base, &flag).unwrap();
+        assert!(r1.limpou, "1ª chamada do processo devia zerar (D29)");
+        // Simula o import: conteúdo entra DEPOIS do boot.
+        escrever_json_valor(&base.join("cards").join("card_y.json"), &carta_pack_valida("card_y", "Y"), "base").unwrap();
+        // Simula o reload: mesma flag (mesmo processo) chama de novo.
+        let r2 = preparar_boot_uma_vez(&base, &flag).unwrap();
+        assert!(!r2.limpou, "reload no mesmo processo não devia limpar");
+        assert!(r2.mensagem.contains("mantido"), "mensagem devia dizer que manteve: {}", r2.mensagem);
+        assert!(base.join("cards").join("card_y.json").is_file(), "reload apagou o importado!");
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn boot_uma_vez_processo_novo_zera_de_novo() {
+        // Fechar e abrir = processo novo = flag fresca = D29 zera de novo.
+        let base = projeto_boot_teste("processo-novo");
+        escrever_json_valor(&base.join("cards").join("card_x.json"), &carta_pack_valida("card_x", "X"), "base").unwrap();
+        let r = preparar_boot_uma_vez(&base, &AtomicBool::new(false)).unwrap();
+        assert!(r.limpou, "processo novo devia zerar (D29)");
+        assert!(!base.join("cards").join("card_x.json").exists());
         let _ = std::fs::remove_dir_all(&base);
     }
 
