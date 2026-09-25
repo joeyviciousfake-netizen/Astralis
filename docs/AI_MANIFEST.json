@@ -22,13 +22,34 @@
     { "file": "docs/06_SISTEMA_FUSAO.md", "owner": "runtime+systems", "purpose": "receita + regra", "depends_on": ["04", "05"] },
     { "file": "docs/07_SISTEMA_EFEITOS.md", "owner": "runtime+systems+editor", "purpose": "trigger/condition/target/action/flow + templates", "depends_on": ["04", "05"] },
     { "file": "docs/08_CAMPANHA.md", "owner": "campaign", "purpose": "grafo, cena, battle win/lose, flags-lite", "depends_on": ["04"] },
-    { "file": "docs/09_STUDIO_EDITOR.md", "owner": "editor", "purpose": "editores, starter kit, wizard", "depends_on": ["04", "05", "06", "07", "08"] },
+    { "file": "docs/09_STUDIO_EDITOR.md", "owner": "editor", "purpose": "editores, UX, starter kit, wizard", "depends_on": ["04", "05", "06", "07", "08"] },
     { "file": "docs/10_PREVIEW_TESTE_DEBUG.md", "owner": "qa+runtime+editor", "purpose": "preview unificado, test lab minimo, GUT", "depends_on": ["05", "06", "07", "08"] },
     { "file": "docs/11_ROADMAP_AGENTES.md", "owner": "lead", "purpose": "mvp, roadmap, agentes", "depends_on": ["00"] },
     { "file": "docs/12_DISTRIBUICAO_EXPORTACAO.md", "owner": "systems+runtime+editor", "purpose": ".astralis binario + cadeado + bundles", "depends_on": ["03", "04"] },
-    { "file": "docs/13_TABULEIRO_DUELO.md", "owner": "lead", "purpose": "zonas, fases, mao, LP, win/lose + duel_setup", "depends_on": ["02", "04", "05"] },
+    { "file": "docs/13_TABULEIRO_DUELO.md", "owner": "lead", "purpose": "zonas 5+5, fases, mao, LP, win/lose + duel_setup", "depends_on": ["02", "04", "05"] },
     { "file": "docs/14_EXPERIENCIA_USUARIO.md", "owner": "lead", "purpose": "padrao Simples/Avancado, galeria, erros PT-BR, guia 5min", "depends_on": ["01", "05", "06", "07", "08", "09", "10"] }
   ],
+  "contract_files": {
+    "owner": "systems",
+    "purpose": "O CONTRATO entre runtime e studio. Mudar qualquer um aqui exige: atualizar este manifest + o doc dono em docs/ + SESSAO_ATUAL, e o Studio tem que espelhar a mesma regra (checar_* em src-tauri/src/main.rs).",
+    "schema_version": 1,
+    "files": [
+      "schemas/card.schema.json",
+      "schemas/deck.schema.json",
+      "schemas/duelist.schema.json",
+      "schemas/duel_setup.schema.json",
+      "schemas/arena.schema.json",
+      "schemas/effect.schema.json",
+      "schemas/fusion.schema.json"
+    ],
+    "sem_schema_ainda": [
+      "project.json (docs 04.3 / 12.2 — nao existe)",
+      "scene.schema.json (docs 08 — cenas simples sao dado provisorio)",
+      "test scenario schema (docs 10)",
+      "equips do pack FM (4041 pares, sem contrato V1)"
+    ],
+    "index": "schemas/README.md"
+  },
   "rules": [
     "R1 runtime unica verdade gameplay",
     "R2 proibido Fake engine",
@@ -39,6 +60,11 @@
     "R7 nao reabrir DECISOES sem permissao",
     "R8 nada solto: arquivo novo na pasta do dono (ver 02.7)"
   ],
+  "change_protocol": {
+    "schema_ou_protocolo": "mudar contract_files exige: 1) atualizar este manifest 2) atualizar docs/04 e o README de schemas/ 3) espelhar a mesma regra no Studio (checar_* em main.rs) 4) rodar tools/fm_import.py --check 5) registrar em DECISOES.md e SESSAO_ATUAL.md",
+    "gameplay": "mudanca de regra exige: contrato -> Astralis -> Studio -> teste GUT -> docs. Nao comeca pela UI (R4).",
+    "doc": "docs/00-14 sao AUTHORITATIVE. Se doc e codigo divergem, o doc esta errado ate prova em contrario: o schema e o teste mandam."
+  },
   "session_protocol": {
     "on_start": "ler manifest, indice, sessao, decisoes; confirmar em 1 linha",
     "on_end": "atualizar SESSAO_ATUAL.md (onde, fez, proximo, travas, data); anexar decisao nova em DECISOES.md",
