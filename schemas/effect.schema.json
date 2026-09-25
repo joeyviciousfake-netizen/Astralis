@@ -43,7 +43,7 @@
               "additionalProperties": false
             }
           },
-          "flow": { "type": "object", "description": "V1: só sequence (múltiplas actions em ordem). if/else/repeat adiados.", "properties": { "mode": { "type": "string", "enum": ["sequence"] } }, "required": ["mode"], "additionalProperties": false }
+          "flow": { "type": "object", "description": "V1: só sequence (múltiplas actions em ordem). if/else/repeat adiados.", "properties": { "mode": { "type": "string", "enum": ["sequence"], "description": "Único valor aceito na V1 = 'sequence' (múltiplas actions em ordem). Motivo: o único motor existente é o seqüencial — o Studio Rust já rejeita qualquer outro valor (astralis-studio/src-tauri/src/main.rs:1199, arm 'Some(\"sequence\")' da validação de flow), doc 07 §7.2 'Flow V1: multiple actions + sequence', e schemas/examples/effects.json já usa 'sequence'. Se um dia existir if/else/repeat, entra como enum novo + versão, nunca em silêncio." } }, "required": ["mode"], "additionalProperties": false }
         },
         "required": ["id", "name", "trigger", "target", "actions"],
         "additionalProperties": false

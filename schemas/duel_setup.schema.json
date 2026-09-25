@@ -24,7 +24,7 @@
       "required": ["duelist_id", "deck_id"],
       "additionalProperties": false
     },
-    "starting_lp": { "type": "integer", "exclusiveMinimum": 0, "description": "LP inicial do duelo (dado). Padrão 8000, starter 4000. LP nunca passa do inicial (regra fixa)." },
+    "starting_lp": { "type": "integer", "exclusiveMinimum": 0, "maximum": 99999, "description": "LP inicial do duelo (dado). Padrão 8000, starter 4000. LP nunca passa do inicial (regra fixa). Teto 99999 (1 a 99999): é o mesmo limite que o Studio já aplica ao montar o duelo — astralis-studio/src-tauri/src/main.rs:1303 recusa vida <= 0 ou > 99999. Schema alinhado ao código; o dado real usa 4000 (starter_backup) e 8000 (duel_fm_abertura, D20)." },
     "turn_order": { "type": "string", "enum": ["first_p1", "first_p2", "random"] },
     "seed": { "type": "integer", "description": "Seed determinística (ex: 42 no starter). Preview/Test usam a mesma." },
     "arena_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },

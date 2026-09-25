@@ -18,8 +18,8 @@
         "type": "object",
         "properties": {
           "slot_id": { "type": "string", "pattern": "^(p0|p1)_(m|s)[0-4]$", "description": "ID fixo do slot (ex: p0_m0). Lógica só usa este ID." },
-          "x": { "type": "number", "description": "Posição X do canto do slot em 1920x1080 (só desenho)." },
-          "y": { "type": "number", "description": "Posição Y do canto do slot em 1920x1080 (só desenho)." }
+          "x": { "type": "number", "minimum": 0, "maximum": 1920, "description": "Posição X do canto do slot em 1920x1080 (só desenho). Limite 0-1920: a resolução da mesa é FIXA em 1920x1080 (D16), então nada pode cair fora da tela; o mesmo limite já existe no bloco hand deste schema (hand.p0/hand.p1), e os slots eram a inconsistência. Dado real (arena_starter): X de 780 a 1536." },
+          "y": { "type": "number", "minimum": 0, "maximum": 1080, "description": "Posição Y do canto do slot em 1920x1080 (só desenho). Limite 0-1080: idem X (D16, 1920x1080 fixo); igual ao bloco hand deste schema. Dado real (arena_starter): Y de 128 a 789." }
         },
         "required": ["slot_id", "x", "y"],
         "additionalProperties": false
