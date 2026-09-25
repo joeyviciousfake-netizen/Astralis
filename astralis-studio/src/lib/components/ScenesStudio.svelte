@@ -13,7 +13,6 @@
 
   useSectionShell({
     mount: () => { void store.ensureLoaded(); },
-    onIso: () => { selId = null; },
     onSave: () => { if (sel || isNew) save().catch(() => {}); },
   });
 

@@ -22,7 +22,7 @@
   <div class="fixed inset-0 z-30 bg-zinc-950/70 backdrop-blur-sm flex items-center justify-center p-4" onclick={onclose} onkeydown={(e)=> { if (e.key === "Escape") onclose(); }}>
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div class="rounded-2xl bg-zinc-900 border border-zinc-700 w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden" role="dialog" aria-modal="true" aria-label="Validação da ISO" tabindex="-1" onclick={(e)=> e.stopPropagation()}>
+    <div class="rounded-2xl bg-zinc-900 border border-zinc-700 w-full max-w-lg max-h-[80vh] flex flex-col overflow-hidden" role="dialog" aria-modal="true" aria-label="Validação do projeto" tabindex="-1" onclick={(e)=> e.stopPropagation()}>
       <div class="px-4 py-3 border-b border-zinc-800 flex items-center gap-2">
         <span class="text-sm font-bold">Validação do projeto</span>
         {#if v.report}

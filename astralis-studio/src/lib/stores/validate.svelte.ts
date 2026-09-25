@@ -1,5 +1,5 @@
 import { invokeLoad, invokeSave, errMsg } from "$lib/stores/ipc";
-import { onIsoChanged, onSaveRequested } from "$lib/stores/isoVersion.svelte";
+import { onSaveRequested } from "$lib/stores/saveBus.svelte";
 import { fetchCartas } from "$lib/stores/cards.svelte";
 import type { Card } from "$lib/stores/cards.svelte";
 
@@ -24,7 +24,7 @@ export type ValidationReport = {
   completo: boolean;
 };
 
-type ErroRust = { campo?: string; mensagem?: string };
+type ErroRust = { campo?: string; mensagem?: string; nivel?: string };
 type ProjetoRust = { erros: number; avisos: number; itens: ValidationArea[]; mensagem: string };
 
 // Lote paralelo: 16 invokes simultâneos (Tauri aguenta) em vez de 762
@@ -37,7 +37,9 @@ async function validarUma(c: Card): Promise<ValidationIssue[]> {
   const erros = await invokeLoad<ErroRust[]>("validar_carta", { carta: data });
   return erros.map((e) => ({
     system: e.campo ?? "Carta",
-    level: "erro",
+    // O Rust separa "erro" (trava salvar/jogar) de "aviso" (mostra, não
+    // trava) — ex.: carta citando efeito que o projeto ainda não tem.
+    level: e.nivel === "aviso" ? "aviso" : "erro",
     card_id: c.id,
     message: e.mensagem ?? "Carta inválida",
   }));
@@ -143,14 +145,8 @@ export function useValidate() {
   };
 }
 
-// revalida após saves (best-effort com folga p/ o save terminar).
+// Revalida depois do save (best-effort com folga p/ o save terminar).
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
-onIsoChanged(() => {
-  if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
-  const s = useValidate();
-  s.clear();
-  void s.refresh();
-});
 onSaveRequested(() => {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => { void useValidate().refresh(); }, 2500);

@@ -27,12 +27,23 @@ struct CartaArquivo {
     data: serde_json::Value,
 }
 
+// `nivel` separa o que BARRA (erro) do que só AVISA (aviso). Antes tudo era
+// erro e o Studio não tinha como falar "isso aqui é só um aviso" — o gate de
+// efeitos (R4) precisa exatamente disso: projeto sem efeitos cadastrados
+// avisa, projeto com efeitos e id errado barra.
+fn nivel_padrao() -> String {
+    "erro".to_string()
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct ErroValidacao {
     campo: String,
     #[serde(rename = "campoId")]
     campo_id: String,
     mensagem: String,
+    /// "erro" (trava salvar/jogar) ou "aviso" (mostra, não trava).
+    #[serde(default = "nivel_padrao")]
+    nivel: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -47,7 +58,41 @@ fn erro(campo: &str, campo_id: &str, mensagem: &str) -> ErroValidacao {
         campo: campo.to_string(),
         campo_id: campo_id.to_string(),
         mensagem: mensagem.to_string(),
+        nivel: "erro".to_string(),
     }
+}
+
+fn aviso(campo: &str, campo_id: &str, mensagem: &str) -> ErroValidacao {
+    ErroValidacao {
+        campo: campo.to_string(),
+        campo_id: campo_id.to_string(),
+        mensagem: mensagem.to_string(),
+        nivel: "aviso".to_string(),
+    }
+}
+
+fn eh_erro(e: &ErroValidacao) -> bool {
+    e.nivel != "aviso"
+}
+
+// Só os que barram (erros) — é o que trava salvar/jogar/importar.
+fn so_erros(lista: &[ErroValidacao]) -> Vec<&ErroValidacao> {
+    lista.iter().filter(|e| eh_erro(e)).collect()
+}
+
+fn so_avisos(lista: &[ErroValidacao]) -> Vec<&ErroValidacao> {
+    lista.iter().filter(|e| !eh_erro(e)).collect()
+}
+
+// "Arruma antes de salvar:\n- …" (mesma frase em todos os salvar_*).
+fn mensagem_bloqueio(erros: &[&ErroValidacao]) -> String {
+    let lista: Vec<String> = erros.iter().map(|e| format!("- {}", e.mensagem)).collect();
+    format!("Arruma antes de salvar:\n{}", lista.join("\n"))
+}
+
+// Avisos num texto só (append na mensagem de sucesso, sem travar).
+fn texto_avisos(avisos: &[&ErroValidacao]) -> String {
+    avisos.iter().map(|a| format!("- {}", a.mensagem)).collect::<Vec<String>>().join("\n")
 }
 
 fn eh_id_snake(s: &str) -> bool {
@@ -186,28 +231,84 @@ fn pasta_cartas() -> Result<PathBuf, String> {
     projeto_sub("cards")
 }
 
-// IDs de efeito que o Astralis sabe executar (R4): lidos de
-// projects/default/effects.json. Se o arquivo faltar, volta vazio e a
-// checagem de "efeito desconhecido" é pulada (sem travar o resto).
-fn efeitos_conhecidos() -> Vec<String> {
-    let caminho = match pasta_projeto() {
-        Ok(p) => p.join("effects.json"),
-        Err(_) => return Vec::new(),
-    };
+// ---- GATE DE EFEITOS DA CARTA (R4) ----
+// O que a carta pode citar = o que está em projects/default/effects.json.
+// Antes o gate era fail-open: `if !conhecidos.is_empty() && !conhecidos…`
+// — e como o projeto nasce VAZIO (D29), a lista ficava sempre vazia e a
+// checamento INTEIRA pulava (qualquer id inventado passava). Agora o
+// catálogo distingue os dois estados e o gate vive num helper só.
+#[derive(Debug, Clone, PartialEq)]
+enum CatalogoEfeitos {
+    /// effects.json existe e lista efeitos: id fora da lista é ERRO.
+    Listado(Vec<String>),
+    /// effects.json ausente, sem "effects" ou com lista vazia (projeto novo):
+    /// a carta não pode citar efeito nenhum — mas isso é AVISO, não erro.
+    Vazio,
+}
+
+impl CatalogoEfeitos {
+    fn tem(&self, id: &str) -> bool {
+        match self {
+            CatalogoEfeitos::Listado(lista) => lista.iter().any(|x| x == id),
+            CatalogoEfeitos::Vazio => false,
+        }
+    }
+}
+
+// Lê projects/default/effects.json UMA vez por validação. Todo mundo que
+// precisa do gate usa isto (nada de ler o arquivo espalhado pelos comandos).
+fn catalogo_efeitos() -> CatalogoEfeitos {
+    match pasta_projeto() {
+        Ok(p) => catalogo_efeitos_de(&p),
+        Err(_) => CatalogoEfeitos::Vazio,
+    }
+}
+
+fn catalogo_efeitos_de(proj: &std::path::Path) -> CatalogoEfeitos {
+    let caminho = proj.join("effects.json");
     let texto = match std::fs::read_to_string(&caminho) {
         Ok(t) => t,
-        Err(_) => return Vec::new(),
+        Err(_) => return CatalogoEfeitos::Vazio,
     };
     let v: serde_json::Value = match serde_json::from_str(&texto) {
         Ok(v) => v,
-        Err(_) => return Vec::new(),
+        Err(_) => return CatalogoEfeitos::Vazio,
     };
-    match v.get("effects") {
+    let ids: Vec<String> = match v.get("effects") {
         Some(serde_json::Value::Array(lista)) => lista
             .iter()
             .filter_map(|e| e.get("id")?.as_str().map(|s| s.to_string()))
             .collect(),
         _ => Vec::new(),
+    };
+    if ids.is_empty() {
+        CatalogoEfeitos::Vazio
+    } else {
+        CatalogoEfeitos::Listado(ids)
+    }
+}
+
+/// GATE ÚNICO do R4 para efeito citado na carta — todos os pontos que
+/// checam isso usam ESTA função, para não voltar a divergir.
+/// - catálogo listado + id na lista -> None (vale a pena).
+/// - catálogo listado + id fora -> ERRO com o nome do efeito e onde corrigir.
+/// - catálogo vazio (projeto sem efeitos) -> AVISO: a carta não pode citar
+///   efeito nenhum, e o texto diz onde cadastrar (aba Efeitos / modelo).
+fn checar_efeito_da_carta(catalogo: &CatalogoEfeitos, id: &str) -> Option<ErroValidacao> {
+    if catalogo.tem(id) {
+        return None;
+    }
+    match catalogo {
+        CatalogoEfeitos::Listado(_) => Some(erro(
+            "Efeitos",
+            "field-effects",
+            &format!("Efeito \"{id}\" não existe neste projeto (só vale o que o Astralis sabe executar). Clique em Efeitos e escolha um modelo da lista — ou crie o efeito na aba Efeitos."),
+        )),
+        CatalogoEfeitos::Vazio => Some(aviso(
+            "Efeitos",
+            "field-effects",
+            &format!("Efeito \"{id}\" não pode existir ainda: este projeto não tem nenhum efeito cadastrado. Clique na aba Efeitos e pegue um modelo da galeria (ou crie o seu) antes de salvar a carta."),
+        )),
     }
 }
 
@@ -318,34 +419,109 @@ fn montar_args_jogo(projeto: &str, setup: Option<&str>) -> Vec<String> {
     args
 }
 
+// Procura o executável do Godot (D14: 4.7.2 oficial, exe em Godot/).
+// Um helper só para os dois lugares que lançam o jogo (jogar_carta e
+// jogar_duelo) — antes o nome do exe estava repetido 4x, sem fallback.
+// Ordem: GODOT_PATH -> Godot/Godot_v4.7.2-stable_win64.exe -> qualquer
+// Godot_v*_win64*.exe na pasta Godot/ (versão mais nova primeiro).
+fn achar_godot(raiz: &std::path::Path) -> Result<PathBuf, String> {
+    let godot_dir = raiz.join("Godot");
+    if let Some(do_env) = std::env::var_os("GODOT_PATH") {
+        let p = PathBuf::from(do_env);
+        if p.is_file() {
+            return Ok(p);
+        }
+    }
+    let oficial = godot_dir.join("Godot_v4.7.2-stable_win64.exe");
+    if oficial.is_file() {
+        return Ok(oficial);
+    }
+    // Qualquer outro win64 na pasta, do mais novo pro mais antigo.
+    let mut outros: Vec<PathBuf> = Vec::new();
+    if let Ok(entries) = std::fs::read_dir(&godot_dir) {
+        for e in entries.flatten() {
+            let nome = e.file_name().to_string_lossy().to_string();
+            if nome.starts_with("Godot_v") && nome.contains("win64") && nome.ends_with(".exe") {
+                outros.push(e.path());
+            }
+        }
+    }
+    outros.sort_by(|a, b| {
+        versao_godot(&b.file_name().unwrap_or_default().to_string_lossy())
+            .cmp(&versao_godot(&a.file_name().unwrap_or_default().to_string_lossy()))
+    });
+    if let Some(p) = outros.into_iter().next() {
+        return Ok(p);
+    }
+    Err(format!(
+        "Não achei o Godot. Procurei a variável GODOT_PATH, o arquivo {} e qualquer Godot_v*_win64*.exe na mesma pasta. Baixe o Godot 4.7.2 e coloque o exe em {}, ou defina a variável de ambiente GODOT_PATH apontando pro exe.",
+        oficial.display(),
+        godot_dir.display()
+    ))
+}
+
+// "Godot_v4.7.2-stable_win64.exe" -> (4, 7, 2) (ordena 4.10 > 4.7, não 4 > 4).
+fn versao_godot(nome: &str) -> (u32, u32, u32) {
+    let meio = match nome.strip_prefix("Godot_v") {
+        Some(m) => m,
+        None => return (0, 0, 0),
+    };
+    let numeros: String = meio
+        .chars()
+        .take_while(|c| c.is_ascii_digit() || *c == '.')
+        .collect();
+    let partes = numeros.split('.');
+    let pega = |i: usize| partes.clone().nth(i).and_then(|p| p.parse::<u32>().ok()).unwrap_or(0);
+    (pega(0), pega(1), pega(2))
+}
+
+/// Lança um processo numa janela normal, solto do Studio (o alvo primário é
+/// o Windows: `cmd /C start` abre janela independente e o jogo continua
+/// rodando depois de fechar o editor). Em Unix não existe `start` — lá
+/// chamamos o programa direto, que já é o comportamento certo.
+fn abrir_processo(programa: &std::path::Path, args: &[String]) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    {
+        let mut cmd = std::process::Command::new("cmd");
+        cmd.args(["/C", "start", ""]);
+        cmd.arg(programa);
+        cmd.args(args);
+        cmd.spawn()
+            .map(|_| ())
+            .map_err(|e| format!("Não consegui abrir {}: {e}", programa.display()))
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        std::process::Command::new(programa)
+            .args(args)
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| format!("Não consegui abrir {}: {e}", programa.display()))
+    }
+}
+
 // Lança o Astralis de verdade com um setup rápido externo (--setup <temp>)
 // POR CIMA do projeto do editor (--project <projects/default>).
 // O jogo já aceita os dois. Nunca toca no duel_setup do jogo (starter intacto).
 fn lancar_astralis_com_setup(setup: &std::path::Path) -> Result<String, String> {
     let raiz = raiz_projeto().ok_or_else(|| "Não achei a raiz do projeto para lançar o jogo.".to_string())?;
-    let godot = raiz.join("Godot").join("Godot_v4.7.2-stable_win64.exe");
-    if !godot.is_file() {
-        return Err("Não achei o Godot em Godot/Godot_v4.7.2-stable_win64.exe.".to_string());
-    }
+    let godot = achar_godot(&raiz)?;
     let projeto = raiz.join("astralis");
     if !projeto.is_dir() {
         return Err("Não achei a pasta astralis/ do jogo.".to_string());
     }
     let pasta_ed = pasta_projeto()?;
     let extra = montar_args_jogo(&pasta_ed.to_string_lossy(), Some(&setup.to_string_lossy()));
-    let status = std::process::Command::new("cmd")
-        .args(["/C", "start", "", &godot.to_string_lossy(), "--path", &projeto.to_string_lossy(), "--"])
-        .args(&extra)
-        .spawn();
-    match status {
-        Ok(_) => Ok("Astralis aberto de verdade (lendo projects/default + setup do duelo). Bom jogo!".to_string()),
-        Err(e) => Err(format!("O jogo não abriu: {e}")),
-    }
+    let mut args = vec!["--path".to_string(), projeto.to_string_lossy().to_string(), "--".to_string()];
+    args.extend(extra);
+    abrir_processo(&godot, &args)?;
+    Ok("Astralis aberto de verdade (lendo projects/default + setup do duelo). Bom jogo!".to_string())
 }
 
 // Espelha schemas/card.schema.json com mensagens em PT-BR simples dizendo
 // onde clicar (mesmo texto do frontend em src/lib/validacao.js).
-fn checar_carta(carta: &serde_json::Value, conhecidos: &[String]) -> Vec<ErroValidacao> {
+// `catalogo` é o gate de efeitos (R4) — sai de `catalogo_efeitos()`.
+fn checar_carta(carta: &serde_json::Value, catalogo: &CatalogoEfeitos) -> Vec<ErroValidacao> {
     let mut erros: Vec<ErroValidacao> = Vec::new();
 
     if !carta.is_object() {
@@ -446,12 +622,8 @@ fn checar_carta(carta: &serde_json::Value, conhecidos: &[String]) -> Vec<ErroVal
             for ef in lista {
                 match ef.as_str() {
                     Some(id) if eh_id_snake(id) => {
-                        if !conhecidos.is_empty() && !conhecidos.contains(&id.to_string()) {
-                            erros.push(erro(
-                                "Efeitos",
-                                "field-effects",
-                                &format!("Efeito \"{id}\" o jogo não conhece (só vale o que o Astralis sabe executar). Clique em Efeitos e escolha um modelo da lista."),
-                            ));
+                        if let Some(e) = checar_efeito_da_carta(catalogo, id) {
+                            erros.push(e);
                         }
                     }
                     _ => erros.push(erro(
@@ -521,15 +693,16 @@ fn checar_carta(carta: &serde_json::Value, conhecidos: &[String]) -> Vec<ErroVal
 
 fn escrever_carta(pasta: &std::path::Path, carta: &serde_json::Value, id: &str) -> Result<String, String> {
     let destino = pasta.join(format!("{id}.json"));
-    let canon = match destino.canonicalize() {
-        Ok(c) => c,
-        Err(_) => destino.clone(),
-    };
-    let base = match pasta.canonicalize() {
-        Ok(b) => b,
-        Err(_) => pasta.to_path_buf(),
-    };
-    if !canon.starts_with(&base) {
+    // Confere que o arquivo cai DENTRO da pasta mesmo com caminho curto do
+    // Windows (8.3): canonicaliza o PAR (que existe) e junta o nome, em vez de
+    // comparar o caminho cru do arquivo que ainda nem foi criado.
+    let base = pasta.canonicalize().unwrap_or_else(|_| pasta.to_path_buf());
+    let pai = destino
+        .parent()
+        .and_then(|p| p.canonicalize().ok())
+        .unwrap_or_else(|| base.clone());
+    let nome = destino.file_name().map(|n| n.to_os_string()).unwrap_or_default();
+    if !pai.join(&nome).starts_with(&base) {
         return Err("ID fora da pasta de cartas. Use só letra minúscula, número e underline.".to_string());
     }
     let texto = serde_json::to_string_pretty(carta).map_err(|e| format!("Não consegui montar o JSON: {e}"))? + "\n";
@@ -563,23 +736,37 @@ fn listar_cartas() -> Result<Vec<CartaArquivo>, String> {
 
 #[tauri::command]
 fn salvar_carta(carta: serde_json::Value) -> Result<ResultadoOk, String> {
+    let pasta = pasta_cartas()?;
+    salvar_carta_para(&pasta, &carta)
+}
+
+// Valida ANTES de gravar (mesma trava/mensagem dos outros salvar_*) e devolve
+// o nome do arquivo. Aviso (ex.: carta citando efeito que o projeto ainda não
+// tem) não impede o save: ele vai na mensagem.
+fn salvar_carta_para(pasta: &std::path::Path, carta: &serde_json::Value) -> Result<ResultadoOk, String> {
     let id = carta.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
     if !eh_id_snake(&id) {
         return Err("ID inválido: use só letra minúscula, número e underline — exemplo: card_meu_dragao.".to_string());
     }
-    let pasta = pasta_cartas()?;
-    let file = escrever_carta(&pasta, &carta, &id)?;
-    Ok(ResultadoOk {
-        ok: true,
-        file: file.clone(),
-        mensagem: format!("Salvo em projects/default/cards/{file} (dado puro, sem mexer no jogo)."),
-    })
+    // Antes salvar_carta era o ÚNIMO salvar_* que não validava: carta inválida
+    // ia pro disco sem reclamar.
+    let revisao = checar_carta(carta, &catalogo_efeitos());
+    let erros = so_erros(&revisao);
+    if !erros.is_empty() {
+        return Err(mensagem_bloqueio(&erros));
+    }
+    let file = escrever_carta(pasta, carta, &id)?;
+    let mut mensagem = format!("Salvo em projects/default/cards/{file} (dado puro, sem mexer no jogo).");
+    let avisos = so_avisos(&revisao);
+    if !avisos.is_empty() {
+        mensagem.push_str(&format!("\nAviso:\n{}", texto_avisos(&avisos)));
+    }
+    Ok(ResultadoOk { ok: true, file: file.clone(), mensagem })
 }
 
 #[tauri::command]
 fn validar_carta(carta: serde_json::Value) -> Vec<ErroValidacao> {
-    let conhecidos = efeitos_conhecidos();
-    checar_carta(&carta, &conhecidos)
+    checar_carta(&carta, &catalogo_efeitos())
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -712,15 +899,15 @@ fn checar_duelista(d: &serde_json::Value, decks: &std::collections::HashSet<Stri
 
 fn escrever_duelista(pasta: &std::path::Path, d: &serde_json::Value, id: &str) -> Result<String, String> {
     let destino = pasta.join(format!("{id}.json"));
-    let canon = match destino.canonicalize() {
-        Ok(c) => c,
-        Err(_) => destino.clone(),
-    };
-    let base = match pasta.canonicalize() {
-        Ok(b) => b,
-        Err(_) => pasta.to_path_buf(),
-    };
-    if !canon.starts_with(&base) {
+    // Mesmo cuidado de caminho do escrever_carta (canonicaliza o par, que
+    // existe, em vez do arquivo que ainda não foi criado).
+    let base = pasta.canonicalize().unwrap_or_else(|_| pasta.to_path_buf());
+    let pai = destino
+        .parent()
+        .and_then(|p| p.canonicalize().ok())
+        .unwrap_or_else(|| base.clone());
+    let nome = destino.file_name().map(|n| n.to_os_string()).unwrap_or_default();
+    if !pai.join(&nome).starts_with(&base) {
         return Err("ID fora da pasta de duelistas. Use só letra minúscula, número e underline.".to_string());
     }
     escrever_json_valor(&destino, d, &format!("duelista {id}"))?;
@@ -735,9 +922,9 @@ fn salvar_duelista(duelista: serde_json::Value) -> Result<ResultadoOk, String> {
     }
     let decks = ids_de_projeto("decks").unwrap_or_default();
     let erros = checar_duelista(&duelista, &decks);
-    if !erros.is_empty() {
-        let lista: Vec<String> = erros.iter().map(|e| format!("- {}", e.mensagem)).collect();
-        return Err(format!("Arruma antes de salvar:\n{}", lista.join("\n")));
+    let bloqueios = so_erros(&erros);
+    if !bloqueios.is_empty() {
+        return Err(mensagem_bloqueio(&bloqueios));
     }
     let pasta = projeto_sub("duelists")?;
     let file = escrever_duelista(&pasta, &duelista, &id)?;
@@ -759,21 +946,20 @@ fn validar_duelista(duelista: serde_json::Value) -> Vec<ErroValidacao> {
 // só entrega o dado e abre o jogo.
 #[tauri::command]
 fn jogar_carta(carta: serde_json::Value) -> Result<ResultadoOk, String> {
-    let conhecidos = efeitos_conhecidos();
-    let erros = checar_carta(&carta, &conhecidos);
+    let revisao = checar_carta(&carta, &catalogo_efeitos());
+    let erros = so_erros(&revisao);
     if !erros.is_empty() {
         let lista: Vec<String> = erros.iter().map(|e| format!("- {}", e.mensagem)).collect();
         return Err(format!("Arruma antes de jogar:\n{}", lista.join("\n")));
     }
+    let avisos = so_avisos(&revisao);
+    let aviso_txt = if avisos.is_empty() { String::new() } else { format!("\nAviso:\n{}", texto_avisos(&avisos)) };
     let id = carta.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
     let pasta = pasta_cartas()?;
     let file = escrever_carta(&pasta, &carta, &id)?;
 
     let raiz = raiz_projeto().ok_or_else(|| "Não achei a raiz do projeto para lançar o jogo.".to_string())?;
-    let godot = raiz.join("Godot").join("Godot_v4.7.2-stable_win64.exe");
-    if !godot.is_file() {
-        return Err("Salvei a carta, mas não achei o Godot em Godot/Godot_v4.7.2-stable_win64.exe.".to_string());
-    }
+    let godot = achar_godot(&raiz).map_err(|e| format!("Salvei a carta, mas {e}"))?;
     let projeto = raiz.join("astralis");
     if !projeto.is_dir() {
         return Err("Salvei a carta, mas não achei a pasta astralis/ do jogo.".to_string());
@@ -781,21 +967,17 @@ fn jogar_carta(carta: serde_json::Value) -> Result<ResultadoOk, String> {
     let pasta_ed = pasta_projeto()
         .map_err(|e| format!("Salvei a carta, mas {e}"))?;
     let extra = montar_args_jogo(&pasta_ed.to_string_lossy(), None);
+    let mut args = vec!["--path".to_string(), projeto.to_string_lossy().to_string(), "--".to_string()];
+    args.extend(extra);
 
-    // Lança via shell (cmd start): janela normal, processo solto do Studio.
+    // Lança solto do Studio (janela normal, sobrevive ao fechar o editor).
     // O jogo lê TUDO de projects/default/ via --project (só o que importar).
-    let status = std::process::Command::new("cmd")
-        .args(["/C", "start", "", &godot.to_string_lossy(), "--path", &projeto.to_string_lossy(), "--"])
-        .args(&extra)
-        .spawn();
-    match status {
-        Ok(_) => Ok(ResultadoOk {
-            ok: true,
-            file,
-            mensagem: "Carta salva e Astralis aberto de verdade (lendo projects/default). Bom jogo!".to_string(),
-        }),
-        Err(e) => Err(format!("Salvei a carta, mas o jogo não abriu: {e}")),
-    }
+    abrir_processo(&godot, &args).map_err(|e| format!("Salvei a carta, mas o jogo não abriu: {e}"))?;
+    Ok(ResultadoOk {
+        ok: true,
+        file,
+        mensagem: format!("Carta salva e Astralis aberto de verdade (lendo projects/default). Bom jogo!{aviso_txt}"),
+    })
 }
 
 // ---- DECKS (bloco 2) ----
@@ -854,9 +1036,9 @@ fn salvar_deck(deck: serde_json::Value) -> Result<ResultadoOk, String> {
     }
     let cartas = cartas_ids().unwrap_or_default();
     let erros = checar_deck(&deck, &cartas);
-    if !erros.is_empty() {
-        let lista: Vec<String> = erros.iter().map(|e| format!("- {}", e.mensagem)).collect();
-        return Err(format!("Arruma antes de salvar:\n{}", lista.join("\n")));
+    let bloqueios = so_erros(&erros);
+    if !bloqueios.is_empty() {
+        return Err(mensagem_bloqueio(&bloqueios));
     }
     let pasta = projeto_sub("decks")?;
     let destino = pasta.join(format!("{id}.json"));
@@ -977,9 +1159,9 @@ fn ler_fusoes() -> Result<serde_json::Value, String> {
 fn salvar_fusoes(dado: serde_json::Value) -> Result<ResultadoOk, String> {
     let cartas = cartas_ids().unwrap_or_default();
     let erros = checar_fusoes(&dado, &cartas);
-    if !erros.is_empty() {
-        let lista: Vec<String> = erros.iter().map(|e| format!("- {}", e.mensagem)).collect();
-        return Err(format!("Arruma antes de salvar:\n{}", lista.join("\n")));
+    let bloqueios = so_erros(&erros);
+    if !bloqueios.is_empty() {
+        return Err(mensagem_bloqueio(&bloqueios));
     }
     let caminho = caminho_fusoes()?;
     escrever_json_valor(&caminho, &dado, "fusions.json")?;
@@ -1241,9 +1423,9 @@ fn ler_efeitos() -> Result<serde_json::Value, String> {
 #[tauri::command]
 fn salvar_efeitos(dado: serde_json::Value) -> Result<ResultadoOk, String> {
     let erros = checar_efeitos(&dado);
-    if !erros.is_empty() {
-        let lista: Vec<String> = erros.iter().map(|e| format!("- {}", e.mensagem)).collect();
-        return Err(format!("Arruma antes de salvar:\n{}", lista.join("\n")));
+    let bloqueios = so_erros(&erros);
+    if !bloqueios.is_empty() {
+        return Err(mensagem_bloqueio(&bloqueios));
     }
     let caminho = caminho_efeitos()?;
     escrever_json_valor(&caminho, &dado, "effects.json")?;
@@ -1261,11 +1443,70 @@ fn validar_efeito(efeito: serde_json::Value) -> Vec<ErroValidacao> {
 
 // ---- DUELO RÁPIDO (bloco 5) ----
 // Preview unificado (doc 10): valida, escreve o setup rápido num arquivo
-// temporário do SO (std::env::temp_dir()/duel_studio_rapido.json) e lança o
-// Godot com --project <projects/default> + --setup <temp> (o jogo já aceita
-// os dois: lê o projeto e põe o setup por cima). Nunca toca no duel_setup do
-// jogo (starter intacto).
-// O editor nunca simula duelo (R1).
+// temporário do SO (std::env::temp_dir()/duel_studio_rapido_<pid>_<seg>.json)
+// e lança o Godot com --project <projects/default> + --setup <temp> (o jogo já
+// aceita os dois: lê o projeto e põe o setup por cima). Nunca toca no
+// duel_setup do jogo (starter intacto). O editor nunca simula duelo (R1).
+//
+// Nome por invocação: o nome fixo duel_studio_rapido.json fazia dois cliques
+// rápidos em "Jogar agora" se atropelarem (o segundo sobrescreve o setup antes
+// do primeiro Godot ler). Com pid+timestamp cada duelo tem o seu arquivo.
+// Limpeza: apagamos na chamada SEGUINTE (todo duelo começa varrendo o que
+// ficou >1h no temp) e não com atraso de thread — `cmd start` solta o processo
+// e não esperamos o Godot ler, então apagar cedo quebraria o duelo em curso.
+// O jogo só lê o --setup no boot, então 1h depois ele é lixo garantido.
+const PREFIXO_SETUP: &str = "duel_studio_rapido_";
+const SETUP_MAX_IDADE_SEGS: u64 = 3600;
+
+fn agora_em_segundos() -> u64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
+fn novo_setup_temporario(agora: u64) -> PathBuf {
+    // pid + segundos + contador: o relógio só tem resolução de 1s, então dois
+    // dueles no mesmo segundo ainda precisam de arquivos diferentes.
+    let n = CONTADOR_SETUP.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+    std::env::temp_dir().join(format!("{PREFIXO_SETUP}{}_{agora}_{n}.json", std::process::id()))
+}
+
+static CONTADOR_SETUP: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+// Idade em segundos do arquivo de setup (None = não é nosso/não dá para ler).
+fn idade_setup(caminho: &std::path::Path, agora: u64) -> Option<u64> {
+    let nome = caminho.file_name()?.to_str()?;
+    let meio = nome.strip_prefix(PREFIXO_SETUP)?.strip_suffix(".json")?;
+    let partes: Vec<&str> = meio.split('_').collect();
+    // <pid>_<segundos>_<contador>
+    if partes.len() < 3 {
+        return None;
+    }
+    let secs: u64 = partes[1].parse().ok()?;
+    Some(agora.saturating_sub(secs))
+}
+
+// Apaga os duel_studio_rapido_*.json velhos do temp. Devolve quantos apagou.
+fn limpar_setups_antigos(agora: u64, max_idade: u64) -> usize {
+    let temp = std::env::temp_dir();
+    let mut n = 0;
+    if let Ok(entries) = std::fs::read_dir(&temp) {
+        for e in entries.flatten() {
+            let p = e.path();
+            if !p.is_file() {
+                continue;
+            }
+            if let Some(idade) = idade_setup(&p, agora) {
+                if idade > max_idade && std::fs::remove_file(&p).is_ok() {
+                    n += 1;
+                }
+            }
+        }
+    }
+    n
+}
+
 #[derive(Debug, serde::Deserialize)]
 struct PedidoDuelo {
     #[serde(default)]
@@ -1338,7 +1579,10 @@ fn jogar_duelo(pedido: PedidoDuelo) -> Result<ResultadoOk, String> {
         "arena_id": arena,
         "win": { "on_lp_zero": true, "on_deckout": true }
     });
-    let temp = std::env::temp_dir().join("duel_studio_rapido.json");
+    let agora = agora_em_segundos();
+    // Vira o lixo do duelo anterior (o jogo já leu o setup dele).
+    let _ = limpar_setups_antigos(agora, SETUP_MAX_IDADE_SEGS);
+    let temp = novo_setup_temporario(agora);
     escrever_json_valor(&temp, &setup, "duelo rápido (temporário)")?;
     match lancar_astralis_com_setup(&temp) {
         Ok(msg) => Ok(ResultadoOk {
@@ -1411,9 +1655,9 @@ fn salvar_cena(cena: serde_json::Value) -> Result<ResultadoOk, String> {
         return Err("ID inválido: use só letra minúscula, número e underline — exemplo: scene_encontro_rival.".to_string());
     }
     let erros = checar_cena(&cena);
-    if !erros.is_empty() {
-        let lista: Vec<String> = erros.iter().map(|e| format!("- {}", e.mensagem)).collect();
-        return Err(format!("Arruma antes de salvar:\n{}", lista.join("\n")));
+    let bloqueios = so_erros(&erros);
+    if !bloqueios.is_empty() {
+        return Err(mensagem_bloqueio(&bloqueios));
     }
     let pasta = pasta_cenas()?;
     std::fs::create_dir_all(&pasta).map_err(|e| format!("Não consegui criar projects/default/scenes/: {e}"))?;
@@ -1460,10 +1704,11 @@ fn validar_projeto() -> Result<ResultadoProjeto, String> {
     // Cartas: valida cada uma.
     let mut n_cartas = 0;
     let mut err_cartas = 0;
+    let mut avisos_cartas = 0;
     let mut ids_cartas: std::collections::HashSet<String> = std::collections::HashSet::new();
     let pasta_c = proj.join("cards");
     if let Ok(entries) = std::fs::read_dir(&pasta_c) {
-        let conhecidos = efeitos_conhecidos();
+        let catalogo = catalogo_efeitos();
         for e in entries.flatten() {
             let p = e.path();
             if p.extension().and_then(|x| x.to_str()) != Some("json") {
@@ -1475,17 +1720,24 @@ fn validar_projeto() -> Result<ResultadoProjeto, String> {
                     if let Some(id) = v.get("id").and_then(|x| x.as_str()) {
                         ids_cartas.insert(id.to_string());
                     }
-                    err_cartas += checar_carta(&v, &conhecidos).len();
+                    let revisao = checar_carta(&v, &catalogo);
+                    err_cartas += so_erros(&revisao).len();
+                    avisos_cartas += so_avisos(&revisao).len();
                 }
                 None => err_cartas += 1,
             }
         }
     }
     erros += err_cartas;
+    avisos += avisos_cartas;
     itens.push(ItemProjeto {
         area: "Cartas".to_string(),
         ok: n_cartas > 0 && err_cartas == 0,
-        detalhe: if n_cartas == 0 { "nenhuma carta no projeto".to_string() } else { format!("{n_cartas} cartas, {err_cartas} erros") },
+        detalhe: if n_cartas == 0 {
+            "nenhuma carta no projeto".to_string()
+        } else {
+            format!("{n_cartas} cartas, {err_cartas} erros{}", if avisos_cartas > 0 { format!(", {avisos_cartas} avisos") } else { String::new() })
+        },
     });
 
     // Decks + duelistas (refs cruzadas).
@@ -1632,7 +1884,7 @@ fn validar_projeto() -> Result<ResultadoProjeto, String> {
         if avisos == 0 {
             "Projeto válido de ponta a ponta. Empacotamento (.astralis + zip) vem depois — por ora nada foi empacotado.".to_string()
         } else {
-            format!("Projeto válido com {avisos} aviso(s) (decks fora do alvo 40). Empacotamento (.astralis + zip) vem depois — por ora nada foi empacotado.")
+            format!("Projeto válido com {avisos} aviso(s) (decks fora do alvo 40; carta citando efeito que o projeto ainda não tem). Empacotamento (.astralis + zip) vem depois — por ora nada foi empacotado.")
         }
     } else {
         format!("Projeto com {erros} erro(s) — arrume nas abas (clique em Validar em cada uma) e volte aqui. Nada foi empacotado.")
@@ -1820,14 +2072,14 @@ fn importar_pack_valor(pack: &serde_json::Value, nome: &str) -> Result<Resultado
         }
     }
 
-    let conhecidos = efeitos_conhecidos();
+    let catalogo = catalogo_efeitos();
     importar_pack_para(
         pack,
         &pasta_cartas,
         &pasta_duelistas,
         &pasta_decks,
         &caminho_fusoes,
-        &conhecidos,
+        &catalogo,
     )
 }
 
@@ -1837,7 +2089,7 @@ fn importar_pack_para(
     pasta_duelistas: &std::path::Path,
     pasta_decks: &std::path::Path,
     caminho_fusoes: &std::path::Path,
-    conhecidos: &[String],
+    catalogo: &CatalogoEfeitos,
 ) -> Result<ResultadoImportacao, String> {
     let tem_cartas = pack_tem_lista(pack, "cartas", "cards");
     let tem_duelistas = pack_tem_lista(pack, "duelistas", "duelists");
@@ -1906,7 +2158,13 @@ fn importar_pack_para(
 
     for c in &lista_cartas {
         let id = c.get("id").and_then(|v| v.as_str()).unwrap_or("?").to_string();
-        let errs = checar_carta(c, conhecidos);
+        let revisao = checar_carta(c, catalogo);
+        // Aviso não barra o import (ex.: carta citando efeito que o projeto
+        // ainda não tem) — erro barra tudo, sem mexer em nada.
+        for a in so_avisos(&revisao) {
+            avisos.push(format!("Carta \"{id}\": {}", a.mensagem));
+        }
+        let errs = so_erros(&revisao);
         if errs.is_empty() {
             cartas_ok.push((c, id));
         } else if erros.len() < 30 {
@@ -2374,9 +2632,78 @@ fn preparar_boot() -> Result<ResultadoBoot, String> {
     preparar_boot_para(&proj)
 }
 
+// ---- DIAGNÓSTICO DE IPC (o frontend manda lote a cada 2s) ----
+// ipc.ts chamava "debug_push_batch", comando que NÃO existia no Rust: a falha
+// era engolida (.then(ok, falho)), então todo o diagnóstico se perdia e ainda
+// sobrava 1 IPC morto a cada 2s. Agora o lote é registrado num estado do Tauri
+// com teto de DIAG_MAX_LINHAS linhas (o buffer não cresce para sempre).
+const DIAG_MAX_LINHAS: usize = 500;
+
+#[derive(Debug, serde::Deserialize, Clone)]
+struct EventoIpc {
+    #[serde(default)]
+    origin: String,
+    #[serde(default)]
+    level: String,
+    #[serde(default)]
+    area: String,
+    #[serde(default)]
+    msg: String,
+}
+
+#[derive(Debug, Default)]
+struct DiagnosticoIpc {
+    linhas: std::sync::Mutex<Vec<String>>,
+}
+
+fn trancar(estado: &DiagnosticoIpc) -> std::sync::MutexGuard<'_, Vec<String>> {
+    estado.linhas.lock().unwrap_or_else(|e| e.into_inner())
+}
+
+fn linha_de_diag(agora: u64, e: &EventoIpc) -> String {
+    format!("{agora} [{}] {}/{} — {}", e.level, e.origin, e.area, e.msg)
+}
+
+// Registra o lote e corta o excesso (guarda as últimas DIAG_MAX_LINHAS).
+// Devolve quantas linhas estão guardadas depois do lote.
+fn registrar_diagnostico(estado: &DiagnosticoIpc, agora: u64, eventos: &[EventoIpc]) -> usize {
+    let mut linhas = trancar(estado);
+    for e in eventos {
+        linhas.push(linha_de_diag(agora, e));
+    }
+    if linhas.len() > DIAG_MAX_LINHAS {
+        let excesso = linhas.len() - DIAG_MAX_LINHAS;
+        linhas.drain(0..excesso);
+    }
+    linhas.len()
+}
+
+// Só os testes leem o buffer (o comando só grava e devolve o total).
+#[cfg(test)]
+fn ler_diagnostico(estado: &DiagnosticoIpc) -> Vec<String> {
+    trancar(estado).clone()
+}
+
+#[derive(Debug, serde::Serialize)]
+struct ResumoDiagnostico {
+    recebidos: usize,
+    total: usize,
+    teto: usize,
+}
+
+#[tauri::command]
+fn debug_push_batch(
+    estado: tauri::State<'_, DiagnosticoIpc>,
+    events: Vec<EventoIpc>,
+) -> Result<ResumoDiagnostico, String> {
+    let total = registrar_diagnostico(&estado, agora_em_segundos(), &events);
+    Ok(ResumoDiagnostico { recebidos: events.len(), total, teto: DIAG_MAX_LINHAS })
+}
+
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())
+        .manage(DiagnosticoIpc::default())
         .invoke_handler(tauri::generate_handler![
             listar_cartas,
             salvar_carta,
@@ -2403,7 +2730,8 @@ fn main() {
             validar_cena,
             validar_projeto,
             importar_pack,
-            preparar_boot
+            preparar_boot,
+            debug_push_batch
         ])
         .run(tauri::generate_context!())
         .expect("Astralis Studio não abriu");
@@ -2413,6 +2741,15 @@ fn main() {
 #[cfg(test)]
 mod testes {
     use super::*;
+
+    // Catálogo de efeitos sem nenhum efeito (projeto novo — D29).
+    fn sem_efeitos() -> CatalogoEfeitos {
+        CatalogoEfeitos::Vazio
+    }
+
+    fn com_efeitos(ids: &[&str]) -> CatalogoEfeitos {
+        CatalogoEfeitos::Listado(ids.iter().map(|s| s.to_string()).collect())
+    }
 
     #[test]
     fn id_snake() {
@@ -2426,8 +2763,8 @@ mod testes {
 
     #[test]
     fn carta_vazia_reclama_obrigatorios() {
-        let erros = checar_carta(&serde_json::json!({}), &[]);
-        let campos: Vec<&str> = erros.iter().map(|e| e.campo.as_str()).collect();
+        let erros = checar_carta(&serde_json::json!({}), &sem_efeitos());
+        let campos: Vec<&str> = so_erros(&erros).iter().map(|e| e.campo.as_str()).collect();
         for c in ["Versão", "ID", "Nome", "Tipo", "Efeitos"] {
             assert!(campos.contains(&c), "faltou erro de {c}");
         }
@@ -2450,7 +2787,7 @@ mod testes {
             "effects": [],
             "tags": []
         });
-        assert!(checar_carta(&carta, &[]).is_empty());
+        assert!(checar_carta(&carta, &sem_efeitos()).is_empty());
     }
 
     #[test]
@@ -2459,8 +2796,122 @@ mod testes {
             "schema_version": 1, "id": "card_teste", "name": "Teste",
             "card_type": "spell", "effects": ["efeito_que_nao_existe"], "tags": []
         });
-        let erros = checar_carta(&carta, &["ganho_lp".to_string()]);
-        assert!(erros.iter().any(|e| e.mensagem.contains("não conhece")));
+        let erros = checar_carta(&carta, &com_efeitos(&["ganho_lp"]));
+        assert!(so_erros(&erros).iter().any(|e| e.mensagem.contains("não existe neste projeto")));
+    }
+
+    // ---- Gate de efeitos: os 3 estados do R4 (aciei o bug do fail-open) ----
+
+    fn carta_com_efeito(id_efeito: &str) -> serde_json::Value {
+        serde_json::json!({
+            "schema_version": 1, "id": "card_teste", "name": "Teste",
+            "card_type": "spell", "effects": [id_efeito], "tags": []
+        })
+    }
+
+    #[test]
+    fn efeito_em_projeto_sem_efeitos_avisa_e_nao_passa_em_silencio() {
+        // Projeto novo/vazio (effects.json ausente ou "effects": []) — a carta
+        // NÃO pode citar efeito, mas é AVISO (não erro): some da lista de
+        // bloqueio e aparece com o texto dizendo onde cadastrar o modelo.
+        let revisao = checar_carta(&carta_com_efeito("effect_inventado"), &sem_efeitos());
+        assert!(so_erros(&revisao).is_empty(), "sem catálogo não pode virar erro: {revisao:?}");
+        let avisos = so_avisos(&revisao);
+        assert_eq!(avisos.len(), 1, "o efeito citado tem que gerar aviso");
+        let m = &avisos[0].mensagem;
+        assert!(m.contains("effect_inventado"), "aviso tem que citar o efeito: {m}");
+        assert!(m.contains("não tem nenhum efeito cadastrado"), "aviso tem que avisar: {m}");
+        assert!(m.contains("aba Efeitos"), "aviso tem que dizer onde corrigir: {m}");
+    }
+
+    #[test]
+    fn efeito_cadastrado_no_projeto_passa() {
+        let revisao = checar_carta(&carta_com_efeito("effect_ganho_lp"), &com_efeitos(&["effect_ganho_lp"]));
+        assert!(revisao.is_empty(), "efeito cadastrado tem que passar: {revisao:?}");
+    }
+
+    #[test]
+    fn efeito_fora_da_lista_do_projeto_e_erro_com_o_nome() {
+        let revisao = checar_carta(&carta_com_efeito("effect_inventado"), &com_efeitos(&["effect_ganho_lp"]));
+        let erros = so_erros(&revisao);
+        assert_eq!(erros.len(), 1, "fora da lista tem que ser ERRO: {revisao:?}");
+        assert!(erros[0].mensagem.contains("effect_inventado"), "erro tem que citar o efeito");
+        assert!(erros[0].mensagem.contains("aba Efeitos"), "erro tem que dizer onde corrigir");
+    }
+
+    #[test]
+    fn gate_efeito_unico_os_tres_estados() {
+        assert!(checar_efeito_da_carta(&com_efeitos(&["a"]), "a").is_none());
+        let e = checar_efeito_da_carta(&com_efeitos(&["a"]), "b").expect("fora da lista = erro");
+        assert!(eh_erro(&e));
+        let a = checar_efeito_da_carta(&sem_efeitos(), "b").expect("sem catálogo = aviso");
+        assert!(!eh_erro(&a));
+    }
+
+    #[test]
+    fn catalogo_le_effects_json_da_pasta() {
+        // Projeto temporário: effects.json com 1 efeito -> Listado.
+        let dir = projeto_boot_teste("catalogo-listado");
+        let mut ef = efeito_base();
+        ef["id"] = serde_json::json!("effect_ganho_lp");
+        escrever_json_valor(
+            &dir.join("effects.json"),
+            &serde_json::json!({"schema_version": 1, "effects": [ef]}),
+            "efeitos",
+        )
+        .unwrap();
+        assert_eq!(catalogo_efeitos_de(&dir), com_efeitos(&["effect_ganho_lp"]));
+        // effects.json com lista vazia -> Vazio (o caso do projeto novo).
+        escrever_json_valor(
+            &dir.join("effects.json"),
+            &serde_json::json!({"schema_version": 1, "effects": []}),
+            "efeitos",
+        )
+        .unwrap();
+        assert_eq!(catalogo_efeitos_de(&dir), CatalogoEfeitos::Vazio);
+        // Sem o arquivo -> Vazio.
+        std::fs::remove_file(dir.join("effects.json")).unwrap();
+        assert_eq!(catalogo_efeitos_de(&dir), CatalogoEfeitos::Vazio);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn salvar_carta_valida_antes_de_gravar() {
+        // Os dois lados: carta boa grava, carta ruim NÃO grava e volta a lista.
+        let dir = projeto_boot_teste("salvar-carta");
+        let pasta_cartas = dir.join("cards");
+        let boa = carta_pack_valida("card_boa", "Boa");
+        let gravada = salvar_carta_para(&pasta_cartas, &boa);
+        assert!(gravada.is_ok(), "carta válida tem que gravar: {:?}", gravada.err());
+        assert!(pasta_cartas.join("card_boa.json").is_file());
+
+        // Carta com efeito fora do catálogo de um projeto que TEM efeitos: erro.
+        let mut ruim = carta_pack_valida("card_ruim", "Ruim");
+        ruim["effects"] = serde_json::json!(["effect_inventado"]);
+        let revisao = checar_carta(&ruim, &com_efeitos(&["effect_ganho_lp"]));
+        let erros = so_erros(&revisao);
+        assert!(!erros.is_empty());
+        let msg = mensagem_bloqueio(&erros);
+        assert!(msg.starts_with("Arruma antes de salvar:"), "mesma frase dos outros salvar_*: {msg}");
+        assert!(!pasta_cartas.join("card_ruim.json").exists(), "carta inválida não pode ir pro disco");
+
+        // Sem catálogo: aviso, não erro — a carta pode gravar, o aviso vai junto.
+        let revisao = checar_carta(&ruim, &sem_efeitos());
+        assert!(so_erros(&revisao).is_empty());
+        assert_eq!(so_avisos(&revisao).len(), 1);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn salvar_carta_invalida_real_nao_grava() {
+        // O comando de verdade (com o projeto do editor): carta sem nome não
+        // pode criar arquivo nenhum.
+        let carta = serde_json::json!({"schema_version": 1, "id": "card_sem_nome", "card_type": "spell", "effects": [], "tags": []});
+        let r = salvar_carta(carta);
+        assert!(r.is_err(), "carta sem nome tem que barrar");
+        let e = r.unwrap_err();
+        assert!(e.starts_with("Arruma antes de salvar:"), "mesma frase padrão: {e}");
+        assert!(e.contains("Nome"), "tem que dizer o que falta: {e}");
     }
 
     #[test]
@@ -2677,7 +3128,7 @@ mod testes {
 
     #[test]
     fn carta_fm_completa_passa() {
-        assert!(checar_carta(&carta_fm_base(), &[]).is_empty());
+        assert!(checar_carta(&carta_fm_base(), &sem_efeitos()).is_empty());
     }
 
     #[test]
@@ -2685,14 +3136,14 @@ mod testes {
         for mt in ["beast-warrior", "winged-beast", "dinosaur", "reptile", "sea-serpent", "fish"] {
             let mut c = carta_fm_base();
             c["monster_type"] = serde_json::json!(mt);
-            assert!(checar_carta(&c, &[]).is_empty(), "tipo {mt} deveria passar");
+            assert!(checar_carta(&c, &sem_efeitos()).is_empty(), "tipo {mt} deveria passar");
         }
         for ct in ["equip", "ritual"] {
             let c = serde_json::json!({
                 "schema_version": 1, "id": "card_fm_x", "name": "X",
                 "card_type": ct, "effects": [], "tags": []
             });
-            assert!(checar_carta(&c, &[]).is_empty(), "tipo {ct} deveria passar sem status");
+            assert!(checar_carta(&c, &sem_efeitos()).is_empty(), "tipo {ct} deveria passar sem status");
         }
     }
 
@@ -2700,7 +3151,7 @@ mod testes {
     fn carta_magic_barra_fm() {
         let mut c = carta_fm_base();
         c["card_type"] = serde_json::json!("magic");
-        let erros = checar_carta(&c, &[]);
+        let erros = checar_carta(&c, &sem_efeitos());
         assert!(erros.iter().any(|e| e.campo == "Tipo"));
     }
 
@@ -2708,19 +3159,19 @@ mod testes {
     fn carta_fm_opcionais_invalidos_barram() {
         let mut c = carta_fm_base();
         c["password"] = serde_json::json!("123");
-        assert!(checar_carta(&c, &[]).iter().any(|e| e.campo == "Senha"));
+        assert!(checar_carta(&c, &sem_efeitos()).iter().any(|e| e.campo == "Senha"));
         let mut c = carta_fm_base();
         c["guardian_star_1"] = serde_json::json!("terra");
-        assert!(checar_carta(&c, &[]).iter().any(|e| e.campo == "Estrela guardiã"));
+        assert!(checar_carta(&c, &sem_efeitos()).iter().any(|e| e.campo == "Estrela guardiã"));
         let mut c = carta_fm_base();
         c["starchip_cost"] = serde_json::json!(-5);
-        assert!(checar_carta(&c, &[]).iter().any(|e| e.campo == "Starchips"));
+        assert!(checar_carta(&c, &sem_efeitos()).iter().any(|e| e.campo == "Starchips"));
         // Ausentes = N/A: continuam válidas.
         let mut c = carta_fm_base();
         for k in ["guardian_star_1", "guardian_star_2", "password", "starchip_cost"] {
             c.as_object_mut().unwrap().remove(k);
         }
-        assert!(checar_carta(&c, &[]).is_empty());
+        assert!(checar_carta(&c, &sem_efeitos()).is_empty());
     }
 
     fn pasta_teste_import(nome: &str) -> std::path::PathBuf {
@@ -2813,7 +3264,7 @@ mod testes {
             &dir.join("duelists"),
             &dir.join("decks"),
             &caminho_fusoes,
-            &[],
+            &sem_efeitos(),
         )
         .unwrap();
         assert_eq!(r.cartas, 2);
@@ -2868,7 +3319,7 @@ mod testes {
             &dir.join("duelists"),
             &dir.join("decks"),
             &caminho_fusoes,
-            &[],
+            &sem_efeitos(),
         );
         assert!(r.is_err());
         assert!(r.unwrap_err().contains("não mexi em nada"));
@@ -2917,7 +3368,7 @@ mod testes {
             &dir.join("duelists"),
             &dir.join("decks"),
             &dir.join("fusions.json"),
-            &[],
+            &sem_efeitos(),
         );
         assert!(r.is_err());
         assert!(!dir.join("cards").join("card_pack_nova.json").exists());
@@ -3053,5 +3504,130 @@ mod testes {
         let f: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(base.join("fusions.json")).unwrap()).unwrap();
         assert_eq!(f.get("recipes").and_then(|v| v.as_array()).map(|a| a.len()), Some(0));
         let _ = std::fs::remove_dir_all(&base);
+    }
+
+    // ---- Duelo rápido: --setup temporário com nome único + limpeza ----
+
+    #[test]
+    fn setup_temporario_tem_nome_unico_por_chamada() {
+        // Duas chamadas seguidas = dois arquivos diferentes (o nome fixo
+        // duel_studio_rapido.json fazia o 2º sobrescrever o setup do 1º
+        // antes do Godot ler).
+        let a = novo_setup_temporario(1_000);
+        let b = novo_setup_temporario(1_000);
+        assert_ne!(a, b, "duas chamadas não podem gerar o mesmo arquivo");
+        let c = novo_setup_temporario(1_001);
+        assert_ne!(b, c);
+        for p in [&a, &b, &c] {
+            let nome = p.file_name().unwrap().to_string_lossy().to_string();
+            assert!(nome.starts_with(PREFIXO_SETUP), "prefixo: {nome}");
+            assert!(nome.ends_with(".json"), "extensão: {nome}");
+        }
+    }
+
+    #[test]
+    fn setup_temporario_apaga_so_o_que_esta_velho() {
+        // Limpeza: a varredura do próximo duelo apaga o setup ancient e
+        // preserva o recente (o jogo em curso ainda pode estar lendo).
+        let agora = 10_000_000u64;
+        let velho = std::env::temp_dir().join(format!("{PREFIXO_SETUP}99999_{}_0.json", agora - 7200));
+        let recente = std::env::temp_dir().join(format!("{PREFIXO_SETUP}99999_{}_0.json", agora - 10));
+        let meu_setup = novo_setup_temporario(agora);
+        std::fs::write(&velho, "{}").unwrap();
+        std::fs::write(&recente, "{}").unwrap();
+        std::fs::write(&meu_setup, "{}").unwrap();
+
+        assert_eq!(idade_setup(&velho, agora), Some(7200));
+        assert_eq!(idade_setup(&recente, agora), Some(10));
+        // Arquivo que não é nosso (ou nome sem tempo) nunca é tocado.
+        let outro = std::env::temp_dir().join("duel_studio_rapido.json");
+        assert!(idade_setup(&outro, agora).is_none());
+        let sem_seg = std::env::temp_dir().join(format!("{PREFIXO_SETUP}sem_tempo.json"));
+        assert!(idade_setup(&sem_seg, agora).is_none());
+
+        let apagados = limpar_setups_antigos(agora, SETUP_MAX_IDADE_SEGS);
+        assert!(!velho.exists(), "setup de 2h tem que ser apagado");
+        assert!(recente.exists(), "setup de 10s tem que continuar (duelo em curso)");
+        assert!(meu_setup.exists(), "o setup que acabou de nascer nunca é apagado");
+        assert_eq!(apagados, 1, "só o velho devia entrar na conta");
+        // Limpeza do teste (nada de lixo no temp — R8).
+        let _ = std::fs::remove_file(&recente);
+        let _ = std::fs::remove_file(&meu_setup);
+    }
+
+    // ---- Achar o Godot (o nome do exe estava repetido 4x, sem fallback) ----
+
+    #[test]
+    fn achar_godot_usa_o_exe_oficial_e_depois_o_mais_novo() {
+        let base = projeto_boot_teste("godot");
+        let dir_godot = base.join("Godot");
+        std::fs::create_dir_all(&dir_godot).unwrap();
+        // 1) nome oficial (D14) ganha mesmo com outras versões na pasta.
+        for nome in ["Godot_v4.4.0-stable_win64.exe", "Godot_v4.7.2-stable_win64.exe"] {
+            std::fs::write(dir_godot.join(nome), "x").unwrap();
+        }
+        assert!(achar_godot(&base).unwrap().ends_with("Godot_v4.7.2-stable_win64.exe"));
+        // 2) sem o oficial: qualquer Godot_v*_win64*.exe, versão mais nova 1º.
+        std::fs::remove_file(dir_godot.join("Godot_v4.7.2-stable_win64.exe")).unwrap();
+        assert!(achar_godot(&base).unwrap().ends_with("Godot_v4.4.0-stable_win64.exe"));
+        std::fs::write(dir_godot.join("Godot_v4.10.1-stable_win64.exe"), "x").unwrap();
+        assert!(achar_godot(&base).unwrap().ends_with("Godot_v4.10.1-stable_win64.exe"));
+        // 3) sem nenhum exe (e nem linux/mac valem): erro em PT-BR dizendo
+        //    onde procurar e como resolver.
+        for nome in ["Godot_v4.4.0-stable_win64.exe", "Godot_v4.10.1-stable_win64.exe"] {
+            std::fs::remove_file(dir_godot.join(nome)).unwrap();
+        }
+        let r = achar_godot(&base).unwrap_err();
+        assert!(r.contains("Não achei o Godot"), "{r}");
+        assert!(r.contains("GODOT_PATH"), "{r}");
+        assert!(r.contains("Godot"), "{r}");
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn versao_godot_ordena() {
+        assert_eq!(versao_godot("Godot_v4.7.2-stable_win64.exe"), (4, 7, 2));
+        assert_eq!(versao_godot("Godot_v4.10.1-stable_win64.exe"), (4, 10, 1));
+        assert_eq!(versao_godot("Godot_v3.5-stable_win64.exe"), (3, 5, 0));
+        assert_eq!(versao_godot("outro.exe"), (0, 0, 0));
+        assert!(versao_godot("Godot_v4.10.1-stable_win64.exe") > versao_godot("Godot_v4.7.2-stable_win64.exe"));
+    }
+
+    // ---- Diagnóstico de IPC (o comando que faltava) ----
+
+    #[test]
+    fn diagnostico_ipc_guarda_lote_e_respeita_o_teto() {
+        let estado = DiagnosticoIpc::default();
+        let lote: Vec<EventoIpc> = (0..3)
+            .map(|i| EventoIpc {
+                origin: "ui".to_string(),
+                level: "info".to_string(),
+                area: "ipc".to_string(),
+                msg: format!("listar_cartas ok {i}ms"),
+            })
+            .collect();
+        assert_eq!(registrar_diagnostico(&estado, 100, &lote), 3);
+        assert_eq!(registrar_diagnostico(&estado, 101, &[]), 3, "lote vazio não muda nada");
+        let guardado = ler_diagnostico(&estado);
+        assert_eq!(guardado.len(), 3);
+        assert!(guardado[0].contains("listar_cartas ok 0ms"), "linha: {}", guardado[0]);
+        assert!(guardado[0].contains("[info]"), "nível tem que aparecer: {}", guardado[0]);
+
+        // Estourando o teto: fica com as ÚLTIMAS 500 (o buffer não cresce).
+        let cheio: Vec<EventoIpc> = (0..600)
+            .map(|i| EventoIpc {
+                origin: "ui".to_string(),
+                level: "info".to_string(),
+                area: "ipc".to_string(),
+                msg: format!("evento {i}"),
+            })
+            .collect();
+        assert_eq!(registrar_diagnostico(&estado, 102, &cheio), DIAG_MAX_LINHAS);
+        let guardado = ler_diagnostico(&estado);
+        assert_eq!(guardado.len(), DIAG_MAX_LINHAS);
+        // Sobrou a cauda: as 3 do primeiro lote caíram fora e o começo do lote
+        // de 600 também (o que é velho some, o que é novo fica).
+        assert!(guardado[0].contains("evento 100"), "primeira linha guardada: {}", guardado[0]);
+        assert!(guardado[DIAG_MAX_LINHAS - 1].contains("evento 599"), "última linha guardada: {}", guardado[DIAG_MAX_LINHAS - 1]);
     }
 }

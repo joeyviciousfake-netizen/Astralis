@@ -4,3 +4,28 @@ build/
 src/generated/
 src-tauri/target/
 src-tauri/gen/
+
+# Conteúdo do projeto do editor (D29): abre vazio e só enche por Importar
+# pack. O esqueleto (projects/default/**/.gitkeep, README.md, fusions.json e
+# effects.json VAZIOS) continua versionado — o que entra importado não vai
+# para o git.
+projects/default/backups/
+projects/default/cards/*
+projects/default/duelists/*
+projects/default/decks/*
+projects/default/arenas/*
+projects/default/scenes/*
+projects/default/assets/*/*
+projects/default/duel_setup.json
+
+# ...exceto o esqueleto vazio, que precisa ficar de pé (senão a pasta nova
+# não entra no clone e o primeiro Importar não acha projects/default/).
+!projects/default/cards/.gitkeep
+!projects/default/duelists/.gitkeep
+!projects/default/decks/.gitkeep
+!projects/default/arenas/.gitkeep
+!projects/default/scenes/.gitkeep
+!projects/default/assets/*/.gitkeep
+!projects/default/README.md
+!projects/default/fusions.json
+!projects/default/effects.json

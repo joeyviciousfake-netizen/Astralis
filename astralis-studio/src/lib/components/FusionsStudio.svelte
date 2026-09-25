@@ -17,7 +17,6 @@
 
   useSectionShell({
     mount: () => { void store.ensureLoaded(); void cardsStore.loadAll(); },
-    onIso: () => { aba = "receitas"; testeMsg = ""; },
     onSave: () => { save().catch(() => {}); },
   });
 

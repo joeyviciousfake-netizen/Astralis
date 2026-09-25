@@ -16,7 +16,6 @@
 
   useSectionShell({
     mount: () => { void store.ensureLoaded(); void cardsStore.loadAll(); },
-    onIso: () => { selId = null; buscaCarta = ""; },
     onSave: () => { if (sel || isNew) save().catch(() => {}); },
   });
 

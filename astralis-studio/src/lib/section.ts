@@ -1,16 +1,14 @@
-// purpose: esqueleto único de seção (mount + listeners ISO/save + flash).
+// purpose: esqueleto único de seção (mount + listener de salvar + flash).
 // Antes cada seção copiava: createSaveFlash + onMount com ensure/load +
-// addEventListener(fm-iso-loaded/fm-save-request) + cleanup com
-// clearSaveTimer. Mesma ordem aqui: mount primeiro, listeners depois.
+// listener de salvar + cleanup com clearSaveTimer. Mesma ordem aqui:
+// mount primeiro, listeners depois.
 import { createSaveFlash } from "$lib/stores/saveFlash.svelte";
-import { onIsoChanged, onSaveRequested } from "$lib/stores/isoVersion.svelte";
+import { onSaveRequested } from "$lib/stores/saveBus.svelte";
 import { onMount } from "svelte";
 
 export function useSectionShell(opts: {
   /** roda no mount, antes dos listeners (ensureLoaded/loadNames/...) */
   mount?: () => void;
-  /** recarrega na troca de ISO */
-  onIso?: () => void;
   /** salva no Ctrl+S global (o chamador checa saving/dirty) */
   onSave?: () => void;
   /** listeners extras de window ([evento, handler], removidos no cleanup) */
@@ -25,10 +23,6 @@ export function useSectionShell(opts: {
   onMount(() => {
     opts.mount?.();
     const offs: Array<() => void> = [];
-    if (opts.onIso) {
-      const h = () => opts.onIso?.();
-      offs.push(onIsoChanged(h));
-    }
     if (opts.onSave) {
       const s = () => opts.onSave?.();
       offs.push(onSaveRequested(s));

@@ -1,22 +1,12 @@
 import { invoke } from "@tauri-apps/api/core";
 
-// R ALTO: timeout padrão para todo IPC de load (antes só a FusionSection tinha
+// R ALTO: timeout padrão para todo IPC de load. Antes só a FusionSection tinha
 // 15s; os demais loads giravam para sempre se o backend pendurasse —
-// precedente "mod CDZ", carta 001 no `Carregando…` infinito).
+// precedente "mod CDZ", carta 001 no `Carregando…` infinito.
 export const IPC_TIMEOUT_MS = 15000;
 
-export function withTimeout<T>(p: Promise<T>, ms = IPC_TIMEOUT_MS): Promise<T> {
-  let t: ReturnType<typeof setTimeout> | null = null;
-  const timeout = new Promise<never>((_, rej) => {
-    t = setTimeout(() => rej(new Error(`Tempo esgotado após ${ms / 1000}s — tente de novo`)), ms);
-  });
-  return Promise.race([p, timeout]).finally(() => {
-    if (t) clearTimeout(t);
-  });
-}
-
 /// Invoke com timeout padrão (loads). Para saves usar `invokeSave`
-/// (escrita pode legitimamente demorar em ISO 517MB — 60s em vez de
+/// (escrita pode legitimamente demorar em pack grande — 60s em vez de
 /// infinito; antes um save pendurado travava `saving=true` para sempre).
 export const SAVE_TIMEOUT_MS = 60000;
 
@@ -55,8 +45,9 @@ function invokeWithTimeout<T>(cmd: string, work: () => Promise<T>, ms: number): 
 }
 
 /// Log de diagnóstico em lote: eventos acumulam em memória e descarregam de
-/// 2s em 2s numa chamada só (1 IPC em vez de N — a mesa dispara dezenas por
-/// seleção). Erro descarrega na hora. Fire-and-forget: nunca quebra o chamador.
+/// 2s em 2s numa chamada só (1 IPC em vez de N — a validação dispara dezenas
+/// por seleção). Erro descarrega na hora. Fire-and-forget: nunca quebra o
+/// chamador. O comando Rust `debug_push_batch` guarda as últimas 500 linhas.
 type LogItem = { origin: string; level: string; area: string; msg: string };
 let logQueue: LogItem[] = [];
 let logTimer: ReturnType<typeof setTimeout> | null = null;
@@ -70,8 +61,8 @@ function scheduleFlush() {
   }, LOG_FLUSH_MS);
 }
 
-/// Descarrega a fila agora (o visor chama antes de ler — zero defasagem lá).
-export function flushDebugLog(): Promise<void> {
+/// Descarrega a fila agora (chamado pelo timer e no erro).
+function flushDebugLog(): Promise<void> {
   if (logTimer !== null) {
     clearTimeout(logTimer);
     logTimer = null;
@@ -101,17 +92,6 @@ function logIpc(cmd: string, ms: number, err: string | null, late = false) {
     } else {
       scheduleFlush();
     }
-  } catch {
-    /* diagnóstico nunca quebra o app */
-  }
-}
-
-/// Log de ação da UI em lote (mesma fila do hook IPC: 1 IPC a cada 2s, não 1
-/// por ação — antes cada play/select emitia 2 invokes `debug_push` avulsos).
-export function queueUiLog(area: string, msg: string, level = "info"): void {
-  try {
-    logQueue.push({ origin: "ui", level, area, msg });
-    scheduleFlush();
   } catch {
     /* diagnóstico nunca quebra o app */
   }

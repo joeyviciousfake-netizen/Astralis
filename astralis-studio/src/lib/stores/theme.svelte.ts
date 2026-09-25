@@ -53,6 +53,24 @@ export const themes: Theme[] = [
   },
 ];
 
+// Chave do tema no navegador. A antiga era "fm-theme" (herdada do FM-Studio);
+// agora é "astralis-studio-theme" e a antiga é migrada uma vez, para ninguém
+// perder o tema que já tinha escolhido.
+const CHAVE_TEMA = "astralis-studio-theme";
+const CHAVE_TEMA_ANTIGA = "fm-theme";
+
+function temaSalvo(): ThemeId | null {
+  const atual = localStorage.getItem(CHAVE_TEMA) as ThemeId | null;
+  if (atual) return atual;
+  const antiga = localStorage.getItem(CHAVE_TEMA_ANTIGA) as ThemeId | null;
+  if (antiga) {
+    localStorage.setItem(CHAVE_TEMA, antiga);
+    localStorage.removeItem(CHAVE_TEMA_ANTIGA);
+    return antiga;
+  }
+  return null;
+}
+
 let current = $state<ThemeId>("dark");
 
 export function useTheme() {
@@ -66,12 +84,12 @@ export function useTheme() {
         document.documentElement.setAttribute("data-theme", id);
         document.documentElement.classList.remove(...themes.map(t => `theme-${t.id}`));
         document.documentElement.classList.add(`theme-${id}`);
-        localStorage.setItem("fm-theme", id);
+        localStorage.setItem(CHAVE_TEMA, id);
       }
     },
     init() {
       if (typeof window !== "undefined") {
-        const saved = localStorage.getItem("fm-theme") as ThemeId | null;
+        const saved = temaSalvo();
         const initial = saved && themes.some(t => t.id === saved) ? saved : "dark";
         this.setTheme(initial);
       }

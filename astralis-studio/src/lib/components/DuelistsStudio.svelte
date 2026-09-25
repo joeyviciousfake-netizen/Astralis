@@ -20,7 +20,6 @@
 
   useSectionShell({
     mount: () => { void store.ensureNamesLoaded(); void decksStore.ensureLoaded(); },
-    onIso: () => { selId = null; busca = ""; },
     onSave: () => { if (sel || isNew) save().catch(() => {}); },
   });
 

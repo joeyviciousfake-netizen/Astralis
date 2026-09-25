@@ -97,7 +97,7 @@
 
   function zipNome(): string {
     const plat = plataforma === "windows" ? "windows" : plataforma === "linux" ? "linux" : "android";
-    return `MeuJogo-${plat}.zip`;
+    return `Astralis-${plat}.zip`;
   }
 
   async function exportar() {

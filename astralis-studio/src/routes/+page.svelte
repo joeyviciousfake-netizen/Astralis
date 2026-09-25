@@ -1,8 +1,9 @@
 <script lang="ts">
   // Página principal — espelha o +page do FM-Studio (mesmo header 64px blur,
   // nav em pílula, pills de estado, selo de validação clicável, Ctrl+S).
-  // Religado: sem ISO — Cartas (JSON real), Duelistas (leitura), Cenas (em
-  // breve). Jogar lança o Astralis de verdade (preview unificado, doc 10).
+  // Projeto do editor abre VAZIO (D29) e só enche por Importar pack. Cartas
+  // (JSON real), Duelistas/Decks (leitura), Efeitos, Fusões, Cenas, Exportar.
+  // Jogar lança o Astralis de verdade (preview unificado, doc 10).
   import { onMount } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { useCards } from "$lib/stores/cards.svelte";
@@ -15,7 +16,7 @@
   import ScenesStudio from "$lib/components/ScenesStudio.svelte";
   import ExportStudio from "$lib/components/ExportStudio.svelte";
   import { createSaveFlash } from "$lib/stores/saveFlash.svelte";
-  import { requestSave } from "$lib/stores/isoVersion.svelte";
+  import { requestSave } from "$lib/stores/saveBus.svelte";
   import ThemeSelector from "$lib/components/ThemeSelector.svelte";
   import ValidationPanel from "$lib/components/ValidationPanel.svelte";
   import { useValidate } from "$lib/stores/validate.svelte";

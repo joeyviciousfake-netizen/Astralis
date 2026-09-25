@@ -1,5 +1,5 @@
 import { invokeLoad, invokeSave, errMsg } from "$lib/stores/ipc";
-import { onIsoChanged } from "$lib/stores/isoVersion.svelte";
+import { onSaveRequested } from "$lib/stores/saveBus.svelte";
 import snapshot from "../../generated/cards-snapshot.json";
 
 // Duelista Astralis (schemas/duelist.schema.json). Editável no Studio (dado
@@ -151,6 +151,7 @@ export function useDuelists() {
   };
 }
 
-onIsoChanged(() => {
+// Depois de salvar um duelista, a lista de nomes/drop pode estar desatualizada.
+onSaveRequested(() => {
   useDuelists().clear();
 });

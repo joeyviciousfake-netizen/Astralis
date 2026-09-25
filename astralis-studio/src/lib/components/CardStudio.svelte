@@ -27,7 +27,6 @@ import { useEffects } from "$lib/stores/effects.svelte";
 
   const detailFlash = useSectionShell({
     mount: () => { void effStore.ensureLoaded(); },
-    onIso: () => { store.selectedId = null; lastSyncId = null; },
     onSave: () => {
       if (store.selected) save().catch((e) => detailFlash.flashSave(`Falha ao salvar carta: ${errMsg(e)}`, false));
     },
@@ -65,7 +64,7 @@ import { useEffects } from "$lib/stores/effects.svelte";
   // Snapshot dos originais (ao selecionar) — campo alterado mostra ↺.
   type Orig = { name: string; desc: string; art: string; type: string; mtype: string; attr: string; lvl: number; atk: number; def: number; g1: string; g2: string; pwd: string; chip: string; effects: string[]; tags: string };
   let orig = $state<Orig | null>(null);
-  let fieldErrors = $state<Array<{ campo: string; mensagem: string }>>([]);
+  let fieldErrors = $state<Array<{ campo: string; mensagem: string; nivel: string }>>([]);
   let playMsg = $state("");
   let playOk = $state(false);
   let effectPick = $state("");
@@ -292,9 +291,14 @@ import { useEffects } from "$lib/stores/effects.svelte";
     const card = buildCard();
     try {
       const { file: _drop, ...data } = card;
-      const erros: Array<{ campo: string; mensagem: string }> = await invoke("validar_carta", { carta: data });
-      fieldErrors = erros;
-      detailFlash.flashSave(erros.length ? `${erros.length} erro(s) — veja a lista` : "Carta válida", !erros.length);
+      const erros: Array<{ campo: string; mensagem: string; nivel?: string }> = await invoke("validar_carta", { carta: data });
+      fieldErrors = erros.map((e) => ({ ...e, nivel: e.nivel ?? "erro" }));
+      const qtdErro = fieldErrors.filter((e) => e.nivel !== "aviso").length;
+      const qtdAviso = fieldErrors.length - qtdErro;
+      const resumo = [qtdErro ? `${qtdErro} erro(s)` : "", qtdAviso ? `${qtdAviso} aviso(s)` : ""]
+        .filter(Boolean)
+        .join(" e ");
+      detailFlash.flashSave(resumo ? `${resumo} - veja a lista` : "Carta válida", !qtdErro);
     } catch (e) {
       detailFlash.flashSave(`Falha ao validar: ${errMsg(e)}`, false);
     }
@@ -526,7 +530,10 @@ import { useEffects } from "$lib/stores/effects.svelte";
       {#if fieldErrors.length}
         <div class="mt-2 rounded-xl border border-rose-900/60 bg-rose-950/20 divide-y divide-rose-900/40">
           {#each fieldErrors as fe (fe.campo + fe.mensagem)}
-            <p class="px-3 py-1.5 text-xs text-rose-200"><span class="font-bold">{fe.campo}:</span> {fe.mensagem}</p>
+            <p class="px-3 py-1.5 text-xs {fe.nivel === 'aviso' ? 'text-amber-200' : 'text-rose-200'}">
+              {#if fe.nivel === "aviso"}<span class="font-bold">Aviso:</span>{:else}<span class="font-bold">{fe.campo}:</span>{/if}
+              {fe.mensagem}
+            </p>
           {/each}
         </div>
       {/if}

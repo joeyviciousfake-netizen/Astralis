@@ -30,7 +30,7 @@ async function fetchFusoes(): Promise<FusionsFile> {
     return { schema_version: 1, recipes: raw.recipes ?? [], rules: raw.rules ?? [] };
   } catch {
     // Snapshot enxuto (pós-pack FM): traz só a contagem, não as 25 mil
-    // receitas — no navegador a aba Fusões pede para abrir via app.bat.
+    // receitas — no navegador a aba Fusões pede o app.
     const snap = (snapshot as Snap).fusions;
     if (snap && Array.isArray((snap as FusionsFile).recipes)) {
       const f = snap as FusionsFile;
@@ -38,9 +38,10 @@ async function fetchFusoes(): Promise<FusionsFile> {
     }
     if (snap && typeof (snap as { recipe_count?: number }).recipe_count === "number") {
       const c = snap as { recipe_count: number; rule_count: number };
-      throw new Error(`Este projeto tem ${c.recipe_count} fusões — abra o app via app.bat para editar (o navegador não carrega essa lista).`);
+      throw new Error(`Este projeto tem ${c.recipe_count} fusões e o navegador não carrega essa lista. Abra o app pelo app.bat para editar.`);
     }
-    throw new Error("Fusões não encontradas");
+    // Projeto vazio (o Studio abre vazio, D29) não é erro: é o estado normal.
+    throw new Error("Este projeto está vazio — importe um pack (botão 📥 Importar) para ter fusões para editar.");
   }
 }
 

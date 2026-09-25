@@ -1,9 +1,27 @@
 @echo off
 REM Astralis Studio - abre o app ou cria o exe. Dono: editor.
-REM Acha o Rust mesmo fora do PATH e entra na pasta do Studio.
-set "CARGO_BIN=C:\Users\Max\.cargo\bin"
-set "PATH=%CARGO_BIN%;%PATH%"
+REM Acha o cargo-tauri sem depender desta maquina e entra na pasta do Studio.
 cd /d "%~dp0"
+
+REM 1) cargo-tauri no PATH?  2) CARGO_BIN apontando pra ele?  3) ~/.cargo/bin.
+where cargo-tauri >nul 2>nul
+if not errorlevel 1 goto TEMCARGO
+if defined CARGO_BIN if exist "%CARGO_BIN%\cargo-tauri.exe" (
+  set "PATH=%CARGO_BIN%;%PATH%"
+  goto TEMCARGO
+)
+if exist "%USERPROFILE%\.cargo\bin\cargo-tauri.exe" (
+  set "PATH=%USERPROFILE%\.cargo\bin;%PATH%"
+  goto TEMCARGO
+)
+echo [ERRO] Rust nao encontrado nesta maquina.
+echo Instale o Rust em https://rustup.rs e depois feche e abra este script de novo.
+echo Se voce instalou em outro lugar, defina CARGO_BIN apontando para a pasta do
+echo cargo ^(ex.: setx CARGO_BIN C:\Ferramentas\cargo\bin^).
+pause
+goto FIM
+
+:TEMCARGO
 
 :MENU
 cls
