@@ -200,10 +200,13 @@ fn pasta_projeto() -> Result<PathBuf, String> {
     Ok(proj)
 }
 
-// As pastas do esqueleto são exatamente as que têm .gitkeep versionado no repo
-// (fonte da verdade: `git ls-files astralis-studio/projects/default/`).
-const PASTAS_ESQUELETO: [&str; 8] = [
-    "cards", "duelists", "decks", "arenas", "scenes",
+// As pastas do esqueleto: as 8 com .gitkeep versionado no repo (fonte da
+// verdade: `git ls-files astralis-studio/projects/default/`) + layouts/ (o
+// molde da carta é CONTEÚDO do usuário como cards/*.json — ignorado no git
+// em .gitignore — mas a PASTA precisa existir, senão o 1º Salvar do molde
+// não acha onde gravar).
+const PASTAS_ESQUELETO: [&str; 9] = [
+    "cards", "duelists", "decks", "arenas", "scenes", "layouts",
     "assets/cards", "assets/portraits", "assets/backgrounds",
 ];
 
@@ -1810,6 +1813,345 @@ fn checar_test_state(setup: &serde_json::Value, cartas: &Catalogo) -> Vec<ErroVa
     erros
 }
 
+/// Número 0-1000 do rect/style do molde (por-mil do próprio eixo, V1).
+fn num_molde(v: &serde_json::Value) -> Option<f64> {
+    match v {
+        serde_json::Value::Number(n) => n.as_f64().filter(|f| (0.0..=1000.0).contains(f)),
+        _ => None,
+    }
+}
+
+/// Molde da carta em DADO (contrato systems `card_layout.schema.json` V1) —
+/// o espelho da mesma regra do schema. Só valida DADO (R1/R4: nunca desenha,
+/// nunca calcula jogo). V1 = molde padrão de monstro; peça ausente = default
+/// do scan, então aqui só confere o que VEIO: schema_version==1, id snake,
+/// name, layout_for==monster (V1), canvas=={59,86,per_mil}, pieces 0-9 com
+/// kind do enum fechado (máx 1 por kind), rect 0-1000 com x+w/y+h<=1000,
+/// style nos limites, visible_when do enum. O draft-07 não faz soma nem
+/// unicidade de kind: essas duas conferem aqui + tools/fm_import.py --check.
+/// V2 (molde por carta + editor visual) liga este gate no salvar/validar.
+fn checar_card_layout(molde: &serde_json::Value) -> Vec<ErroValidacao> {
+    let mut erros: Vec<ErroValidacao> = Vec::new();
+    let obj = match molde.as_object() {
+        Some(o) => o,
+        None => {
+            return vec![erro(
+                "Molde",
+                "field-layout",
+                "Molde da carta vazio. O molde padrão de monstro já vem no projeto (V1 só tem ele).",
+            )]
+        }
+    };
+    match obj.get("schema_version").and_then(|v| v.as_i64()) {
+        Some(1) => {}
+        _ => erros.push(erro(
+            "Versão do molde",
+            "field-layout",
+            "Versão do molde precisa ser 1. Não mexa neste campo (ele é automático).",
+        )),
+    }
+    match obj.get("id").and_then(|v| v.as_str()) {
+        Some(id) if eh_id_snake(id) && id.len() <= 64 => {}
+        Some(id) if id.chars().count() > 64 => erros.push(erro(
+            "ID do molde",
+            "field-layout",
+            "ID do molde longo demais. Use no máximo 64 caracteres (só letra minúscula, número e underline).",
+        )),
+        _ => erros.push(erro(
+            "ID do molde",
+            "field-layout",
+            "Falta um ID válido no molde. Use só letra minúscula, número e underline — exemplo: card_layout_monster_default.",
+        )),
+    }
+    match obj.get("name").and_then(|v| v.as_str()) {
+        Some(nome) if !nome.trim().is_empty() => {}
+        _ => erros.push(erro(
+            "Nome do molde",
+            "field-layout",
+            "Falta o Nome do molde. Diga como o molde vai aparecer na lista (ex: Molde padrão de monstro).",
+        )),
+    }
+    for k in obj.keys() {
+        if !["schema_version", "id", "name", "description", "layout_for", "canvas", "pieces"]
+            .contains(&k.as_str())
+        {
+            erros.push(erro(
+                "Molde",
+                "field-layout",
+                &format!("Molde com campo desconhecido \"{k}\". O molde V1 só aceita: name, description, layout_for, canvas, pieces."),
+            ));
+        }
+    }
+    if let Some(lf) = obj.get("layout_for") {
+        if lf.as_str() != Some("monster") {
+            erros.push(erro(
+                "Molde",
+                "field-layout",
+                "V1 só tem molde de monstro. Deixe layout_for em \"monster\" (outros tipos chegam depois).",
+            ));
+        }
+    }
+    if let Some(cv) = obj.get("canvas") {
+        let ok = cv.as_object().map(|o| {
+            o.len() == 3
+                && o.get("w").and_then(|v| v.as_f64()) == Some(59.0)
+                && o.get("h").and_then(|v| v.as_f64()) == Some(86.0)
+                && o.get("unit").and_then(|v| v.as_str()) == Some("per_mil")
+        });
+        if ok != Some(true) {
+            erros.push(erro(
+                "Tamanho do molde",
+                "field-layout",
+                "O tamanho do molde é fixo na V1: 59x86 em por-mil. Não mexa no canvas.",
+            ));
+        }
+    }
+    let pecas = match obj.get("pieces") {
+        None => return erros,
+        Some(v) => v,
+    };
+    let lista = match pecas.as_array() {
+        Some(l) if l.len() <= 9 => l,
+        _ => {
+            erros.push(erro(
+                "Peças do molde",
+                "field-layout",
+                "O molde precisa ter de 0 a 9 peças (uma por tipo: nome, orbe, estrelas, arte, tipo, texto, ATK/DEF, rodapé, moldura).",
+            ));
+            return erros;
+        }
+    };
+    let kinds = [
+        "name", "attribute_orb", "level_stars", "art_window", "type_line",
+        "text_box", "atkdef_bar", "footer", "frame",
+    ];
+    let mut vistos: Vec<&str> = Vec::new();
+    for p in lista {
+        let o = match p.as_object() {
+            Some(o) => o,
+            None => {
+                erros.push(erro(
+                    "Peças do molde",
+                    "field-layout",
+                    "Peça do molde fora de formato (vale só objeto com id + kind).",
+                ));
+                continue;
+            }
+        };
+        for k in o.keys() {
+            if !["id", "kind", "rect", "style", "visible_when"].contains(&k.as_str()) {
+                erros.push(erro(
+                    "Peças do molde",
+                    "field-layout",
+                    &format!("Peça com campo desconhecido \"{k}\". Vale só: id, kind, rect, style, visible_when."),
+                ));
+            }
+        }
+        match o.get("id").and_then(|v| v.as_str()) {
+            Some(id) if eh_id_snake(id) && id.len() <= 64 => {}
+            Some(id) if id.chars().count() > 64 => erros.push(erro(
+                "Peças do molde",
+                "field-layout",
+                "Peça com ID longo demais. Use no máximo 64 caracteres (só letra minúscula, número e underline) — exemplo: name_bar.",
+            )),
+            _ => erros.push(erro(
+                "Peças do molde",
+                "field-layout",
+                "Peça sem ID válido. Use só letra minúscula, número e underline — exemplo: name_bar.",
+            )),
+        }
+        match o.get("kind").and_then(|v| v.as_str()) {
+            Some(k) if kinds.contains(&k) => {
+                if vistos.contains(&k) {
+                    erros.push(erro(
+                        "Peças do molde",
+                        "field-layout",
+                        &format!("Peça \"{k}\" repetida (vale no máximo 1 por tipo). Apague a cópia."),
+                    ));
+                } else {
+                    vistos.push(k);
+                }
+            }
+            _ => erros.push(erro(
+                "Peças do molde",
+                "field-layout",
+                "Peça com tipo fora da lista. Os 9 tipos são: nome, orbe, estrelas, arte, tipo, texto, ATK/DEF, rodapé e moldura.",
+            )),
+        }
+        if let Some(r) = o.get("rect") {
+            let nums = ["x", "y", "w", "h"]
+                .iter()
+                .filter_map(|k| r.get(*k).and_then(num_molde))
+                .collect::<Vec<f64>>();
+            let chaves_ok = r.as_object().map(|o| o.len() == 4).unwrap_or(false);
+            if nums.len() != 4 || !chaves_ok {
+                erros.push(erro(
+                    "Posição da peça",
+                    "field-layout",
+                    "Posição (rect) precisa ter x, y, w e h de 0 a 1000 (por-mil da carta).",
+                ));
+            } else if nums[0] + nums[2] > 1000.0 || nums[1] + nums[3] > 1000.0 {
+                erros.push(erro(
+                    "Posição da peça",
+                    "field-layout",
+                    "Peça saindo da carta (x+largura e y+altura precisam caber em 1000). Diminua ou mova a peça.",
+                ));
+            }
+        }
+        if let Some(s) = o.get("style") {
+            match s.as_object() {
+                None => erros.push(erro(
+                    "Visual da peça",
+                    "field-layout",
+                    "Visual (style) fora de formato. Vale só: font_size, bold, color, align, z.",
+                )),
+                Some(so) => {
+                    for k in so.keys() {
+                        if !["font_size", "bold", "color", "align", "z"].contains(&k.as_str()) {
+                            erros.push(erro(
+                                "Visual da peça",
+                                "field-layout",
+                                &format!("Visual com campo desconhecido \"{k}\". Vale só: font_size, bold, color, align, z."),
+                            ));
+                        }
+                    }
+                    if let Some(v) = so.get("font_size") {
+                        if num_molde(v).is_none() {
+                            erros.push(erro(
+                                "Visual da peça",
+                                "field-layout",
+                                "Tamanho da letra (font_size) precisa ser de 0 a 1000 (por-mil da altura).",
+                            ));
+                        }
+                    }
+                    if let Some(v) = so.get("bold") {
+                        if !v.is_boolean() {
+                            erros.push(erro(
+                                "Visual da peça",
+                                "field-layout",
+                                "Negrito (bold) precisa ser ligado/desligado.",
+                            ));
+                        }
+                    }
+                    if let Some(v) = so.get("color") {
+                        let ok = v.as_str().map(|c| {
+                            c.len() == 7
+                                && c.starts_with('#')
+                                && c[1..].chars().all(|ch| ch.is_ascii_hexdigit())
+                        });
+                        if ok != Some(true) {
+                            erros.push(erro(
+                                "Visual da peça",
+                                "field-layout",
+                                "Cor (color) precisa ser hex — exemplo: #2a1c08.",
+                            ));
+                        }
+                    }
+                    if let Some(v) = so.get("align") {
+                        if !["left", "center", "right"].contains(&v.as_str().unwrap_or("")) {
+                            erros.push(erro(
+                                "Visual da peça",
+                                "field-layout",
+                                "Alinhamento (align) só aceita: left, center, right.",
+                            ));
+                        }
+                    }
+                    if let Some(v) = so.get("z") {
+                        match v.as_i64() {
+                            Some(z) if (0..=10).contains(&z) => {}
+                            _ => erros.push(erro(
+                                "Visual da peça",
+                                "field-layout",
+                                "Ordem de desenho (z) precisa ser de 0 a 10 (moldura 0 primeiro, orbe 6 por cima).",
+                            )),
+                        }
+                    }
+                }
+            }
+        }
+        if let Some(v) = o.get("visible_when") {
+            if !["always", "monster_only"].contains(&v.as_str().unwrap_or("")) {
+                erros.push(erro(
+                    "Peças do molde",
+                    "field-layout",
+                    "Quando mostrar (visible_when) só aceita: always, monster_only (ATK/DEF é só de monstro).",
+                ));
+            }
+        }
+    }
+    erros
+}
+
+// ---- MOLDE DA CARTA (bloco do layout V1) ----
+// O molde (contrato systems `card_layout.schema.json` V1) mora em
+// projects/default/layouts/card_layout_monster_default.json. O jogo lê de lá
+// via --project e cai no default embutido sem ele (projeto legado); o Studio
+// EDITA aqui. Só dado, nunca desenho nem regra (R1/R4). V1 = só este molde;
+// sem peça nova (kinds fechados), sem campo novo na carta.
+const MOLDE_ARQUIVO: &str = "card_layout_monster_default.json";
+
+fn caminho_molde_de(proj: &std::path::Path) -> PathBuf {
+    proj.join("layouts").join(MOLDE_ARQUIVO)
+}
+
+fn caminho_molde() -> Result<PathBuf, String> {
+    Ok(caminho_molde_de(&pasta_projeto()?))
+}
+
+// Default oficial (schemas/examples/layouts/...): o que o `ler` devolve
+// quando o projeto ainda não tem molde (projeto vazio D29 ou legado). Lido
+// do repo — sem copiar os números para dentro do Rust (fonte única, igual
+// ao teste do default oficial). O jogo faz o mesmo com o default embutido.
+fn molde_padrao_oficial() -> Result<serde_json::Value, String> {
+    let raiz = raiz_studio()
+        .and_then(|s| s.parent().map(|p| p.to_path_buf()))
+        .ok_or_else(|| "Não achei a pasta astralis-studio/ a partir daqui. Rode o app de dentro do projeto Astralis.".to_string())?;
+    let oficial = raiz.join("schemas").join("examples").join("layouts").join(MOLDE_ARQUIVO);
+    ler_arquivo_json(&oficial, "molde padrão oficial (schemas/examples/layouts)")
+}
+
+fn ler_molde_de(proj: &std::path::Path) -> Result<serde_json::Value, String> {
+    let caminho = caminho_molde_de(proj);
+    if !caminho.is_file() {
+        return molde_padrao_oficial();
+    }
+    ler_arquivo_json(&caminho, "molde da carta (layouts/card_layout_monster_default.json)")
+}
+
+fn salvar_molde_para(proj: &std::path::Path, molde: &serde_json::Value) -> Result<ResultadoOk, String> {
+    // Valida ANTES de gravar (mesma trava dos outros salvar_*): inválido não
+    // grava, e a mensagem diz onde clicar (vem do checar_card_layout).
+    let erros = checar_card_layout(molde);
+    let bloqueios = so_erros(&erros);
+    if !bloqueios.is_empty() {
+        return Err(mensagem_bloqueio(&bloqueios));
+    }
+    let pasta = proj.join("layouts");
+    std::fs::create_dir_all(&pasta)
+        .map_err(|e| format!("Não consegui criar projects/default/layouts/: {e}"))?;
+    escrever_json_valor(&caminho_molde_de(proj), molde, "molde da carta")?;
+    Ok(ResultadoOk {
+        ok: true,
+        file: format!("layouts/{MOLDE_ARQUIVO}"),
+        mensagem: "Molde salvo em projects/default/layouts/card_layout_monster_default.json (só o desenho; o jogo lê via --project).".to_string(),
+    })
+}
+
+#[tauri::command]
+fn ler_card_layout() -> Result<serde_json::Value, String> {
+    ler_molde_de(&pasta_projeto()?)
+}
+
+#[tauri::command]
+fn validar_molde(molde: serde_json::Value) -> Vec<ErroValidacao> {
+    checar_card_layout(&molde)
+}
+
+#[tauri::command]
+fn salvar_card_layout(molde: serde_json::Value) -> Result<ResultadoOk, String> {
+    salvar_molde_para(&pasta_projeto()?, &molde)
+}
+
  /// Diz se o test_state do pedido é "vazio" (ausente, null, {} ou só com mão
 /// vazia e zonas ausentes/só-null) — vazio = duelo normal, sem test_state no
 /// setup. Evita mandar `{}` à toa e mantém o --setup idêntico ao do Duelo
@@ -3293,7 +3635,7 @@ fn json_tem_lista(caminho: &std::path::Path, chave: &str) -> bool {
 }
 
 fn projeto_tem_conteudo(proj: &std::path::Path) -> bool {
-    for sub in ["cards", "duelists", "decks", "arenas", "scenes"] {
+    for sub in ["cards", "duelists", "decks", "arenas", "scenes", "layouts"] {
         if pasta_tem_json(&proj.join(sub)) {
             return true;
         }
@@ -3353,7 +3695,7 @@ fn preparar_boot_para(proj: &std::path::Path) -> Result<ResultadoBoot, String> {
         });
     }
     let mut apagados = 0;
-    for sub in ["cards", "duelists", "decks", "arenas", "scenes"] {
+    for sub in ["cards", "duelists", "decks", "arenas", "scenes", "layouts"] {
         apagados += apagar_json_da_pasta(&proj.join(sub));
     }
     for sub in ["assets/cards", "assets/portraits", "assets/backgrounds"] {
@@ -3389,7 +3731,7 @@ static BOOT_JA_FEITO: AtomicBool = AtomicBool::new(false);
 
 fn contar_arquivos_projeto(proj: &std::path::Path) -> usize {
     let mut n = 0;
-    for sub in ["cards", "duelists", "decks", "arenas", "scenes"] {
+    for sub in ["cards", "duelists", "decks", "arenas", "scenes", "layouts"] {
         if let Ok(entries) = std::fs::read_dir(proj.join(sub)) {
             n += entries
                 .flatten()
@@ -3533,6 +3875,9 @@ fn main() {
             listar_cenas,
             salvar_cena,
             validar_cena,
+            ler_card_layout,
+            validar_molde,
+            salvar_card_layout,
             validar_projeto,
             importar_pack,
             importar_apack,
@@ -4214,6 +4559,199 @@ mod testes {
         let erros = so_erros(&rev);
         assert_eq!(erros.len(), 1, "{erros:?}");
         assert!(erros[0].mensagem.contains("exatos 5"), "{}", erros[0].mensagem);
+    }
+
+    fn molde_minimo() -> serde_json::Value {
+        serde_json::json!({ "schema_version": 1, "id": "layout_teste", "name": "Teste" })
+    }
+
+    fn peca_nome() -> serde_json::Value {
+        serde_json::json!({ "id": "p_name", "kind": "name",
+            "rect": { "x": 35, "y": 35, "w": 930, "h": 65 },
+            "style": { "font_size": 37, "bold": true, "color": "#2a1c08", "align": "left", "z": 5 } })
+    }
+
+    #[test]
+    fn molde_minimo_sem_pecas_passa() {
+        assert!(checar_card_layout(&molde_minimo()).is_empty());
+    }
+
+    #[test]
+    fn molde_default_oficial_passa_com_9_pecas() {
+        let caminho = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../schemas/examples/layouts/card_layout_monster_default.json");
+        let texto = std::fs::read_to_string(&caminho).expect("molde default oficial sumiu");
+        let molde: serde_json::Value = serde_json::from_str(&texto).unwrap();
+        assert!(checar_card_layout(&molde).is_empty());
+        let pecas = molde["pieces"].as_array().unwrap();
+        assert_eq!(pecas.len(), 9);
+        let mut kinds: Vec<&str> = pecas.iter().filter_map(|p| p["kind"].as_str()).collect();
+        kinds.sort_unstable();
+        let mut esperados = ["name", "attribute_orb", "level_stars", "art_window", "type_line",
+            "text_box", "atkdef_bar", "footer", "frame"];
+        esperados.sort_unstable();
+        assert_eq!(kinds, esperados);
+    }
+
+    #[test]
+    fn molde_kind_fora_barra() {
+        let mut m = molde_minimo();
+        let mut p = peca_nome();
+        p["kind"] = serde_json::json!("sombra");
+        m["pieces"] = serde_json::json!([p]);
+        let erros = checar_card_layout(&m);
+        assert!(erros.iter().any(|e| e.campo == "Peças do molde"), "{erros:?}");
+    }
+
+    #[test]
+    fn molde_rect_fora_do_canvas_barra() {
+        let mut m = molde_minimo();
+        let mut p = peca_nome();
+        p["rect"] = serde_json::json!({ "x": 900, "y": 0, "w": 200, "h": 10 });
+        m["pieces"] = serde_json::json!([p]);
+        let erros = checar_card_layout(&m);
+        assert!(erros.iter().any(|e| e.campo == "Posição da peça"), "{erros:?}");
+    }
+
+    #[test]
+    fn molde_kind_repetido_barra() {
+        let mut m = molde_minimo();
+        let mut p2 = peca_nome();
+        p2["id"] = serde_json::json!("p2");
+        m["pieces"] = serde_json::json!([peca_nome(), p2]);
+        let erros = checar_card_layout(&m);
+        assert!(erros.iter().any(|e| e.mensagem.contains("repetida")), "{erros:?}");
+    }
+
+    #[test]
+    fn molde_cor_e_vis_barra() {
+        let mut m = molde_minimo();
+        let mut p = peca_nome();
+        p["style"] = serde_json::json!({ "color": "marrom" });
+        m["pieces"] = serde_json::json!([p]);
+        let erros = checar_card_layout(&m);
+        assert!(erros.iter().any(|e| e.campo == "Visual da peça"), "{erros:?}");
+        let mut m2 = molde_minimo();
+        let mut p2 = peca_nome();
+        p2["visible_when"] = serde_json::json!("so_efeito");
+        m2["pieces"] = serde_json::json!([p2]);
+        let erros2 = checar_card_layout(&m2);
+        assert!(erros2.iter().any(|e| e.mensagem.contains("visible_when")), "{erros2:?}");
+    }
+
+    #[test]
+    fn molde_versao_e_canvas_barra() {
+        let mut m = molde_minimo();
+        m["schema_version"] = serde_json::json!(2);
+        m["canvas"] = serde_json::json!({ "w": 60, "h": 86, "unit": "per_mil" });
+        let erros = checar_card_layout(&m);
+        assert!(erros.iter().any(|e| e.campo == "Versão do molde"), "{erros:?}");
+        assert!(erros.iter().any(|e| e.campo == "Tamanho do molde"), "{erros:?}");
+    }
+
+    #[test]
+    fn molde_id_longo_71_recusa_64_aceita() {
+        // Espelha o jogo (card_layout.gd _eh_id máx 64): 71 chars barra nos
+        // dois ids (molde + peça), 64 chars passa.
+        let longo71 = format!("a{}", "x".repeat(70));
+        assert_eq!(longo71.chars().count(), 71);
+        let mut m = molde_minimo();
+        m["id"] = serde_json::json!(longo71);
+        let erros = checar_card_layout(&m);
+        assert!(erros.iter().any(|e| e.mensagem.contains("no máximo 64")), "{erros:?}");
+        let mut m2 = molde_minimo();
+        let mut p = peca_nome();
+        p["id"] = serde_json::json!(format!("p{}", "y".repeat(70)));
+        m2["pieces"] = serde_json::json!([p]);
+        let erros2 = checar_card_layout(&m2);
+        assert!(erros2.iter().any(|e| e.mensagem.contains("no máximo 64")), "{erros2:?}");
+        let ok64 = format!("a{}", "x".repeat(63));
+        assert_eq!(ok64.chars().count(), 64);
+        let mut m3 = molde_minimo();
+        m3["id"] = serde_json::json!(ok64);
+        let mut p3 = peca_nome();
+        p3["id"] = serde_json::json!(ok64);
+        m3["pieces"] = serde_json::json!([p3]);
+        assert!(checar_card_layout(&m3).is_empty(), "64 chars devia passar");
+    }
+
+    fn molde_para_teste(nome: &str) -> std::path::PathBuf {
+        let dir = std::env::temp_dir().join(format!("astralis-studio-test-molde-{nome}"));
+        let _ = std::fs::remove_dir_all(&dir);
+        garantir_projeto(&dir).unwrap();
+        dir
+    }
+
+    #[test]
+    fn molde_ler_sem_arquivo_devolve_padrao_oficial() {
+        // Projeto vazio (D29) ou legado: sem layouts/*.json o ler devolve o
+        // oficial (o mesmo que o jogo usa como fallback) — a tela sempre tem
+        // o que editar, sem inventar número.
+        let base = molde_para_teste("ler");
+        assert!(base.join("layouts").is_dir(), "esqueleto devia ter layouts/");
+        let molde = ler_molde_de(&base).expect("ler sem arquivo devia devolver o padrão");
+        assert_eq!(molde.get("id").and_then(|v| v.as_str()), Some("card_layout_monster_default"));
+        assert!(checar_card_layout(&molde).is_empty(), "padrão oficial devia passar no gate");
+        assert_eq!(molde.get("pieces").and_then(|v| v.as_array()).map(|a| a.len()), Some(9));
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn molde_salvar_valido_grava_e_ler_devolve_igual() {
+        let base = molde_para_teste("salvar");
+        let mut molde = molde_padrao_oficial().expect("oficial devia ler no teste");
+        // Muda 1 peça (nome 10 por-mil p/ direita): o resto segue idêntico.
+        molde["pieces"].as_array_mut().unwrap()[0]["rect"]["x"] = serde_json::json!(45);
+        let r = salvar_molde_para(&base, &molde).expect("molde válido devia salvar");
+        assert!(r.mensagem.contains("layouts/card_layout_monster_default.json"), "{}", r.mensagem);
+        let de_volta = ler_molde_de(&base).expect("ler depois de salvar");
+        assert_eq!(de_volta, molde, "o que volta do disco devia ser igual ao que salvou");
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn molde_salvar_invalido_nao_grava() {
+        // INVÁLIDO NÃO GRAVA: o arquivo em disco continua intacto e o erro
+        // diz onde clicar (mensagem de bloqueio PT-BR).
+        let base = molde_para_teste("invalido");
+        let oficial = molde_padrao_oficial().expect("oficial devia ler no teste");
+        salvar_molde_para(&base, &oficial).unwrap();
+        let mut ruim = oficial.clone();
+        let mut p2 = peca_nome();
+        p2["id"] = serde_json::json!("p2");
+        ruim["pieces"] = serde_json::json!([peca_nome(), p2]);
+        let err = salvar_molde_para(&base, &ruim).expect_err("molde inválido não podia salvar");
+        assert!(err.contains("Arruma antes de salvar"), "{err}");
+        let intacto = ler_molde_de(&base).unwrap();
+        assert_eq!(intacto, oficial, "arquivo inválido não podia ter sobrescrito o disco");
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn molde_json_quebrado_no_ler_avisa_onde() {
+        let base = molde_para_teste("quebrado");
+        std::fs::write(base.join("layouts").join(MOLDE_ARQUIVO), "{quebrado").unwrap();
+        let err = ler_molde_de(&base).expect_err("JSON quebrado devia falhar com onde arrumar");
+        assert!(err.contains("molde da carta"), "{err}");
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn molde_boot_apaga_e_ler_volta_ao_padrao() {
+        // D29 vale p/ o molde: boot com molde customizado apaga o arquivo e
+        // o ler volta a devolver o oficial (sem molde velho sobrevivendo).
+        let base = projeto_boot_teste("molde");
+        let mut molde = molde_padrao_oficial().expect("oficial devia ler no teste");
+        molde["pieces"].as_array_mut().unwrap()[0]["rect"]["x"] = serde_json::json!(45);
+        salvar_molde_para(&base, &molde).unwrap();
+        escrever_json_valor(&base.join("cards").join("card_x.json"), &carta_pack_valida("card_x", "X"), "base").unwrap();
+        let r = preparar_boot_para(&base).unwrap();
+        assert!(r.limpou, "projeto cheio devia limpar");
+        assert!(!base.join("layouts").join(MOLDE_ARQUIVO).exists(), "molde customizado devia ter sido apagado");
+        assert!(base.join("layouts").is_dir(), "pasta layouts/ devia continuar de pé");
+        let de_volta = ler_molde_de(&base).expect("ler pós-boot");
+        assert_eq!(de_volta["pieces"].as_array().unwrap()[0]["rect"]["x"], serde_json::json!(35), "pós-boot o ler devia voltar ao oficial");
+        let _ = std::fs::remove_dir_all(&base);
     }
 
     #[test]

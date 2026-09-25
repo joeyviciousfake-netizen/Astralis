@@ -11,7 +11,7 @@ TRABALHO (pasta JSON editável):
 ```text
 project/
   project.json
-  cards/ duelists/ decks/ fusions/ effects/ campaigns/ tests/
+  cards/ duelists/ decks/ fusions/ effects/ campaigns/ tests/ layouts/
   assets/cards/ characters/ portraits/ backgrounds/ music/ sfx/ ui/
 ```
 
@@ -74,3 +74,34 @@ info sem trava V1, modo sempre `aberto`, contagens, SHA256 por arquivo) +
 `data/pack.json` (O MESMO JSON legado, byte-idêntico) + `assets/` (imagem
 repetida grava 1x, faltando = aviso) + `preview` opcional. Pack legado
 `.json` = `.apack` sem assets (abre como "sem imagens").
+
+## 4.8 Molde da carta em DADO — `card_layout.schema.json` V1 (D23 Lead, Systems — COMPATÍVEL, `schema_version` continua 1)
+
+O layout da carta virou MOLDE EM DADO (JSON): mover, redimensionar e
+reestilizar tudo sem mexer em código (R3). V1 = SÓ o molde padrão de
+MONSTRO (`schemas/examples/layouts/card_layout_monster_default.json`,
+medido do scan real Blue-Eyes 813x1200: nome 3,5/6,5; orbe 9% em x91;
+estrelas top11,5 à direita N=level; arte 9%/16,5%/82% quadrada até ~72,8;
+texto 6%/74%/88%x21%; rodapé 96-98,5).
+
+- Contrato (`schemas/card_layout.schema.json`, `schema_version` 1): canvas
+  fixo 59x86 em POR-MIL do próprio eixo (`x/w` em ‰ de 59, `y/h` em ‰ de
+  86 — quadrado visual tem `w≠h`, ex: arte 820x563, orbe 90x62) + lista de
+  0-9 peças de TIPOS FECHADOS amarrados aos campos da carta (R5, nada
+  genérico): `name`←name, `attribute_orb`←attribute, `level_stars`←level,
+  `art_window`←artwork, `type_line`←monster_type, `text_box`←description,
+  `atkdef_bar`←attack/defense (só monstro), `footer`←id, `frame`←fundo/borda.
+  Cada peça: `id` + `kind` + `rect{x,y,w,h}` + `style{font_size(em ‰ da
+  altura),bold,color,align,z}` + `visible_when[always,monster_only]`.
+  Peça ausente = default do scan; `x+w<=1000` e `y+h<=1000` + kind único
+  (máx 1 por kind) não cabem em draft-07: conferem no Studio
+  (`checar_card_layout`) e em `tools/fm_import.py --check`.
+- Onde mora: `layouts/` no Project Data (árvore em 4.1). V1 só tem o
+  default de monstro. Override por carta e fontes próprias ficam p/ V2 —
+  por isso NÃO existe campo novo em `card.schema.json` (não criar).
+- Quem desenha pelo molde (runtime `CardView`, editor visual do Studio)
+  vem depois no plano do Lead (contrato → jogo desenha → editor visual →
+  testes → docs). V1 = contrato + default + validação; nada muda no jogo
+  nem no editor hoje.
+- Validação espelhada no Studio (`checar_card_layout` + 7 testes Rust);
+  `tools/fm_import.py --check` segue verde (722/39/39/25081 intactos).

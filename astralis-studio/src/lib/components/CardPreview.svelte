@@ -11,10 +11,14 @@
   // de efeito (description), barra ATK/DEF e número embaixo.
   // Preview PURO: não valida, não salva, não mexe em regra. A arte que o
   // usuário escolhe entra no fluxo existente (importar_asset → campo artwork
-  // → botão Salvar da tela). A borda/acabamento é SÓ visualização da sessão
+  // → botão Salvar da tela). Posição/tamanho/fonte/cor vêm do `molde` (mesma
+  // fusão do jogo: peça ausente = default do scan); sem molde = tudo default
+  // (visual idêntico ao de antes). A borda/acabamento é SÓ visualização da sessão
   // (não salva na carta: não há campo de borda no contrato — ver retorno).
   import AssetDrop from "$lib/components/AssetDrop.svelte";
   import { monsterTypeName, attrName } from "$lib/cardMeta";
+  import MOLDE_OFICIAL from "../../../../schemas/examples/layouts/card_layout_monster_default.json";
+  import type { Molde } from "$lib/stores/layout.svelte";
 
   type Acabamento = "classica" | "efeito" | "fusao";
 
@@ -33,6 +37,8 @@
     sugestaoArte = "arte",
     aoImportarArte = null,
     aoArquivoArte = null,
+    molde = null,
+    esconderBorda = false,
   }: {
     nome?: string;
     idCarta?: string;
@@ -48,6 +54,8 @@
     sugestaoArte?: string;
     aoImportarArte?: ((caminho: string) => void) | null;
     aoArquivoArte?: ((f: File) => void) | null;
+    molde?: Molde | null;
+    esconderBorda?: boolean;
   } = $props();
 
   // Acabamento da borda: automático pelo dado (com efeito = laranja, sem
@@ -64,6 +72,42 @@
   let pedidoArte = $state(0);
 
   let estrelas = $derived(Math.min(12, Math.max(1, Math.floor(Number(nivel) || 1))));
+
+  // ---- MOLDE (D23): posição/tamanho/fonte/cor vêm do dado, não de número
+  // fixo. Peça ausente no molde = default do scan (mesma fusão do jogo em
+  // card_layout.gd). Sem molde (uso antigo) = tudo default = visual idêntico.
+  // Conversões por-mil → tela: x/y/w/h em % do próprio eixo (÷10); font_size
+  // em ‰ da ALTURA → cqw (1% da largura): cqw = fs × 86 ÷ 590 (nome 37→5,39).
+  type RectMolde = { x: number; y: number; w: number; h: number };
+  type EstiloMolde = { font_size?: number; bold?: boolean; color?: string; align?: string; z?: number };
+  function pecaMolde(kind: string): { rect: RectMolde; style: EstiloMolde } {
+    const base = ((MOLDE_OFICIAL as unknown as Molde).pieces ?? []).find((p) => p.kind === kind) ?? {};
+    const over = ((molde as Molde | null)?.pieces ?? []).find((p) => p.kind === kind) ?? {};
+    return {
+      rect: { x: 0, y: 0, w: 0, h: 0, ...((base as { rect?: object }).rect ?? {}), ...((over as { rect?: object }).rect ?? {}) } as RectMolde,
+      style: { ...((base as { style?: object }).style ?? {}), ...((over as { style?: object }).style ?? {}) } as EstiloMolde,
+    };
+  }
+  let pNome = $derived(pecaMolde("name"));
+  let pOrbe = $derived(pecaMolde("attribute_orb"));
+  let pEstrelas = $derived(pecaMolde("level_stars"));
+  let pArte = $derived(pecaMolde("art_window"));
+  let pTipo = $derived(pecaMolde("type_line"));
+  let pTexto = $derived(pecaMolde("text_box"));
+  let pAtk = $derived(pecaMolde("atkdef_bar"));
+  let pRodape = $derived(pecaMolde("footer"));
+  const pc = (v: number) => `${v / 10}%`;
+  const fsCqw = (s: EstiloMolde, padrao: number) =>
+    typeof s.font_size === "number" ? (s.font_size * 86) / 590 : padrao;
+  const negrito = (s: EstiloMolde, padrao: boolean) =>
+    typeof s.bold === "boolean" ? s.bold : padrao;
+  const corTxt = (s: EstiloMolde, padrao: string) =>
+    typeof s.color === "string" ? s.color : padrao;
+  const just = (s: EstiloMolde, padrao: string) => {
+    const a = s.align ?? padrao;
+    return a === "center" ? "center" : a === "right" ? "flex-end" : "flex-start";
+  };
+  const alinhTxt = (s: EstiloMolde, padrao: string) => (s.align ?? padrao) as string;
 
   const ORBE: Record<string, { kanji: string; en: string; fundo: string }> = {
     light: { kanji: "光", en: "LIGHT", fundo: "radial-gradient(circle at 35% 30%, #fff7cc, #f5b301 60%, #8a5a00)" },
@@ -121,14 +165,14 @@
       <!-- 2. Barra de nome: top 3,5% H, altura 6,5% H, laterais 3,5% W.
            Serifada negrito marrom, ~3,8%H; bege claro com relevo.
            Padding direito reserva o orbe (centro x91%). -->
-      <div class="absolute" style="left: 3.5%; top: 3.5%; width: 93%; height: 6.5%;">
+      <div class="absolute" style="left: {pc(pNome.rect.x)}; top: {pc(pNome.rect.y)}; width: {pc(pNome.rect.w)}; height: {pc(pNome.rect.h)};">
         <div
           class="w-full h-full overflow-hidden flex items-center"
-          style="background: linear-gradient(180deg, #f7ead0, #e9d3a3); border-radius: 1.6cqw; border: 0.5cqw solid #3d2a12; box-shadow: inset 0 0.4cqw 1cqw rgba(90, 60, 20, 0.45), inset 0 -0.4cqw 0.8cqw rgba(255,255,255,0.5); padding: 0.4cqw 10cqw 0.4cqw 2.4cqw;"
+          style="background: linear-gradient(180deg, #f7ead0, #e9d3a3); border-radius: 1.6cqw; border: 0.5cqw solid #3d2a12; box-shadow: inset 0 0.4cqw 1cqw rgba(90, 60, 20, 0.45), inset 0 -0.4cqw 0.8cqw rgba(255,255,255,0.5); padding: 0.4cqw 10cqw 0.4cqw 2.4cqw; justify-content: {just(pNome.style, 'left')};"
         >
           <p
             class="truncate"
-            style="font-family: Georgia, 'Times New Roman', serif; font-weight: 700; font-size: 5.4cqw; color: #2a1c08; line-height: 1.15;"
+            style="font-family: Georgia, 'Times New Roman', serif; font-weight: {negrito(pNome.style, true) ? 700 : 400}; font-size: {fsCqw(pNome.style, 5.4)}cqw; color: {corTxt(pNome.style, '#2a1c08')}; line-height: 1.15;"
             title={nome || "(sem nome)"}
           >{nome || "(sem nome)"}</p>
         </div>
@@ -138,7 +182,7 @@
            top ≈3%H sobrepondo a barra; kanji + rótulo pequeno em cima. -->
       <div
         class="absolute flex flex-col items-center justify-center"
-        style="left: 86.5%; top: 3%; width: 9%; aspect-ratio: 1 / 1; border-radius: 9999px; background: {orbe.fundo}; border: 0.6cqw solid #2a1c08; box-shadow: 0 0.5cqw 1.5cqw rgba(0,0,0,0.5);"
+        style="left: {pc(pOrbe.rect.x)}; top: {pc(pOrbe.rect.y)}; width: {pc(pOrbe.rect.w)}; aspect-ratio: 1 / 1; border-radius: 9999px; background: {orbe.fundo}; border: 0.6cqw solid #2a1c08; box-shadow: 0 0.5cqw 1.5cqw rgba(0,0,0,0.5);"
         title="Atributo: {attrName(atributo)}"
       >
         <span style="font-size: 1.4cqw; line-height: 1; color: #fff; opacity: 0.9; font-weight: 700; letter-spacing: 0.02em;">{orbe.en}</span>
@@ -147,9 +191,9 @@
 
       <!-- 4. Estrelas: fileira top ≈11,5%H, cada ★ ~6,5%W, grupo à
            DIREITA terminando em x≈92% (right 8%). N = level do dado. -->
-      <div class="absolute flex items-center justify-end" style="left: 3.5%; right: 8%; top: 11.5%; gap: 0.6cqw;" title="Nível {estrelas}">
+      <div class="absolute flex items-center" style="left: {pc(pEstrelas.rect.x)}; right: {(1000 - pEstrelas.rect.x - pEstrelas.rect.w) / 10}%; top: {pc(pEstrelas.rect.y)}; height: {pc(pEstrelas.rect.h)}; gap: 0.6cqw; justify-content: {just(pEstrelas.style, 'right')};" title="Nível {estrelas}">
         {#each Array(estrelas) as _, i (i)}
-          <span style="font-size: 6.5cqw; line-height: 1; color: #ff9d0a; text-shadow: 0 0 1cqw rgba(255,157,10,0.8), 0 0.3cqw 0.6cqw rgba(0,0,0,0.6);">★</span>
+          <span style="font-size: {fsCqw(pEstrelas.style, 6.5)}cqw; line-height: 1; color: {corTxt(pEstrelas.style, '#ff9d0a')}; text-shadow: 0 0 1cqw rgba(255,157,10,0.8), 0 0.3cqw 0.6cqw rgba(0,0,0,0.6);">★</span>
         {/each}
       </div>
 
@@ -159,7 +203,7 @@
       <button
         type="button"
         class="absolute overflow-hidden text-left transition"
-        style="left: 9%; top: 16.5%; width: 82%; aspect-ratio: 1 / 1; border-radius: 1.2cqw; border: 1.2cqw solid #8a7d64; background: #101014; cursor: pointer; padding: 0;"
+        style="left: {pc(pArte.rect.x)}; top: {pc(pArte.rect.y)}; width: {pc(pArte.rect.w)}; height: {pc(pArte.rect.h)}; border-radius: 1.2cqw; border: 1.2cqw solid #8a7d64; background: #101014; cursor: pointer; padding: 0;"
         onclick={() => { pedidoArte += 1; }}
         title="Clique para trocar a imagem (abre o seletor de PNG)"
         aria-label="Trocar imagem da carta"
@@ -191,37 +235,40 @@
            negrito ~2,2%H; texto ~2%H; divisória; ATK/DEF ~2,6%H à direita. -->
       <div
         class="absolute overflow-hidden"
-        style="left: 6%; top: 74%; width: 88%; height: 21%; background: linear-gradient(180deg, #f7ead0, #efdcb2); border-radius: 1.2cqw; border: 0.5cqw solid #3d2a12; box-shadow: inset 0 0 2cqw rgba(90, 60, 20, 0.35);"
+        style="left: {pc(pTexto.rect.x)}; top: {pc(pTexto.rect.y)}; width: {pc(pTexto.rect.w)}; height: {pc(pTexto.rect.h)}; background: linear-gradient(180deg, #f7ead0, #efdcb2); border-radius: 1.2cqw; border: 0.5cqw solid #3d2a12; box-shadow: inset 0 0 2cqw rgba(90, 60, 20, 0.35);"
       >
         <span class="absolute" style="left: 0.8cqw; top: 0.8cqw; width: 2cqw; height: 2cqw; background: #b91c1c; border: 0.3cqw solid #7f1d1d; border-radius: 0.3cqw;"></span>
         <span class="absolute" style="right: 0.8cqw; top: 0.8cqw; width: 2cqw; height: 2cqw; background: #b91c1c; border: 0.3cqw solid #7f1d1d; border-radius: 0.3cqw;"></span>
         <span class="absolute" style="left: 0.8cqw; bottom: 0.8cqw; width: 2cqw; height: 2cqw; background: #b91c1c; border: 0.3cqw solid #7f1d1d; border-radius: 0.3cqw;"></span>
         <span class="absolute" style="right: 0.8cqw; bottom: 0.8cqw; width: 2cqw; height: 2cqw; background: #b91c1c; border: 0.3cqw solid #7f1d1d; border-radius: 0.3cqw;"></span>
         <div class="w-full h-full flex flex-col" style="padding: 1.8cqw 3.4cqw 1.4cqw;">
-          <p class="truncate" style="font-family: Georgia, 'Times New Roman', serif; font-weight: 700; font-size: 3.2cqw; color: #2a1c08; line-height: 1.3;">[{monsterTypeName(tipoMonstro)}/{temEfeito ? "Efeito" : "Normal"}]</p>
+          <p class="truncate" style="font-family: Georgia, 'Times New Roman', serif; font-weight: {negrito(pTipo.style, true) ? 700 : 400}; font-size: {fsCqw(pTipo.style, 3.2)}cqw; color: {corTxt(pTipo.style, '#2a1c08')}; line-height: 1.3; text-align: {alinhTxt(pTipo.style, 'left')};">[{monsterTypeName(tipoMonstro)}/{temEfeito ? "Efeito" : "Normal"}]</p>
           <div class="w-full overflow-y-auto" style="flex: 1 1 auto; min-height: 0; margin-top: 0.8cqw;">
             {#if (descricao ?? "").trim()}
-              <p style="font-family: Georgia, 'Times New Roman', serif; font-size: 2.9cqw; color: #2a1c08; line-height: 1.4; white-space: pre-line;">{(descricao ?? "").trim()}</p>
+              <p style="font-family: Georgia, 'Times New Roman', serif; font-size: {fsCqw(pTexto.style, 2.9)}cqw; color: {corTxt(pTexto.style, '#2a1c08')}; line-height: 1.4; white-space: pre-line; text-align: {alinhTxt(pTexto.style, 'left')};">{(descricao ?? "").trim()}</p>
             {:else}
-              <p style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: 2.9cqw; color: #8a7a55; line-height: 1.4;">(sem texto — comum no pack FM)</p>
+              <p style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: {fsCqw(pTexto.style, 2.9)}cqw; color: #8a7a55; line-height: 1.4;">(sem texto — comum no pack FM)</p>
             {/if}
           </div>
           <div style="border-top: 0.3cqw solid #3d2a12; margin-top: 1cqw; padding-top: 0.8cqw;">
-            <p class="text-right" style="font-family: Georgia, 'Times New Roman', serif; font-weight: 700; font-size: 3.8cqw; color: #2a1c08; line-height: 1.2;">ATK/{atk} DEF/{def}</p>
+            <p style="font-family: Georgia, 'Times New Roman', serif; font-weight: {negrito(pAtk.style, true) ? 700 : 400}; font-size: {fsCqw(pAtk.style, 3.8)}cqw; color: {corTxt(pAtk.style, '#2a1c08')}; line-height: 1.2; text-align: {alinhTxt(pAtk.style, 'right')};">ATK/{atk} DEF/{def}</p>
           </div>
         </div>
       </div>
 
       <!-- 7. Microtexto de rodapé: 96→98,5%H (top 96% h 2,5%),
            nº da carta à esquerda + copyright à direita, minúsculo. -->
-      <div class="absolute flex items-center justify-between" style="left: 3.5%; right: 3.5%; top: 96%; height: 2.5%;">
-        <p class="truncate" style="font-size: 1.9cqw; font-family: ui-monospace, monospace; color: rgba(255,255,255,0.8);" title={idCarta}>{idCarta || "···"}</p>
-        <p style="font-size: 1.9cqw; color: rgba(255,255,255,0.6); white-space: nowrap;">© ASTRALIS</p>
+      <div class="absolute flex items-center justify-between" style="left: {pc(pRodape.rect.x)}; right: {(1000 - pRodape.rect.x - pRodape.rect.w) / 10}%; top: {pc(pRodape.rect.y)}; height: {pc(pRodape.rect.h)};">
+        <p class="truncate" style="font-size: {fsCqw(pRodape.style, 1.9)}cqw; font-family: ui-monospace, monospace; color: {corTxt(pRodape.style, '#ffffff')}cc;" title={idCarta}>{idCarta || "···"}</p>
+        <p style="font-size: {fsCqw(pRodape.style, 1.9)}cqw; color: {corTxt(pRodape.style, '#ffffff')}99; white-space: nowrap;">© ASTRALIS</p>
       </div>
     </div>
   </div>
 
-  <!-- Acabamento da borda (só visualização, não salva) -->
+  <!-- Acabamento da borda (só visualização, não salva). No editor de molde
+       fica escondido: lá o que vale é o molde, e a carta precisa ocupar a
+       área toda para o arrastar alinhar. -->
+  {#if !esconderBorda}
   <div class="mt-2 rounded-xl border border-zinc-800 bg-zinc-900/60" style="padding: 2.5cqw 3cqw;">
     <p style="font-size: 3.4cqw; letter-spacing: 0.12em;" class="tracking-widest text-zinc-500 font-semibold">BORDA — SÓ VISUALIZAÇÃO (NÃO SALVA)</p>
     <div class="flex" style="gap: 1.5cqw; margin-top: 1.5cqw;">
@@ -246,4 +293,5 @@
       onarquivo={aoArquivoArte}
     />
   </div>
+  {/if}
 </div>

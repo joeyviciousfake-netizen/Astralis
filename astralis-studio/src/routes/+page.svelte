@@ -9,6 +9,7 @@
   import { invoke } from "@tauri-apps/api/core";
   import { useCards } from "$lib/stores/cards.svelte";
   import CardStudio from "$lib/components/CardStudio.svelte";
+  import LayoutStudio from "$lib/components/LayoutStudio.svelte";
   import DuelistsStudio from "$lib/components/DuelistsStudio.svelte";
   import DecksStudio from "$lib/components/DecksStudio.svelte";
   import FusionsStudio from "$lib/components/FusionsStudio.svelte";
@@ -26,7 +27,7 @@
   import { errMsg } from "$lib/stores/ipc";
   let store = useCards();
   let duelists = useDuelists();
-  type Tab = "cards" | "duelists" | "decks" | "fusions" | "effects" | "duel" | "testes" | "cenas" | "export";
+  type Tab = "cards" | "molde" | "duelists" | "decks" | "fusions" | "effects" | "duel" | "testes" | "cenas" | "export";
   let tab = $state<Tab>("cards");
   // Abas pesadas (Fusões com 25 mil receitas, etc.) só MONTAM quando abertas
   // a primeira vez — antes as 8 montavam juntas no boot (mesmo ocultas) e a
@@ -179,6 +180,9 @@
         <button class="px-3.5 py-1.5 rounded-full text-xs font-medium transition flex items-center gap-1.5 {tab === 'cards' ? 'bg-white text-zinc-900 shadow' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'}" onclick={() => setTab('cards')}>
           <span class="text-[11px] opacity-60">▤</span>Cartas{#if store.cards.length}<span class="text-[10px] opacity-60">{store.cards.length}</span>{/if}
         </button>
+        <button class="px-3.5 py-1.5 rounded-full text-xs font-medium transition flex items-center gap-1.5 {tab === 'molde' ? 'bg-white text-zinc-900 shadow' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'}" onclick={() => setTab('molde')}>
+          <span class="text-[11px] opacity-60">📐</span>Molde
+        </button>
         <button class="px-3.5 py-1.5 rounded-full text-xs font-medium transition flex items-center gap-1.5 {tab === 'duelists' ? 'bg-white text-zinc-900 shadow' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'}" onclick={() => setTab('duelists')}>
           <span class="text-[11px] opacity-60">⬢</span>Duelistas
         </button>
@@ -232,7 +236,7 @@
     <!-- mobile nav -->
     <div class="md:hidden border-t border-zinc-800/50 bg-zinc-950/50">
       <nav class="flex gap-1 p-2 overflow-auto">
-        {#each [['cards', 'Cartas'], ['duelists', 'Duelistas'], ['decks', 'Decks'], ['fusions', 'Fusões'], ['effects', 'Efeitos'], ['duel', 'Duelo'], ['testes', 'Testes'], ['cenas', 'Cenas'], ['export', 'Exportar']] as [id, label] (id)}
+        {#each [['cards', 'Cartas'], ['molde', 'Molde'], ['duelists', 'Duelistas'], ['decks', 'Decks'], ['fusions', 'Fusões'], ['effects', 'Efeitos'], ['duel', 'Duelo'], ['testes', 'Testes'], ['cenas', 'Cenas'], ['export', 'Exportar']] as [id, label] (id)}
           <button class="flex-1 py-2 rounded-full text-[11px] font-medium whitespace-nowrap {tab === id ? 'bg-white text-zinc-900' : 'bg-zinc-900 text-zinc-400 border border-zinc-800'}" onclick={() => setTab(id as Tab)}>{label}</button>
         {/each}
       </nav>
@@ -260,6 +264,7 @@
 
     <div class="flex-1 min-h-0 flex flex-col overflow-hidden">
       {#if visitadas.has("cards")}<div class:hidden={tab !== "cards"} class="flex-1 min-h-0 flex flex-col overflow-hidden"><CardStudio /></div>{/if}
+      {#if visitadas.has("molde")}<div class:hidden={tab !== "molde"} class="flex-1 min-h-0 flex flex-col overflow-hidden"><LayoutStudio /></div>{/if}
       {#if visitadas.has("duelists")}<div class:hidden={tab !== "duelists"} class="flex-1 min-h-0 overflow-hidden flex flex-col"><DuelistsStudio /></div>{/if}
       {#if visitadas.has("decks")}<div class:hidden={tab !== "decks"} class="flex-1 min-h-0 overflow-hidden flex flex-col"><DecksStudio /></div>{/if}
       {#if visitadas.has("fusions")}<div class:hidden={tab !== "fusions"} class="flex-1 min-h-0 overflow-hidden flex flex-col"><FusionsStudio /></div>{/if}

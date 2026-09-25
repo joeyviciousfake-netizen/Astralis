@@ -35,6 +35,7 @@
     "schema_version": 1,
     "files": [
       "schemas/card.schema.json",
+      "schemas/card_layout.schema.json",
       "schemas/deck.schema.json",
       "schemas/duelist.schema.json",
       "schemas/duel_setup.schema.json",

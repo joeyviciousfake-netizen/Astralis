@@ -265,6 +265,86 @@ def check_card(c, enums, errs, where):
         errs.append("%s %s: tags invalido" % (where, c.get("id")))
 
 
+LAYOUT_KINDS = ["name", "attribute_orb", "level_stars", "art_window", "type_line",
+                "text_box", "atkdef_bar", "footer", "frame"]
+LAYOUT_VIS = ["always", "monster_only"]
+COR_RE = re.compile(r"^#[0-9a-fA-F]{6}$")
+
+
+def check_layout(L, errs, where):
+    """Espelha schemas/card_layout.schema.json (molde da carta V1, D23 Lead).
+
+    V1 = molde padrão de monstro. Peça ausente = default do scan; rect/style
+    ausentes numa peça presente = default da peça. O schema (draft-07, sem
+    soma) não confere x+w<=1000, y+h<=1000 nem kind único: confere aqui.
+    """
+    allowed = {"schema_version", "id", "name", "description", "layout_for",
+               "canvas", "pieces"}
+    if L.get("schema_version") != 1:
+        errs.append("%s %s: schema_version != 1" % (where, L.get("id")))
+    if not ID_RE.fullmatch(L.get("id", "")):
+        errs.append("%s: id invalido %r" % (where, L.get("id")))
+    if not L.get("name"):
+        errs.append("%s %s: name vazio" % (where, L.get("id")))
+    for k in L:
+        if k not in allowed:
+            errs.append("%s %s: campo extra %r" % (where, L.get("id"), k))
+    if "layout_for" in L and L["layout_for"] != "monster":
+        errs.append("%s %s: layout_for %r (V1 só monster)" % (where, L.get("id"), L["layout_for"]))
+    if "canvas" in L:
+        cv = L["canvas"]
+        if not isinstance(cv, dict) or cv.get("w") != 59 or cv.get("h") != 86 \
+                or cv.get("unit") != "per_mil" or set(cv) - {"w", "h", "unit"}:
+            errs.append("%s %s: canvas precisa ser {w:59,h:86,unit:per_mil}" % (where, L.get("id")))
+    ps = L.get("pieces", [])
+    if not isinstance(ps, list) or len(ps) > 9:
+        errs.append("%s %s: pieces precisa ser lista de 0-9" % (where, L.get("id")))
+        return
+    vistos = set()
+    for p in ps:
+        if not isinstance(p, dict):
+            errs.append("%s %s: peca fora de formato" % (where, L.get("id")))
+            continue
+        for k in p:
+            if k not in ("id", "kind", "rect", "style", "visible_when"):
+                errs.append("%s %s: peca com campo extra %r" % (where, L.get("id"), k))
+        if not ID_RE.fullmatch(p.get("id", "")):
+            errs.append("%s %s: peca com id invalido %r" % (where, L.get("id"), p.get("id")))
+        kind = p.get("kind")
+        if kind not in LAYOUT_KINDS:
+            errs.append("%s %s: kind %r fora do enum" % (where, L.get("id"), kind))
+        elif kind in vistos:
+            errs.append("%s %s: kind %r repetido (máx 1 por kind)" % (where, L.get("id"), kind))
+        else:
+            vistos.add(kind)
+        if "rect" in p:
+            r = p["rect"]
+            ok = isinstance(r, dict) and set(r) == {"x", "y", "w", "h"} \
+                and all(isinstance(r[k], (int, float)) and 0 <= r[k] <= 1000 for k in ("x", "y", "w", "h"))
+            if not ok:
+                errs.append("%s %s: rect %r fora de 0-1000" % (where, L.get("id"), r))
+            elif r["x"] + r["w"] > 1000 or r["y"] + r["h"] > 1000:
+                errs.append("%s %s: rect %r sai do canvas (x+w/y+h<=1000)" % (where, L.get("id"), r))
+        if "style" in p:
+            s = p["style"]
+            if not isinstance(s, dict) or set(s) - {"font_size", "bold", "color", "align", "z"}:
+                errs.append("%s %s: style com campo extra" % (where, L.get("id")))
+            else:
+                if "font_size" in s and (not isinstance(s["font_size"], (int, float))
+                                         or not 0 <= s["font_size"] <= 1000):
+                    errs.append("%s %s: font_size %r fora de 0-1000" % (where, L.get("id"), s["font_size"]))
+                if "bold" in s and not isinstance(s["bold"], bool):
+                    errs.append("%s %s: bold precisa ser ligado/desligado" % (where, L.get("id")))
+                if "color" in s and not COR_RE.fullmatch(s["color"] or ""):
+                    errs.append("%s %s: color %r (hex #rrggbb)" % (where, L.get("id"), s["color"]))
+                if "align" in s and s["align"] not in ("left", "center", "right"):
+                    errs.append("%s %s: align %r" % (where, L.get("id"), s["align"]))
+                if "z" in s and (not isinstance(s["z"], int) or not 0 <= s["z"] <= 10):
+                    errs.append("%s %s: z %r fora de 0-10" % (where, L.get("id"), s["z"]))
+        if "visible_when" in p and p["visible_when"] not in LAYOUT_VIS:
+            errs.append("%s %s: visible_when %r" % (where, L.get("id"), p["visible_when"]))
+
+
 def run_check():
     errs = []
     card_schema = load_json(SCHEMAS / "card.schema.json")
@@ -308,6 +388,56 @@ def run_check():
     print("minimo valido: %s | 5 invalidos reprovados: %s" % ("OK" if ok_valid else "FALHA", "OK" if ok_invalid else "FALHA"))
     if not ok_valid or not ok_invalid:
         errs.append("contrato minimo falhou")
+
+    # 2b) molde da carta V1 (schemas/card_layout.schema.json + default de monstro)
+    layout_schema = load_json(SCHEMAS / "card_layout.schema.json")
+    lp = layout_schema["properties"]["pieces"]["items"]["properties"]
+    if lp["kind"]["enum"] != LAYOUT_KINDS or lp["visible_when"]["enum"] != LAYOUT_VIS:
+        errs.append("card_layout.schema.json: enum fora do espelho (kinds/visible_when)")
+    if layout_schema["properties"]["layout_for"]["const"] != "monster":
+        errs.append("card_layout.schema.json: layout_for V1 precisa ser monster")
+    def_peca = {"id": "p_name", "kind": "name",
+                "rect": {"x": 35, "y": 35, "w": 930, "h": 65},
+                "style": {"font_size": 37, "bold": True, "color": "#2a1c08", "align": "left", "z": 5}}
+    layout_min = {"schema_version": 1, "id": "layout_teste", "name": "Teste"}
+    n0 = len(errs)
+    check_layout(dict(layout_min, pieces=[def_peca]), errs, "layout-valido")
+    check_layout(layout_min, errs, "layout-valido")  # sem pieces = tudo default
+    ok_lay_valid = len(errs) == n0
+    lay_invalids = [
+        dict(layout_min, pieces=[dict(def_peca, kind="sombra")]),          # kind fora do enum
+        dict(layout_min, pieces=[dict(def_peca, rect={"x": 900, "y": 0, "w": 200, "h": 10})]),  # x+w>1000
+        dict(layout_min, pieces=[def_peca, dict(def_peca, id="p2")]),      # kind repetido
+        dict(layout_min, pieces=[dict(def_peca, style={"color": "marrom"})]),  # cor fora do hex
+        dict(layout_min, pieces=[dict(def_peca, visible_when="so_efeito")]),  # vis fora do enum
+        dict(layout_min, schema_version=2),                               # versão != 1
+    ]
+    ok_lay_invalid = True
+    for i, inv in enumerate(lay_invalids):
+        m0 = len(errs)
+        check_layout(inv, errs, "layout-invalido-%d" % i)
+        if len(errs) == m0:
+            ok_lay_invalid = False
+            print("FALHA: layout-invalido-%d passou (devia reprovar)" % i)
+    errs[:] = [e for e in errs if not e.startswith("layout-invalido")]
+    def_path = SCHEMAS / "examples" / "layouts" / "card_layout_monster_default.json"
+    if not def_path.exists():
+        errs.append("molde default ausente: schemas/examples/layouts/card_layout_monster_default.json")
+        n_pecas = 0
+    else:
+        m0 = len(errs)
+        def_lay = load_json(def_path)
+        check_layout(def_lay, errs, "layout-default")
+        n_pecas = len(def_lay.get("pieces", []))
+        if len(errs) != m0:
+            errs.append("molde default invalido")
+        elif n_pecas != 9 or {p["kind"] for p in def_lay["pieces"]} != set(LAYOUT_KINDS):
+            errs.append("molde default precisa das 9 peças (1 por kind)")
+    print("layout: default %s (%d pecas) | minimo valido %s | 6 invalidos reprovados %s"
+          % ("OK" if def_path.exists() else "FALTA", n_pecas,
+             "OK" if ok_lay_valid else "FALHA", "OK" if ok_lay_invalid else "FALHA"))
+    if not ok_lay_valid or not ok_lay_invalid:
+        errs.append("contrato layout minimo falhou")
 
     # 3) pack bate nos schemas
     pack_path = SCHEMAS / "packs" / "fm_original_pack.json"

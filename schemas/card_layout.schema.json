@@ -1,0 +1,67 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Astralis Card Layout V1",
+  "description": "Molde da carta em DADO (D23 Lead: layout vira JSON modificável — mover, redimensionar, reestilizar tudo). V1 = SÓ o molde padrão de MONSTRO (schemas/examples/layouts/card_layout_monster_default.json, medido do scan real Blue-Eyes 813x1200); molde por carta e fontes próprias ficam p/ V2, SEM campo novo em card.schema.json (não criar). Tipos de peça FECHADOS (R5: nada genérico) amarrados aos campos da carta: name<-name, attribute_orb<-attribute, level_stars<-level, art_window<-artwork, type_line<-monster_type, text_box<-description, atkdef_bar<-attack/defense, footer<-id, frame<-fundo/borda. Canvas 59x86 (carta real) em POR-MIL do próprio eixo: x/w em ‰ da largura (59), y/h em ‰ da altura (86). Peça ausente = default do scan (tabela abaixo); rect ausente numa peça presente = default daquela peça. x+w<=1000 e y+h<=1000 NÃO cabem em draft-07 (sem soma): conferidos no Studio (checar_card_layout) e em tools/fm_import.py --check. Mesmo vale p/ kind único (máx 1 peça por kind). Owner: Systems. Ver docs/04_CONTRATO_DADOS.md §4.8.",
+  "type": "object",
+  "properties": {
+    "schema_version": { "type": "integer", "const": 1, "description": "Sempre 1 na V1 (adição compatível: nenhum schema existente foi tocado, doc 04.3)." },
+    "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "description": "ID estável snake_case (ex: card_layout_monster_default). Nunca muda mesmo se name mudar." },
+    "name": { "type": "string", "minLength": 1, "description": "Nome exibido no seletor de moldes (V2)." },
+    "description": { "type": "string", "description": "Texto exibido na galeria/seletor (opcional, só apresentação)." },
+    "layout_for": { "type": "string", "const": "monster", "default": "monster", "description": "V1 só existe molde de monstro. Outros tipos (spell/trap/equip/ritual) ganham molde próprio depois; override por carta só na V2." },
+    "canvas": {
+      "type": "object",
+      "description": "Tamanho real da carta. Fixo na V1 (molde proporcional: o desenho escala).",
+      "properties": {
+        "w": { "type": "number", "const": 59, "description": "Largura real em mm (Yu-Gi-Oh 59x86)." },
+        "h": { "type": "number", "const": 86, "description": "Altura real em mm." },
+        "unit": { "type": "string", "const": "per_mil", "description": "Unidade do rect: por-mil do próprio eixo (x/w ÷ 59, y/h ÷ 86). ATENÇÃO: quadrado visual tem w≠h (ex: arte 820x563, orbe 90x62) porque cada eixo tem sua escala." }
+      },
+      "required": ["w", "h", "unit"],
+      "additionalProperties": false,
+      "default": { "w": 59, "h": 86, "unit": "per_mil" }
+    },
+    "pieces": {
+      "type": "array",
+      "description": "Peças do molde. Opcional: ausente/vazio = as 9 defaults do scan. Máx 1 peça por kind (conferido fora do schema). Defaults (x,y,w,h em ‰ + estilo): name name_bar 35,35,930,65 (fs37 bold #2a1c08 esq); attribute_orb 865,30,90,62 (círculo: h=90*59/86); level_stars 35,115,885,45 (fs45 #ff9d0a dir, N=level); art_window 90,165,820,563 (quadrada: termina ~72,8%); type_line 95,752,810,30 (fs22 bold #2a1c08 esq); text_box 60,740,880,210 (fs20 #2a1c08 esq); atkdef_bar 95,905,810,32 (fs26 bold #2a1c08 dir, só monstro); footer 35,960,930,25 (fs13 #ffffff esq: id + ©); frame 0,0,1000,1000 (z0, fundo/borda). fs = font_size em ‰ da ALTURA (86): nome 5,4cqw→37, estrelas 6,5cqw→45, tipo 3,2cqw→22, texto 2,9cqw→20, ATK 3,8cqw→26, rodapé 1,9cqw→13 (cqw=1% da largura; %H=cqw*59/86).",
+      "minItems": 0,
+      "maxItems": 9,
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$", "description": "ID estável da peça (ex: name_bar)." },
+          "kind": { "type": "string", "enum": ["name", "attribute_orb", "level_stars", "art_window", "type_line", "text_box", "atkdef_bar", "footer", "frame"], "description": "Tipo FECHADO (R5). name<-name, attribute_orb<-attribute, level_stars<-level (N estrelas), art_window<-artwork, type_line<-monster_type (+Normal/Efeito), text_box<-description, atkdef_bar<-attack/defense, footer<-id (+© ASTRALIS), frame<-fundo/borda." },
+          "rect": {
+            "type": "object",
+            "description": "Retângulo em por-mil do próprio eixo. x+w<=1000 e y+h<=1000 (conferido no Studio + --check). Ausente = default do scan da peça.",
+            "properties": {
+              "x": { "type": "number", "minimum": 0, "maximum": 1000 },
+              "y": { "type": "number", "minimum": 0, "maximum": 1000 },
+              "w": { "type": "number", "minimum": 0, "maximum": 1000 },
+              "h": { "type": "number", "minimum": 0, "maximum": 1000 }
+            },
+            "required": ["x", "y", "w", "h"],
+            "additionalProperties": false
+          },
+          "style": {
+            "type": "object",
+            "description": "Visual. Tudo opcional: ausente = default do scan da peça.",
+            "properties": {
+              "font_size": { "type": "number", "minimum": 0, "maximum": 1000, "description": "Tamanho da letra em ‰ da ALTURA da carta (86). Ex: nome 37, estrelas 45, texto 20." },
+              "bold": { "type": "boolean" },
+              "color": { "type": "string", "pattern": "^#[0-9a-fA-F]{6}$", "description": "Cor do texto/traço em hex (ex: #2a1c08). Orbe e moldura não usam (cor vem do attribute/acabamento)." },
+              "align": { "type": "string", "enum": ["left", "center", "right"] },
+              "z": { "type": "integer", "minimum": 0, "maximum": 10, "description": "Ordem de desenho (frame 0 primeiro, orbe 6 por cima da barra de nome)." }
+            },
+            "additionalProperties": false
+          },
+          "visible_when": { "type": "string", "enum": ["always", "monster_only"], "default": "always", "description": "Quando desenhar. atkdef_bar default monster_only (ATK/DEF só existe em monstro); resto always. Ausente = default da peça." }
+        },
+        "required": ["id", "kind"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "required": ["schema_version", "id", "name"],
+  "additionalProperties": false
+}
