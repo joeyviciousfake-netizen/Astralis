@@ -42,6 +42,10 @@
       if (typeof v.impMsg === "string" && v.impMsg) impMsg = v.impMsg;
       impOk = v.impOk === true;
       if (v.resumo && typeof v.resumo === "object") resumo = v.resumo as ResumoPack;
+      // Faixa verde restaurada após reload = projeto tem conteúdo: avisa a
+      // +page para apagar o aviso de boot "Projeto zerado" (que é estado dela
+      // e não some sozinho). Mesmo evento do import OK abaixo.
+      if (impOk) window.dispatchEvent(new CustomEvent("astralis:projeto-carregado"));
     } catch { /* sessão corrompida: começa sem faixa */ }
   }
 
@@ -146,6 +150,10 @@
         impMsg += ` (Recarregue a aba para ver os novos dados: ${errMsg(e2)})`;
       }
       salvarResumoSessao();
+      // Projeto deixou de estar zerado: apaga o aviso de boot da +page (que
+      // é estado dela e não some sozinho). Evento no padrão astralis:* já
+      // usado por ir-importar/ir-duelo — sem store nova.
+      window.dispatchEvent(new CustomEvent("astralis:projeto-carregado"));
     } catch (e) {
       impMsg = `Não deu para importar (${faseImp}): ${errMsg(e)}`;
       salvarResumoSessao();

@@ -121,9 +121,16 @@
     void (async () => {
       try {
         const r = await invoke<{ limpou?: boolean; mensagem?: string }>("preparar_boot");
+        // Só o zerado de verdade (limpou=true, processo novo) vira aviso.
+        // O "Sessão já aberta — N arquivo(s) mantido(s)" do reload (D32,
+        // limpou=false) é info silenciosa de propósito: com conteúdo em disco
+        // ele nunca pode aparecer como atenção junto da faixa verde.
         if (r?.limpou && r.mensagem) avisoBoot = r.mensagem;
       } catch { /* navegador: snapshot vazio */ }
       await Promise.all([store.loadAll(), duelists.ensureNamesLoaded()]);
+      // Se há cartas em disco (import feito antes de um F5, aba Exportar ainda
+      // nem montou), o aviso de boot é obsoleto: projeto já não está zerado.
+      if (store.cards.length > 0) avisoBoot = "";
       void v.refresh(store.cards);
     })();
     const onKey = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); requestSave(); } };
@@ -131,10 +138,15 @@
     // DEF-2: botões "Importar pack…" de outras abas pedem por aqui (troca de
     // aba + tick + evento), nunca pelo "astralis:importar-pack" direto.
     const irImportarEv = () => void irImportar();
+    // Boot zerou mas o Importar encheu depois: o ExportStudio dispara
+    // "astralis:projeto-carregado" no import OK e ao restaurar a faixa verde
+    // do sessionStorage — aqui o aviso de boot some (projeto não está zerado).
+    const projetoCarregadoEv = () => { avisoBoot = ""; };
     window.addEventListener("keydown", onKey);
     window.addEventListener("astralis:ir-duelo", irDuelo);
     window.addEventListener("astralis:ir-importar", irImportarEv);
-    return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("astralis:ir-duelo", irDuelo); window.removeEventListener("astralis:ir-importar", irImportarEv); playFlash.clearSaveTimer(); };
+    window.addEventListener("astralis:projeto-carregado", projetoCarregadoEv);
+    return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("astralis:ir-duelo", irDuelo); window.removeEventListener("astralis:ir-importar", irImportarEv); window.removeEventListener("astralis:projeto-carregado", projetoCarregadoEv); playFlash.clearSaveTimer(); };
   });
 </script>
 
@@ -233,7 +245,7 @@
         <button class="ml-auto shrink-0 px-3 py-1.5 rounded-full bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition" onclick={irImportar}>Importar pack…</button>
       </div>
     {/if}
-    {#if avisoBoot}
+    {#if avisoBoot && cardsLen === 0}
       <div class="shrink-0 rounded-xl border border-amber-900/60 bg-amber-950/30 px-4 py-3">
         <p class="text-xs font-semibold text-amber-200">Atenção: abrir o Studio limpa o projeto</p>
         <p class="text-xs text-amber-300/90 whitespace-pre-line">{avisoBoot}</p>
