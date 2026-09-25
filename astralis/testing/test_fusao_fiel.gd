@@ -300,6 +300,7 @@ func test_mesa_fusao_desce_face_cima_conta_jogada() -> void:
 	assert_false((mesa.get("_fusao_final") as Dictionary).is_empty(), "Fusão: FINAL calculado antes da estrela.")
 	# Estrela no fim da combinação (menu igual ao da avulsa).
 	mesa.set("_pad_popup_idx", 0)
+	var estrela_fusao: String = str((mesa.get("_estrela_ops") as Array)[0])
 	Input.action_press("confirmar")
 	mesa.call("_pad_confirmar")
 	Input.action_release("confirmar")
@@ -314,6 +315,7 @@ func test_mesa_fusao_desce_face_cima_conta_jogada() -> void:
 			achou = true
 			assert_false(bool((m as Dictionary).get("face_down", true)), "Resultado sempre face p/ cima.")
 			assert_eq(str((m as Dictionary).get("position", "")), "ATK", "Resultado em Ataque.")
+			assert_eq(str((m as Dictionary).get("guardian_star", "")), estrela_fusao, "Estrela do menu gravada no resultado.")
 	assert_true(achou, "Resultado fm_0638 desceu à zona (fluxo normal).")
 	assert_eq(((st.players[0] as Dictionary)["hand"] as Array).size(), mao_antes - 2, "2 levantadas saíram da mão.")
 	assert_true((mesa.get("_levantadas") as Array).is_empty(), "Levantadas limpam após fundir.")
@@ -433,3 +435,239 @@ func test_cadeia_falha_cemiterio_novata_desce() -> void:
 	assert_true(bool(st.normal_summon_used), "Mesa: falha conta como a jogada.")
 	assert_eq(((st.players[0] as Dictionary)["graveyard"] as Array).size(), cem_antes + 1, "Mesa: 1 descarte ao cemitério.")
 	assert_true(((st.players[0] as Dictionary)["graveyard"] as Array).has("id_a"), "Mesa: fundida id_a no cemitério.")
+
+
+## ---- SLOT OCUPADO (runtime liberou avulsa + combinação) ----
+## Regra travada (só controle na mesa, par-a-par no FusionSystem real):
+## avulsa em ocupado tenta fusão campo+mão (funde = resultado no slot,
+## falha = campo descartado e a da mão desce COM a face); combinação em
+## ocupado: a FINAL tenta fusão com o campo (funde ou desce), sempre
+## face-up em ATK com a estrela do menu gravada.
+
+func _indice_id_na_mao(st, card_id: String) -> int:
+	var mao: Array = (st.players[0] as Dictionary)["hand"]
+	for i in range(mao.size()):
+		var c = mao[i]
+		if c is Dictionary and str((c as Dictionary).get("id", "")) == card_id:
+			return i
+	return -1
+
+
+func _ocupar_slot_com(st, mesa, slot: int, card_id: String) -> void:
+	# GIVEN de teste (doc 10): prepara estado, quem resolve é o sistema real.
+	var cartas: Dictionary = mesa.get("_cartas")
+	assert_true(cartas.has(card_id), "Preparo: dado tem %s." % card_id)
+	var base := (cartas[card_id] as Dictionary).duplicate(true)
+	var zona: Array = (st.players[0] as Dictionary)["monster"]
+	zona[slot] = {"card_id": card_id, "nome": str(base.get("name", card_id)), "atk": clampi(int(base.get("attack", 0)), 0, 9999), "def": clampi(int(base.get("defense", 0)), 0, 9999), "position": "ATK", "battle_position": "ATK", "face_down": false, "guardian_star": str(base.get("guardian_star_1", "")), "has_attacked": false}
+	mesa.call("_atualizar")
+
+
+func _achar_par_que_falha(cartas: Dictionary, fusions: Dictionary, id_campo: String, candidatos: Array) -> String:
+	# Procura ordem fixa (determinístico): 1º par sem receita no sistema real.
+	var base_campo := (cartas[id_campo] as Dictionary).duplicate(true)
+	for cid in candidatos:
+		var c := str(cid)
+		if not cartas.has(c):
+			continue
+		var t: Dictionary = FusionSystem.try_fuse_pair(base_campo, (cartas[c] as Dictionary).duplicate(true), fusions, cartas)
+		if not bool(t.get("ok", false)):
+			return c
+	return ""
+
+
+func test_avulsa_ocupado_que_funde_resultado_no_slot() -> void:
+	# (1) Avulsa em ocupado que FUNDE: encontro campo+mão via FusionSystem
+	# real, resultado fm_0638 desce ao slot (mesa real, sem Fake).
+	var mesa = await _mesa_nova()
+	var st = mesa.get("_st")
+	var cartas: Dictionary = mesa.get("_cartas")
+	var fusions: Dictionary = mesa.get("_fusions_data")
+	var t: Dictionary = FusionSystem.try_fuse_pair((cartas["fm_0002"] as Dictionary).duplicate(true), (cartas["fm_0008"] as Dictionary).duplicate(true), fusions, cartas)
+	assert_true(bool(t.get("ok", false)), "Preparo: fm_0002+fm_0008 funde no sistema real.")
+	assert_eq(str(t.get("result_id", "")), "fm_0638", "Preparo: resultado fm_0638.")
+	_ocupar_slot_com(st, mesa, 0, "fm_0002")
+	var cem_antes: int = ((st.players[0] as Dictionary)["graveyard"] as Array).size()
+	((st.players[0] as Dictionary)["hand"] as Array).append((cartas["fm_0008"] as Dictionary).duplicate(true))
+	var n: int = ((st.players[0] as Dictionary)["hand"] as Array).size()
+	var idx := _indice_id_na_mao(st, "fm_0008")
+	assert_true(idx >= 0, "Preparo: fm_0008 na mão.")
+	mesa.call("_atualizar")
+	# Fluxo avulsa só no controle: carta -> centro -> face -> slot -> estrela.
+	mesa.set("_pad_fileira", TableScript.FILEIRA_MAO)
+	mesa.set("_pad_col", idx)
+	Input.action_press("confirmar")
+	mesa.call("_pad_confirmar")
+	Input.action_release("confirmar")
+	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_FACE, "Avulsa: carta foi ao centro.")
+	Input.action_press("confirmar")
+	mesa.call("_pad_confirmar")
+	Input.action_release("confirmar")
+	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_SLOT, "Avulsa: face travada, pede o slot.")
+	mesa.set("_pad_col", 0)
+	Input.action_press("confirmar")
+	mesa.call("_pad_confirmar")
+	Input.action_release("confirmar")
+	await wait_process_frames(2)
+	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_ESTRELA, "Avulsa em ocupado: abre o menu da estrela.")
+	assert_false(bool(mesa.get("_combinando")), "Avulsa: não marca combinando.")
+	assert_true(str((mesa.get("_log") as Array).back()).contains("fus"), "Avulsa em ocupado: avisa o encontro (fala '%s')." % str((mesa.get("_log") as Array).back()))
+	var estrela: String = str((mesa.get("_estrela_ops") as Array)[0])
+	mesa.set("_pad_popup_idx", 0)
+	Input.action_press("confirmar")
+	mesa.call("_pad_confirmar")
+	Input.action_release("confirmar")
+	await wait_process_frames(4)
+	assert_eq(int(mesa.get("_fase_jogador")), TableScript.FASE_CAMPO, "Avulsa: entra na fase de campo.")
+	assert_eq(String(st.phase), "BATTLE", "Avulsa: MAIN -> BATTLE (conta como a jogada).")
+	assert_true(bool(st.normal_summon_used), "Avulsa em ocupado conta como a jogada.")
+	var zona: Array = (st.players[0] as Dictionary)["monster"]
+	assert_true(zona[0] is Dictionary, "Slot 0 tem carta.")
+	assert_eq(str((zona[0] as Dictionary).get("card_id", "")), "fm_0638", "Encontro fundiu: resultado fm_0638 no slot.")
+	assert_eq(str((zona[0] as Dictionary).get("position", "")), "ATK", "Resultado em Ataque.")
+	assert_false(bool((zona[0] as Dictionary).get("face_down", true)), "Resultado desce com a face escolhida (p/ cima).")
+	assert_eq(str((zona[0] as Dictionary).get("guardian_star", "")), estrela, "Estrela do menu gravada na instância.")
+	assert_eq(((st.players[0] as Dictionary)["hand"] as Array).size(), n - 1, "1 carta saiu da mão.")
+	assert_eq(((st.players[0] as Dictionary)["graveyard"] as Array).size(), cem_antes, "Fundiu: nada ao cemitério.")
+	assert_false(((st.players[0] as Dictionary)["graveyard"] as Array).has("fm_0002"), "Campo fundido não é descartado.")
+
+
+func test_avulsa_ocupado_que_falha_descarta_campo_e_desce_com_face() -> void:
+	# (2) Avulsa em ocupado que FALHA: campo descartado ao cemitério e a da
+	# mão desce ao slot COM a face escolhida (mesa real, sem Fake).
+	var mesa = await _mesa_nova()
+	var st = mesa.get("_st")
+	var cartas: Dictionary = mesa.get("_cartas")
+	var fusions: Dictionary = mesa.get("_fusions_data")
+	_ocupar_slot_com(st, mesa, 0, "fm_0002")
+	var mao_id := _achar_par_que_falha(cartas, fusions, "fm_0002", ["fm_0001", "fm_0003", "fm_0004", "fm_0005", "fm_0006", "fm_0007", "fm_0009", "fm_0010"])
+	assert_false(mao_id.is_empty(), "Preparo: par que falha com fm_0002 no sistema real.")
+	((st.players[0] as Dictionary)["hand"] as Array).append((cartas[mao_id] as Dictionary).duplicate(true))
+	var n: int = ((st.players[0] as Dictionary)["hand"] as Array).size()
+	var idx := _indice_id_na_mao(st, mao_id)
+	assert_true(idx >= 0, "Preparo: %s na mão." % mao_id)
+	var cem_antes: int = ((st.players[0] as Dictionary)["graveyard"] as Array).size()
+	mesa.call("_atualizar")
+	# Fluxo avulsa com face P/ BAIXO (esq/dir no centro alterna, só controle).
+	mesa.set("_pad_fileira", TableScript.FILEIRA_MAO)
+	mesa.set("_pad_col", idx)
+	Input.action_press("confirmar")
+	mesa.call("_pad_confirmar")
+	Input.action_release("confirmar")
+	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_FACE, "Avulsa: carta foi ao centro.")
+	Input.action_press("mover_esq")
+	mesa.call("_pad_mover", -1, 0)
+	Input.action_release("mover_esq")
+	assert_true(bool(mesa.get("_face_baixo")), "Face p/ baixo escolhida no centro.")
+	Input.action_press("confirmar")
+	mesa.call("_pad_confirmar")
+	Input.action_release("confirmar")
+	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_SLOT, "Avulsa: face travada, pede o slot.")
+	mesa.set("_pad_col", 0)
+	Input.action_press("confirmar")
+	mesa.call("_pad_confirmar")
+	Input.action_release("confirmar")
+	await wait_process_frames(2)
+	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_ESTRELA, "Avulsa em ocupado: abre o menu da estrela.")
+	var estrela: String = str((mesa.get("_estrela_ops") as Array)[0])
+	mesa.set("_pad_popup_idx", 0)
+	Input.action_press("confirmar")
+	mesa.call("_pad_confirmar")
+	Input.action_release("confirmar")
+	await wait_process_frames(4)
+	assert_eq(String(st.phase), "BATTLE", "Avulsa: MAIN -> BATTLE (conta como a jogada).")
+	assert_true(bool(st.normal_summon_used), "Avulsa em ocupado conta como a jogada.")
+	var zona: Array = (st.players[0] as Dictionary)["monster"]
+	assert_true(zona[0] is Dictionary, "Slot 0 tem carta.")
+	assert_eq(str((zona[0] as Dictionary).get("card_id", "")), mao_id, "Falhou: a da mão desce ao slot.")
+	assert_true(bool((zona[0] as Dictionary).get("face_down", false)), "Falhou: desce COM a face escolhida (p/ baixo).")
+	assert_eq(str((zona[0] as Dictionary).get("position", "")), "ATK", "Falhou: desce em Ataque.")
+	assert_eq(str((zona[0] as Dictionary).get("guardian_star", "")), estrela, "Estrela do menu gravada na instância.")
+	assert_true(((st.players[0] as Dictionary)["graveyard"] as Array).has("fm_0002"), "Falhou: campo fm_0002 descartado ao cemitério.")
+	assert_eq(((st.players[0] as Dictionary)["graveyard"] as Array).size(), cem_antes + 1, "Falhou: 1 descarte ao cemitério.")
+	assert_eq(((st.players[0] as Dictionary)["hand"] as Array).size(), n - 1, "1 carta saiu da mão.")
+	assert_true(str((mesa.get("_log") as Array).back()).contains("Ataque"), "Avulsa: confirma a descida (fala '%s')." % str((mesa.get("_log") as Array).back()))
+
+
+func test_combinacao_ocupado_final_funde_ou_desce_com_estrela() -> void:
+	# (3) Combinação em ocupado: a FINAL encontra o campo via FusionSystem
+	# real (funde = resultado no slot; falha = campo descartado e FINAL
+	# desce), sempre face-up em ATK com a estrela do menu gravada.
+	var mesa = await _mesa_nova()
+	var st = mesa.get("_st")
+	var cartas: Dictionary = mesa.get("_cartas")
+	var fusions: Dictionary = mesa.get("_fusions_data")
+	# Precondição no sistema real: fm_0002+fm_0008 -> FINAL fm_0638.
+	var cadeia: Dictionary = FusionSystem.resolve_chain([(cartas["fm_0002"] as Dictionary).duplicate(true), (cartas["fm_0008"] as Dictionary).duplicate(true)], fusions, cartas)
+	assert_true(bool(cadeia.get("ok", false)), "Preparo: cadeia resolve no sistema real.")
+	assert_eq(str(cadeia.get("final_id", "")), "fm_0638", "Preparo: FINAL fm_0638.")
+	# Ocupa o slot 0; o esperado (funde ou desce) vem do sistema real,
+	# igual ao encontro que a mesa vai tentar.
+	assert_true(cartas.has("fm_0001"), "Preparo: dado tem fm_0001.")
+	_ocupar_slot_com(st, mesa, 0, "fm_0001")
+	var cem_antes: int = ((st.players[0] as Dictionary)["graveyard"] as Array).size()
+	var campo_full: Dictionary = mesa.call("_carta_completa_do_campo", (st.players[0] as Dictionary)["monster"][0])
+	var final_prev: Dictionary = (cadeia.get("final_card", {}) as Dictionary).duplicate(true)
+	final_prev["id"] = str(cadeia.get("final_id", ""))
+	var tent: Dictionary = FusionSystem.try_fuse_pair(campo_full, final_prev, fusions, cartas)
+	var esperado := "fm_0638"
+	var funde := false
+	if bool(tent.get("ok", false)):
+		var rid := str(tent.get("result_id", ""))
+		var real: Dictionary = (cartas.get(rid, {}) as Dictionary) if cartas.has(rid) else {}
+		if str(real.get("card_type", "monster")) == "monster":
+			esperado = rid
+			funde = true
+	# Levanta o par EM ORDEM só no controle.
+	((st.players[0] as Dictionary)["hand"] as Array).append((cartas["fm_0002"] as Dictionary).duplicate(true))
+	((st.players[0] as Dictionary)["hand"] as Array).append((cartas["fm_0008"] as Dictionary).duplicate(true))
+	var n: int = ((st.players[0] as Dictionary)["hand"] as Array).size()
+	var i_a := n - 2
+	var i_b := n - 1
+	mesa.call("_atualizar")
+	mesa.set("_pad_fileira", TableScript.FILEIRA_MAO)
+	mesa.set("_pad_col", i_a)
+	Input.action_press("mover_cima")
+	mesa.call("_pad_mover", 0, -1)
+	Input.action_release("mover_cima")
+	mesa.set("_pad_col", i_b)
+	Input.action_press("mover_cima")
+	mesa.call("_pad_mover", 0, -1)
+	Input.action_release("mover_cima")
+	assert_eq((mesa.get("_levantadas") as Array), [i_a, i_b], "Preparo: 2 levantadas EM ORDEM.")
+	# Confirmar pede o SLOT primeiro (vazio ou ocupado).
+	Input.action_press("confirmar")
+	mesa.call("_pad_confirmar")
+	Input.action_release("confirmar")
+	await wait_process_frames(2)
+	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_SLOT, "Fusão: confirmar pede o slot primeiro.")
+	assert_true(bool(mesa.get("_combinando")), "Fusão: marca combinando no slot.")
+	# Escolhe o slot 0 OCUPADO -> fila + FINAL + menu da estrela.
+	mesa.set("_pad_col", 0)
+	Input.action_press("confirmar")
+	mesa.call("_pad_confirmar")
+	Input.action_release("confirmar")
+	await wait_process_frames(6)
+	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_ESTRELA, "Fusão em ocupado: abre o menu da estrela.")
+	assert_eq(str((mesa.get("_fusao_final") as Dictionary).get("id", "")), "fm_0638", "Fusão: FINAL fm_0638 antes da estrela.")
+	var estrela: String = str((mesa.get("_estrela_ops") as Array)[0])
+	mesa.set("_pad_popup_idx", 0)
+	Input.action_press("confirmar")
+	mesa.call("_pad_confirmar")
+	Input.action_release("confirmar")
+	await wait_process_frames(4)
+	assert_eq(int(mesa.get("_fase_jogador")), TableScript.FASE_CAMPO, "Fusão: entra na fase de campo.")
+	assert_eq(String(st.phase), "BATTLE", "Fusão: MAIN -> BATTLE (conta como a jogada).")
+	assert_true(bool(st.normal_summon_used), "Fusão em ocupado conta como a jogada.")
+	var zona: Array = (st.players[0] as Dictionary)["monster"]
+	assert_true(zona[0] is Dictionary, "Slot 0 tem carta.")
+	assert_eq(str((zona[0] as Dictionary).get("card_id", "")), esperado, "Encontro em ocupado: sistema real diz '%s' (funde=%s)." % [esperado, str(funde)])
+	assert_false(bool((zona[0] as Dictionary).get("face_down", true)), "FINAL sempre face p/ cima.")
+	assert_eq(str((zona[0] as Dictionary).get("position", "")), "ATK", "FINAL em Ataque.")
+	assert_eq(str((zona[0] as Dictionary).get("guardian_star", "")), estrela, "Estrela do menu gravada na instância.")
+	assert_eq(((st.players[0] as Dictionary)["hand"] as Array).size(), n - 2, "2 levantadas saíram da mão.")
+	if funde:
+		assert_false(((st.players[0] as Dictionary)["graveyard"] as Array).has("fm_0001"), "Fundiu com campo: nada descartado.")
+	else:
+		assert_true(((st.players[0] as Dictionary)["graveyard"] as Array).has("fm_0001"), "Não fundiu: campo fm_0001 descartado ao cemitério.")
+	assert_eq(((st.players[0] as Dictionary)["graveyard"] as Array).size(), cem_antes + (0 if funde else 1), "Cemitério bate com o encontro real.")
