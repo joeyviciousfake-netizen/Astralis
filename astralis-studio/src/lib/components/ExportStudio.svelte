@@ -161,7 +161,11 @@
       if (ehApack) {
         const dados = await lerArquivoBase64(arq);
         faseImp = "validando e importando";
-        r = await invokeSave("importar_apack", { dados_base64: dados, nome: arq.name }, 180000);
+        // O Tauri converte o nome do parâmetro Rust para camelCase no IPC
+        // (dados_base64 vira `dadosBase64`); snake aqui quebrava o import
+        // com "missing required key dadosBase64". Resposta continua snake
+        // (struct serde), só o ARGUMENTO do comando é camel.
+        r = await invokeSave("importar_apack", { dadosBase64: dados, nome: arq.name }, 180000);
       } else {
         const conteudo = await arq.text();
         faseImp = "validando e importando";
