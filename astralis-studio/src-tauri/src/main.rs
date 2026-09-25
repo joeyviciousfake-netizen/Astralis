@@ -2792,4 +2792,70 @@ mod testes {
         assert!(!dir.join("backups").exists());
         let _ = std::fs::remove_dir_all(&dir);
     }
+
+    #[test]
+    fn boot_vazio_ler_nao_cria_nada() {
+        // Projeto VAZIO (igual ao commitado vazio): ler não escreve.
+        // Trava R1/R4 no boot: listar_cartas/duelistas/decks voltam vazios e o
+        // disco continua vazio — nenhum fm_*.json, nenhum pack_* criado.
+        // Só importar_pack (file picker) e salvar_* escrevem; todo o resto
+        // (listar_*, ler_*, validar_*, testar_fusao, jogar_duelo no projeto)
+        // é só leitura (+ garantir_projeto só cria o esqueleto vazio).
+        // Usa pasta temporária (nunca encosta em projects/default/).
+        let base = std::env::temp_dir().join("astralis-studio-test-boot-vazio");
+        let _ = std::fs::remove_dir_all(&base);
+        garantir_projeto(&base).unwrap();
+        let conta_json = |p: &std::path::Path| -> usize {
+            std::fs::read_dir(p)
+                .map(|e| {
+                    e.flatten()
+                        .filter(|x| x.path().extension().and_then(|x| x.to_str()) == Some("json"))
+                        .count()
+                })
+                .unwrap_or(0)
+        };
+        let tem_fm = |p: &std::path::Path| -> bool {
+            std::fs::read_dir(p)
+                .map(|e| {
+                    e.flatten().any(|x| {
+                        x.file_name().to_str().map(|n| n.starts_with("fm_")).unwrap_or(false)
+                    })
+                })
+                .unwrap_or(false)
+        };
+        // Antes: esqueleto vazio (0 itens, 0 fm_*, fusions/effects vazios).
+        assert_eq!(conta_json(&base.join("cards")), 0);
+        assert_eq!(conta_json(&base.join("duelists")), 0);
+        assert_eq!(conta_json(&base.join("decks")), 0);
+        // Leitura pelos mesmos helpers dos comandos (só leitura, sem escrever).
+        let cartas = listar_arquivos(&base.join("cards"), "carta").unwrap();
+        let duelistas = listar_arquivos(&base.join("duelists"), "duelista").unwrap();
+        let decks = listar_arquivos(&base.join("decks"), "deck").unwrap();
+        assert!(cartas.is_empty(), "projeto vazio: cartas deviam voltar vazias");
+        assert!(duelistas.is_empty(), "projeto vazio: duelistas deviam voltar vazios");
+        assert!(decks.is_empty(), "projeto vazio: decks deviam voltar vazios");
+        // Depois: disco continua vazio — a leitura não criou nada.
+        assert_eq!(conta_json(&base.join("cards")), 0);
+        assert_eq!(conta_json(&base.join("duelists")), 0);
+        assert_eq!(conta_json(&base.join("decks")), 0);
+        assert!(!tem_fm(&base.join("cards")));
+        assert!(!tem_fm(&base.join("duelists")));
+        assert!(!tem_fm(&base.join("decks")));
+        // Nenhum backup pack_* nasceu sozinho (só o Importar cria).
+        let tem_pack = std::fs::read_dir(base.join("backups"))
+            .map(|e| {
+                e.flatten().any(|x| {
+                    x.file_name().to_str().map(|n| n.starts_with("pack_")).unwrap_or(false)
+                })
+            })
+            .unwrap_or(false);
+        assert!(!tem_pack, "leitura não devia criar backup pack_*");
+        // fusions/effects seguem vazios válidos (esqueleto, não conteúdo).
+        let f: serde_json::Value = serde_json::from_str(
+            &std::fs::read_to_string(base.join("fusions.json")).unwrap(),
+        )
+        .unwrap();
+        assert_eq!(f.get("recipes").and_then(|v| v.as_array()).map(|a| a.len()), Some(0));
+        let _ = std::fs::remove_dir_all(&base);
+    }
 }
