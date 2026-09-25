@@ -19,8 +19,9 @@ Campanha MVP: Scene/Dialogue/Character/Background/Choice/Battle(win/lose V1.2)/T
 Princípios: preview avançado só após GameState/Effect/Duel/contrato/comunicação estáveis. Test Lab prever observabilidade cedo (setup controlado, eventos rastreáveis, seed) sem exigir reescrita.
 
 Futuro (não V1): variables completas, campanha condicional avançada, flow avançado, AI profiles completos, animação rica, UI flexível, test generation/recording, breakpoints, inspector rico, plugins se necessário, migration.
+ADIADOS FM (ordem do usuário, não esquecer): traps/equips/magicas/rituais (depois do editor certo), Exodia, contadores de rank, guardiã/terreno ±500, Swords/timers, IA avançada (a atual é fiel básica: kill fraco + best-margin).
 
-## 11.3 Agentes (6, por domínio — travado em D15)
+## 11.3 Agentes (6, por domínio — travado em D13)
 
 1 Lead Architect (arquitetura/contratos/invariantes/docs, impede hardcoding, editor-gameplay, genericização)
 2 Runtime Engineer (Astralis, Duel/Effect/Fusion execution, AI, Save, UI, DataLoader, Preview/Test modes) — ponto de sobrecarga, ver split abaixo
