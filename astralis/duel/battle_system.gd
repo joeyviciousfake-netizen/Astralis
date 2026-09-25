@@ -54,7 +54,11 @@ static func can_attack(state, attacker_player: int, attacker_slot: int) -> Dicti
 	if bool(atacante.get("has_attacked", false)):
 		return {"ok": false, "erro": "Este monstro já atacou neste turno."}
 	# D17/D22: jogador (lado 0) não ataca no 1º turno; inimigo pode no dele.
-	if attacker_player == 0 and int(state.turn_number) <= 1:
+	# Exceção Campo de Testes (pedido do usuário via Lead, vale sobre D15 só aqui):
+	# duelo montado com test_state (state.is_test=true, dado do duel_manager)
+	# libera o ataque no turno 1 p/ testar carta atacando de cara. Duelo normal
+	# (is_test=false) continua bloqueado como antes. Nenhum outro fluxo muda.
+	if attacker_player == 0 and int(state.turn_number) <= 1 and not bool(state.get("is_test")):
 		return {"ok": false, "erro": "Sem ataque no 1º turno."}
 	return {"ok": true, "erro": ""}
 

@@ -21,9 +21,10 @@ var winner: int = -1 # -1 = sem vencedor, 0/1 = jogador, -2 = empate
 var over: bool = false
 var normal_summon_used: bool = false
 var starting_lp: int = 4000
+var is_test: bool = false
 
 
-static func create(p0_deck: Array, p1_deck: Array, lp: int, first: int):
+static func create(p0_deck: Array, p1_deck: Array, lp: int, first: int, p_is_test: bool = false):
 	# load() em vez de DuelGameState.new(): funciona mesmo com cache frio de class_name.
 	var s = (load("res://duel/game_state.gd") as GDScript).new()
 	s.starting_lp = lp
@@ -34,6 +35,7 @@ static func create(p0_deck: Array, p1_deck: Array, lp: int, first: int):
 	s.winner = -1
 	s.over = false
 	s.normal_summon_used = false
+	s.is_test = p_is_test
 	return s
 
 

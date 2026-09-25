@@ -10,12 +10,18 @@ extends "res://testing/astralis_test_base.gd"
 ##     position ATK/DEF, estrela = guardian_star_1 do dado);
 ## (4) null = vazio (as magias dos 2 lados ficam vazias);
 ## (5) seed fixa = mesmo campo + mesma mão em 2 montagens;
-## (6) sem test_state, tudo igual a antes (5/5, campo vazio, ordem do setup).
+## (6) sem test_state, tudo igual a antes (5/5, campo vazio, ordem do setup);
+## (7) com test_state, turno 1 BATTLE: ataque de p0 funciona e mata/dá dano
+##     como o motor manda (fm_0001 3000 vs fm_0004 1200 = 1800 de dano);
+## (8) sem test_state, turno 1 BATTLE: ataque de p0 continua bloqueado com
+##     "Sem ataque no 1º turno." (D15/D17 vale no duelo normal).
 ## Fixtures FM reais: fm_0001 Blue-eyes 3000/2500 sol, fm_0002 Mystical Elf
 ## 800/2000, fm_0003 Hitotsu-me 1200/1000 lua, fm_0004 Baby Dragon 1200/700.
 ## Seed fixa 42 (a do duel_setup FM). Bug aqui vira teste permanente.
 ## Helpers (ProjectLoaderScript/DuelManagerScript/SummonSystem/
 ## _indice_monstro_na_mao) vêm de astralis_test_base.gd.
+
+const BattleSystem := preload("res://duel/battle_system.gd")
 
 
 # Monta o setup FM de verdade + test_state do contrato (só dado, R3).
@@ -194,3 +200,56 @@ func test_duelo_de_teste_e_jogavel() -> void:
 	var rs: Dictionary = SummonSystem.normal_summon(st, cur, idx, slot)
 	assert_true(bool(rs.get("ok", false)), "Invocação normal funciona no duelo de teste.")
 	assert_true((st.players[cur] as Dictionary)["monster"][slot] != null, "Carta desceu no slot 2.")
+
+
+func test_com_teste_turno1_p0_ataca_e_mata_como_o_motor_manda() -> void:
+	# (7) Com test_state (is_test=true), o turno 1 libera o ataque de p0:
+	# fm_0001 (3000 ATK aberta) vs fm_0004 (1200 ATK aberta) = destrói o alvo
+	# + 1800 de dano no LP do rival, pela regra real do BattleSystem.
+	var duel = _duelo_com_teste()
+	var st = duel.get_state()
+	assert_true(bool(st.get("is_test")), "Duelo de teste marca is_test.")
+	assert_eq(int(st.turn_number), 1, "Preparo: turno 1.")
+	assert_eq(int(st.current_player), 0, "Preparo: vez de p0.")
+	var r1: Dictionary = duel.advance_phase() # DRAW -> MAIN
+	assert_true(bool(r1.get("ok", false)), "DRAW -> MAIN avança no turno 1 de teste.")
+	assert_eq(String(st.phase), "MAIN", "Preparo: estamos na MAIN.")
+	var r2: Dictionary = duel.advance_phase() # MAIN -> BATTLE
+	assert_true(bool(r2.get("ok", false)), "MAIN -> BATTLE avança no turno 1 de teste.")
+	assert_eq(String(st.phase), "BATTLE", "Preparo: estamos na BATTLE do turno 1.")
+	assert_eq(int((st.players[1] as Dictionary)["lp"]), 8000, "Preparo: rival começa com 8000 LP.")
+	var a: Dictionary = BattleSystem.attack(st, 0, 0, 1, 0)
+	assert_true(bool(a.get("ok", false)), "Com test_state, p0 ataca no turno 1.")
+	assert_true(bool(a.get("destruiu_alvo", false)), "3000 > 1200: Baby Dragon foi destruída.")
+	assert_false(bool(a.get("destruiu_atacante", true)), "Blue-eyes sobrevive.")
+	assert_eq(int(a.get("dano", -1)), 1800, "Dano é a diferença 3000-1200=1800.")
+	assert_eq(int((st.players[1] as Dictionary)["lp"]), 6200, "LP do rival: 8000-1800=6200.")
+	assert_true((st.players[1] as Dictionary)["monster"][0] == null, "Slot 0 do rival ficou vazio.")
+	assert_true((st.players[0] as Dictionary)["monster"][0] != null, "Blue-eyes segue no campo.")
+
+
+func test_sem_teste_turno1_p0_continua_bloqueado() -> void:
+	# (8) Sem test_state (is_test=false), D15/D17 vale: p0 invoca na MAIN do
+	# turno 1 mas o ataque na BATTLE continua bloqueado com a mensagem de sempre.
+	var state: Dictionary = ProjectLoaderScript.load_initial_state()
+	var data: Dictionary = state.get("data", {})
+	var setup: Dictionary = ((data as Dictionary).get("duel_setup", {}) as Dictionary).duplicate(true)
+	assert_false(setup.has("test_state"), "Preparo: o setup FM não tem test_state.")
+	var duel = DuelManagerScript.new_duel(setup, data.get("decks", {}), data.get("cards", {}))
+	var st = duel.get_state()
+	assert_false(bool(st.get("is_test")), "Duelo normal não marca is_test.")
+	assert_eq(int(st.turn_number), 1, "Preparo: turno 1.")
+	assert_eq(int(st.current_player), 0, "Preparo: vez de p0.")
+	duel.advance_phase() # DRAW -> MAIN
+	var cur: int = int(st.current_player)
+	_garantir_monstros_na_mao(st, cur, 1)
+	var i: int = _indice_monstro_na_mao(st, cur)
+	assert_true(i >= 0, "Preparo: mão tem monstro (carta FM de verdade).")
+	var rs: Dictionary = SummonSystem.normal_summon(st, cur, i, 0)
+	assert_true(bool(rs.get("ok", false)), "Preparo: invocação na MAIN funciona.")
+	var rb: Dictionary = duel.advance_phase() # MAIN -> BATTLE
+	assert_true(bool(rb.get("ok", false)), "MAIN -> BATTLE avança.")
+	assert_eq(String(st.phase), "BATTLE", "Preparo: estamos na BATTLE do turno 1.")
+	var a: Dictionary = BattleSystem.attack(st, cur, 0, 1 - cur, -1)
+	assert_false(bool(a.get("ok", false)), "Sem test_state, p0 não ataca no turno 1.")
+	assert_eq(str(a.get("erro", "")), "Sem ataque no 1º turno.", "Erro do turno 1 é o de sempre.")

@@ -63,7 +63,7 @@ func _montar(setup: Dictionary, decks: Dictionary, cards: Dictionary) -> void:
 		teste = setup.get("test_state", {})
 	if not teste.is_empty():
 		primeiro = 0
-	state = GameState.create(baralho1, baralho2, lp, primeiro)
+	state = GameState.create(baralho1, baralho2, lp, primeiro, not teste.is_empty())
 	if teste.is_empty():
 		for i in range(5):
 			for pi in [0, 1]:
