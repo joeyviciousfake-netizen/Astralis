@@ -13,7 +13,7 @@
 - D08 2026-09-23: Fusão = receita explícita (prioridade) + regra genérica fallback. | motivo: menos cadastro estilo FM | impacto: docs 06
 - D09 2026-09-23: IA por preset (dificuldade/agressividade/uso_fusao/protecao_lp), sem custom scripting V1. | motivo: identidade sem código | impacto: docs 05
 - D10 2026-09-23: Efeitos Simples (templates) + Avançado (blocos), mesmo motor/validação. | motivo: simples p/ comum, poderoso p/ avançado | impacto: docs 07
-- D11 2026-09-23: Starter Kit jogável em todo New Project + wizard 3 passos. | motivo: tirar tela em branco | impacto: docs 09
+- D11 2026-09-23: New Project abre VAZIO (nada carregado, nada predefinido); conteúdo só via Importar pack; wizard 3 passos vale após importar. | motivo: ordem do usuário | impacto: docs 09
 - D12 2026-09-23: Preview unificado "Jogar a partir daqui" + Test Lab mínimo (Testar agora + seed fixa). Debug completo adiado. | motivo: menos UI, mesmo motor | impacto: docs 10
 - D13 2026-09-23: 6 agentes por domínio, sem micro-agentes. Feature: contrato → Astralis → Studio → testes → docs. Split só se lotar (Efeito temporário; 7º Build só se APK doer na V2). | motivo: evitar divergência | impacto: docs 11
 - D14 2026-09-23: Ferramentas oficiais: Coding-Solo godot-mcp (Godot 4.7.2, sem editor aberto) + GUT 9.7.1 (astralis/testing/). | motivo: as que executam de verdade | impacto: runtime usa MCP, qa usa GUT
@@ -31,4 +31,5 @@
 - D26 2026-09-24: Mão sempre com 5 (início 5/5 sem extra, refill até 5 todo turno pros 2 lados, deckout ao completar); fusão em fila animada (ponta direita, flash/sucesso, chacoalhada/falha, sem mudar resultado). | motivo: 2 bugs do usuário (mão curta + animação rápida) | impacto: runtime duel/turn/mesa; QA 5 testes; GUT 74/74
 - D27 2026-09-24: Slot escolhido ANTES da fusão (vazio ou ocupado); final encontra o campo (falha = campo descartado, carta desce); estrela no final da combinação. | motivo: 3 correções do usuário | impacto: runtime mesa; QA 3 testes; GUT 77/77
 - D28 2026-09-24: IA do rival fiel básica (direto c/ mais forte, kill c/ mais fraco diferença>0, best-margin só vs ATK margem>=0, guardiã retorna 0); resto da IA intacto, melhora depois. | motivo: ordem do usuário (só a IA agora) | impacto: runtime mesa; QA 5 testes; GUT 82/82
+- D29 2026-09-24: Studio trabalha em pasta de projeto separada (astralis-studio/projects/default/, abre vazia); jogo lê via --project (+ --setup por cima); Importar carrega o pack. | motivo: editor não mostra nada sem importar | impacto: runtime --project; editor projeto separado; examples/ segue p/ testes
 - D29 2026-09-25: Studio abre VAZIO (só mostra o que importar); projeto do editor em astralis-studio/projects/default/; Jogar chama Godot com --project <pasta> (+ --setup temp no duelo). | motivo: ordem do usuário (editor separado do jogo) | impacto: editor; schemas/examples é só o jogo embutido
