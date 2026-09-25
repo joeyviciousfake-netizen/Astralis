@@ -85,8 +85,8 @@
 
   onMount(() => {
     setTab("cards");
-    // Boot VAZIO (ordem do usuário, D29): guarda a sessão anterior em
-    // backups/sessao_* (comando preparar_boot) ANTES da primeira listagem;
+    // Boot VAZIO (ordem do usuário, D29): APAGA tudo de projects/default/
+    // (comando preparar_boot, sem backup) ANTES da primeira listagem;
     // depois lista normal (vazio + convite "Importe um pack para começar").
     // No navegador o invoke falha e cai no snapshot (o build sai vazio).
     // Boot em 2 tempos: primeiro a lista (1 invoke) + nomes de duelistas em

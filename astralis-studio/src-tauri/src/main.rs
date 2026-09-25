@@ -152,7 +152,7 @@ fn pasta_projeto() -> Result<PathBuf, String> {
 fn garantir_projeto(proj: &std::path::Path) -> Result<(), String> {
     for sub in [
         "cards", "duelists", "decks", "arenas", "scenes",
-        "assets/cards", "assets/portraits", "assets/backgrounds", "backups",
+        "assets/cards", "assets/portraits", "assets/backgrounds",
     ] {
         std::fs::create_dir_all(proj.join(sub))
             .map_err(|e| format!("Não consegui criar projects/default/{sub}: {e}"))?;
@@ -1726,9 +1726,6 @@ fn rotulo_backup(dir: &std::path::Path) -> String {
     if let Some(pos) = s.find("backups/pack_") {
         return s[pos..].to_string();
     }
-    if let Some(pos) = s.find("backups/sessao_") {
-        return s[pos..].to_string();
-    }
     s.to_string()
 }
 
@@ -2247,18 +2244,14 @@ fn importar_asset(pedido: PedidoAsset) -> Result<ResultadoOk, String> {
 }
 
 // ---- BOOT VAZIO (ordem do usuário, D29) ----
-// Toda vez que o editor abre, ele abre VAZIO — mesmo que a sessão anterior
-// tenha importado o pack. O frontend chama `preparar_boot` no onMount ANTES
-// da primeira listagem. Se projects/default/ tem conteúdo (qualquer
-// carta/duelista/deck/arena/cena, fusions.json com receita ou regra,
-// effects.json com efeito, ou duel_setup.json), move tudo para
-// projects/default/backups/sessao_<data>_<hora>/ (proteção invisível, já
-// ignorada no git) e recria o esqueleto vazio. Projeto já vazio = não faz
-// nada (sem backup novo). Só dado, nada de jogo (R1/R4).
+// Toda vez que o editor abre, ele abre VAZIO: APAGA todo o conteúdo de
+// projects/default/ e recria o esqueleto vazio — SEM backup, sem pasta
+// sessao_*, sem nada guardado (ordem literal do usuário). O frontend chama
+// `preparar_boot` no onMount ANTES da primeira listagem. Projeto já vazio =
+// não faz nada. Só dado, nada de jogo (R1/R4).
 #[derive(Debug, serde::Serialize)]
 struct ResultadoBoot {
     limpou: bool,
-    backup: Option<String>,
     mensagem: String,
 }
 
@@ -2312,69 +2305,66 @@ fn projeto_tem_conteudo(proj: &std::path::Path) -> bool {
     false
 }
 
-// Move um arquivo para o backup (rename rápido; se falhar, copia e apaga).
-// Devolve true se moveu.
-fn mover_para_backup(origem: &std::path::Path, destino: &std::path::Path) -> bool {
-    if let Some(pai) = destino.parent() {
-        let _ = std::fs::create_dir_all(pai);
-    }
-    if std::fs::rename(origem, destino).is_ok() {
-        return true;
-    }
-    if std::fs::copy(origem, destino).is_ok() {
-        return std::fs::remove_file(origem).is_ok();
-    }
-    false
-}
-
-fn preparar_boot_para(proj: &std::path::Path) -> Result<ResultadoBoot, String> {
-    garantir_projeto(proj)?;
-    if !projeto_tem_conteudo(proj) {
-        return Ok(ResultadoBoot {
-            limpou: false,
-            backup: None,
-            mensagem: "Projeto já vazio — nada a guardar. Importe um pack para começar.".to_string(),
-        });
-    }
-    let raiz_backups = proj.join("backups");
-    std::fs::create_dir_all(&raiz_backups)
-        .map_err(|e| format!("Não consegui criar a pasta de backup em {}: {e}", raiz_backups.display()))?;
-    let carimbo = carimbo_data_hora();
-    let mut dir = raiz_backups.join(format!("sessao_{carimbo}"));
-    let mut i = 2;
-    while dir.exists() {
-        dir = raiz_backups.join(format!("sessao_{carimbo}_{i}"));
-        i += 1;
-    }
-    let mut movidos = 0;
-    for sub in ["cards", "duelists", "decks", "arenas", "scenes"] {
-        let origem = proj.join(sub);
-        if let Ok(entries) = std::fs::read_dir(&origem) {
-            for e in entries.flatten() {
-                let p = e.path();
-                if p.is_file() && p.extension().and_then(|x| x.to_str()) == Some("json") {
-                    if let Some(nome) = p.file_name() {
-                        if mover_para_backup(&p, &dir.join(sub).join(nome)) {
-                            movidos += 1;
-                        }
-                    }
+// Apaga os *.json de uma pasta. Devolve quantos apagou.
+fn apagar_json_da_pasta(pasta: &std::path::Path) -> usize {
+    let mut n = 0;
+    if let Ok(entries) = std::fs::read_dir(pasta) {
+        for e in entries.flatten() {
+            let p = e.path();
+            if p.is_file() && p.extension().and_then(|x| x.to_str()) == Some("json") {
+                if std::fs::remove_file(&p).is_ok() {
+                    n += 1;
                 }
             }
         }
     }
-    for nome in ["fusions.json", "effects.json", "duel_setup.json"] {
-        let origem = proj.join(nome);
-        if origem.is_file() && mover_para_backup(&origem, &dir.join(nome)) {
-            movidos += 1;
+    n
+}
+
+// Apaga TODOS os arquivos de uma pasta (artes). Devolve quantos apagou.
+fn apagar_tudo_da_pasta(pasta: &std::path::Path) -> usize {
+    let mut n = 0;
+    if let Ok(entries) = std::fs::read_dir(pasta) {
+        for e in entries.flatten() {
+            let p = e.path();
+            if p.is_file() && std::fs::remove_file(&p).is_ok() {
+                n += 1;
+            }
         }
+    }
+    n
+}
+
+fn preparar_boot_para(proj: &std::path::Path) -> Result<ResultadoBoot, String> {
+    garantir_projeto(proj)?;
+    // Nada guardado: nem sessão antiga nem backup órfão ficam de pé.
+    if !projeto_tem_conteudo(proj) && !proj.join("backups").exists() {
+        return Ok(ResultadoBoot {
+            limpou: false,
+            mensagem: "Projeto já vazio — nada a apagar. Importe um pack para começar.".to_string(),
+        });
+    }
+    let mut apagados = 0;
+    for sub in ["cards", "duelists", "decks", "arenas", "scenes"] {
+        apagados += apagar_json_da_pasta(&proj.join(sub));
+    }
+    for sub in ["assets/cards", "assets/portraits", "assets/backgrounds"] {
+        apagados += apagar_tudo_da_pasta(&proj.join(sub));
+    }
+    for nome in ["fusions.json", "effects.json", "duel_setup.json"] {
+        let p = proj.join(nome);
+        if p.is_file() && std::fs::remove_file(&p).is_ok() {
+            apagados += 1;
+        }
+    }
+    if proj.join("backups").exists() {
+        let _ = std::fs::remove_dir_all(proj.join("backups"));
     }
     // Recria o esqueleto vazio (pastas + fusions/effects vazios válidos).
     garantir_projeto(proj)?;
-    let rotulo = rotulo_backup(&dir);
     Ok(ResultadoBoot {
         limpou: true,
-        backup: Some(rotulo.clone()),
-        mensagem: format!("Sessão anterior guardada ({movidos} arquivo(s) em {rotulo}). Projeto aberto vazio — importe um pack para começar."),
+        mensagem: format!("Projeto zerado ({apagados} arquivo(s) apagado(s), sem backup). Importe um pack para começar."),
     })
 }
 
@@ -3008,22 +2998,12 @@ mod testes {
         dir
     }
 
-    fn boot_pasta_sessao(base: &std::path::Path) -> Option<std::path::PathBuf> {
-        std::fs::read_dir(base.join("backups")).ok()?.flatten().find_map(|x| {
-            let n = x.file_name().to_string_lossy().to_string();
-            if n.starts_with("sessao_") {
-                Some(base.join("backups").join(n))
-            } else {
-                None
-            }
-        })
-    }
-
     #[test]
-    fn boot_cheio_limpa_com_backup_e_vazio_nao_muda() {
+    fn boot_cheio_apaga_tudo_sem_backup_e_vazio_nao_muda() {
         // Projeto cheio (carta + duelista + deck + arena + cena + fusão com
-        // receita + efeito): preparar_boot guarda tudo em backups/sessao_* e
-        // recria o esqueleto vazio. Segunda chamada (já vazio) = não faz nada.
+        // receita + efeito + backup órfão antigo): preparar_boot APAGA tudo,
+        // sem backup, e recria o esqueleto vazio. Segunda chamada (já vazio)
+        // = não faz nada.
         let base = projeto_boot_teste("cheio");
         escrever_json_valor(&base.join("cards").join("card_x.json"), &carta_pack_valida("card_x", "X"), "base").unwrap();
         escrever_json_valor(&base.join("duelists").join("duelist_x.json"), &duelista_pack_valido("duelist_x", "deck_x"), "base").unwrap();
@@ -3035,11 +3015,14 @@ mod testes {
         let mut ef = efeito_base();
         ef["id"] = serde_json::json!("effect_x");
         escrever_json_valor(&base.join("effects.json"), &serde_json::json!({"schema_version": 1, "effects": [ef]}), "base").unwrap();
+        // Backup órfão antigo (de versão anterior): também é apagado, nada guardado.
+        std::fs::create_dir_all(base.join("backups").join("sessao_antiga")).unwrap();
+        std::fs::write(base.join("backups").join("sessao_antiga").join("card_x.json"), "{}").unwrap();
 
         let r = preparar_boot_para(&base).unwrap();
         assert!(r.limpou, "projeto cheio devia limpar");
-        assert!(r.backup.is_some(), "projeto cheio devia criar backup");
-        assert!(r.backup.clone().unwrap().contains("sessao_"), "rótulo devia apontar backups/sessao_*");
+        assert!(r.mensagem.contains("zerado"), "mensagem devia dizer que zerou: {}", r.mensagem);
+        assert!(r.mensagem.contains("sem backup"), "mensagem devia dizer sem backup: {}", r.mensagem);
         // Esqueleto vazio recriado (pastas sem json + fusions/effects válidos).
         for sub in ["cards", "duelists", "decks", "arenas", "scenes"] {
             assert!(!pasta_tem_json(&base.join(sub)), "{sub} devia voltar vazio");
@@ -3049,23 +3032,14 @@ mod testes {
         assert_eq!(f.get("rules").and_then(|v| v.as_array()).map(|a| a.len()), Some(0));
         let e: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(base.join("effects.json")).unwrap()).unwrap();
         assert_eq!(e.get("effects").and_then(|v| v.as_array()).map(|a| a.len()), Some(0));
-        // Backup guardou tudo com a mesma estrutura.
-        let pasta_backup = boot_pasta_sessao(&base).expect("devia ter criado backups/sessao_*");
-        assert!(pasta_backup.join("cards").join("card_x.json").is_file());
-        assert!(pasta_backup.join("duelists").join("duelist_x.json").is_file());
-        assert!(pasta_backup.join("decks").join("deck_x.json").is_file());
-        assert!(pasta_backup.join("arenas").join("arena_x.json").is_file());
-        assert!(pasta_backup.join("scenes").join("scene_x.json").is_file());
-        assert!(pasta_backup.join("fusions.json").is_file());
-        assert!(pasta_backup.join("effects.json").is_file());
+        // SEM backup: nada guardado, nenhuma pasta sessao_* de pé.
+        assert!(!base.join("backups").exists(), "boot não devia deixar backups/ de pé");
+        assert!(!base.join("cards").join("card_x.json").exists(), "carta devia ter sido apagada, não guardada");
 
-        // Segunda chamada: projeto já vazio = não faz nada (sem backup novo).
-        let antes: Vec<String> = std::fs::read_dir(base.join("backups")).unwrap().flatten().map(|x| x.file_name().to_string_lossy().to_string()).collect();
+        // Segunda chamada: projeto já vazio = não faz nada.
         let r2 = preparar_boot_para(&base).unwrap();
         assert!(!r2.limpou, "projeto vazio não devia limpar");
-        assert!(r2.backup.is_none(), "projeto vazio não devia criar backup");
-        let depois: Vec<String> = std::fs::read_dir(base.join("backups")).unwrap().flatten().map(|x| x.file_name().to_string_lossy().to_string()).collect();
-        assert_eq!(antes, depois, "projeto vazio não devia criar pasta nova em backups/");
+        assert!(!base.join("backups").exists(), "projeto vazio não devia criar backups/");
         let _ = std::fs::remove_dir_all(&base);
     }
 
@@ -3074,8 +3048,7 @@ mod testes {
         let base = projeto_boot_teste("vazio2");
         let r = preparar_boot_para(&base).unwrap();
         assert!(!r.limpou);
-        assert!(r.backup.is_none());
-        assert!(boot_pasta_sessao(&base).is_none(), "boot vazio não devia criar backups/sessao_*");
+        assert!(!base.join("backups").exists(), "boot vazio não devia criar backups/");
         // Esqueleto válido segue de pé.
         let f: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(base.join("fusions.json")).unwrap()).unwrap();
         assert_eq!(f.get("recipes").and_then(|v| v.as_array()).map(|a| a.len()), Some(0));
