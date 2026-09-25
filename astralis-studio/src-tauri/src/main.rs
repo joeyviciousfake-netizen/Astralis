@@ -1607,6 +1607,14 @@ struct PedidoDuelo {
     arena: String,
     #[serde(default)]
     ordem: String,
+    /// Campo de Testes (contrato systems `duel_setup.test_state` V1): o setup
+    /// de teste montado na aba Testes (my_hand + 4 zonas p0/p1). Ausente, null
+    /// ou vazio = duelo normal (Duelo rápido, igual a antes). Preenchido =
+    /// força first_p1 (o teste começa sempre na SUA fase da mão, doc 04.6/D24)
+    /// e viaja DENTRO do duel_setup temporário (--setup por cima do --project,
+    /// mesmo caminho do Jogar). Só dado, nunca cálculo (R1/R4).
+    #[serde(default)]
+    test_state: Option<serde_json::Value>,
 }
 
 #[tauri::command]
@@ -1634,6 +1642,260 @@ fn checar_arena_do_duelo(catalogo: &Catalogo, arena: &str) -> Option<ErroValidac
     )
 }
 
+/// Gate do Campo de Testes (contrato systems `duel_setup.test_state` V1) —
+/// o espelho da mesma regra do schema (schemas/duel_setup.schema.json).
+/// Só valida DADO (R1/R4: nunca calcula jogo). Ausente = duelo normal, válido.
+/// Quando presente: my_hand 0-5 Card IDs; p0/p1 monster/spell com exatos 5
+/// slots (null = vazio, ou {card_id + face_up? + attack_position?}); refs de
+/// carta passam pelo gate único (R4); turn_order tem que ser first_p1 (o teste
+/// sempre começa na SUA fase da mão, doc 13.3 + D24 — documentado aqui,
+/// executado no runtime). LP/seed valem os do topo, não se duplicam aqui.
+fn checar_test_state(setup: &serde_json::Value, cartas: &Catalogo) -> Vec<ErroValidacao> {
+    let mut erros: Vec<ErroValidacao> = Vec::new();
+    let ts = match setup.get("test_state") {
+        None => return erros,
+        Some(v) => v,
+    };
+    let obj = match ts.as_object() {
+        Some(o) => o,
+        None => {
+            return vec![erro(
+                "Campo de Testes",
+                "field-test-field",
+                "Campo de Testes com formato inválido. Apague o teste e monte de novo na aba Campo de Testes (mão + campo).",
+            )]
+        }
+    };
+    // Teste sempre começa na SUA fase da mão: turn_order tem que ser first_p1.
+    match setup.get("turn_order").and_then(|v| v.as_str()) {
+        Some("first_p1") => {}
+        _ => erros.push(erro(
+            "Ordem do teste",
+            "field-ordem",
+            "Teste sempre começa na sua fase da mão. Deixe Quem começa em \"Você primeiro\" (first_p1) quando o Campo de Testes está preenchido.",
+        )),
+    }
+    for k in obj.keys() {
+        if !["my_hand", "p0_monster", "p0_spell", "p1_monster", "p1_spell"].contains(&k.as_str()) {
+            erros.push(erro(
+                "Campo de Testes",
+                "field-test-field",
+                &format!("Campo de Testes com campo desconhecido \"{k}\". Apague o teste e monte de novo na aba Campo de Testes."),
+            ));
+        }
+    }
+    if let Some(mh) = obj.get("my_hand") {
+        match mh.as_array() {
+            Some(lista) if lista.len() <= 5 => {
+                for id_v in lista {
+                    match id_v.as_str() {
+                        Some(id) if eh_id_snake(id) => {
+                            if let Some(e) = checar_catalogo(
+                                cartas,
+                                id,
+                                "Mão do teste",
+                                "field-test-hand",
+                                &format!("Carta \"{id}\" da mão do teste não existe neste projeto. Clique em Campo de Testes e escolha uma carta da lista."),
+                                &format!("Carta \"{id}\" ainda não pode existir: este projeto não tem nenhuma carta cadastrada. Clique na aba Cartas e importe um pack antes de montar o teste."),
+                            ) {
+                                erros.push(e);
+                            }
+                        }
+                        _ => erros.push(erro(
+                            "Mão do teste",
+                            "field-test-hand",
+                            "Mão do teste com carta inválida. Clique em Campo de Testes e escolha as cartas da lista (máximo 5).",
+                        )),
+                    }
+                }
+            }
+            _ => erros.push(erro(
+                "Mão do teste",
+                "field-test-hand",
+                "Mão do teste precisa ser uma lista de 0 a 5 cartas. Clique em Campo de Testes e escolha até 5 cartas da lista.",
+            )),
+        }
+    }
+    for chave in ["p0_monster", "p0_spell", "p1_monster", "p1_spell"] {
+        let zona = match obj.get(chave) {
+            None => continue,
+            Some(z) => z,
+        };
+        let lista = match zona.as_array() {
+            Some(l) => l,
+            None => {
+                erros.push(erro(
+                    "Campo do teste",
+                    "field-test-field",
+                    &format!("\"{chave}\" precisa ter exatos 5 espaços (vazio ou com carta). Apague o teste e monte de novo na aba Campo de Testes."),
+                ));
+                continue;
+            }
+        };
+        if lista.len() != 5 {
+            erros.push(erro(
+                "Campo do teste",
+                "field-test-field",
+                &format!("\"{chave}\" precisa ter exatos 5 espaços (achou {}). Apague o teste e monte de novo na aba Campo de Testes.", lista.len()),
+            ));
+            continue;
+        }
+        let rotulo = match chave {
+            "p0_monster" => "seus monstros",
+            "p0_spell" => "suas magias",
+            "p1_monster" => "monstros do rival",
+            _ => "magias do rival",
+        };
+        for (i, slot) in lista.iter().enumerate() {
+            if slot.is_null() {
+                continue;
+            }
+            let o = match slot.as_object() {
+                Some(o) => o,
+                None => {
+                    erros.push(erro(
+                        "Campo do teste",
+                        "field-test-field",
+                        &format!("Espaço {} de {rotulo} com formato inválido (vale vazio ou carta). Clique em Campo de Testes e escolha a carta da lista.", i + 1),
+                    ));
+                    continue;
+                }
+            };
+            match o.get("card_id").and_then(|v| v.as_str()) {
+                Some(id) if eh_id_snake(id) => {
+                    if let Some(e) = checar_catalogo(
+                        cartas,
+                        id,
+                        "Campo do teste",
+                        "field-test-field",
+                        &format!("Carta \"{id}\" do campo do teste não existe neste projeto. Clique em Campo de Testes e escolha uma carta da lista."),
+                        &format!("Carta \"{id}\" ainda não pode existir: este projeto não tem nenhuma carta cadastrada. Clique na aba Cartas e importe um pack antes de montar o teste."),
+                    ) {
+                        erros.push(e);
+                    }
+                }
+                _ => erros.push(erro(
+                    "Campo do teste",
+                    "field-test-field",
+                    &format!("Espaço {} de {rotulo} sem carta válida. Clique em Campo de Testes e escolha a carta da lista (ou deixe vazio).", i + 1),
+                )),
+            }
+            for b in ["face_up", "attack_position"] {
+                if let Some(v) = o.get(b) {
+                    if !v.is_boolean() {
+                        let o_que = if b == "face_up" { "virada p/ cima" } else { "posição de ataque" };
+                        erros.push(erro(
+                            "Campo do teste",
+                            "field-test-field",
+                            &format!("Espaço {} de {rotulo}: \"{o_que}\" precisa ser ligado/desligado. Clique em Campo de Testes e ajuste (ou deixe em branco = virada p/ cima em Ataque).", i + 1),
+                        ));
+                    }
+                }
+            }
+            for k in o.keys() {
+                if !["card_id", "face_up", "attack_position"].contains(&k.as_str()) {
+                    erros.push(erro(
+                        "Campo do teste",
+                        "field-test-field",
+                        &format!("Espaço {} de {rotulo} com campo desconhecido \"{k}\". Apague o teste e monte de novo na aba Campo de Testes.", i + 1),
+                    ));
+                }
+            }
+        }
+    }
+    erros
+}
+
+ /// Diz se o test_state do pedido é "vazio" (ausente, null, {} ou só com mão
+/// vazia e zonas ausentes/só-null) — vazio = duelo normal, sem test_state no
+/// setup. Evita mandar `{}` à toa e mantém o --setup idêntico ao do Duelo
+/// rápido quando o usuário não preencheu nada no Campo de Testes. Formato
+/// quebrado (ex.: string no lugar do objeto) NÃO é vazio: cai no gate, que
+/// barra com a msg PT-BR de onde clicar.
+fn test_state_vazio(ts: Option<&serde_json::Value>) -> bool {
+    let v = match ts {
+        None => return true,
+        Some(v) => v,
+    };
+    if v.is_null() {
+        return true;
+    }
+    let obj = match v.as_object() {
+        None => return false,
+        Some(o) => o,
+    };
+    if obj.is_empty() {
+        return true;
+    }
+    let mao_vazia = match obj.get("my_hand") {
+        None => true,
+        Some(mh) => mh.as_array().map(|l| l.is_empty()).unwrap_or(false),
+    };
+    if !mao_vazia {
+        return false;
+    }
+    for chave in ["p0_monster", "p0_spell", "p1_monster", "p1_spell"] {
+        match obj.get(chave) {
+            None => {}
+            Some(z) => {
+                let tem_carta = z
+                    .as_array()
+                    .map(|l| l.iter().any(|s| !s.is_null()))
+                    .unwrap_or(true);
+                if tem_carta {
+                    return false;
+                }
+            }
+        }
+    }
+    true
+}
+
+/// Monta o duel_setup do duelo rápido/teste (o MESMO JSON que viaja no
+/// --setup temporário por cima do --project). Com teste preenchido, o
+/// turn_order é sempre first_p1 (doc 04.6: o teste começa na sua fase da mão,
+/// D24) e o test_state viaja dentro; sem teste, idêntico ao setup do Duelo
+/// rápido (sem a chave test_state).
+fn montar_setup_duelo(
+    duelista1: &str,
+    deck1: &str,
+    duelista2: &str,
+    deck2: &str,
+    vida: i64,
+    ordem: &str,
+    seed: i64,
+    arena: &str,
+    test_state: Option<&serde_json::Value>,
+) -> serde_json::Value {
+    let tem_teste = !test_state_vazio(test_state);
+    let mut setup = serde_json::json!({
+        "schema_version": 1,
+        "duel_id": "duel_studio_rapido",
+        "duelist1": { "duelist_id": duelista1, "deck_id": deck1 },
+        "duelist2": { "duelist_id": duelista2, "deck_id": deck2 },
+        "starting_lp": vida,
+        "turn_order": if tem_teste { "first_p1".to_string() } else { ordem.to_string() },
+        "seed": seed,
+        "arena_id": arena,
+        "win": { "on_lp_zero": true, "on_deckout": true }
+    });
+    if tem_teste {
+        if let Some(ts) = test_state {
+            setup["test_state"] = ts.clone();
+        }
+    }
+    setup
+}
+
+/// Validação viva do Campo de Testes (aba Testes): recebe o duel_setup
+/// montado na tela (com test_state + turn_order) e devolve a mesma lista
+/// PT-BR de onde clicar do gate checar_test_state. Só valida dado (R1/R4).
+#[tauri::command]
+fn validar_test_state(setup: serde_json::Value) -> Vec<ErroValidacao> {
+    let cartas = Catalogo::de_set(&cartas_ids().unwrap_or_default());
+    checar_test_state(&setup, &cartas)
+}
+
 #[tauri::command]
 fn jogar_duelo(pedido: PedidoDuelo) -> Result<ResultadoOk, String> {
     if !eh_id_snake(&pedido.duelista1) || !eh_id_snake(&pedido.duelista2) {
@@ -1645,9 +1907,30 @@ fn jogar_duelo(pedido: PedidoDuelo) -> Result<ResultadoOk, String> {
     if pedido.vida <= 0 || pedido.vida > 99999 {
         return Err("Vida precisa ser um número maior que 0 (ex.: 4000). Ajuste em Vida e tente de novo.".to_string());
     }
-    let ordem = if pedido.ordem.trim().is_empty() { "first_p1".to_string() } else { pedido.ordem.trim().to_string() };
-    if !["first_p1", "first_p2", "random"].contains(&ordem.as_str()) {
-        return Err("Ordem de turno inválida. Escolha quem começa na lista.".to_string());
+    // Campo de Testes: com teste preenchido a ordem é SEMPRE first_p1 (sua
+    // fase da mão, doc 04.6/D24) — o que veio no pedido é ignorado. Sem
+    // teste, vale a ordem pedida (Duelo rápido normal).
+    let tem_teste = !test_state_vazio(pedido.test_state.as_ref());
+    let ordem = if tem_teste {
+        "first_p1".to_string()
+    } else {
+        let o = if pedido.ordem.trim().is_empty() { "first_p1".to_string() } else { pedido.ordem.trim().to_string() };
+        if !["first_p1", "first_p2", "random"].contains(&o.as_str()) {
+            return Err("Ordem de turno inválida. Escolha quem começa na lista.".to_string());
+        }
+        o
+    };
+    // Validação do teste ANTES de ler os decks do disco (mesmo gate da
+    // validação viva): mão/campo/ordem quebrados barram aqui com a msg PT-BR
+    // de onde clicar, sem depender de mais nada.
+    if tem_teste {
+        let sonda = serde_json::json!({ "turn_order": ordem, "test_state": pedido.test_state.clone().unwrap() });
+        let cartas = Catalogo::de_set(&cartas_ids().unwrap_or_default());
+        let rev_teste = checar_test_state(&sonda, &cartas);
+        let bloqueios = so_erros(&rev_teste);
+        if !bloqueios.is_empty() {
+            return Err(mensagem_bloqueio(&bloqueios));
+        }
     }
     let arena = if pedido.arena.trim().is_empty() { "arena_starter".to_string() } else { pedido.arena.trim().to_string() };
     // Gate único (R4) também na arena — com uma diferença real: aqui não pode
@@ -1679,17 +1962,17 @@ fn jogar_duelo(pedido: PedidoDuelo) -> Result<ResultadoOk, String> {
             return Err(format!("Deck \"{deck}\" do duelista \"{duel_id}\" não existe. Abra a aba Decks e confira."));
         }
     }
-    let setup = serde_json::json!({
-        "schema_version": 1,
-        "duel_id": "duel_studio_rapido",
-        "duelist1": { "duelist_id": pedido.duelista1, "deck_id": deck1 },
-        "duelist2": { "duelist_id": pedido.duelista2, "deck_id": deck2 },
-        "starting_lp": pedido.vida,
-        "turn_order": ordem,
-        "seed": pedido.seed.unwrap_or(42),
-        "arena_id": arena,
-        "win": { "on_lp_zero": true, "on_deckout": true }
-    });
+    let setup = montar_setup_duelo(
+        &pedido.duelista1,
+        &deck1,
+        &pedido.duelista2,
+        &deck2,
+        pedido.vida,
+        &ordem,
+        pedido.seed.unwrap_or(42),
+        &arena,
+        pedido.test_state.as_ref(),
+    );
     let agora = agora_em_segundos();
     // Vira o lixo do duelo anterior (o jogo já leu o setup dele).
     let _ = limpar_setups_antigos(agora, SETUP_MAX_IDADE_SEGS);
@@ -1983,6 +2266,11 @@ fn validar_projeto() -> Result<ResultadoProjeto, String> {
             if v.get("starting_lp").and_then(|x| x.as_i64()).map(|lp| lp <= 0).unwrap_or(true) {
                 n += 1;
             }
+            // Campo de Testes (contrato systems test_state V1): espelho do schema.
+            // Ausente = neutro; presente com mão/campo/ordem quebrados = erro de dado.
+            let rev_teste = checar_test_state(&v, &Catalogo::de_set(&ids_cartas));
+            n += so_erros(&rev_teste).len();
+            avisos += so_avisos(&rev_teste).len();
             erros += n;
             itens.push(ItemProjeto { area: "Duelo".to_string(), ok: n == 0, detalhe: if n == 0 { "setup aponta para duelistas/decks que existem".to_string() } else { format!("{n} problemas no duel_setup.json") } });
         }
@@ -2999,6 +3287,7 @@ fn main() {
             validar_efeito,
             listar_arenas,
             jogar_duelo,
+            validar_test_state,
             listar_cenas,
             salvar_cena,
             validar_cena,
@@ -3487,16 +3776,192 @@ mod testes {
 
     #[test]
     fn duelo_mesmo_duelista_barra() {
-        let p = PedidoDuelo { duelista1: "duelist_hero".to_string(), duelista2: "duelist_hero".to_string(), vida: 4000, seed: None, arena: "".to_string(), ordem: "".to_string() };
+        let p = PedidoDuelo { duelista1: "duelist_hero".to_string(), duelista2: "duelist_hero".to_string(), vida: 4000, seed: None, arena: "".to_string(), ordem: "".to_string(), test_state: None };
         assert!(jogar_duelo(p).is_err());
     }
 
     #[test]
     fn duelo_vida_zero_barra() {
-        let p = PedidoDuelo { duelista1: "duelist_hero".to_string(), duelista2: "duelist_rival".to_string(), vida: 0, seed: None, arena: "".to_string(), ordem: "".to_string() };
+        let p = PedidoDuelo { duelista1: "duelist_hero".to_string(), duelista2: "duelist_rival".to_string(), vida: 0, seed: None, arena: "".to_string(), ordem: "".to_string(), test_state: None };
         let r = jogar_duelo(p);
         assert!(r.is_err());
         assert!(r.unwrap_err().contains("Vida"));
+    }
+
+    // Campo de Testes (contrato systems test_state V1): ausente = válido;
+    // presente e bem formado = válido; quebrado = erro em PT-BR.
+    fn setup_base_com_teste(teste: serde_json::Value) -> serde_json::Value {
+        let mut s = serde_json::json!({
+            "schema_version": 1, "duel_id": "duel_teste",
+            "duelist1": { "duelist_id": "duelist_hero", "deck_id": "deck_a" },
+            "duelist2": { "duelist_id": "duelist_rival", "deck_id": "deck_b" },
+            "starting_lp": 4000, "turn_order": "first_p1", "seed": 42,
+            "arena_id": "arena_starter",
+            "win": { "on_lp_zero": true, "on_deckout": true }
+        });
+        s["test_state"] = teste;
+        s
+    }
+
+    #[test]
+    fn teste_ausente_e_valido() {
+        let s = serde_json::json!({
+            "schema_version": 1, "duel_id": "duel_fm_abertura",
+            "duelist1": { "duelist_id": "fm_duelist_01", "deck_id": "fm_deck_01" },
+            "duelist2": { "duelist_id": "fm_duelist_03", "deck_id": "fm_deck_03" },
+            "starting_lp": 8000, "turn_order": "first_p1", "seed": 42,
+            "arena_id": "arena_starter",
+            "win": { "on_lp_zero": true, "on_deckout": true }
+        });
+        assert!(checar_test_state(&s, &catalogo(&["fm_0001"])).is_empty());
+    }
+
+    #[test]
+    fn teste_minimo_valido_passa() {
+        let s = setup_base_com_teste(serde_json::json!({
+            "my_hand": ["card_a", "card_b"],
+            "p0_monster": [{"card_id": "card_a"}, null, null, null, null],
+            "p0_spell": [null, null, null, null, null],
+            "p1_monster": [null, null, null, null, null],
+            "p1_spell": [null, null, null, null, null]
+        }));
+        assert!(checar_test_state(&s, &catalogo(&["card_a", "card_b"])).is_empty());
+    }
+
+    #[test]
+    fn teste_mao_com_6_barra() {
+        let s = setup_base_com_teste(serde_json::json!({
+            "my_hand": ["card_a", "card_a", "card_a", "card_a", "card_a", "card_a"]
+        }));
+        let rev = checar_test_state(&s, &catalogo(&["card_a"]));
+        let erros = so_erros(&rev);
+        assert_eq!(erros.len(), 1, "{erros:?}");
+        assert!(erros[0].mensagem.contains("0 a 5"), "{}", erros[0].mensagem);
+    }
+
+    #[test]
+    fn teste_zona_com_4_barra() {
+        let s = setup_base_com_teste(serde_json::json!({
+            "p0_monster": [null, null, null, null]
+        }));
+        let rev = checar_test_state(&s, &catalogo(&["card_a"]));
+        let erros = so_erros(&rev);
+        assert_eq!(erros.len(), 1, "{erros:?}");
+        assert!(erros[0].mensagem.contains("exatos 5"), "{}", erros[0].mensagem);
+    }
+
+    #[test]
+    fn teste_ordem_errada_barra() {
+        let mut s = setup_base_com_teste(serde_json::json!({ "my_hand": [] }));
+        s["turn_order"] = serde_json::json!("random");
+        let rev = checar_test_state(&s, &catalogo(&[]));
+        let erros = so_erros(&rev);
+        assert!(erros.iter().any(|e| e.campo == "Ordem do teste"), "{erros:?}");
+    }
+
+    #[test]
+    fn teste_carta_fora_da_lista_barra() {
+        let s = setup_base_com_teste(serde_json::json!({ "my_hand": ["card_fantasma"] }));
+        let rev = checar_test_state(&s, &catalogo(&["card_a"]));
+        let erros = so_erros(&rev);
+        assert_eq!(erros.len(), 1, "{erros:?}");
+        assert!(erros[0].mensagem.contains("card_fantasma"), "{}", erros[0].mensagem);
+    }
+
+    // PedidoDuelo com test_state (ligação da aba Testes): vazio = duelo
+    // normal; preenchido = first_p1 forçado + test_state dentro do setup.
+    #[test]
+    fn teste_vazio_cobre_ausente_null_e_so_nulo() {
+        assert!(test_state_vazio(None));
+        assert!(test_state_vazio(Some(&serde_json::json!(null))));
+        assert!(test_state_vazio(Some(&serde_json::json!({}))));
+        assert!(test_state_vazio(Some(&serde_json::json!({
+            "my_hand": [],
+            "p0_monster": [null, null, null, null, null],
+            "p0_spell": [null, null, null, null, null],
+            "p1_monster": [null, null, null, null, null],
+            "p1_spell": [null, null, null, null, null]
+        }))));
+        assert!(test_state_vazio(Some(&serde_json::json!({ "my_hand": [] }))));
+    }
+
+    #[test]
+    fn teste_preenchido_nao_e_vazio() {
+        assert!(!test_state_vazio(Some(&serde_json::json!({ "my_hand": ["card_a"] }))));
+        assert!(!test_state_vazio(Some(&serde_json::json!({
+            "p1_monster": [null, {"card_id": "card_a"}, null, null, null]
+        }))));
+        // Formato quebrado não é "vazio": tem que cair no gate e barrar.
+        assert!(!test_state_vazio(Some(&serde_json::json!("lixo"))));
+        assert!(!test_state_vazio(Some(&serde_json::json!({ "my_hand": "lixo" }))));
+    }
+
+    #[test]
+    fn setup_do_teste_forca_first_p1_e_carrega_teste() {
+        let ts = serde_json::json!({
+            "my_hand": ["card_a"],
+            "p0_monster": [{"card_id": "card_a"}, null, null, null, null],
+            "p0_spell": [null, null, null, null, null],
+            "p1_monster": [null, null, null, null, null],
+            "p1_spell": [null, null, null, null, null]
+        });
+        let s = montar_setup_duelo("duelist_a", "deck_a", "duelist_b", "deck_b", 4000, "random", 42, "arena_starter", Some(&ts));
+        assert_eq!(s["turn_order"], serde_json::json!("first_p1"));
+        assert_eq!(s["test_state"], ts);
+        assert_eq!(s["duel_id"], serde_json::json!("duel_studio_rapido"));
+    }
+
+    #[test]
+    fn setup_sem_teste_mantem_ordem_e_sem_chave() {
+        let s = montar_setup_duelo("duelist_a", "deck_a", "duelist_b", "deck_b", 4000, "random", 42, "arena_starter", None);
+        assert_eq!(s["turn_order"], serde_json::json!("random"));
+        assert!(s.get("test_state").is_none());
+        let vazio = serde_json::json!({ "my_hand": [] });
+        let s2 = montar_setup_duelo("duelist_a", "deck_a", "duelist_b", "deck_b", 4000, "random", 42, "arena_starter", Some(&vazio));
+        assert_eq!(s2["turn_order"], serde_json::json!("random"));
+        assert!(s2.get("test_state").is_none());
+    }
+
+    #[test]
+    fn duelo_com_teste_quebrado_barra_antes_do_disco() {
+        // Mão com 6 cartas + ordem first_p2 no pedido: erro estrutural (não
+        // depende do catálogo em disco) e a ordem é forçada p/ first_p1, então
+        // a mensagem fala da mão e NUNCA reclama de ordem.
+        let p = PedidoDuelo {
+            duelista1: "duelist_a".to_string(), duelista2: "duelist_b".to_string(),
+            vida: 4000, seed: None, arena: "".to_string(), ordem: "first_p2".to_string(),
+            test_state: Some(serde_json::json!({ "my_hand": ["card_a", "card_a", "card_a", "card_a", "card_a", "card_a"] })),
+        };
+        let r = jogar_duelo(p);
+        assert!(r.is_err());
+        let msg = r.unwrap_err();
+        assert!(msg.contains("0 a 5"), "{msg}");
+        assert!(!msg.contains("fase da mão"), "ordem foi forçada p/ first_p1, não pode reclamar de ordem: {msg}");
+    }
+
+    #[test]
+    fn duelo_com_teste_fora_de_formato_barra() {
+        let p = PedidoDuelo {
+            duelista1: "duelist_a".to_string(), duelista2: "duelist_b".to_string(),
+            vida: 4000, seed: None, arena: "".to_string(), ordem: "first_p2".to_string(),
+            test_state: Some(serde_json::json!("lixo")),
+        };
+        assert!(jogar_duelo(p).is_err());
+    }
+
+    #[test]
+    fn validar_test_state_vazio_passa() {
+        let sonda = serde_json::json!({ "turn_order": "first_p1", "test_state": {} });
+        assert!(validar_test_state(sonda).is_empty());
+    }
+
+    #[test]
+    fn validar_test_state_barra_zona_curta() {
+        let sonda = serde_json::json!({ "turn_order": "first_p1", "test_state": { "p0_monster": [null, null] } });
+        let rev = validar_test_state(sonda);
+        let erros = so_erros(&rev);
+        assert_eq!(erros.len(), 1, "{erros:?}");
+        assert!(erros[0].mensagem.contains("exatos 5"), "{}", erros[0].mensagem);
     }
 
     #[test]

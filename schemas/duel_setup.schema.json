@@ -1,8 +1,28 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "Astralis Duel Setup V1",
-  "description": "Contrato de setup de duelo: quem joga, com que deck, LP, ordem, seed, arena, win flags (DADO). Zonas/fases/mão são FIXAS no runtime (doc 13). Owner: Systems. Ver docs/13_TABULEIRO_DUELO.md.",
+  "description": "Contrato de setup de duelo: quem joga, com que deck, LP, ordem, seed, arena, win flags (DADO). Zonas/fases/mão são FIXAS no runtime (doc 13). Extensão Campo de Testes (COMPATÍVEL, schema_version continua 1): test_state opcional com mão + campo inicial; ausente = duelo normal. Owner: Systems. Ver docs/13_TABULEIRO_DUELO.md, docs/10_PREVIEW_TESTE_DEBUG.md (Campo de Testes).",
   "type": "object",
+  "definitions": {
+    "test_slot": {
+      "type": "object",
+      "description": "Um slot do campo inicial: null = vazio; objeto = carta no slot. face_up/attack_position ausentes = true (face p/ cima em Ataque, padrão D24). O runtime mapeia p/ face_down/position dele; o contrato não inventa mecânica.",
+      "properties": {
+        "card_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+        "face_up": { "type": "boolean" },
+        "attack_position": { "type": "boolean" }
+      },
+      "required": ["card_id"],
+      "additionalProperties": false
+    },
+    "test_zone5": {
+      "type": "array",
+      "description": "Exatos 5 slots (índices 0-4, padrão p0/p1 m/s 0-4 do doc 13.10).",
+      "minItems": 5,
+      "maxItems": 5,
+      "items": { "anyOf": [{ "type": "null" }, { "$ref": "#/definitions/test_slot" }] }
+    }
+  },
   "properties": {
     "schema_version": { "type": "integer", "const": 1 },
     "duel_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
@@ -37,8 +57,29 @@
       },
       "required": ["on_lp_zero", "on_deckout"],
       "additionalProperties": false
+    },
+    "test_state": {
+      "type": "object",
+      "description": "OPCIONAL. Estado inicial do Campo de Testes (Studio monta DADO, Astralis executa — R1/R2/R4). Ausente = duelo normal (dado FM existente continua válido). Tudo dentro é opcional; o que faltar o runtime completa pelo padrão (mão 5 via compra, slot null = vazio). LP/seed/ordem NÃO se duplicam aqui: valem starting_lp, seed e turn_order do topo. Quando presente, turn_order deve ser first_p1 e o duelo começa na fase da mão de p0 (você), doc 13.3 + D24 — documentado aqui, executado no runtime.",
+      "properties": {
+        "my_hand": {
+          "type": "array",
+          "description": "Sua mão inicial (p0, cartas abertas). 0-5 Card IDs; o resto o runtime completa até 5 pela regra fixa (doc 13.3).",
+          "items": { "type": "string", "pattern": "^[a-z][a-z0-9_]*$" },
+          "minItems": 0,
+          "maxItems": 5
+        },
+        "p0_monster": { "$ref": "#/definitions/test_zone5", "description": "Seus 5 slots de monstro (p0_m0-4). null = vazio." },
+        "p0_spell": { "$ref": "#/definitions/test_zone5", "description": "Seus 5 slots de magia (p0_s0-4). null = vazio." },
+        "p1_monster": { "$ref": "#/definitions/test_zone5", "description": "Os 5 slots de monstro do rival (p1_m0-4). null = vazio." },
+        "p1_spell": { "$ref": "#/definitions/test_zone5", "description": "Os 5 slots de magia do rival (p1_s0-4). null = vazio." }
+      },
+      "additionalProperties": false
     }
   },
   "required": ["schema_version", "duel_id", "duelist1", "duelist2", "starting_lp", "turn_order", "seed", "arena_id", "win"],
-  "additionalProperties": false
+  "additionalProperties": false,
+  "allOf": [
+    { "if": { "required": ["test_state"] }, "then": { "properties": { "turn_order": { "const": "first_p1" } } } }
+  ]
 }

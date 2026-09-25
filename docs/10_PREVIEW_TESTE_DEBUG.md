@@ -23,6 +23,7 @@ Studio -> save Project Data -> launch Astralis with context
 - V1: `Play Project` (jogar normal).
 - V2+: `Jogar a partir daqui` (botão contextual em cena/carta/duelo/efeito/fusão que só preenche o context acima). Effect/Fusion Preview são só contexts de duelo preparado, usando mesmo EffectSystem/FusionSystem do jogo.
 - Studio nunca calcula efeito; só prepara cenário e pede execução.
+- **Campo de Testes (contrato fechado, execução pendente):** o context `field/hand` acima tem forma oficial no contrato — `duel_setup.test_state` (doc 04.6, schema `duel_setup.schema.json`): `my_hand[0-5]` + `p0/p1 monster/spell[5]` (`null` ou `{card_id + face_up? + attack_position?}`), tudo opcional, `turn_order` fixo em `first_p1`. O Studio monta esse DADO na tab Campo de Testes (mão + campo meu e do inimigo + Iniciar teste); o Astralis executa de verdade e o duelo começa sempre na MINHA fase da mão (D24). Até o runtime ler o campo, o setup com `test_state` sobe como duelo normal (sem fingir estado inicial).
 
 ## 10.3 Test Lab (usa Astralis real)
 
@@ -35,6 +36,8 @@ Fluxo: `Studio Test Scenario -> Astralis TestHarness.create/inject/set/emit/exec
 Regra do Harness: PROIBIDO `custom_damage/fusion/effect`. CORRETO `prepare_state() + call_real_*() + capture_result()`.
 
 [MELHORIA V1.2] Test Lab mínimo na V1: botão `Testar agora` no Effect/Card/Fusion Editor com setup auto-sugerido (ex.: efeito precisa de inimigo -> cria Test Monster 2000 ATK) + seed fixa para determinismo (`seed=12345`, mesmo cenário = mesmo resultado). UI completa, trace rico, state diff completo, recording, breakpoints, campaign debugger (Play/Pause/Step) ficam pós-V1.
+
+**Campo de Testes (tab nova, contrato V1):** é o Test Lab mínimo com cara de mesa — monta `my_hand` + `p0/p1 monster/spell` (doc 04.6), clica Iniciar teste, e o duelo real começa sempre na MINHA fase da mão (`turn_order: first_p1`, fase da mão D24). Contrato: tudo opcional, mão máx 5, slots exatos 5+5 por lado, `face_up?/attack_position?` ausentes = `true`. Validação em PT-BR no Studio (`checar_test_state`); execução no runtime (ler `test_state` e posicionar antes do turno 1 — pendente, ver retorno do Systems ao Lead). O GIVEN/WHEN/THEN completo segue sem schema (só o context de campo+mão está contratado).
 
 Falha mostra: expected, actual, trace real, state_before/after, events, erro — para debug humano e por IA.
 

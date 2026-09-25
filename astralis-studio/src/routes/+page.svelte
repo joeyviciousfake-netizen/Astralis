@@ -2,7 +2,8 @@
   // Página principal — espelha o +page do FM-Studio (mesmo header 64px blur,
   // nav em pílula, pills de estado, selo de validação clicável, Ctrl+S).
   // Projeto do editor abre VAZIO (D29) e só enche por Importar pack. Cartas
-  // (JSON real), Duelistas/Decks (leitura), Efeitos, Fusões, Cenas, Exportar.
+  // (JSON real), Duelistas/Decks (leitura), Efeitos, Fusões, Duelo, Testes,
+  // Cenas, Exportar.
   // Jogar lança o Astralis de verdade (preview unificado, doc 10).
   import { onMount, tick } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
@@ -13,6 +14,7 @@
   import FusionsStudio from "$lib/components/FusionsStudio.svelte";
   import EffectsStudio from "$lib/components/EffectsStudio.svelte";
   import DuelStudio from "$lib/components/DuelStudio.svelte";
+  import TestStudio from "$lib/components/TestStudio.svelte";
   import ScenesStudio from "$lib/components/ScenesStudio.svelte";
   import ExportStudio from "$lib/components/ExportStudio.svelte";
   import { createSaveFlash } from "$lib/stores/saveFlash.svelte";
@@ -24,7 +26,7 @@
   import { errMsg } from "$lib/stores/ipc";
   let store = useCards();
   let duelists = useDuelists();
-  type Tab = "cards" | "duelists" | "decks" | "fusions" | "effects" | "duel" | "cenas" | "export";
+  type Tab = "cards" | "duelists" | "decks" | "fusions" | "effects" | "duel" | "testes" | "cenas" | "export";
   let tab = $state<Tab>("cards");
   // Abas pesadas (Fusões com 25 mil receitas, etc.) só MONTAM quando abertas
   // a primeira vez — antes as 8 montavam juntas no boot (mesmo ocultas) e a
@@ -192,6 +194,9 @@
         <button class="px-3.5 py-1.5 rounded-full text-xs font-medium transition flex items-center gap-1.5 {tab === 'duel' ? 'bg-white text-zinc-900 shadow' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'}" onclick={() => setTab('duel')}>
           <span class="text-[11px] opacity-60">⚔️</span>Duelo
         </button>
+        <button class="px-3.5 py-1.5 rounded-full text-xs font-medium transition flex items-center gap-1.5 {tab === 'testes' ? 'bg-white text-zinc-900 shadow' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'}" onclick={() => setTab('testes')}>
+          <span class="text-[11px] opacity-60">🎯</span>Testes
+        </button>
         <button class="px-3.5 py-1.5 rounded-full text-xs font-medium transition flex items-center gap-1.5 {tab === 'cenas' ? 'bg-white text-zinc-900 shadow' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'}" onclick={() => setTab('cenas')}>
           <span class="text-[11px] opacity-60">🎬</span>Cenas
         </button>
@@ -227,7 +232,7 @@
     <!-- mobile nav -->
     <div class="md:hidden border-t border-zinc-800/50 bg-zinc-950/50">
       <nav class="flex gap-1 p-2 overflow-auto">
-        {#each [['cards', 'Cartas'], ['duelists', 'Duelistas'], ['decks', 'Decks'], ['fusions', 'Fusões'], ['effects', 'Efeitos'], ['duel', 'Duelo'], ['cenas', 'Cenas'], ['export', 'Exportar']] as [id, label] (id)}
+        {#each [['cards', 'Cartas'], ['duelists', 'Duelistas'], ['decks', 'Decks'], ['fusions', 'Fusões'], ['effects', 'Efeitos'], ['duel', 'Duelo'], ['testes', 'Testes'], ['cenas', 'Cenas'], ['export', 'Exportar']] as [id, label] (id)}
           <button class="flex-1 py-2 rounded-full text-[11px] font-medium whitespace-nowrap {tab === id ? 'bg-white text-zinc-900' : 'bg-zinc-900 text-zinc-400 border border-zinc-800'}" onclick={() => setTab(id as Tab)}>{label}</button>
         {/each}
       </nav>
@@ -260,6 +265,7 @@
       {#if visitadas.has("fusions")}<div class:hidden={tab !== "fusions"} class="flex-1 min-h-0 overflow-hidden flex flex-col"><FusionsStudio /></div>{/if}
       {#if visitadas.has("effects")}<div class:hidden={tab !== "effects"} class="flex-1 min-h-0 overflow-hidden flex flex-col"><EffectsStudio /></div>{/if}
       {#if visitadas.has("duel")}<div class:hidden={tab !== "duel"} class="flex-1 min-h-0 overflow-hidden flex flex-col"><DuelStudio /></div>{/if}
+      {#if visitadas.has("testes")}<div class:hidden={tab !== "testes"} class="flex-1 min-h-0 overflow-hidden flex flex-col"><TestStudio /></div>{/if}
       {#if visitadas.has("cenas")}<div class:hidden={tab !== "cenas"} class="flex-1 min-h-0 overflow-hidden flex flex-col"><ScenesStudio /></div>{/if}
       {#if visitadas.has("export")}<div class:hidden={tab !== "export"} class="flex-1 min-h-0 overflow-hidden flex flex-col"><ExportStudio /></div>{/if}
     </div>

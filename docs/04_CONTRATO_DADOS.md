@@ -52,3 +52,11 @@ Ex.: `id: card_dark_magician / name: Dark Magician` pode virar `name: Mago Sombr
 
 - Precedência da vida: `duel_setup.starting_lp` (obrigatório) manda na batalha; `duelist.starting_lp` (opcional) é só sugestão do Studio. Campo opcional = mudança compatível, sem bump de versão (04.3). Runtime lê só o setup hoje e ignora o campo do duelista.
 - Cenas simples (`campaign/scenes/*.json`, formato no README do editor): dado provisório fora do contrato V1 — sem `scene.schema.json` ainda, sem conflito com schemas existentes, runtime ignora (R4). Schema formal + grafo/timeline ficam p/ depois (docs 08).
+
+## 4.6 Campo de Testes — `duel_setup.test_state` (V1, compatível)
+
+Tab "Campo de Testes" do Studio: o usuário monta mão + campo meu e do inimigo, clica Iniciar teste, e o duelo real começa sempre na MINHA fase da mão. Studio só monta DADO, Astralis executa (R1/R2/R4). Sem motor inventado.
+
+- Contrato (`schemas/duel_setup.schema.json`, `schema_version` continua 1): campo opcional `test_state` com `my_hand[0-5]` (Card IDs), `p0_monster[5] + p0_spell[5] + p1_monster[5] + p1_spell[5]` (cada slot: `null` = vazio, ou `{card_id + face_up? + attack_position?}` — ausentes = `true`, o mínimo que o runtime já sabe mapear p/ `face_down/position` dele, sem mecânica nova), tudo opcional. Slots seguem o padrão `p0/p1 m/s 0-4` (doc 13.10); mão máx 5 (doc 13.3); IDs estáveis referenciando cartas.
+- LP/seed/ordem NÃO se duplicam: valem `starting_lp/seed/turn_order` do topo. Quando `test_state` está presente, `turn_order` tem que ser `first_p1` (schema `allOf/if-then` + Studio `checar_test_state`) e o duelo começa na fase da mão de p0 (D24) — documentado aqui, executado no runtime.
+- Ausente = duelo normal (dado FM `duel_fm_abertura` continua válido, sem tocar). Mudança compatível, sem migração (04.3). Validação espelhada no Studio (`checar_test_state` + `validar_projeto`); `tools/fm_import.py --check` segue verde (722/39/39/25081 intactos).

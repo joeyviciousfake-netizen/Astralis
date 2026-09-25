@@ -12,10 +12,10 @@ que o jogo usa. Não existe cópia "fake" de nada (regra **R2**).
 
 | | |
 |---|---|
-| Arquivos de teste | **11** (+ 1 base de helpers) |
-| Testes | **94** |
-| Asserções | **1412** |
-| Tempo (headless) | **~40 s** (~10 s deles são 2 testes que esperam a IA real) |
+| Arquivos de teste | **12** (+ 1 base de helpers) |
+| Testes | **100** |
+| Asserções | **1519** |
+| Tempo (headless) | **~43 s** (~10 s deles são 2 testes que esperam a IA real) |
 | Conteúdo oficial usado | **722 cartas / 39 duelistas / 39 decks / 25081 receitas de fusão** |
 | Framework | **GUT 9.7.1** (`astralis/addons/gut/`) |
 | Godot | **4.7.2 headless** |
@@ -35,13 +35,13 @@ que o jogo usa. Não existe cópia "fake" de nada (regra **R2**).
 ```
 
 Use o executável **console** (`..._console.exe`): é ele que imprime o resumo
-no terminal. O resultado bom é `94/94 passed` + `---- All tests passed! ----`
-e o `Time` em ~40 s. O GUT sai com código 0 quando passa.
+no terminal. O resultado bom é `100/100 passed` + `---- All tests passed! ----`
+e o `Time` em ~43 s. O GUT sai com código 0 quando passa.
 
 Rodar direto no editor também funciona: abra `Godot/Godot_v4.7.2-stable_win64.exe`,
 importe `astralis/`, aba **GUT** → **Run**.
 
-## Os 11 arquivos e o que cada um trava
+## Os 12 arquivos e o que cada um trava
 
 | Arquivo | Testes | O que trava |
 |---|---:|---|
@@ -56,6 +56,7 @@ importe `astralis/`, aba **GUT** → **Run**.
 | `test_ia_ataque.gd` | 5 | A escolha de ataque da IA: campo vazio → direto com o mais forte, abate com o mais fraco que vence, só Defesa forte → o rival passa, empate Ataque×Ataque ataca e os dois caem, e o bônus de guardião que ainda devolve 0 (adiado, D28). |
 | `test_gamepad.gd` | 7 | Controle 100% gamepad (D19/D26): as 11 ações existem, confirmar e cancelar não dividem botão, as direções são só joypad, o cursor anda e volta pelo passo real, cancelar limpa a escolha, e a mesa **não tem nenhum** botão/texto/carta clicável. |
 | `test_project_arg.gd` | 12 | O `--project` e o `--setup`: sem argumento usa a pasta embutida, pasta inválida é reprovada, pasta válida é reconhecida pelos marcadores, caminho relativo resolve na raiz do repo, relativo inexistente avisa e cai na embutida, as duas formas (`--project pasta` e `--project=pasta`) dão o mesmo resultado, `--setup` por cima do projeto **vence** o duelo do projeto, `--setup` inválido avisa e segue com o do projeto, e a regra nova: projeto **sem arena** → o jogo avisa, `project_arena_path()` devolve vazio e a mesa usa a grade padrão com os 20 slots e o espelho certo. |
+| `test_campo_testes.gd` | 6 | O Campo de Testes (tab Testes do Studio): com `test_state`, o duelo começa em p0 na DRAW (fase da mão, D24), `my_hand` (fm_0001 + fm_0002) vira a mão de p0 na ordem + refill real até 5, o campo vira instâncias reais (ATK/DEF da base, face/posição do dado, estrela = guardiã 1, null = vazio nas magias), seed 42 fixa dá o mesmo campo + mão + deck em 2 montagens, sem `test_state` tudo igual a antes (5/5, campo vazio), e o duelo de teste é jogável (DRAW→MAIN + 1 invocação normal). |
 
 ## A base única de helpers
 
@@ -80,7 +81,9 @@ Quem decide a regra é sempre o sistema real do Astralis.
 deck out; conteúdo FM e validação de contrato; fusão (receita, regra, cadeia,
 equip, slot ocupado); o desenho da arena e o espelho; o fluxo da mesa ponta a
 ponta; navegação e render do campo; a IA de ataque; o controle 100% gamepad;
-o `--project`/`--setup` e o fallback da arena.
+o `--project`/`--setup` e o fallback da arena; o Campo de Testes (`test_state`:
+mão na ordem + refill, instâncias reais no campo, p0 na DRAW, determinismo,
+paridade sem `test_state`, duelo jogável).
 
 **Não coberto (e por quê):**
 
