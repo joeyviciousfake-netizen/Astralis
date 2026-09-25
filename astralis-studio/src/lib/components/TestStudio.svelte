@@ -1,9 +1,11 @@
 <script lang="ts">
-  // TestStudio — Campo de Testes (docs 04 §4.6 + 10 §10.2/10.3, contrato test_state V1).
-  // O usuário monta a MÃO dele + o CAMPO dos dois lados e clica Iniciar teste:
-  // o Studio monta o duel_setup com test_state + first_p1 e lança o Astralis
-  // de verdade via jogar_duelo (--project + --setup temporário, o MESMO caminho
-  // do botão Jogar). R1/R2: nunca calcula jogo — só monta DADO e valida.
+  // TestStudio — Campo de Testes como MESA DE DUELO (docs 04 §4.6 + 10 §10.2/10.3,
+  // contrato test_state V1, D33/D34).
+  // O usuário vê a mesa como no duelo: rival no topo, ele embaixo, mão em faixa.
+  // CLIQUE num espaço vazio (ou ocupado) abre o picker de carta; X esvazia;
+  // mini-botões viram p/ cima/baixo e ATK/DEF; clique numa carta da mão remove.
+  // R1/R2/R4: nunca calcula jogo — só monta DADO (mesmo test_state + first_p1)
+  // e lança o Astralis de verdade via jogar_duelo (--project + --setup).
   import { useCards } from "$lib/stores/cards.svelte";
   import { useDuelists } from "$lib/stores/duelists.svelte";
   import { useDecks } from "$lib/stores/decks.svelte";
@@ -25,7 +27,6 @@
   let d2 = $state("");
   let vida = $state(4000);
   let vidaSugerida = $state(false);
-  let avancado = $state(false);
   let seed = $state(42);
   let arena = $state("arena_starter");
   let arenas = $state<string[]>(["arena_starter"]);
@@ -43,6 +44,11 @@
   let msg = $state("");
   let ok = $state(false);
   let jogando = $state(false);
+
+  // Picker de carta: qual espaço estamos preenchendo (null = fechado).
+  type Alvo = { zona: ZonaKey | "mao"; index: number };
+  let picker = $state<Alvo | null>(null);
+  let busca = $state("");
 
   let mapa = $derived(cardsStore.idMap());
 
@@ -95,21 +101,25 @@
     return dk ? `${dk.name} (${dk.cards.length})` : d.deck_id;
   }
 
-  function nomeCarta(id: string): string {
-    const t = id.trim();
-    if (!t) return "vazio";
-    const c = mapa.get(t);
-    if (!c) return "não existe no projeto — escolha uma carta da lista";
-    const ad = c.card_type === "monster" ? ` • ATK ${c.attack ?? 0} / DEF ${c.defense ?? 0}` : ` • ${c.card_type}`;
-    return `${c.name}${ad}`;
+  function cartaDe(id: string) {
+    return mapa.get(id.trim()) ?? null;
   }
 
-  const ZONAS: Array<{ chave: ZonaKey; contrato: string; titulo: string; dica: string }> = [
-    { chave: "p0m", contrato: "p0_monster", titulo: "Seus monstros", dica: "Seus 5 espaços de monstro (lado de cá)" },
-    { chave: "p0s", contrato: "p0_spell", titulo: "Suas magias", dica: "Seus 5 espaços de magia (lado de cá)" },
-    { chave: "p1m", contrato: "p1_monster", titulo: "Monstros do rival", dica: "Os 5 espaços de monstro do rival" },
-    { chave: "p1s", contrato: "p1_spell", titulo: "Magias do rival", dica: "Os 5 espaços de magia do rival" },
-  ];
+  function linhaCarta(id: string): string {
+    const t = id.trim();
+    if (!t) return "vazio";
+    const c = cartaDe(t);
+    if (!c) return "não existe no projeto — escolha uma carta da lista";
+    return c.card_type === "monster"
+      ? `${c.name} • ATK ${c.attack ?? 0} / DEF ${c.defense ?? 0}`
+      : `${c.name} • ${c.card_type}`;
+  }
+
+  function tipoCurto(id: string): string {
+    const c = cartaDe(id);
+    if (!c) return "";
+    return c.card_type === "monster" ? "Monstro" : c.card_type === "spell" ? "Magia" : c.card_type;
+  }
 
   function slotJson(s: Slot): Record<string, unknown> | null {
     const id = s.id.trim();
@@ -198,6 +208,89 @@
   let errosVivos = $derived(validLista.filter((v) => (v.nivel ?? "erro") !== "aviso"));
   let avisosVivos = $derived(validLista.filter((v) => (v.nivel ?? "erro") === "aviso"));
 
+  // Contadores da mesa (só leitura, p/ o resumo da barra fixa).
+  let maoCount = $derived(mao.filter((m) => m.trim()).length);
+  let campoCount = $derived(
+    (Object.keys(grades) as ZonaKey[]).reduce((n, z) => n + grades[z].filter((s) => s.id.trim()).length, 0),
+  );
+
+  // ---- Picker de carta (um modal só p/ a mesa inteira) ----
+  function abrirPicker(zona: ZonaKey | "mao", index: number) {
+    busca = "";
+    picker = { zona, index };
+  }
+  function fecharPicker() {
+    picker = null;
+    busca = "";
+  }
+  function escolherCarta(id: string) {
+    if (!picker) return;
+    if (picker.zona === "mao") {
+      mao[picker.index] = id;
+    } else {
+      const atual = grades[picker.zona][picker.index];
+      grades[picker.zona][picker.index] = { id, cima: atual.cima, atk: atual.atk };
+    }
+    fecharPicker();
+    void validarVivo();
+  }
+  function esvaziarAlvo() {
+    if (!picker) return;
+    if (picker.zona === "mao") mao[picker.index] = "";
+    else grades[picker.zona][picker.index] = slotVazio();
+    fecharPicker();
+    void validarVivo();
+  }
+  function alvoTemCarta(): boolean {
+    if (!picker) return false;
+    return picker.zona === "mao" ? !!mao[picker.index].trim() : !!grades[picker.zona][picker.index].id.trim();
+  }
+  function alvoTitulo(): string {
+    if (!picker) return "";
+    if (picker.zona === "mao") return `Mão — espaço ${picker.index + 1}`;
+    const nomes: Record<ZonaKey, string> = { p0m: "Seus monstros", p0s: "Suas magias", p1m: "Monstros do rival", p1s: "Magias do rival" };
+    return `${nomes[picker.zona]} — espaço ${picker.index + 1}`;
+  }
+
+  let buscaLimpa = $derived(busca.trim().toLowerCase());
+  let filtradas = $derived((() => {
+    const arr = cardsStore.cards;
+    if (!buscaLimpa) return arr;
+    return arr.filter(
+      (c) =>
+        c.id.toLowerCase().includes(buscaLimpa) ||
+        (c.name ?? "").toLowerCase().includes(buscaLimpa) ||
+        String(c.attack ?? "").includes(buscaLimpa) ||
+        String(c.defense ?? "").includes(buscaLimpa),
+    );
+  })());
+  let resultados = $derived(filtradas.slice(0, 80));
+
+  // ---- Toggles e limpeza por espaço ----
+  function alternarCima(z: ZonaKey, i: number) {
+    const s = grades[z][i];
+    if (!s.id.trim()) return;
+    grades[z][i] = { ...s, cima: !s.cima };
+  }
+  function alternarAtk(z: ZonaKey, i: number) {
+    const s = grades[z][i];
+    if (!s.id.trim()) return;
+    grades[z][i] = { ...s, atk: !s.atk };
+  }
+  function esvaziarSlot(z: ZonaKey, i: number) {
+    grades[z][i] = slotVazio();
+    void validarVivo();
+  }
+  // Clique numa carta da mão REMOVE (pedido do usuário: mão é faixa rápida).
+  function clicarMao(i: number) {
+    if (mao[i].trim()) {
+      mao[i] = "";
+      void validarVivo();
+    } else {
+      abrirPicker("mao", i);
+    }
+  }
+
   function limparMesa() {
     mao = ["", "", "", "", ""];
     grades = { p0m: gradeVazia(), p0s: gradeVazia(), p1m: gradeVazia(), p1s: gradeVazia() };
@@ -251,176 +344,342 @@
   }
 </script>
 
-<div class="flex-1 min-h-0 overflow-y-auto flex flex-col items-center gap-4 p-2">
-  <!-- Uma lista só p/ os 722 nomes (datalist): os 25 campos digitam e filtram
-    sem montar 25 selects de 722 opções (era isso que travava a aba Fusões). -->
-  <datalist id="teste-cartas-lista">
-    {#each cardsStore.cards as c (c.id)}<option value={c.id}>{c.name}</option>{/each}
-  </datalist>
-
-  <div class="w-full max-w-3xl rounded-2xl border border-zinc-800 bg-zinc-950/60 p-5">
-    <div class="flex items-center gap-3">
-      <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-violet-600 via-indigo-600 to-violet-700 flex items-center justify-center text-xl shrink-0">🎯</span>
-      <div>
-        <h2 class="text-base font-black tracking-tight">CAMPO DE TESTES</h2>
-        <p class="text-[11px] text-zinc-500">Monte sua mão + o campo dos dois lados e abra o Astralis de verdade — sempre na sua fase da mão</p>
+<!-- Snippet de UM espaço da mesa: vazio = tracejado convidativo; cheio = mini
+  carta clicável (abre o picker), com X p/ anular e 2 mini-botões (virada e
+  posição). Botão direito também vira p/ cima/baixo. `compact` = lado do rival
+  (menor, de costas quando virada p/ baixo). -->
+{#snippet espaco(z: ZonaKey, i: number, compact: boolean)}
+  {@const s = grades[z][i]}
+  {@const c = cartaDe(s.id)}
+  {@const ladoRival = z === "p1m" || z === "p1s"}
+  {#if !s.id.trim()}
+    <button
+      class="group rounded-xl border-2 border-dashed flex flex-col items-center justify-center gap-0.5 transition cursor-pointer
+        {compact ? 'min-h-[64px] py-2' : 'min-h-[92px] py-3'}
+        {ladoRival ? 'border-rose-900/50 bg-rose-950/10 hover:border-rose-700 hover:bg-rose-950/25' : 'border-emerald-900/50 bg-emerald-950/10 hover:border-emerald-600 hover:bg-emerald-950/25'}"
+      title="Espaço {i + 1} vazio — clique para colocar uma carta"
+      onclick={() => abrirPicker(z, i)}
+    >
+      <span class="{compact ? 'text-base' : 'text-xl'} text-zinc-600 group-hover:text-zinc-300 transition leading-none">＋</span>
+      <span class="text-[10px] text-zinc-600 group-hover:text-zinc-400 transition">vazio</span>
+    </button>
+  {:else if !s.cima}
+    <!-- Virada p/ baixo: mostra o verso (igual p/ os dois lados) -->
+    <div
+      class="rounded-xl border-2 overflow-hidden transition
+        {compact ? 'min-h-[64px]' : 'min-h-[92px]'}
+        {ladoRival ? 'border-rose-800/70 bg-gradient-to-br from-rose-950 via-zinc-900 to-zinc-950' : 'border-sky-800/70 bg-gradient-to-br from-sky-950 via-zinc-900 to-zinc-950'}"
+      title="{linhaCarta(s.id)} • virada p/ baixo • {s.atk ? 'em Ataque' : 'em Defesa'} — clique para trocar, botão direito desvira"
+      role="button"
+      tabindex="0"
+      onclick={() => abrirPicker(z, i)}
+      oncontextmenu={(e) => { e.preventDefault(); alternarCima(z, i); }}
+      onkeydown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrirPicker(z, i); } }}
+    >
+      <div class="flex items-center justify-between px-1 pt-0.5">
+        <span class="text-[9px] text-zinc-500 font-bold">{i + 1}</span>
+        <button class="px-1 rounded text-[10px] text-zinc-500 hover:text-rose-300 hover:bg-white/10 transition" title="Anular (esvaziar este espaço)" onclick={(e) => { e.stopPropagation(); esvaziarSlot(z, i); }}>✕</button>
       </div>
-      <div class="ml-auto flex p-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-[11px]">
-        <button class="px-2.5 py-1 rounded-full {!avancado ? 'bg-white text-zinc-900 font-semibold' : 'text-zinc-400'}" onclick={() => avancado = false}>Simples</button>
-        <button class="px-2.5 py-1 rounded-full {avancado ? 'bg-white text-zinc-900 font-semibold' : 'text-zinc-400'}" onclick={() => avancado = true}>Avançado</button>
+      <div class="flex flex-col items-center pb-1 px-1">
+        <span class="{compact ? 'text-lg' : 'text-2xl'} leading-none">🂠</span>
+        {#if !compact}<span class="text-[9px] text-zinc-500">virada p/ baixo</span>{/if}
+        <span class="flex gap-0.5 mt-0.5">
+          <button class="px-1 py-px rounded text-[9px] bg-white/10 hover:bg-white/20 text-zinc-200 transition" title="Desvirar (p/ cima)" onclick={() => alternarCima(z, i)}>▲</button>
+          <button class="px-1 py-px rounded text-[9px] bg-white/10 hover:bg-white/20 text-zinc-200 transition" title={s.atk ? "Está em Ataque — clique p/ Defesa" : "Está em Defesa — clique p/ Ataque"} onclick={() => alternarAtk(z, i)}>{s.atk ? "🗡" : "🛡"}</button>
+        </span>
+      </div>
+    </div>
+  {:else}
+    <!-- Virada p/ cima: mini carta com nome + ATK/DEF -->
+    <div
+      class="rounded-xl border-2 overflow-hidden transition cursor-pointer hover:-translate-y-0.5
+        {compact ? 'min-h-[64px]' : 'min-h-[92px]'}
+        {ladoRival ? 'border-rose-800/60 bg-zinc-900 hover:border-rose-500 hover:shadow-lg hover:shadow-rose-950/40' : 'border-emerald-800/60 bg-zinc-900 hover:border-emerald-500 hover:shadow-lg hover:shadow-emerald-950/40'}"
+      title="{linhaCarta(s.id)} • {s.atk ? 'em Ataque' : 'em Defesa'} — clique para trocar, botão direito vira p/ baixo"
+      role="button"
+      tabindex="0"
+      onclick={() => abrirPicker(z, i)}
+      oncontextmenu={(e) => { e.preventDefault(); alternarCima(z, i); }}
+      onkeydown={(e) => { if (e.target !== e.currentTarget) return; if (e.key === "Enter" || e.key === " ") { e.preventDefault(); abrirPicker(z, i); } }}
+    >
+      <div class="flex items-center gap-1 px-1 pt-0.5">
+        <span class="text-[9px] font-black {ladoRival ? 'text-rose-400' : 'text-emerald-400'}">{s.atk ? "🗡" : "🛡"}</span>
+        {#if !compact}<span class="text-[9px] text-zinc-500 uppercase tracking-wide">{tipoCurto(s.id)}</span>{/if}
+        <button class="ml-auto px-1 rounded text-[10px] text-zinc-500 hover:text-rose-300 hover:bg-white/10 transition" title="Anular (esvaziar este espaço)" onclick={(e) => { e.stopPropagation(); esvaziarSlot(z, i); }}>✕</button>
+      </div>
+      <p class="px-1.5 text-left font-semibold text-zinc-100 leading-tight {compact ? 'text-[10px] line-clamp-1' : 'text-[11px] line-clamp-2'}">{c?.name ?? s.id}</p>
+      {#if !compact}
+        <p class="px-1.5 text-left text-[10px] text-zinc-400">
+          {c?.card_type === "monster" ? `ATK ${c.attack ?? 0} / DEF ${c.defense ?? 0}` : tipoCurto(s.id)}
+        </p>
+      {/if}
+      <div class="flex gap-0.5 px-1 pb-1 pt-0.5">
+        <button class="px-1 py-px rounded text-[9px] bg-white/5 hover:bg-white/15 text-zinc-300 transition" title="Virar p/ baixo (verso)" onclick={() => alternarCima(z, i)}>▼ verso</button>
+        <button class="px-1 py-px rounded text-[9px] bg-white/5 hover:bg-white/15 text-zinc-300 transition" title={s.atk ? "Está em Ataque — clique p/ Defesa" : "Está em Defesa — clique p/ Ataque"} onclick={() => alternarAtk(z, i)}>{s.atk ? "ATK" : "DEF"}</button>
+      </div>
+    </div>
+  {/if}
+{/snippet}
+
+<div class="flex-1 min-h-0 flex flex-col overflow-hidden">
+  {#if !cardsStore.cards.length && !cardsStore.loading}
+    <div class="flex-1 min-h-0 overflow-y-auto flex flex-col items-center p-2">
+      <div class="w-full max-w-3xl rounded-2xl border border-dashed border-zinc-700 bg-zinc-900/40 px-4 py-8 text-center">
+        <p class="text-3xl">🎯</p>
+        <p class="mt-2 text-sm font-bold text-zinc-200">Campo de Testes vazio — sem cartas no projeto</p>
+        <p class="mt-1 text-xs text-zinc-400">Importe um pack para montar a mesa e abrir o duelo de verdade.</p>
+        <button class="mt-3 px-4 py-2 rounded-full bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition" onclick={() => window.dispatchEvent(new CustomEvent("astralis:ir-importar"))}>📥 Importar pack…</button>
+      </div>
+    </div>
+  {:else}
+    <!-- Topo: quem duela (compacto, sempre visível) -->
+    <div class="shrink-0 px-2 pt-2">
+      <div class="w-full max-w-5xl mx-auto rounded-2xl border border-zinc-800 bg-zinc-950/60 px-3 py-2.5">
+        <div class="flex items-center gap-2 flex-wrap">
+          <span class="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 via-indigo-600 to-violet-700 flex items-center justify-center text-sm shrink-0">🎯</span>
+          <label class="flex items-center gap-1.5 min-w-0">
+            <span class="text-[10px] tracking-widest text-emerald-400 font-bold">VOCÊ</span>
+            <select class="max-w-[140px] px-2 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs" value={d1} onchange={(e) => trocarD1((e.target as HTMLSelectElement).value)}>
+              {#if !duelistsStore.duelists.length}<option value="">— importe um pack —</option>{/if}
+              {#each duelistsStore.duelists as d (d.id)}<option value={d.id}>{d.name}</option>{/each}
+            </select>
+          </label>
+          <span class="text-zinc-600 font-black text-sm">×</span>
+          <label class="flex items-center gap-1.5 min-w-0">
+            <span class="text-[10px] tracking-widest text-rose-400 font-bold">RIVAL</span>
+            <select class="max-w-[140px] px-2 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs" bind:value={d2}>
+              {#if !duelistsStore.duelists.length}<option value="">— importe um pack —</option>{/if}
+              {#each duelistsStore.duelists as d (d.id)}<option value={d.id}>{d.name}</option>{/each}
+            </select>
+          </label>
+          <label class="flex items-center gap-1.5">
+            <span class="text-[10px] tracking-widest text-zinc-500 font-bold">VIDA</span>
+            <input type="number" min="1" max="99999" step="500" class="w-20 px-2 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs" bind:value={vida} />
+          </label>
+          <span class="hidden sm:inline text-[10px] text-emerald-300/80 bg-emerald-950/30 border border-emerald-900/40 rounded-full px-2 py-1">Você começa — sempre na sua fase da mão</span>
+          <details class="ml-auto text-xs text-zinc-400">
+            <summary class="cursor-pointer hover:text-zinc-200 transition text-[11px]">⚙ Ajustes (seed, arena)</summary>
+            <div class="flex items-center gap-2 mt-1.5 flex-wrap">
+              <label class="flex items-center gap-1.5">
+                <span class="text-[10px] text-zinc-500">Seed</span>
+                <input type="number" class="w-20 px-2 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs" bind:value={seed} title="Mesmo número = mesmo embaralho" />
+              </label>
+              <label class="flex items-center gap-1.5">
+                <span class="text-[10px] text-zinc-500">Arena</span>
+                <select class="max-w-[160px] px-2 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs" bind:value={arena}>
+                  {#each arenas as a (a)}<option value={a}>{a}</option>{/each}
+                </select>
+              </label>
+            </div>
+          </details>
+        </div>
+        {#if !duelistsStore.duelists.length && !duelistsStore.loading}
+          <div class="mt-2 rounded-xl border border-dashed border-zinc-700 bg-zinc-900/40 px-3 py-2 text-center">
+            <p class="text-xs text-zinc-300">Sem duelistas — importe um pack para escolher quem duela.
+              <button class="ml-1 px-2.5 py-1 rounded-full bg-sky-600 hover:bg-sky-500 text-white text-[11px] font-semibold transition" onclick={() => window.dispatchEvent(new CustomEvent("astralis:ir-importar"))}>📥 Importar pack…</button>
+            </p>
+          </div>
+        {/if}
       </div>
     </div>
 
-    {#if !cardsStore.cards.length && !cardsStore.loading}
-      <div class="mt-4 rounded-xl border border-dashed border-zinc-700 bg-zinc-900/40 px-4 py-5 text-center">
-        <p class="text-xs text-zinc-300">Sem cartas — importe um pack para montar o teste.</p>
-        <button class="mt-2 px-3 py-1.5 rounded-full bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition" onclick={() => window.dispatchEvent(new CustomEvent("astralis:ir-importar"))}>📥 Importar pack…</button>
-      </div>
-    {:else}
-      <!-- Quem duela (mesmo dado do Duelo rápido; ordem fixa: você primeiro) -->
-      <div class="mt-4 grid sm:grid-cols-[1fr_auto_1fr] gap-2 items-center">
-        <label class="block rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
-          <span class="text-[10px] tracking-widest text-zinc-500 font-semibold">VOCÊ (JOGADOR 1)</span>
-          <select class="mt-1 w-full px-2.5 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-sm" value={d1} onchange={(e) => trocarD1((e.target as HTMLSelectElement).value)}>
-            {#if !duelistsStore.duelists.length}<option value="">— importe um pack —</option>{/if}
-            {#each duelistsStore.duelists as d (d.id)}<option value={d.id}>{d.name}</option>{/each}
-          </select>
-          <span class="block mt-1 text-[11px] text-zinc-500">🂠 {deckNome(d1)}</span>
-        </label>
-        <span class="text-center text-zinc-600 font-black text-lg">×</span>
-        <label class="block rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
-          <span class="text-[10px] tracking-widest text-zinc-500 font-semibold">RIVAL (JOGADOR 2)</span>
-          <select class="mt-1 w-full px-2.5 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-sm" bind:value={d2}>
-            {#if !duelistsStore.duelists.length}<option value="">— importe um pack —</option>{/if}
-            {#each duelistsStore.duelists as d (d.id)}<option value={d.id}>{d.name}</option>{/each}
-          </select>
-          <span class="block mt-1 text-[11px] text-zinc-500">🂠 {deckNome(d2)}</span>
-        </label>
-      </div>
+    <!-- A MESA (rolável): rival em cima, você embaixo, mão em faixa -->
+    <div class="flex-1 min-h-0 overflow-y-auto px-2 py-2">
+      <div class="w-full max-w-5xl mx-auto flex flex-col gap-2">
+        <!-- RIVAL (topo, compacto, tom vermelho) -->
+        <section class="rounded-2xl border border-rose-900/40 bg-gradient-to-b from-rose-950/30 to-zinc-950/60 p-2.5">
+          <div class="flex items-center gap-2 px-1 pb-1.5">
+            <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+            <h3 class="text-[11px] font-black tracking-widest text-rose-300">RIVAL</h3>
+            <span class="text-[10px] text-zinc-500">clique num espaço para colocar • ✕ anula • ▼/▲ vira • ATK/DEF troca</span>
+          </div>
+          <p class="px-1 pb-1 text-[10px] tracking-widest text-rose-400/70 font-semibold">MAGIAS DO RIVAL</p>
+          <div class="grid grid-cols-5 gap-1.5">
+            {#each grades.p1s as _, i (i)}{@render espaco("p1s", i, true)}{/each}
+          </div>
+          <p class="px-1 pt-2 pb-1 text-[10px] tracking-widest text-rose-400/70 font-semibold">MONSTROS DO RIVAL</p>
+          <div class="grid grid-cols-5 gap-1.5">
+            {#each grades.p1m as _, i (i)}{@render espaco("p1m", i, true)}{/each}
+          </div>
+        </section>
 
-      {#if !duelistsStore.duelists.length && !duelistsStore.loading}
-        <div class="mt-2 rounded-xl border border-dashed border-zinc-700 bg-zinc-900/40 px-4 py-3 text-center">
-          <p class="text-xs text-zinc-300">Sem duelistas — importe um pack para escolher quem duela.</p>
-          <button class="mt-2 px-3 py-1.5 rounded-full bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition" onclick={() => window.dispatchEvent(new CustomEvent("astralis:ir-importar"))}>📥 Importar pack…</button>
+        <!-- Divisor: placar da mesa -->
+        <div class="flex items-center gap-2 px-1 text-[11px] text-zinc-500">
+          <span class="flex-1 h-px bg-zinc-800"></span>
+          <span>🂠 Mão {maoCount}/5 • Campo {campoCount}/20 {testeVazioLocal() ? "• mesa vazia = duelo normal" : ""}</span>
+          <span class="flex-1 h-px bg-zinc-800"></span>
         </div>
-      {/if}
 
-      <div class="mt-2 grid sm:grid-cols-2 gap-2">
-        <label class="block rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
-          <span class="text-[10px] tracking-widest text-zinc-500 font-semibold">VIDA (LP inicial dos dois)</span>
-          <input type="number" min="1" max="99999" step="500" class="mt-1 w-full px-2.5 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-sm" bind:value={vida} />
-        </label>
-        <div class="rounded-xl border border-emerald-900/50 bg-emerald-950/20 p-3">
-          <span class="text-[10px] tracking-widest text-emerald-300 font-semibold">QUEM COMEÇA (FIXO NO TESTE)</span>
-          <p class="mt-1 text-sm text-emerald-200">Você primeiro — o teste sempre abre na sua fase da mão.</p>
-        </div>
-        {#if avancado}
-          <label class="block rounded-xl border border-violet-600/30 bg-violet-950/10 p-3">
-            <span class="text-[10px] tracking-widest text-violet-300 font-semibold">SEED (mesmo número = mesmo embaralho)</span>
-            <input type="number" class="mt-1 w-full px-2.5 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-sm" bind:value={seed} />
-          </label>
-          <label class="block rounded-xl border border-violet-600/30 bg-violet-950/10 p-3">
-            <span class="text-[10px] tracking-widest text-violet-300 font-semibold">ARENA</span>
-            <select class="mt-1 w-full px-2.5 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-sm" bind:value={arena}>
-              {#each arenas as a (a)}<option value={a}>{a}</option>{/each}
-            </select>
-          </label>
-        {/if}
-      </div>
+        <!-- VOCÊ (embaixo, maior, tom verde) -->
+        <section class="rounded-2xl border border-emerald-900/40 bg-gradient-to-b from-emerald-950/25 to-zinc-950/60 p-2.5">
+          <div class="flex items-center gap-2 px-1 pb-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            <h3 class="text-[11px] font-black tracking-widest text-emerald-300">VOCÊ</h3>
+            <span class="text-[10px] text-zinc-500">botão direito também vira p/ cima/baixo</span>
+            <button class="ml-auto text-[11px] text-zinc-500 hover:text-zinc-200 transition" title="Esvazia a mão e os 20 espaços" onclick={limparMesa}>🧹 Limpar mesa</button>
+          </div>
+          <p class="px-1 pb-1 text-[10px] tracking-widest text-emerald-400/70 font-semibold">SEUS MONSTROS</p>
+          <div class="grid grid-cols-5 gap-1.5">
+            {#each grades.p0m as _, i (i)}{@render espaco("p0m", i, false)}{/each}
+          </div>
+          <p class="px-1 pt-2 pb-1 text-[10px] tracking-widest text-emerald-400/70 font-semibold">SUAS MAGIAS</p>
+          <div class="grid grid-cols-5 gap-1.5">
+            {#each grades.p0s as _, i (i)}{@render espaco("p0s", i, false)}{/each}
+          </div>
+        </section>
 
-      <!-- Minha mão (até 5; o resto o jogo completa até 5 na hora) -->
-      <div class="mt-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
-        <p class="text-[10px] tracking-widest text-zinc-500 font-semibold">MINHA MÃO (até 5 — digite e escolha da lista)</p>
-        <div class="mt-2 grid sm:grid-cols-2 gap-1.5">
-          {#each mao as carta, i (i)}
-            <div class="rounded-lg border border-zinc-800 bg-zinc-950 p-2">
-              <div class="flex items-center gap-1.5">
-                <span class="text-[11px] text-zinc-500 font-bold w-4 text-center">{i + 1}</span>
-                <input
-                  list="teste-cartas-lista"
-                  class="flex-1 min-w-0 px-2 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs"
-                  placeholder="vazio"
-                  bind:value={mao[i]}
-                />
-                <button class="shrink-0 px-2 py-1 rounded-lg text-[11px] text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition" title="Esvaziar este espaço" onclick={() => mao[i] = ""}>✕</button>
-              </div>
-              <p class="mt-1 text-[11px] {mapa.has(mao[i].trim()) || !mao[i].trim() ? 'text-zinc-600' : 'text-amber-300'}">{nomeCarta(mao[i])}</p>
-            </div>
-          {/each}
-        </div>
-      </div>
-
-      <!-- Campo dos dois lados: 4 grades de 5 -->
-      {#each ZONAS as z (z.chave)}
-        <div class="mt-2 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
-          <p class="text-[10px] tracking-widest text-zinc-500 font-semibold">{z.titulo.toUpperCase()}</p>
-          <p class="text-[11px] text-zinc-600">{z.dica} — cada espaço: carta ou vazio + virada e posição</p>
-          <div class="mt-2 grid gap-1.5">
-            {#each grades[z.chave] as slot, i (i)}
-              <div class="rounded-lg border border-zinc-800 bg-zinc-950 p-2">
-                <div class="flex items-center gap-1.5 flex-wrap">
-                  <span class="text-[11px] text-zinc-500 font-bold w-4 text-center">{i + 1}</span>
-                  <input
-                    list="teste-cartas-lista"
-                    class="flex-1 min-w-[140px] px-2 py-1.5 rounded-lg bg-zinc-900 border border-zinc-800 text-xs"
-                    placeholder="vazio"
-                    bind:value={grades[z.chave][i].id}
-                  />
-                  <label class="inline-flex items-center gap-1 text-[11px] text-zinc-400 {slot.id.trim() ? '' : 'opacity-40'}">
-                    <input type="checkbox" bind:checked={grades[z.chave][i].cima} disabled={!slot.id.trim()} /> P/ cima
-                  </label>
-                  <label class="inline-flex items-center gap-1 text-[11px] text-zinc-400 {slot.id.trim() ? '' : 'opacity-40'}">
-                    <input type="checkbox" bind:checked={grades[z.chave][i].atk} disabled={!slot.id.trim()} /> ATK
-                  </label>
-                  <button class="shrink-0 px-2 py-1 rounded-lg text-[11px] text-zinc-500 hover:text-zinc-200 hover:bg-zinc-800 transition" title="Esvaziar este espaço" onclick={() => grades[z.chave][i] = slotVazio()}>✕</button>
-                </div>
-                <p class="mt-1 text-[11px] {mapa.has(slot.id.trim()) || !slot.id.trim() ? 'text-zinc-600' : 'text-amber-300'}">
-                  {nomeCarta(slot.id)}{slot.id.trim() ? (slot.cima ? " • virada p/ cima" : " • virada p/ baixo") + (slot.atk ? " • em Ataque" : " • em Defesa") : ""}
-                </p>
-              </div>
+        <!-- MÃO (faixa: clique numa carta REMOVE, clique no vazio ABRE o picker) -->
+        <section class="rounded-2xl border border-sky-900/40 bg-sky-950/10 p-2.5">
+          <div class="flex items-center gap-2 px-1 pb-1.5">
+            <span class="text-sm">🂠</span>
+            <h3 class="text-[11px] font-black tracking-widest text-sky-300">SUA MÃO (até 5)</h3>
+            <span class="text-[10px] text-zinc-500">clique na carta para tirar • clique no vazio para colocar • o jogo completa até 5 na hora</span>
+          </div>
+          <div class="grid grid-cols-5 gap-1.5">
+            {#each mao as idCarta, i (i)}
+              {#if !idCarta.trim()}
+                <button
+                  class="rounded-xl border-2 border-dashed border-sky-900/50 bg-sky-950/10 hover:border-sky-500 hover:bg-sky-950/25 min-h-[64px] flex flex-col items-center justify-center gap-0.5 transition cursor-pointer group"
+                  title="Mão {i + 1} vazia — clique para colocar uma carta"
+                  onclick={() => abrirPicker("mao", i)}
+                >
+                  <span class="text-base text-zinc-600 group-hover:text-zinc-300 transition leading-none">＋</span>
+                  <span class="text-[10px] text-zinc-600 group-hover:text-zinc-400 transition">{i + 1} • vazio</span>
+                </button>
+              {:else}
+                {@const cc = cartaDe(idCarta)}
+                <button
+                  class="rounded-xl border-2 border-sky-800/60 bg-zinc-900 hover:border-sky-400 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-sky-950/40 min-h-[64px] px-1.5 py-1 flex flex-col items-start justify-center gap-px transition cursor-pointer text-left"
+                  title="{linhaCarta(idCarta)} — clique para TIRAR da mão"
+                  onclick={() => clicarMao(i)}
+                >
+                  <span class="w-full flex items-center gap-1">
+                    <span class="text-[9px] text-zinc-500 font-bold">{i + 1}</span>
+                    <span class="text-[9px] text-zinc-500 uppercase">{tipoCurto(idCarta)}</span>
+                    <span class="ml-auto text-[10px] text-zinc-500">✕</span>
+                  </span>
+                  <span class="text-[11px] font-semibold text-zinc-100 leading-tight line-clamp-1">{cc?.name ?? idCarta}</span>
+                  {#if cc?.card_type === "monster"}
+                    <span class="text-[10px] text-zinc-400">ATK {cc.attack ?? 0} / DEF {cc.defense ?? 0}</span>
+                  {/if}
+                </button>
+              {/if}
             {/each}
           </div>
-        </div>
-      {/each}
+        </section>
 
-      <!-- Validação viva (backend): nunca em silêncio -->
-      <div class="mt-2 rounded-xl border border-zinc-800 bg-zinc-900/60 p-3">
-        <p class="text-[10px] tracking-widest text-zinc-500 font-semibold">CONFERÊNCIA (validação do próprio jogo, ao digitar)</p>
+        <!-- Conferência detalhada (a validação viva, nunca em silêncio) -->
+        <section class="rounded-2xl border border-zinc-800 bg-zinc-900/60 px-3 py-2">
+          <p class="text-[10px] tracking-widest text-zinc-500 font-semibold">CONFERÊNCIA (validação do próprio jogo, ao montar)</p>
+          {#if validando}
+            <p class="mt-1 text-[11px] text-zinc-500">Validando…</p>
+          {:else if validErro}
+            <p class="mt-1 text-[11px] text-amber-300">Não consegui validar agora: {validErro} — o Iniciar teste valida de novo.</p>
+          {:else if errosVivos.length}
+            <ul class="mt-1 space-y-1">
+              {#each errosVivos as e, i (i)}<li class="text-[11px] text-amber-300">• {e.mensagem}</li>{/each}
+            </ul>
+          {:else if avisosVivos.length}
+            <ul class="mt-1 space-y-1">
+              {#each avisosVivos as e, i (i)}<li class="text-[11px] text-zinc-400">• {e.mensagem}</li>{/each}
+            </ul>
+            <p class="mt-1 text-[11px] text-emerald-300">✓ Pronto para testar (só avisos).</p>
+          {:else if testeVazioLocal()}
+            <p class="mt-1 text-[11px] text-zinc-500">Mesa vazia — preencha a mão ou o campo, ou inicie assim mesmo (abre um duelo normal, sempre na sua fase da mão).</p>
+          {:else}
+            <p class="mt-1 text-[11px] text-emerald-300">✓ Tudo certo — pode clicar em Iniciar teste.</p>
+          {/if}
+          {#if msg}<p class="mt-1.5 text-xs rounded-lg px-3 py-2 border whitespace-pre-line {ok ? 'text-emerald-300 bg-emerald-950/30 border-emerald-900/50' : 'text-amber-300 bg-amber-950/30 border-amber-900/50'}">{msg}</p>{/if}
+          <p class="mt-1.5 text-[11px] text-zinc-600">O Iniciar teste escreve o setup (com a mesa que você montou) num arquivo temporário e abre o Astralis com ele por cima do projeto (projects/default via --project). Quem joga é o Astralis — o editor só monta o dado.</p>
+        </section>
+      </div>
+    </div>
+
+    <!-- Barra fixa: resumo + Iniciar teste -->
+    <div class="shrink-0 px-2 pb-2">
+      <div class="w-full max-w-5xl mx-auto rounded-2xl border border-zinc-700 bg-zinc-950/90 backdrop-blur px-3 py-2.5 flex items-center gap-2.5 flex-wrap shadow-2xl shadow-black/50">
         {#if validando}
-          <p class="mt-1 text-[11px] text-zinc-500">Validando…</p>
+          <span class="flex items-center gap-1.5 text-[11px] text-zinc-400"><span class="w-2 h-2 rounded-full bg-zinc-500 animate-pulse"></span>Validando…</span>
         {:else if validErro}
-          <p class="mt-1 text-[11px] text-amber-300">Não consegui validar agora: {validErro} — o Iniciar teste valida de novo.</p>
+          <span class="flex items-center gap-1.5 text-[11px] text-amber-300"><span class="w-2 h-2 rounded-full bg-amber-500"></span>Sem validar agora — o botão valida de novo</span>
         {:else if errosVivos.length}
-          <ul class="mt-1 space-y-1">
-            {#each errosVivos as e, i (i)}<li class="text-[11px] text-amber-300">• {e.mensagem}</li>{/each}
-          </ul>
-        {:else if avisosVivos.length}
-          <ul class="mt-1 space-y-1">
-            {#each avisosVivos as e, i (i)}<li class="text-[11px] text-zinc-400">• {e.mensagem}</li>{/each}
-          </ul>
-          <p class="mt-1 text-[11px] text-emerald-300">✓ Pronto para testar (só avisos).</p>
+          <span class="flex items-center gap-1.5 text-[11px] text-amber-300"><span class="w-2 h-2 rounded-full bg-amber-500"></span>{errosVivos.length} erro(s) — arrume acima</span>
         {:else if testeVazioLocal()}
-          <p class="mt-1 text-[11px] text-zinc-500">Mesa vazia — preencha a mão ou o campo, ou inicie assim mesmo (abre um duelo normal, sempre na sua fase da mão).</p>
+          <span class="flex items-center gap-1.5 text-[11px] text-zinc-400"><span class="w-2 h-2 rounded-full bg-zinc-500"></span>Mesa vazia = duelo normal</span>
         {:else}
-          <p class="mt-1 text-[11px] text-emerald-300">✓ Tudo certo — pode clicar em Iniciar teste.</p>
+          <span class="flex items-center gap-1.5 text-[11px] text-emerald-300"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Mão {maoCount}/5 • Campo {campoCount}/20 • pronto</span>
         {/if}
+        <span class="ml-auto flex gap-2">
+          <button
+            class="px-4 py-2.5 rounded-2xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-semibold transition disabled:opacity-50"
+            disabled={jogando}
+            title="Esvazia a mão e os 20 espaços"
+            onclick={limparMesa}
+          >Limpar</button>
+          <button
+            class="px-6 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold shadow-lg shadow-emerald-600/20 transition disabled:opacity-50"
+            disabled={jogando}
+            onclick={iniciarTeste}
+          >{jogando ? "Abrindo o Astralis…" : "▶ Iniciar teste"}</button>
+        </span>
       </div>
+    </div>
 
-      <div class="mt-4 flex gap-2">
-        <button
-          class="flex-1 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold shadow-lg shadow-emerald-600/20 transition disabled:opacity-50"
-          disabled={jogando}
-          onclick={iniciarTeste}
-        >{jogando ? "Abrindo o Astralis…" : "▶ Iniciar teste"}</button>
-        <button
-          class="px-4 py-3 rounded-2xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-sm font-semibold transition disabled:opacity-50"
-          disabled={jogando}
-          title="Esvazia a mão e os 20 espaços"
-          onclick={limparMesa}
-        >Limpar mesa</button>
+    <!-- Picker modal: busca por nome/id, mostra ATK/DEF, anula com o botão -->
+    {#if picker}
+      <div
+        class="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/70 backdrop-blur-sm"
+        role="dialog"
+        tabindex="-1"
+        aria-modal="true"
+        aria-label={alvoTitulo()}
+        onclick={(e) => { if (e.target === e.currentTarget) fecharPicker(); }}
+        onkeydown={(e) => { if (e.key === "Escape") fecharPicker(); }}
+      >
+        <div class="w-full max-w-lg rounded-2xl border border-zinc-700 bg-zinc-950 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+          <div class="px-4 pt-3 pb-2 border-b border-zinc-800">
+            <div class="flex items-center gap-2">
+              <p class="text-sm font-bold">🂠 {alvoTitulo()}</p>
+              <button class="ml-auto px-2 py-1 rounded-lg text-xs text-zinc-400 hover:text-white hover:bg-zinc-800 transition" title="Fechar (Esc)" onclick={fecharPicker}>✕</button>
+            </div>
+            <input
+              class="mt-2 w-full px-3 py-2 rounded-xl bg-zinc-900 border border-zinc-700 text-sm placeholder:text-zinc-600 focus:outline-none focus:border-violet-500"
+              placeholder="Busque por nome ou id… (ex.: dark, fm_0001, 2500)"
+              bind:value={busca}
+            />
+            <p class="mt-1 text-[11px] text-zinc-500">
+              {filtradas.length === cardsStore.cards.length ? `${cardsStore.cards.length} cartas — digite para filtrar` : `${filtradas.length} achada(s)`}{filtradas.length > 80 ? " (mostrando 80)" : ""}
+            </p>
+          </div>
+          <div class="flex-1 min-h-0 overflow-y-auto p-2 space-y-1">
+            {#if !resultados.length}
+              <p class="px-3 py-6 text-center text-xs text-zinc-500">Nenhuma carta com “{busca.trim()}”. Tente outro nome ou id.</p>
+            {:else}
+              {#each resultados as c (c.id)}
+                <button
+                  class="w-full text-left px-3 py-2 rounded-xl border border-transparent hover:border-violet-600/50 hover:bg-violet-950/20 transition flex items-center gap-2"
+                  title={c.id}
+                  onclick={() => escolherCarta(c.id)}
+                >
+                  <span class="min-w-0 flex-1">
+                    <span class="block text-xs font-semibold text-zinc-100 truncate">{c.name}</span>
+                    <span class="block text-[10px] text-zinc-500 truncate">{c.id}{c.card_type === "monster" ? ` • ATK ${c.attack ?? 0} / DEF ${c.defense ?? 0}` : ` • ${c.card_type}`}</span>
+                  </span>
+                  <span class="shrink-0 text-[10px] px-1.5 py-0.5 rounded-full {c.card_type === 'monster' ? 'bg-amber-950/50 text-amber-300 border border-amber-900/50' : 'bg-sky-950/50 text-sky-300 border border-sky-900/50'}">
+                    {c.card_type === "monster" ? "Monstro" : c.card_type === "spell" ? "Magia" : c.card_type}
+                  </span>
+                </button>
+              {/each}
+            {/if}
+          </div>
+          <div class="px-3 py-2.5 border-t border-zinc-800 flex gap-2">
+            {#if alvoTemCarta()}
+              <button class="flex-1 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-semibold transition" title="Deixa este espaço vazio" onclick={esvaziarAlvo}>✕ Deixar vazio</button>
+            {/if}
+            <button class="flex-1 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-200 text-xs font-semibold transition" onclick={fecharPicker}>Fechar</button>
+          </div>
+        </div>
       </div>
-      {#if msg}<p class="mt-2 text-xs rounded-lg px-3 py-2 border whitespace-pre-line {ok ? 'text-emerald-300 bg-emerald-950/30 border-emerald-900/50' : 'text-amber-300 bg-amber-950/30 border-amber-900/50'}">{msg}</p>{/if}
-      <p class="mt-2 text-[11px] text-zinc-600">O Iniciar teste escreve o setup (com a mesa que você montou) num arquivo temporário e abre o Astralis com ele por cima do projeto (projects/default via --project). Quem joga é o Astralis — o editor só monta o dado.</p>
     {/if}
-  </div>
+  {/if}
 </div>
