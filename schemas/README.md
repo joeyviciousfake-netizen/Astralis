@@ -89,6 +89,32 @@ schemas/
 | runtime `astralis/core/runtime_validator.gd` | `schema_version==1`, refs (deck→cartas, duel_setup→duelistas/decks, fusão→cartas) e `starting_lp>0` | Não é validação de schema: não checa arena, nem a estrutura de efeito/fusão, nem `test_state`. |
 | Studio `checar_test_state` (`astralis-studio/src-tauri/src/main.rs`) + `validar_projeto` | `duel_setup.test_state` (mão 0-5, 4 zonas x 5 slots, refs de carta, `turn_order==first_p1`) | **Espelho da mesma regra do schema.** Ausente = neutro; presente quebrado = erro em PT-BR. É o que fecha o GAP 3 p/ o duelo de teste. |
 
+## Pack de criação `.apack` V1 (D23, Systems — transporte, `schema_version` continua 1)
+
+O pack de criação é 1 arquivo único `.apack` (textos + imagens juntos). É um
+ZIP comum com `manifest.json` (magic `APACK`, format 1, schema 1,
+`runtime_version` + `author_id` como info sem trava V1, modo `aberto`,
+contagens, SHA256 por arquivo) + `data/pack.json` (O MESMO JSON legado,
+byte-idêntico — `pack_sha256` prova) + `assets/` + `preview` opcional.
+Especificação exata: `docs/12_DISTRIBUICAO_EXPORTACAO.md` §12.7; resumo do
+contrato: `docs/04_CONTRATO_DADOS.md` §4.7. A fita final `.astralis` continua
+binária trancada (doc 12) — `.apack` nunca vira distribuição.
+
+| Comando | O que faz |
+|---|---|
+| `python tools/apack.py pack schemas/packs/fm_original_pack.json --out x.apack` | embrulha o legado (sem assets = abre como "sem imagens", só aviso) |
+| `python tools/apack.py check x.apack` | valida formato + hashes + dado (reusa `fm_import.check_card`; fonte única) |
+| `python tools/apack.py unpack x.apack --out-dir d/` | desempacota conferindo hashes (repetida volta como cópia) |
+
+Limites V1 (estourar = erro): 5 MB/asset, 200 MB assets, 250 MB o `.apack`,
+máx 5000 assets, extensões `png/webp/jpg/jpeg/ogg`, preview 2 MB. Faltando =
+aviso (as 722 do FM não têm imagem no repo, GAP 7). Imagem repetida grava 1x
+(`stored_as` no manifest). Prova FM (temp, criada-mostrada-apagada R8):
+`pack` → 722/39/39/25131 + 0 assets; `check` → OK + 25081 importáveis (50 A+A
+filtradas igual ao Studio); `unpack` → `pack.json` com o MESMO SHA256
+(`8bad78b0…27e5`). Inválidos recusados (`rc=1`): `card_type:"magic"`, hash
+adulterado, `magic:"XXXX"`.
+
 ## Fatos e GAPs
 
 1. **25.081 (examples) vs 25.131 (pack) — INTENTIONAL E RASTREÁVEL.** A diferença são as **50 receitas `A+A`** (mesma carta nos dois lados). Elas existem na fonte FM, são dado válido no schema, mas **nunca disparam no jogo** (uma fusão exige duas cartas diferentes). O Importar do Studio filtra essas 50 com o aviso "fusões com A e B iguais ignoradas… esse dado nunca dispara" (`astralis-studio/src-tauri/src/main.rs:2087`). Por isso os ids de `examples/fusions.json` vão de `fm_fusion_00001` a `fm_fusion_25131` com **50 buracos** — a numeração vem do pack. **NÃO regenere os arquivos para "fechar" a sequência**: a partir de D20 o conteúdo FM é dado oficial; o número 25.081 é o número certo.

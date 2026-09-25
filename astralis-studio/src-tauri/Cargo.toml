@@ -13,3 +13,10 @@ tauri = { version = "2", features = [] }
 tauri-plugin-shell = { version = "2", features = [] }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order"] }
+# .apack V1 (docs/12 §12.7): o .apack é um ZIP comum + SHA256 por arquivo.
+# std não tem nenhum dos dois; `zip` (só deflate, sem AES/time extras) e
+# `sha2` são o par mínimo para ler/escrever/conferir o formato que o
+# tools/apack.py gera. Base64 continua manual (codificar/decodificar já
+# existem no backend, sem crate nova).
+zip = { version = "2", default-features = false, features = ["deflate"] }
+sha2 = "0.10"

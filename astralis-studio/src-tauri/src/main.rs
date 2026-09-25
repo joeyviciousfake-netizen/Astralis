@@ -22,6 +22,10 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicBool, Ordering};
 
+// Pack de criação `.apack` V1 (docs/12 §12.7): zip + manifest + SHA256.
+// O dado continua entrando pelo `importar_pack_valor` atual (passo 3).
+mod apack;
+
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct CartaArquivo {
     file: String,
@@ -2467,7 +2471,35 @@ fn backup_pasta_json(origem: &std::path::Path, destino: &std::path::Path) -> usi
     n
 }
 
-// Copia o conteúdo atual (cartas/duelistas/decks/fusions.json) para
+// Copia TODOS os arquivos de uma pasta (recursivo, vale subpasta) para o
+// destino. Devolve quantos copiou. Usado só pelo backup de assets/ do
+// importar (as artes têm subpastas: cards/portraits/backgrounds/fm/...).
+fn backup_pasta_rec(origem: &std::path::Path, destino: &std::path::Path) -> usize {
+    let mut n = 0;
+    let entries = match std::fs::read_dir(origem) {
+        Ok(e) => e,
+        Err(_) => return 0,
+    };
+    for e in entries.flatten() {
+        let p = e.path();
+        if p.is_dir() {
+            if let Some(nome) = p.file_name() {
+                n += backup_pasta_rec(&p, &destino.join(nome));
+            }
+        } else if p.is_file() {
+            if std::fs::create_dir_all(destino).is_ok() {
+                if let Some(nome) = p.file_name() {
+                    if std::fs::copy(&p, destino.join(nome)).is_ok() {
+                        n += 1;
+                    }
+                }
+            }
+        }
+    }
+    n
+}
+
+// Copia o conteúdo atual (cartas/duelistas/decks/fusions.json + assets/) para
 // <projects/default>/backups/pack_<data>_<hora>/. Devolve (pasta, rótulo).
 // Não apaga nem altera nada do projeto — só copia.
 fn backup_conteudo_atual(
@@ -2475,6 +2507,7 @@ fn backup_conteudo_atual(
     pasta_duelistas: &std::path::Path,
     pasta_decks: &std::path::Path,
     caminho_fusoes: &std::path::Path,
+    pasta_assets: &std::path::Path,
 ) -> Result<(std::path::PathBuf, String), String> {
     let projeto = pasta_cartas.parent().ok_or_else(|| "Não achei a pasta projects/default a partir daqui.".to_string())?;
     let raiz_backups = projeto.join("backups");
@@ -2495,6 +2528,9 @@ fn backup_conteudo_atual(
         std::fs::copy(caminho_fusoes, dir.join("fusions.json"))
             .map_err(|e| format!("Não consegui copiar fusions.json para o backup: {e}"))?;
     }
+    // Artes atuais (o importar .apack SUBSTITUI imagens de mesmo nome: sem
+    // este backup elas se perdiam sem volta).
+    backup_pasta_rec(pasta_assets, &dir.join("assets"));
     let rotulo = rotulo_backup(&dir);
     Ok((dir, rotulo))
 }
@@ -2779,7 +2815,9 @@ fn importar_pack_para(
 
     // Pack válido: backup do conteúdo atual e SUBSTITUIÇÃO por área presente.
     // Área ausente no pack não é tocada (não apagamos o que o pack nem cita).
-    let (_dir_backup, rotulo) = backup_conteudo_atual(pasta_cartas, pasta_duelistas, pasta_decks, caminho_fusoes)?;
+    // (Aqui só chegam as pastas, sem o `proj`: assets é irmã de cards/.)
+    let pasta_assets = pasta_cartas.parent().map(|p| p.join("assets")).unwrap_or_else(|| PathBuf::from("assets"));
+    let (_dir_backup, rotulo) = backup_conteudo_atual(pasta_cartas, pasta_duelistas, pasta_decks, caminho_fusoes, &pasta_assets)?;
 
     let mut n_cartas = 0;
     let mut n_duelistas = 0;
@@ -2911,6 +2949,152 @@ fn importar_pack(conteudo: String, nome: String) -> Result<ResultadoImportacao, 
     let pack: serde_json::Value = serde_json::from_str(&conteudo)
         .map_err(|e| format!("\"{nome_limpo}\" tem JSON quebrado: {e}. Confira vírgulas e chaves e tente de novo."))?;
     importar_pack_valor(&pack, &nome_limpo)
+}
+
+// ---- APACK V1 (passos 3+4+5 do §12.7) ----
+// O frontend manda o .apack como base64 (binário não viaja como texto).
+// Passo 1+2 (abrir o zip, validar magic/manifest/hashes/limites/ZipSlip) é o
+// apack::ler_apack; o passo 3 REUSA o importar_pack_valor atual (mesmo backup,
+// mesmas chaves PT/EN, mesmo filtro A+A); o passo 4 copia os assets; o passo 5
+// (faltando = aviso) entra na mensagem + avisos abaixo — nunca silêncio.
+#[tauri::command]
+fn importar_apack(dados_base64: String, nome: String) -> Result<ResultadoImportacao, String> {
+    let nome_limpo = if nome.trim().is_empty() { "pack.apack".to_string() } else { nome.trim().to_string() };
+    let bytes = decodificar_base64(&dados_base64)
+        .map_err(|_| format!("\"{nome_limpo}\" não chegou direito (arquivo ilegível). Escolha o .apack de novo e confirme o arquivo."))?;
+    if bytes.is_empty() {
+        return Err(format!("\"{nome_limpo}\" chegou vazio. Escolha o .apack de novo e confirme o arquivo."));
+    }
+    let lido = apack::ler_apack(&bytes, &nome_limpo)?;
+    let mut r = importar_pack_valor(&lido.pack, &nome_limpo)?;
+
+    // Passo 4: assets/* para projects/default/<mesmo path>.
+    let proj = pasta_projeto()?;
+    let (n_img, falhas) = apack::copiar_assets(&proj, &lido.assets);
+    let bytes_img: u64 = lido.assets.iter().map(|(_, b)| b.len() as u64).sum();
+    if lido.assets.is_empty() && lido.faltando.is_empty() {
+        r.mensagem.push_str(" Nenhuma imagem no pack (só-textos, igual ao .json antigo).");
+    } else {
+        r.mensagem.push_str(&format!(" {n_img} imagem(ns) copiada(s) para projects/default/assets/ ({bytes_img} bytes)."));
+    }
+    if let Some((capa, _)) = &lido.preview {
+        r.mensagem.push_str(&format!(" Capa \"{capa}\" incluída no pack (só desenho — não entra no projeto)."));
+    }
+    // Passo 5: faltando = aviso (a carta mostra um cinza no lugar).
+    let mostra = lido.faltando.iter().take(apack::AVISOS_TETO);
+    for f in mostra {
+        r.avisos.push(format!("Sem imagem: \"{f}\" não vem no pack (a carta mostra um cinza no lugar)."));
+    }
+    if lido.faltando.len() > apack::AVISOS_TETO {
+        r.avisos.push(format!("…e mais {} imagem(ns) sem arquivo no pack.", lido.faltando.len() - apack::AVISOS_TETO));
+    }
+    for f in falhas {
+        r.avisos.push(format!("{f}"));
+    }
+    Ok(r)
+}
+
+#[derive(Debug, serde::Serialize)]
+struct ResultadoApack {
+    nome: String,
+    dados_base64: String,
+    mensagem: String,
+    avisos: Vec<String>,
+}
+
+// Lê os *.json de uma pasta do projeto em ordem (para o .apack sair
+// determinístico). JSON quebrado = erro com o nome do arquivo (nunca pula em
+// silêncio).
+fn ler_jsons_da_pasta(pasta: &std::path::Path, o_que: &str) -> Result<Vec<serde_json::Value>, String> {
+    let mut nomes: Vec<String> = Vec::new();
+    let entries = std::fs::read_dir(pasta)
+        .map_err(|e| format!("Não consegui abrir {}: {e}", pasta.display()))?;
+    for e in entries.flatten() {
+        let p = e.path();
+        if p.extension().and_then(|x| x.to_str()) == Some("json") {
+            if let Some(n) = p.file_name().and_then(|x| x.to_str()) {
+                nomes.push(n.to_string());
+            }
+        }
+    }
+    nomes.sort();
+    let mut itens = Vec::new();
+    for nome in nomes {
+        let texto = std::fs::read_to_string(pasta.join(&nome))
+            .map_err(|e| format!("Não consegui ler {nome}: {e}"))?;
+        let v: serde_json::Value = serde_json::from_str(&texto)
+            .map_err(|e| format!("{nome} tem JSON quebrado ({o_que}): {e}. Arruma na aba e exporta de novo."))?;
+        itens.push(v);
+    }
+    Ok(itens)
+}
+
+// Empacota o projeto atual num .apack V1 (data/pack.json + assets/ com dedup +
+// manifest + contagens). O pack.json é montado das pastas do projeto nas
+// mesmas chaves PT que o importar entende (exportar → importar = roundtrip).
+// Projeto vazio = erro (nada para empacotar). Asset citado sem arquivo no
+// disco = aviso (igual ao Python). Sem capa V1 (o Studio não tem slot de capa).
+#[tauri::command]
+fn exportar_apack() -> Result<ResultadoApack, String> {
+    let proj = pasta_projeto()?;
+    let cartas = ler_jsons_da_pasta(&proj.join("cards"), "carta")?;
+    let duelistas = ler_jsons_da_pasta(&proj.join("duelists"), "duelista")?;
+    let decks = ler_jsons_da_pasta(&proj.join("decks"), "deck")?;
+    let fusoes: serde_json::Value = match std::fs::read_to_string(proj.join("fusions.json")) {
+        Ok(t) => serde_json::from_str(&t)
+            .map_err(|e| format!("fusions.json tem JSON quebrado: {e}. Arruma na aba Fusões e exporta de novo."))?,
+        Err(_) => serde_json::json!({"schema_version": 1, "recipes": [], "rules": []}),
+    };
+    let n_recipes = fusoes.get("recipes").and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
+    let n_rules = fusoes.get("rules").and_then(|v| v.as_array()).map(|a| a.len()).unwrap_or(0);
+    if cartas.is_empty() && duelistas.is_empty() && decks.is_empty() && n_recipes == 0 && n_rules == 0 {
+        return Err("Projeto vazio — nada para empacotar. Importe um pack (.apack ou .json) antes de exportar.".to_string());
+    }
+
+    let pack = apack::construir_pack_json("studio_pack", "Pack do Studio", cartas, duelistas, decks, fusoes);
+    let pack_raw = (serde_json::to_string_pretty(&pack).map_err(|e| format!("Não consegui montar o pack.json: {e}"))? + "\n").into_bytes();
+
+    // Resolve as refs assets/... no disco (só abaixo de assets/, sem `..`).
+    let refs = apack::refs_do_pack(&pack);
+    let mut achados: std::collections::BTreeMap<String, Vec<u8>> = std::collections::BTreeMap::new();
+    for r in &refs {
+        if !r.starts_with("assets/") || !apack::zip_seguro(r) {
+            return Err(format!("Referência fora de assets/: \"{r}\" — não empacotei. Use 'assets/...'."));
+        }
+        if !apack::extensao_permitida(r) {
+            return Err(format!("Extensão proibida em \"{r}\" (V1 aceita: png, webp, jpg, jpeg, ogg) — não empacotei."));
+        }
+        match std::fs::read(proj.join(r)) {
+            Ok(b) => {
+                achados.insert(r.clone(), b);
+            }
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => {} // faltando = aviso (montar_apack lista)
+            Err(e) => return Err(format!("Não consegui ler \"{r}\" do projeto: {e} — não empacotei.")),
+        }
+    }
+
+    let pronto = apack::montar_apack(&pack, &pack_raw, &achados, None, "studio", "1")?;
+    let c = &pronto.manifest.counts;
+    let nome = format!("studio_pack_{}.apack", carimbo_data_hora());
+    let mut mensagem = format!(
+        "Pack exportado: {} cartas, {} duelistas, {} decks, {} fusões ({} regras) + {} imagem(ns) ({} bytes).",
+        c.cartas, c.duelistas, c.decks, c.fusoes_recipes, c.fusoes_rules, c.assets, c.assets_bytes
+    );
+    if pronto.repetidas > 0 {
+        mensagem.push_str(&format!(" {} repetida(s) gravada(s) 1x.", pronto.repetidas));
+    }
+    let mut avisos: Vec<String> = Vec::new();
+    let mostra = pronto.faltando.iter().take(apack::AVISOS_TETO);
+    for f in mostra {
+        avisos.push(format!("Sem imagem no projeto: \"{f}\" não tem arquivo em projects/default/ (o pack abre como \"sem imagens\" nesse ponto)."));
+    }
+    if pronto.faltando.len() > apack::AVISOS_TETO {
+        avisos.push(format!("…e mais {} referência(s) sem arquivo no projeto.", pronto.faltando.len() - apack::AVISOS_TETO));
+    }
+    if !pronto.faltando.is_empty() {
+        mensagem.push_str(&format!(" {} referência(s) sem imagem (aviso, não erro).", pronto.faltando.len()));
+    }
+    Ok(ResultadoApack { nome, dados_base64: apack::codificar_base64(&pronto.bytes), mensagem, avisos })
 }
 
 // ---- ASSETS (blocos 1 e 8) ----
@@ -3293,6 +3477,8 @@ fn main() {
             validar_cena,
             validar_projeto,
             importar_pack,
+            importar_apack,
+            exportar_apack,
             preparar_boot,
             debug_push_batch
         ])

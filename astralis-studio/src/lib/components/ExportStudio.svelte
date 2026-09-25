@@ -102,6 +102,30 @@
     return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
   }
 
+  // Lê qualquer arquivo (texto ou binário, ex. .apack) como base64 puro, sem o
+  // prefixo `data:...;base64,`. O binário não viaja como texto: arq.text() num
+  // .apack corromperia os bytes.
+  function lerArquivoBase64(arq: File): Promise<string> {
+    return new Promise((ok, no) => {
+      const lr = new FileReader();
+      lr.onload = () => {
+        const s = String(lr.result ?? "");
+        const i = s.indexOf(",");
+        ok(i >= 0 ? s.slice(i + 1) : s);
+      };
+      lr.onerror = () => no(new Error("não consegui ler o arquivo aqui no app"));
+      lr.readAsDataURL(arq);
+    });
+  }
+
+  // Base64 do Rust de volta para bytes (download do .apack exportado).
+  function base64ParaBytes(b64: string): Uint8Array {
+    const s = atob(b64);
+    const out = new Uint8Array(s.length);
+    for (let i = 0; i < s.length; i++) out[i] = s.charCodeAt(i);
+    return out;
+  }
+
   async function aoEscolherPack(e: Event) {
     const input = e.target as HTMLInputElement;
     const arq = input.files?.[0];
@@ -111,7 +135,7 @@
     // carregou" — agora sempre há mensagem visível na tela.
     if (!arq) {
       impOk = false;
-      impMsg = "Nenhum arquivo chegou ao editor (o seletor abriu mas voltou vazio). Clique em “Escolher pack (.json)” de novo e confirme o arquivo.";
+      impMsg = "Nenhum arquivo chegou ao editor (o seletor abriu mas voltou vazio). Clique em “Escolher pack (.apack ou .json)” de novo e confirme o arquivo.";
       salvarResumoSessao();
       return;
     }
@@ -128,9 +152,20 @@
     // aqui no app, validar no Rust, ou recarregar as abas depois).
     let faseImp = "lendo o arquivo";
     try {
-      const conteudo = await arq.text();
-      faseImp = "validando e importando";
-      const r: ResumoPack = await invokeSave("importar_pack", { conteudo, nome: arq.name }, 180000);
+      // Mesmo botão, dois formatos: .apack (binário, via base64) ou .json
+      // antigo (texto, só-textos sem imagens). A resposta do Rust é a mesma
+      // (ResumoPack) nos dois — o que muda é só como o arquivo viaja.
+      const ehApack = arq.name.toLowerCase().endsWith(".apack");
+      let r: ResumoPack;
+      if (ehApack) {
+        const dados = await lerArquivoBase64(arq);
+        faseImp = "validando e importando";
+        r = await invokeSave("importar_apack", { dados_base64: dados, nome: arq.name }, 180000);
+      } else {
+        const conteudo = await arq.text();
+        faseImp = "validando e importando";
+        r = await invokeSave("importar_pack", { conteudo, nome: arq.name }, 180000);
+      }
       resumo = r;
       // Sem lista de erros no Ok: o Rust recusa o pack INTEIRO quando acha erro
       // (aí vem pelo Err e cai no catch, em âmbar). Chegou aqui = pack inteiro
@@ -138,6 +173,12 @@
       // `{#each}` que consumia era código morto.
       impOk = true;
       impMsg = r.mensagem;
+      // .json antigo = .apack sem assets: entra como "só-textos, sem imagens".
+      // O Rust não muda a mensagem dele (é a mesma do importar_pack); o aviso
+      // de "sem imagens" vem daqui, da tela.
+      if (!ehApack) {
+        impMsg += "\n\nArquivo .json antigo: só-textos, sem imagens (onde houver arte, a tela mostra um cinza).";
+      }
       // Listas mudaram no disco: recarrega tudo para a tela mostrar o novo dado.
       faseImp = "recarregando as abas";
       try {
@@ -198,6 +239,57 @@
       exportando = false;
     }
   }
+
+  // ---- EXPORTAR PACK (.apack V1) ----
+  // Empacota o projeto atual num arquivo único .apack (textos + imagens, com
+  // dedup) e baixa no navegador. Antes valida o projeto: com erro, não
+  // empacota (mesma regra do botão Exportar). O checklist "testou?" é só da
+  // fita final (.astralis) — pack de criação é arquivo aberto de trabalho.
+  // DEF-2: todo caminho termina com mensagem visível, nunca silêncio.
+  let expMsg = $state("");
+  let expOk = $state(false);
+  let exportandoPack = $state(false);
+
+  async function exportarPack() {
+    expMsg = "";
+    expOk = false;
+    exportandoPack = true;
+    try {
+      if (!emTauri()) {
+        expMsg = "Para exportar, abra o app via app.bat (no navegador é só leitura — exportar lê os arquivos do projeto).";
+        return;
+      }
+      const v: { erros: number; mensagem: string } = await invokeSave("validar_projeto", {}, 120000);
+      if (v.erros > 0) {
+        expMsg = `Não exportei: o projeto tem ${v.erros} erro(s). ${v.mensagem} Corrija nas abas e clique de novo.`;
+        return;
+      }
+      const r: { nome: string; dados_base64: string; mensagem: string; avisos: string[] } =
+        await invokeSave("exportar_apack", {}, 180000);
+      if (!r.dados_base64) {
+        expMsg = "O Rust devolveu o pack vazio (não era para acontecer). Clique em Exportar pack de novo.";
+        return;
+      }
+      const bytes = base64ParaBytes(r.dados_base64);
+      const url = URL.createObjectURL(new Blob([bytes.buffer as ArrayBuffer], { type: "application/zip" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = r.nome || "studio_pack.apack";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      expOk = true;
+      expMsg = `${r.mensagem}\nArquivo baixado: ${a.download} (${bytes.length} bytes). Para conferir, importe ele de volta no botão Importar acima.`;
+      if (r.avisos.length) {
+        expMsg += `\nAvisos:\n- ${r.avisos.join("\n- ")}`;
+      }
+    } catch (e) {
+      expMsg = `Não deu para exportar: ${errMsg(e)}`;
+    } finally {
+      exportandoPack = false;
+    }
+  }
 </script>
 
 <div class="flex-1 min-h-0 overflow-y-auto flex flex-col items-center gap-3 p-2">
@@ -206,7 +298,7 @@
       <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-sky-500 via-blue-600 to-indigo-600 flex items-center justify-center text-xl shrink-0">📥</span>
       <div>
         <h2 class="text-base font-black tracking-tight">IMPORTAR PACK</h2>
-        <p class="text-[11px] text-zinc-500">Escolhe um .json pack: valida tudo antes, faz backup automático e SUBSTITUI o conteúdo do projeto (só dado, nada de jogo)</p>
+        <p class="text-[11px] text-zinc-500">Arquivo único .apack com imagens, ou o .json antigo só-textos: valida tudo antes, faz backup automático e SUBSTITUI o conteúdo do projeto (só dado, nada de jogo)</p>
       </div>
     </div>
     <!-- Seletor de arquivo: tem que estar RENDERIZADO, só invisível.
@@ -220,7 +312,7 @@
     <input
       bind:this={arquivoPack}
       type="file"
-      accept=".json,application/json"
+      accept=".apack,.json,application/json"
       class="fixed left-0 top-0 h-px w-px opacity-0 pointer-events-none"
       tabindex="-1"
       aria-hidden="true"
@@ -230,7 +322,7 @@
       class="mt-3 w-full py-3 rounded-2xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold shadow-lg shadow-sky-600/20 transition disabled:opacity-50"
       disabled={importando}
       onclick={abrirImportacao}
-    >{importando ? "Validando e importando…" : "📥 Escolher pack (.json)…"}</button>
+    >{importando ? "Validando e importando…" : "📥 Escolher pack (.apack ou .json)…"}</button>
     {#if impMsg}<p class="mt-2 text-xs rounded-lg px-3 py-2 border whitespace-pre-line {impOk ? 'text-emerald-300 bg-emerald-950/30 border-emerald-900/50' : 'text-amber-300 bg-amber-950/30 border-amber-900/50'}">{impMsg}</p>{/if}
     {#if resumo}
       <div class="mt-2 rounded-xl border border-zinc-800 divide-y divide-zinc-800/60 overflow-hidden">
@@ -261,7 +353,7 @@
       <span class="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500 via-orange-600 to-rose-600 flex items-center justify-center text-xl shrink-0">📦</span>
       <div>
         <h2 class="text-base font-black tracking-tight">EXPORTAR JOGO</h2>
-        <p class="text-[11px] text-zinc-500">Valida tudo e prepara a caixa (videogame + fita) — empacotamento vem depois</p>
+        <p class="text-[11px] text-zinc-500">Valida tudo, exporta o pack (.apack, arquivo único com imagens) ou prepara a caixa (.astralis, vem depois)</p>
       </div>
     </div>
 
@@ -308,6 +400,15 @@
 
     {#if msg}<p class="mt-2 text-xs rounded-lg px-3 py-2 border whitespace-pre-line {ok ? 'text-emerald-300 bg-emerald-950/30 border-emerald-900/50' : 'text-amber-300 bg-amber-950/30 border-amber-900/50'}">{msg}</p>{/if}
 
+    <button
+      class="mt-2 w-full py-3 rounded-2xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold shadow-lg shadow-sky-600/20 transition disabled:opacity-50"
+      disabled={exportandoPack}
+      onclick={exportarPack}
+      title="Empacota o projeto atual num arquivo único .apack (textos + imagens) e baixa"
+    >{exportandoPack ? "Empacotando…" : "📦 Exportar pack (.apack)"}</button>
+
+    {#if expMsg}<p class="mt-2 text-xs rounded-lg px-3 py-2 border whitespace-pre-line {expOk ? 'text-emerald-300 bg-emerald-950/30 border-emerald-900/50' : 'text-amber-300 bg-amber-950/30 border-amber-900/50'}">{expMsg}</p>{/if}
+
     {#if jaValidou && itens.length}
       <div class="mt-2 rounded-xl border border-zinc-800 divide-y divide-zinc-800/60 overflow-hidden">
         {#each itens as it (it.area)}
@@ -318,7 +419,7 @@
           </div>
         {/each}
         {#if erros === 0}
-          <p class="px-3 py-2 text-[11px] text-zinc-500 bg-zinc-900/40">⚠ Empacotamento (.astralis binário + zip com o player) vem depois — esta tela só valida, não empacota.</p>
+          <p class="px-3 py-2 text-[11px] text-zinc-500 bg-zinc-900/40">⚠ A fita final (.astralis binária + zip com o player) vem depois — o botão acima exporta o pack de criação (.apack, aberto, com imagens).</p>
         {/if}
       </div>
     {/if}
