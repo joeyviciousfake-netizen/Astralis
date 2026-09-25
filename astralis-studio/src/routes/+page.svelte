@@ -97,6 +97,13 @@
   // disparo — um evento só, então o seletor abre uma vez.
   // NÃO remova o await e NÃO troque por montagem-eager: são essas duas coisas
   // que desfazem o import ou a performance.
+  //
+  // DEF-2 (mesmo bug em outras abas): os botões "Importar pack…" dos estados
+  // vazios de Cartas/Duelo NÃO podem disparar "astralis:importar-pack" direto —
+  // sem trocar de aba o painel pode nem estar montado (evento no vazio, nada
+  // acontece) ou o resultado aparece na Exportar escondida (parece que "não
+  // carregou"). Eles disparam "astralis:ir-importar", que cai aqui no
+  // irImportar (troca de aba + tick + evento, com a Exportar visível).
   async function irImportar() {
     setTab("export");
     await tick();
@@ -121,9 +128,13 @@
     })();
     const onKey = (e: KeyboardEvent) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") { e.preventDefault(); requestSave(); } };
     const irDuelo = () => setTab("duel");
+    // DEF-2: botões "Importar pack…" de outras abas pedem por aqui (troca de
+    // aba + tick + evento), nunca pelo "astralis:importar-pack" direto.
+    const irImportarEv = () => void irImportar();
     window.addEventListener("keydown", onKey);
     window.addEventListener("astralis:ir-duelo", irDuelo);
-    return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("astralis:ir-duelo", irDuelo); playFlash.clearSaveTimer(); };
+    window.addEventListener("astralis:ir-importar", irImportarEv);
+    return () => { window.removeEventListener("keydown", onKey); window.removeEventListener("astralis:ir-duelo", irDuelo); window.removeEventListener("astralis:ir-importar", irImportarEv); playFlash.clearSaveTimer(); };
   });
 </script>
 

@@ -148,7 +148,7 @@
     {#if !duelistsStore.duelists.length && !duelistsStore.loading}
       <div class="mt-2 rounded-xl border border-dashed border-zinc-700 bg-zinc-900/40 px-4 py-3 text-center">
         <p class="text-xs text-zinc-300">Sem duelistas — importe um pack para começar.</p>
-        <button class="mt-2 px-3 py-1.5 rounded-full bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition" onclick={() => window.dispatchEvent(new CustomEvent("astralis:importar-pack"))}>📥 Importar pack…</button>
+        <button class="mt-2 px-3 py-1.5 rounded-full bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition" onclick={() => window.dispatchEvent(new CustomEvent("astralis:ir-importar"))}>📥 Importar pack…</button>
       </div>
     {/if}
 

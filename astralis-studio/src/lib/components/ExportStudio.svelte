@@ -13,7 +13,14 @@
   import { useValidate } from "$lib/stores/validate.svelte";
 
   function abrirImportacao() {
-    arquivoPack?.click();
+    // DEF-2: sem o input montado o click() seria um não-faz-nada silencioso
+    // (parece que "clicou e nada aconteceu"). Com mensagem, nunca há silêncio.
+    if (!arquivoPack) {
+      impOk = false;
+      impMsg = "O seletor ainda não montou — aguarde 1 segundo e clique em Importar de novo.";
+      return;
+    }
+    arquivoPack.click();
   }
 
   useSectionShell({ mount: () => {}, extra: [["astralis:importar-pack", abrirImportacao]] });
@@ -73,7 +80,14 @@
     const input = e.target as HTMLInputElement;
     const arq = input.files?.[0];
     input.value = "";
-    if (!arq) return;
+    // DEF-2: o seletor abriu mas voltou sem arquivo (cancelado ou o WebView2
+    // não entregou o arquivo). Retornar em silêncio parecia "escolhi e nada
+    // carregou" — agora sempre há mensagem visível na tela.
+    if (!arq) {
+      impOk = false;
+      impMsg = "Nenhum arquivo chegou ao editor (o seletor abriu mas voltou vazio). Clique em “Escolher pack (.json)” de novo e confirme o arquivo.";
+      return;
+    }
     impMsg = "";
     impOk = false;
     resumo = null;
@@ -82,8 +96,12 @@
       return;
     }
     importando = true;
+    // Fase atual, só para a mensagem de erro dizer ONDE parou (ler o arquivo
+    // aqui no app, validar no Rust, ou recarregar as abas depois).
+    let faseImp = "lendo o arquivo";
     try {
       const conteudo = await arq.text();
+      faseImp = "validando e importando";
       const r: ResumoPack = await invokeSave("importar_pack", { conteudo, nome: arq.name }, 180000);
       resumo = r;
       // Sem lista de erros no Ok: o Rust recusa o pack INTEIRO quando acha erro
@@ -93,6 +111,7 @@
       impOk = true;
       impMsg = r.mensagem;
       // Listas mudaram no disco: recarrega tudo para a tela mostrar o novo dado.
+      faseImp = "recarregando as abas";
       try {
         await useCards().loadAll();
         await useDuelists().reload();
@@ -103,7 +122,7 @@
         impMsg += ` (Recarregue a aba para ver os novos dados: ${errMsg(e2)})`;
       }
     } catch (e) {
-      impMsg = errMsg(e);
+      impMsg = `Não deu para importar (${faseImp}): ${errMsg(e)}`;
     } finally {
       importando = false;
     }

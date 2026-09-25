@@ -497,7 +497,7 @@ import { useEffects } from "$lib/stores/effects.svelte";
         <div class="p-4 text-center">
           <p class="text-xs text-zinc-400">Projeto vazio — nada carregado.</p>
           <p class="mt-1 text-xs text-zinc-500">Importe um pack para começar.</p>
-          <button class="mt-2 px-3 py-1.5 rounded-full bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition" onclick={() => window.dispatchEvent(new CustomEvent("astralis:importar-pack"))}>📥 Importar pack…</button>
+          <button class="mt-2 px-3 py-1.5 rounded-full bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold transition" onclick={() => window.dispatchEvent(new CustomEvent("astralis:ir-importar"))}>📥 Importar pack…</button>
         </div>
       {:else}
         <p class="p-4 text-xs text-zinc-500 text-center">Nenhuma carta — ajuste a busca ou crie uma nova.</p>
