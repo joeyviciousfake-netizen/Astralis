@@ -185,8 +185,9 @@ fn raiz_studio() -> Option<PathBuf> {
 }
 
 // Projeto do editor: astralis-studio/projects/default/ (boot VAZIO — só o que
-// importar aparece). Cria a estrutura se faltar (pastas + fusions/effects
-// vazios válidos). Todo comando de dado lê/escreve AQUI, nunca no jogo.
+// importar aparece). Cria a estrutura se faltar (pastas + .gitkeep para o git
+// continuar rastreando + fusions/effects vazios válidos). Todo comando de dado
+// lê/escreve AQUI, nunca no jogo.
 fn pasta_projeto() -> Result<PathBuf, String> {
     let studio = raiz_studio().ok_or_else(|| "Não achei a pasta astralis-studio/ a partir daqui. Rode o app de dentro do projeto Astralis.".to_string())?;
     let proj = studio.join("projects").join("default");
@@ -194,13 +195,33 @@ fn pasta_projeto() -> Result<PathBuf, String> {
     Ok(proj)
 }
 
+// As pastas do esqueleto são exatamente as que têm .gitkeep versionado no repo
+// (fonte da verdade: `git ls-files astralis-studio/projects/default/`).
+const PASTAS_ESQUELETO: [&str; 8] = [
+    "cards", "duelists", "decks", "arenas", "scenes",
+    "assets/cards", "assets/portraits", "assets/backgrounds",
+];
+
 fn garantir_projeto(proj: &std::path::Path) -> Result<(), String> {
-    for sub in [
-        "cards", "duelists", "decks", "arenas", "scenes",
-        "assets/cards", "assets/portraits", "assets/backgrounds",
-    ] {
-        std::fs::create_dir_all(proj.join(sub))
+    for sub in PASTAS_ESQUELETO {
+        let dir = proj.join(sub);
+        std::fs::create_dir_all(&dir)
             .map_err(|e| format!("Não consegui criar projects/default/{sub}: {e}"))?;
+        // ---- POR QUE O .gitkeep É RECRIADO AQUI (não "otimizar" isto) ----
+        // O boot (D29) apaga TODO o conteúdo do projeto a cada abertura e,
+        // nas pastas de arte, `apagar_tudo_da_pasta` leva o .gitkeep junto
+        // (para ele é um arquivo comum). Pasta vazia = pasta que some do
+        // git: então todo `git status` mostrava os .gitkeep como DELETADOS
+        // só de ABRIR o Studio — o app sujava o repositório sozinha e fazia
+        // um agente futuro concluir que alguém tinha mexido no conteúdo.
+        // O .gitkeep NÃO é conteúdo: é o marcador que mantém a pasta
+        // rastreável. Por isso o esqueleto volta COM ele. Só cria se não
+        // existir; nunca sobrescreve nada.
+        let marca = dir.join(".gitkeep");
+        if !marca.exists() {
+            std::fs::write(&marca, b"")
+                .map_err(|e| format!("Não consegui criar projects/default/{sub}/.gitkeep: {e}"))?;
+        }
     }
     for (nome, base) in [
         ("fusions.json", "{\"schema_version\": 1, \"recipes\": [], \"rules\": []}\n"),
@@ -2012,6 +2033,11 @@ fn validar_projeto() -> Result<ResultadoProjeto, String> {
 // Formato aceito: chaves PT (cartas/duelistas/decks/fusoes, ex. FM Original
 // Pack) ou EN (cards/duelists/decks/fusions). `equips` não tem schema V1
 // (schemas/README gap 4): é contado e ignorado com aviso, o jogo ignora.
+// SEM campo `erros` de propósito: qualquer erro recusa o pack INTEIRO e volta
+// por `Err` (é o que o frontend mostra em âmbar, no catch do aoEscolherPack).
+// No caminho `Ok` não existe lista de erros — o campo era `Vec::new()` fixo e o
+// frontend tratava isso como "não tem erro", com um `{#each resumo.erros}` que
+// nunca renderizava nada (código morto nas duas pontas).
 #[derive(Debug, serde::Serialize)]
 struct ResultadoImportacao {
     cartas: usize,
@@ -2019,13 +2045,54 @@ struct ResultadoImportacao {
     decks: usize,
     fusoes_novas: usize,
     fusoes_puladas: usize,
+    /// Fusão com a MESMA carta nos dois lados (A+A), pulada porque nunca
+    /// dispara no jogo. Contado à parte de `fusoes_puladas` porque NÃO é
+    /// repetição: a mensagem antiga somava os dois e dizia "repetido do
+    /// próprio pack", mandando o usuário caçar um problema que não existe.
+    fusoes_mesma: usize,
     regras_novas: usize,
     regras_puladas: usize,
     equips_ignorados: usize,
     backups: Vec<String>,
-    erros: Vec<String>,
     avisos: Vec<String>,
     mensagem: String,
+}
+
+// Teto de AVISOS na resposta do import. Aviso é uma linha inteira na tela e
+// existe um por carta/duelista/deck (o pack FM são 722 cartas): sem teto a
+// lista vira centenas de linhas. Mesma política dos erros (30 linhas) e mesmo
+// texto "…e mais N" — o corte é honesto, não esconde que sobrou.
+const TOPO_AVISOS: usize = 30;
+
+/// Empurra um aviso por item (carta/duelista/deck) respeitando o teto e conta
+/// o que não coube, para a mensagem final dizer o que sobrou.
+fn empurra_aviso(avisos: &mut Vec<String>, omitidos: &mut usize, texto: String) {
+    if avisos.len() < TOPO_AVISOS {
+        avisos.push(texto);
+    } else {
+        *omitidos += 1;
+    }
+}
+
+// Frases de contagem com singular/plural acertados, usadas NO MESMO texto tanto
+// na lista de avisos quanto na mensagem final (eles não podem discordar — foi
+// o que fez o usuário ler "50 repetido(s) do próprio pack" num pack sem
+// repetida nenhuma). Sem o "N item(ns)": "1 fusões ... foram" é português
+// torto e a mensagem é lida por gente.
+fn frase_fusao_mesma(n: usize) -> String {
+    if n == 1 {
+        "1 fusão com a mesma carta nos dois lados foi ignorada — ela nunca dispara no jogo (fusão precisa de duas cartas diferentes).".to_string()
+    } else {
+        format!("{n} fusões com a mesma carta nos dois lados foram ignoradas — elas nunca disparam no jogo (fusão precisa de duas cartas diferentes).")
+    }
+}
+
+fn frase_fusao_repetida(n: usize) -> String {
+    if n == 1 {
+        "1 fusão repetida dentro do próprio pack foi pulada (mesmo par + resultado).".to_string()
+    } else {
+        format!("{n} fusões repetidas dentro do próprio pack foram puladas (mesmo par + resultado).")
+    }
 }
 
 fn pack_lista<'a>(pack: &'a serde_json::Value, pt: &str, en: &str) -> Vec<&'a serde_json::Value> {
@@ -2232,7 +2299,10 @@ fn importar_pack_para(
     }
 
     let mut erros: Vec<String> = Vec::new();
-    let mut avisos: Vec<String> = Vec::new();
+    // Avisos POR ITEM vão para cá e são cortados no fim (teto 30). Os de
+    // RESUMO (A+A, repetidas, equips) são montados depois e entram na frente.
+    let mut avisos_item: Vec<String> = Vec::new();
+    let mut avisos_omitidos: usize = 0;
 
     // ID repetido dentro do próprio pack = pack inválido (nada é importado).
     for (lista, rotulo) in [(&lista_cartas, "Carta"), (&lista_duelistas, "Duelista"), (&lista_decks, "Deck")] {
@@ -2271,7 +2341,7 @@ fn importar_pack_para(
         // Aviso não barra o import (ex.: carta citando efeito que o projeto
         // ainda não tem) — erro barra tudo, sem mexer em nada.
         for a in so_avisos(&revisao) {
-            avisos.push(format!("Carta \"{id}\": {}", a.mensagem));
+            empurra_aviso(&mut avisos_item, &mut avisos_omitidos, format!("Carta \"{id}\": {}", a.mensagem));
         }
         let errs = so_erros(&revisao);
         if errs.is_empty() {
@@ -2290,7 +2360,7 @@ fn importar_pack_para(
         // Mesmo tratamento das cartas: aviso (pack sem o deck citado) viaja
         // na lista de avisos; só ERRO recusa o pack inteiro.
         for a in so_avisos(&revisao) {
-            avisos.push(format!("Duelista \"{id}\": {}", a.mensagem));
+            empurra_aviso(&mut avisos_item, &mut avisos_omitidos, format!("Duelista \"{id}\": {}", a.mensagem));
         }
         let errs = so_erros(&revisao);
         if errs.is_empty() {
@@ -2307,7 +2377,7 @@ fn importar_pack_para(
         let id = d.get("id").and_then(|v| v.as_str()).unwrap_or("?").to_string();
         let revisao = checar_deck(d, &Catalogo::de_set(&todas_cartas));
         for a in so_avisos(&revisao) {
-            avisos.push(format!("Deck \"{id}\": {}", a.mensagem));
+            empurra_aviso(&mut avisos_item, &mut avisos_omitidos, format!("Deck \"{id}\": {}", a.mensagem));
         }
         let errs = so_erros(&revisao);
         if errs.is_empty() {
@@ -2460,18 +2530,37 @@ fn importar_pack_para(
             .map_err(|m| format!("{m} {ajuda_backup}"))?;
     }
 
+    // Avisos de RESUMO: o que o pack tinha e foi ignorado DE PROPÓSITO. São no
+    // máximo 3 linhas e entram PRIMEIROS na lista (o corte de 30 é dos avisos
+    // por item) — são as coisas que o usuário precisa ler depois de importar.
+    let mut avisos: Vec<String> = Vec::new();
     if fusoes_mesma > 0 {
-        avisos.push(format!("{fusoes_mesma} fusões com A e B iguais ignoradas (fusão precisa de duas cartas diferentes — esse dado nunca dispara)."));
+        avisos.push(frase_fusao_mesma(fusoes_mesma));
     }
     if fusoes_repetidas > 0 {
-        avisos.push(format!("{fusoes_repetidas} fusões repetidas dentro do próprio pack puladas (mesmo par + resultado)."));
+        avisos.push(frase_fusao_repetida(fusoes_repetidas));
     }
     let equips_ignorados = match pack.get("equips") {
         Some(serde_json::Value::Array(lista)) => lista.len(),
         _ => 0,
     };
     if equips_ignorados > 0 {
-        avisos.push(format!("{equips_ignorados} pares equip→monstro ignorados (sem schema V1 — o jogo ignora; viram schema formal depois)."));
+        avisos.push(format!(
+            "{equips_ignorados} pares equip→monstro ignorados (sem schema V1 — o jogo ignora; viram schema formal depois)."
+        ));
+    }
+
+    // Completa com os avisos por item até o teto e diz o que sobrou (mesmo
+    // texto "…e mais N" dos erros): 722 cartas x 1 aviso = 722 linhas, não
+    // cabe numa tela e o que importa está no resumo acima.
+    let total_item = avisos_item.len();
+    let cabem = total_item.min(TOPO_AVISOS.saturating_sub(avisos.len()));
+    avisos.extend(avisos_item.into_iter().take(cabem));
+    let restantes = avisos_omitidos + (total_item - cabem);
+    if restantes > 0 {
+        avisos.push(format!(
+            "…e mais {restantes} aviso(s) não mostrados aqui (o resumo está na mensagem acima)."
+        ));
     }
 
     let mut partes: Vec<String> = Vec::new();
@@ -2494,8 +2583,20 @@ fn importar_pack_para(
     if removidos > 0 {
         mensagem.push_str(&format!(" {removidos} item(ns) antigo(s) removido(s)."));
     }
-    if fusoes_puladas + regras_puladas > 0 {
-        mensagem.push_str(&format!(" {} repetido(s) do próprio pack pulado(s).", fusoes_puladas + regras_puladas));
+    // Os dois contadores são SEPARADOS de propósito: "A+A" (mesma carta dos dois
+    // lados, dado que nunca dispara) não é repetição. Antes os dois iam somados
+    // num "N repetido(s) do próprio pack pulado(s)" que mandava o usuário
+    // procurar no pack uma repetição que não existia.
+    if fusoes_mesma > 0 {
+        mensagem.push(' ');
+        mensagem.push_str(&frase_fusao_mesma(fusoes_mesma));
+    }
+    if fusoes_repetidas > 0 {
+        mensagem.push(' ');
+        mensagem.push_str(&frase_fusao_repetida(fusoes_repetidas));
+    }
+    if regras_puladas > 0 {
+        mensagem.push_str(&format!(" {regras_puladas} regras repetidas dentro do próprio pack foram puladas."));
     }
     mensagem.push_str(&format!(" backup em {rotulo}."));
 
@@ -2505,11 +2606,11 @@ fn importar_pack_para(
         decks: n_decks,
         fusoes_novas,
         fusoes_puladas,
+        fusoes_mesma,
         regras_novas,
         regras_puladas,
         equips_ignorados,
         backups: vec![rotulo],
-        erros: Vec::new(),
         avisos,
         mensagem,
     })
@@ -2737,7 +2838,8 @@ fn preparar_boot_para(proj: &std::path::Path) -> Result<ResultadoBoot, String> {
     if proj.join("backups").exists() {
         let _ = std::fs::remove_dir_all(proj.join("backups"));
     }
-    // Recria o esqueleto vazio (pastas + fusions/effects vazios válidos).
+    // Recria o esqueleto vazio e COMPLETO: pastas + .gitkeep (para as pastas
+    // continuarem rastreáveis no git) + fusions/effects vazios válidos.
     garantir_projeto(proj)?;
     Ok(ResultadoBoot {
         limpou: true,
@@ -3542,8 +3644,14 @@ mod testes {
         assert_eq!(r.decks, 1);
         assert_eq!(r.fusoes_novas, 1);
         assert_eq!(r.fusoes_puladas, 1);
+        // A única fusão pulada é o MESMO par de novo (não é A+A): a mensagem
+        // tem que falar de repetida e não inventar "repetido do próprio pack"
+        // para o A+A (que é o que o texto antigo fazia).
+        assert_eq!(r.fusoes_mesma, 0);
+        assert!(r.mensagem.contains("repetida dentro do próprio pack"), "{}", r.mensagem);
+        assert!(!r.mensagem.contains("repetido(s) do próprio pack"), "texto antigo voltou: {}", r.mensagem);
+        assert!(!r.mensagem.contains("nunca disparam"), "não tem A+A neste pack: {}", r.mensagem);
         assert_eq!(r.equips_ignorados, 1);
-        assert!(r.erros.is_empty());
         assert_eq!(r.backups.len(), 1);
         assert!(r.mensagem.contains("backup em"));
         assert!(r.mensagem.contains("substituído"));
@@ -3569,6 +3677,80 @@ mod testes {
         assert!(backup.join("duelists").join("duelist_velho.json").is_file());
         assert!(backup.join("decks").join("deck_velho.json").is_file());
         assert!(backup.join("fusions.json").is_file());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    // A+A (mesma carta nos dois lados) NÃO é repetição: é dado que nunca
+    // dispara no jogo. A mensagem antiga somava as duas coisas e dizia
+    // "N repetido(s) do próprio pack pulado(s)" — o usuário ia procurar no
+    // pack uma repetição que não existia (no pack FM: 0 repetidas, 50 A+A).
+    #[test]
+    fn importar_pack_separa_a_mais_a_de_repetida() {
+        let dir = pasta_teste_import("a-mais-a");
+        let caminho_fusoes = dir.join("fusions.json");
+        escrever_json_valor(&caminho_fusoes, &serde_json::json!({"schema_version": 1, "recipes": [], "rules": []}), "fusoes").unwrap();
+
+        let mut pack = pack_teste();
+        pack["fusoes"]["recipes"].as_array_mut().unwrap().push(serde_json::json!({
+            "id": "fusion_aa",
+            "input": {"card_a": "card_pack_nova", "card_b": "card_pack_nova"},
+            "result": "card_pack_nova"
+        }));
+        let r = importar_pack_para(
+            &pack,
+            &dir.join("cards"),
+            &dir.join("duelists"),
+            &dir.join("decks"),
+            &caminho_fusoes,
+            &sem_efeitos(),
+        )
+        .unwrap();
+        // 1 repetida (mesmo par) + 1 A+A = 2 puladas, contadas à parte.
+        assert_eq!(r.fusoes_novas, 1);
+        assert_eq!(r.fusoes_puladas, 2);
+        assert_eq!(r.fusoes_mesma, 1);
+        assert!(r.mensagem.contains("1 fusão com a mesma carta nos dois lados foi ignorada"), "{}", r.mensagem);
+        assert!(r.mensagem.contains("nunca dispara no jogo"), "{}", r.mensagem);
+        assert!(r.mensagem.contains("1 fusão repetida dentro do próprio pack foi pulada"), "{}", r.mensagem);
+        assert!(!r.mensagem.contains("repetido(s) do próprio pack"), "texto antigo voltou: {}", r.mensagem);
+        // O resumo (A+A) é a PRIMEIRA linha dos avisos, e é aviso de novo.
+        assert!(r.avisos[0].contains("nunca dispara no jogo"), "{:?}", r.avisos);
+        assert!(r.avisos[1].contains("repetida dentro do próprio pack"), "{:?}", r.avisos);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    // Aviso é uma linha inteira na tela e existe um por carta: pack grande
+    // (o FM são 722 cartas) gerava centenas. Teto de 30 + linha "…e mais N",
+    // igual ao teto de erros.
+    #[test]
+    fn importar_pack_corta_aviso_no_teto() {
+        let dir = pasta_teste_import("teto-aviso");
+        let caminho_fusoes = dir.join("fusions.json");
+        escrever_json_valor(&caminho_fusoes, &serde_json::json!({"schema_version": 1, "recipes": [], "rules": []}), "fusoes").unwrap();
+
+        // 40 cartas, cada uma citando 1 efeito que o projeto não tem
+        // (projeto vazio = aviso, não erro — o pack entra inteiro).
+        let mut cartas: Vec<serde_json::Value> = Vec::new();
+        for i in 0..40 {
+            let mut c = carta_pack_valida(&format!("card_aviso_{i}"), "Aviso");
+            c["effects"] = serde_json::json!(["fx_que_nao_existe"]);
+            cartas.push(c);
+        }
+        let pack = serde_json::json!({"schema_version": 1, "cartas": cartas});
+        let r = importar_pack_para(
+            &pack,
+            &dir.join("cards"),
+            &dir.join("duelists"),
+            &dir.join("decks"),
+            &caminho_fusoes,
+            &sem_efeitos(),
+        )
+        .unwrap();
+        assert_eq!(r.cartas, 40, "aviso não pode barrar o import");
+        assert_eq!(r.avisos.len(), 31, "30 avisos + a linha do que sobrou: {:?}", r.avisos);
+        assert!(!r.avisos[0].contains("mais"), "a linha do excesso tem que vir por último");
+        let ultima = r.avisos.last().unwrap();
+        assert!(ultima.contains("…e mais 10 aviso(s)"), "{ultima}");
         let _ = std::fs::remove_dir_all(&dir);
     }
 
@@ -3776,6 +3958,53 @@ mod testes {
         let _ = std::fs::remove_dir_all(&base);
     }
 
+    #[test]
+    fn boot_devolve_os_gitkeep_do_esqueleto() {
+        // Bug do "abrir o app suja o git": o boot (D29) apaga o conteúdo E o
+        // .gitkeep das pastas de arte (`apagar_tudo_da_pasta` não faz ideia do
+        // que é marcador), e o esqueleto voltava só com as pastas. Pasta sem
+        // .gitkeep some do git, então todo `git status` mostrava os .gitkeep
+        // como DELETADOS só de abrir o Studio.
+        //
+        // A lista abaixo é a que `git ls-files astralis-studio/projects/default/`
+        // devolve — de propósito NÃO é a constante PASTAS_ESQUELETO: se alguém
+        // tirar uma pasta de lá, este teste quebra. É o contrato com o repo.
+        let com_gitkeep = [
+            "arenas", "assets/backgrounds", "assets/cards", "assets/portraits",
+            "cards", "decks", "duelists", "scenes",
+        ];
+        let base = projeto_boot_teste("gitkeep");
+        // Conteúdo de verdade, para o boot ter o que apagar (D29).
+        escrever_json_valor(&base.join("cards").join("card_x.json"), &carta_pack_valida("card_x", "X"), "base").unwrap();
+        std::fs::write(base.join("assets").join("cards").join("arte_x.png"), b"png").unwrap();
+        // O esqueleto já nasce rastreável.
+        for sub in com_gitkeep {
+            assert!(base.join(sub).join(".gitkeep").is_file(), "{sub} devia nascer com .gitkeep");
+        }
+        // Cenário do bug: o boot come o .gitkeep de assets/cards, e alguém mexeu
+        // no de cards/ na mão. Depois do boot TODOS têm que estar de volta.
+        std::fs::remove_file(base.join("assets").join("cards").join(".gitkeep")).unwrap();
+        std::fs::remove_file(base.join("cards").join(".gitkeep")).unwrap();
+
+        let r = preparar_boot_para(&base).unwrap();
+        assert!(r.limpou, "projeto cheio devia limpar");
+        for sub in com_gitkeep {
+            let marca = base.join(sub).join(".gitkeep");
+            assert!(base.join(sub).is_dir(), "{sub} devia existir depois do boot");
+            assert!(marca.is_file(), "{sub}/.gitkeep devia VOLTAR depois do boot (senão a pasta some do git)");
+            assert_eq!(marca.metadata().unwrap().len(), 0, "{sub}/.gitkeep devia ser o marcador vazio");
+        }
+        // D29 intacto: o conteúdo foi mesmo, e nada ficou guardado.
+        assert!(!base.join("cards").join("card_x.json").exists(), "a carta devia ter sido apagada");
+        assert!(!base.join("assets").join("cards").join("arte_x.png").exists(), "a arte devia ter sido apagada");
+        assert!(!base.join("backups").exists(), "boot não devia deixar backups/ de pé");
+        // Regra da creación: .gitkeep que JÁ existe não é sobrescrito.
+        std::fs::write(base.join("decks").join(".gitkeep"), b"intacto").unwrap();
+        garantir_projeto(&base).unwrap();
+        assert_eq!(std::fs::read(base.join("decks").join(".gitkeep")).unwrap(), b"intacto");
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
     // ---- Duelo rápido: --setup temporário com nome único + limpeza ----
 
     #[test]
@@ -3897,7 +4126,7 @@ mod testes {
         assert_eq!(guardado.len(), DIAG_MAX_LINHAS);
         // Sobrou a cauda: as 3 do primeiro lote caíram fora e o começo do lote
         // de 600 também (o que é velho some, o que é novo fica).
-        assert!(guardado[0].contains("evento 100"), "primeira linha guardada: {}", guardado[0]);
+        assert_eq!(guardado[0].contains("evento 100"), true, "primeira linha guardada: {}", guardado[0]);
         assert!(guardado[DIAG_MAX_LINHAS - 1].contains("evento 599"), "última linha guardada: {}", guardado[DIAG_MAX_LINHAS - 1]);
     }
 }

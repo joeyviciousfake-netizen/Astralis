@@ -100,12 +100,26 @@
     <p class="text-xs text-zinc-400">{enviando ? "enviando…" : rotulo}</p>
     <p class="mt-0.5 text-[10px] text-zinc-600">PNG até 5 MB • vira cinza automático se faltar</p>
   {/if}
-  <input
-    bind:this={inputEl}
-    type="file"
-    accept="image/png,.png"
-    class="hidden"
-    onchange={(e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) void enviarArquivo(f); (e.target as HTMLInputElement).value = ""; }}
-  />
 </div>
+<!-- Seletor de arquivo: tem que estar RENDERIZADO, só invisível.
+     O `class="hidden"` do Tailwind é display:none, e existem versões de
+     WebView2 em que input.click() num input com display:none NÃO abre o
+     diálogo (sintoma: cliquei e nada aconteceu). Este padrão (1px,
+     opacity 0, pointer-events none) continua invisível para o usuário e
+     funciona em todos os WebView2; tabindex/aria-hidden tiram o input
+     invisível do tab order (a div visível é o controle).
+     NÃO voltar para display:none.
+     E fica FORA da div de propósito: input.click() dispara um evento de
+     clique que sobe até os ancestrais, e a div é clicável (chama click()
+     de novo) — dentro dela isso vira reentrada. Como a div chama
+     `inputEl?.click()` e o input é irmão dela, o caminho é de mão única. -->
+<input
+  bind:this={inputEl}
+  type="file"
+  accept="image/png,.png"
+  class="fixed left-0 top-0 h-px w-px opacity-0 pointer-events-none"
+  tabindex="-1"
+  aria-hidden="true"
+  onchange={(e) => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) void enviarArquivo(f); (e.target as HTMLInputElement).value = ""; }}
+/>
 {#if msg}<p class="mt-1 text-[11px] {ok ? 'text-emerald-300' : 'text-amber-300'}">{msg}</p>{/if}

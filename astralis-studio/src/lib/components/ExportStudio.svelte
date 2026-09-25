@@ -42,16 +42,28 @@
   // Precisa do app (escreve arquivos): no navegador é só leitura.
   type ResumoPack = {
     cartas: number; duelistas: number; decks: number;
-    fusoes_novas: number; fusoes_puladas: number;
+    fusoes_novas: number; fusoes_puladas: number; fusoes_mesma: number;
     regras_novas: number; regras_puladas: number;
     equips_ignorados: number; backups: string[];
-    erros: string[]; avisos: string[]; mensagem: string;
+    avisos: string[]; mensagem: string;
   };
   let arquivoPack: HTMLInputElement | null = $state(null);
   let importando = $state(false);
   let impMsg = $state("");
   let impOk = $state(false);
   let resumo = $state<ResumoPack | null>(null);
+
+  // Aviso é uma linha inteira aqui, e existe um por carta/duelista/deck. O Rust
+  // já corta em 30 (teto igual ao dos erros), mas a tela não depende disso:
+  // mostra os 30 primeiros e o resto vira contagem.
+  const AVISOS_MAX = 30;
+  let avisosVisiveis = $derived(resumo ? resumo.avisos.slice(0, AVISOS_MAX) : []);
+  let avisosRestantes = $derived(resumo ? resumo.avisos.length - avisosVisiveis.length : 0);
+  // Repetida de verdade = pulada menos as A+A (mesma carta nos dois lados, que
+  // nunca disparam no jogo). Os dois contadores NÃO podem virar um só: o texto
+  // antigo ("N repetidos do próprio pack") mandava o usuário caçar uma
+  // repetição que não existia — no pack FM eram 0 repetidas e 50 A+A.
+  let fusoesRepetidas = $derived(resumo ? resumo.fusoes_puladas - resumo.fusoes_mesma : 0);
 
   function emTauri(): boolean {
     return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
@@ -74,7 +86,11 @@
       const conteudo = await arq.text();
       const r: ResumoPack = await invokeSave("importar_pack", { conteudo, nome: arq.name }, 180000);
       resumo = r;
-      impOk = r.erros.length === 0;
+      // Sem lista de erros no Ok: o Rust recusa o pack INTEIRO quando acha erro
+      // (aí vem pelo Err e cai no catch, em âmbar). Chegou aqui = pack inteiro
+      // passou. O campo `erros` que existia no Rust era Vec::new() fixo e o
+      // `{#each}` que consumia era código morto.
+      impOk = true;
       impMsg = r.mensagem;
       // Listas mudaram no disco: recarrega tudo para a tela mostrar o novo dado.
       try {
@@ -140,7 +156,23 @@
         <p class="text-[11px] text-zinc-500">Escolhe um .json pack: valida tudo antes, faz backup automático e SUBSTITUI o conteúdo do projeto (só dado, nada de jogo)</p>
       </div>
     </div>
-    <input bind:this={arquivoPack} type="file" accept=".json,application/json" class="hidden" onchange={aoEscolherPack} />
+    <!-- Seletor de arquivo: tem que estar RENDERIZADO, só invisível.
+         O `class="hidden"` do Tailwind é display:none, e existem versões de
+         WebView2 em que input.click() num input com display:none NÃO abre o
+         diálogo (sintoma: cliquei e nada aconteceu). Este padrão (1px,
+         opacity 0, pointer-events none) continua invisível para o usuário e
+         funciona em todos os WebView2; tabindex/aria-hidden tiram o input
+         invisível do tab order (o botão visível é o controle).
+         NÃO voltar para display:none. -->
+    <input
+      bind:this={arquivoPack}
+      type="file"
+      accept=".json,application/json"
+      class="fixed left-0 top-0 h-px w-px opacity-0 pointer-events-none"
+      tabindex="-1"
+      aria-hidden="true"
+      onchange={aoEscolherPack}
+    />
     <button
       class="mt-3 w-full py-3 rounded-2xl bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold shadow-lg shadow-sky-600/20 transition disabled:opacity-50"
       disabled={importando}
@@ -151,18 +183,23 @@
       <div class="mt-2 rounded-xl border border-zinc-800 divide-y divide-zinc-800/60 overflow-hidden">
         <div class="px-3 py-2 bg-zinc-900/40 text-xs">
           <span class="font-bold">{resumo.cartas} cartas, {resumo.duelistas} duelistas, {resumo.decks} decks, {resumo.fusoes_novas} fusões substituídos</span>{#if resumo.regras_novas}<span> (+ {resumo.regras_novas} regras)</span>{/if}
-          {#if resumo.fusoes_puladas + resumo.regras_puladas}<span class="text-zinc-400"> • {resumo.fusoes_puladas + resumo.regras_puladas} repetidos do próprio pack (pulados)</span>{/if}
+          {#if resumo.fusoes_mesma}<span class="text-zinc-400"> • {resumo.fusoes_mesma} fusões com a mesma carta nos dois lados foram ignoradas (nunca disparam no jogo)</span>{/if}
+          {#if fusoesRepetidas}<span class="text-zinc-400"> • {fusoesRepetidas} fusões repetidas dentro do próprio pack foram puladas (mesmo par + resultado)</span>{/if}
           {#if resumo.equips_ignorados}<span class="text-zinc-400"> • {resumo.equips_ignorados} equips ignorados (sem schema V1)</span>{/if}
         </div>
         {#if resumo.backups.length}
           <p class="px-3 py-2 text-[11px] text-zinc-400 bg-zinc-900/40">💾 backup em {resumo.backups.join(" • ")}</p>
         {/if}
-        {#each resumo.avisos as av (av)}
+        <!-- Chave pelo ÍNDICE, não pelo texto: dois avisos idênticos (o mesmo
+             "não existe neste projeto" em 40 cartas) quebravam o Svelte, que
+             exige chave única. A lista é reescrita inteira a cada import e
+             nunca é reordenada, então o índice é a chave estável. -->
+        {#each avisosVisiveis as av, i (i)}
           <p class="px-3 py-2 text-[11px] text-sky-300 bg-zinc-900/40">ℹ {av}</p>
         {/each}
-        {#each resumo.erros as er (er)}
-          <p class="px-3 py-2 text-[11px] text-rose-300 bg-zinc-900/40">✕ {er}</p>
-        {/each}
+        {#if avisosRestantes > 0}
+          <p class="px-3 py-2 text-[11px] text-zinc-400 bg-zinc-900/40">…e mais {avisosRestantes} aviso(s) não mostrados aqui (o resumo está na mensagem acima).</p>
+        {/if}
       </div>
     {/if}
   </div>

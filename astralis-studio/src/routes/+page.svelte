@@ -4,7 +4,7 @@
   // Projeto do editor abre VAZIO (D29) e só enche por Importar pack. Cartas
   // (JSON real), Duelistas/Decks (leitura), Efeitos, Fusões, Cenas, Exportar.
   // Jogar lança o Astralis de verdade (preview unificado, doc 10).
-  import { onMount } from "svelte";
+  import { onMount, tick } from "svelte";
   import { invoke } from "@tauri-apps/api/core";
   import { useCards } from "$lib/stores/cards.svelte";
   import CardStudio from "$lib/components/CardStudio.svelte";
@@ -84,8 +84,22 @@
     } catch (e) { playFlash.flashSave(errMsg(e), false); }
   }
 
-  function irImportar() {
+  // Botão "Importar" (cabeçalho e faixa de projeto vazio): vai para a aba
+  // Exportar e manda o ExportStudio abrir o seletor de arquivo.
+  //
+  // DEF-1 (bug "cliquei em Importar e não aconteceu nada"): o painel Exportar
+  // só MONTA na primeira visita à aba (lazy-mount, por performance: as 8 abas
+  // juntas travavam o navegador com 25 mil receitas) e o listener do
+  // "astralis:importar-pack" é registrado no onMount dele. Disparar o evento
+  // no mesmo tick do setTab jogava o evento no vazio: a aba trocava (o usuário
+  // via a tela Exportar) e abrirImportacao nunca rodava. O await tick() espera
+  // o Svelte aplicar a troca de aba e rodar o onMount do painel antes do
+  // disparo — um evento só, então o seletor abre uma vez.
+  // NÃO remova o await e NÃO troque por montagem-eager: são essas duas coisas
+  // que desfazem o import ou a performance.
+  async function irImportar() {
     setTab("export");
+    await tick();
     window.dispatchEvent(new CustomEvent("astralis:importar-pack"));
   }
 
