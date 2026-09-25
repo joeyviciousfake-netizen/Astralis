@@ -60,6 +60,65 @@ static func setup_override_path() -> String:
 	return ""
 
 
+static func project_override_path() -> String:
+	# Lê --project <pasta> (ou --project=<pasta>) dos args de usuário.
+	# Retorna "" se não foi passado. Só leitura de CLI, sem regra nova.
+	var args: PackedStringArray = OS.get_cmdline_user_args()
+	for i in range(args.size()):
+		var a := String(args[i])
+		if a == "--project" and i + 1 < args.size():
+			return _limpar_caminho(String(args[i + 1]))
+		if a.begins_with("--project="):
+			return _limpar_caminho(a.trim_prefix("--project="))
+	return ""
+
+
+static func _resolver_abs(p: String) -> String:
+	# Vira caminho absoluto do SO. Relativo = relativo à raiz do repo
+	# (de onde o Godot é chamado). res:// e user:// viram disco.
+	var r := _limpar_caminho(p)
+	if r.is_empty():
+		return ""
+	if r.begins_with("res://") or r.begins_with("user://"):
+		return ProjectSettings.globalize_path(r).simplify_path()
+	if r.is_absolute_path():
+		return r.simplify_path()
+	var repo: String = ProjectSettings.globalize_path("res://").path_join("..").simplify_path()
+	return repo.path_join(r).simplify_path()
+
+
+static func pasta_projeto_valida(p: String) -> bool:
+	# Pasta de projeto válida = existe e tem cara de projeto Astralis
+	# (ao menos 1 marcador: cards/, duelists/, decks/, arenas/ ou
+	# duel_setup.json/fusions.json/effects.json). Sem mudar regra/schema.
+	var abs := _resolver_abs(p)
+	if abs.is_empty() or not DirAccess.dir_exists_absolute(abs):
+		return false
+	for sub in ["cards", "duelists", "decks", "arenas"]:
+		if DirAccess.dir_exists_absolute(abs.path_join(sub)):
+			return true
+	for arq in ["duel_setup.json", "fusions.json", "effects.json"]:
+		if FileAccess.file_exists(abs.path_join(arq)):
+			return true
+	return false
+
+
+static func project_base_dir() -> String:
+	# Com --project válido, TUDO (cartas, duelistas, decks, fusões,
+	# arenas, duel_setup, efeitos) é lido de lá; sem o argumento,
+	# tudo como hoje (pasta examples/ embutida). Pasta inexistente
+	# ou inválida = avisa em PT-BR e usa a embutida. Sem regra/schema.
+	var pedido := project_override_path()
+	if pedido.is_empty():
+		return starter_kit_dir()
+	var abs := _resolver_abs(pedido)
+	if pasta_projeto_valida(pedido):
+		print("[DataLoader] --project usando: " + abs)
+		return abs
+	print("[DataLoader] Aviso: --project ignorado (pasta inexistente ou inválida): " + pedido + " — usando embutida.")
+	return starter_kit_dir()
+
+
 static func _limpar_caminho(p: String) -> String:
 	var r := p.strip_edges()
 	if r.length() >= 2 and r.begins_with('"') and r.ends_with('"'):
@@ -68,12 +127,15 @@ static func _limpar_caminho(p: String) -> String:
 
 
 static func load_starter_kit() -> Dictionary:
-	var base: String = starter_kit_dir()
+	# Base = pasta do --project (se válido) ou examples/ embutida.
+	# O --setup continua valendo por cima (só troca o duel_setup).
+	var base: String = project_base_dir()
 	var cards: Dictionary = {}
 	var duelists: Dictionary = {}
 	var decks: Dictionary = {}
 	var fusions: Dictionary = {}
 	var effects: Dictionary = {}
+	var arenas: Dictionary = {}
 	var duel_setup: Dictionary = {}
 	var load_errors: Array = []
 
@@ -119,6 +181,15 @@ static func load_starter_kit() -> Dictionary:
 	else:
 		load_errors.append(String(rs.get("error", "")))
 
+	# Arenas (só DADO p/ o desenho, nunca regra — D24/R3).
+	# Pasta arenas/ ausente = silêncio (a mesa usa a grade padrão);
+	# só arquivo quebrado vira erro. Sem mudar regra/schema.
+	var ra: Dictionary = _load_folder(base.path_join("arenas"))
+	arenas = ra.get("items", {})
+	for e in ra.get("erros", []):
+		if not String(e).begins_with("Pasta não encontrada"):
+			load_errors.append(String(e))
+
 	# Override via CLI p/ o Studio lançar duelos sem sobrescrever o starter.
 	# Se --setup foi passado e o arquivo existe e é um objeto válido, usa-o;
 	# senão, mantém o comportamento atual (starter). Sem mudar regra/schema/ID.
@@ -137,6 +208,7 @@ static func load_starter_kit() -> Dictionary:
 		"decks": decks,
 		"fusions": fusions,
 		"effects": effects,
+		"arenas": arenas,
 		"duel_setup": duel_setup,
 		"load_errors": load_errors,
 		"base_dir": base,

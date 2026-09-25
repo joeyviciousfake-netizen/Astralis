@@ -23,6 +23,8 @@ const Y_VOCE_MAGIA := 789.0
 
 const NULO := Vector2(-99999, -99999)
 
+const DataLoaderScript := preload("res://core/data_loader.gd")
+
 ## Mão (só DESENHO, nunca regra). Centro X editável esq/dir no JSON,
 ## step = distância entre cartas, y = topo da carta em 1920x1080.
 ## Fallback quando a arena não tem "hand" (arena antiga continua válida).
@@ -179,6 +181,22 @@ static func default_layout() -> Dictionary:
 static func starter_arena_path() -> String:
 	var res_dir: String = ProjectSettings.globalize_path("res://")
 	return res_dir.path_join("../schemas/examples/arenas/arena_starter.json").simplify_path()
+
+
+## Caminho da arena <arena_id>.json na pasta do --project (se válido)
+## ou na embutida. Sem --project (ou pasta inválida), volta o starter
+## de sempre. Nunca quebra: ausente cai na grade padrão em load_arena_data.
+static func project_arena_path(arena_id: String = "arena_starter") -> String:
+	var aid := arena_id.strip_edges()
+	if aid.is_empty():
+		aid = "arena_starter"
+	var base: String = DataLoaderScript.project_base_dir()
+	var cand: String = base.path_join("arenas").path_join(aid + ".json")
+	if FileAccess.file_exists(cand):
+		return cand
+	if base != DataLoaderScript.starter_kit_dir():
+		print("[ARENA] Arena '%s' não achada no --project, usando embutida." % aid)
+	return starter_arena_path()
 
 
 ## Converte valor do layout em Vector2. Aceita Vector2, Array [x,y] ou Dict {x,y}.

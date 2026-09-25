@@ -158,7 +158,12 @@ func _ready() -> void:
 	move_child(_camada_campo, 1)
 	_montar_painel()
 	_criar_cursor()
-	_arena_data = BoardLayoutScript.load_arena_data(BoardLayoutScript.starter_arena_path())
+	var state: Dictionary = ProjectLoaderScript.load_initial_state()
+	var data: Dictionary = state.get("data", {})
+	# Arena do duel_setup (só DESENHO): com --project válido sai da pasta
+	# informada; sem o argumento (ou pasta inválida), da embutida.
+	var arena_id := str((data.get("duel_setup", {}) as Dictionary).get("arena_id", "arena_starter"))
+	_arena_data = BoardLayoutScript.load_arena_data(BoardLayoutScript.project_arena_path(arena_id))
 	_arena_layout = (_arena_data.get("slots", {}) as Dictionary)
 	if _arena_layout.is_empty():
 		print("[TABLE] Aviso: arena não carregou, usando grade padrão.")
@@ -166,8 +171,6 @@ func _ready() -> void:
 		var h0: Dictionary = BoardLayoutScript.get_hand(_arena_data, 0)
 		var h1: Dictionary = BoardLayoutScript.get_hand(_arena_data, 1)
 		print("[TABLE] Arena carregada: %d slots + mão p0(%d,%d,%d) p1(%d,%d,%d)." % [_arena_layout.size(), int(h0["x"]), int(h0["y"]), int(h0["step"]), int(h1["x"]), int(h1["y"]), int(h1["step"])])
-	var state: Dictionary = ProjectLoaderScript.load_initial_state()
-	var data: Dictionary = state.get("data", {})
 	_duel = DuelManagerScript.new_duel(data.get("duel_setup", {}), data.get("decks", {}), data.get("cards", {}))
 	_st = _duel.get_state()
 	_cartas = data.get("cards", {})
@@ -299,10 +302,10 @@ func _fala(texto: String) -> void:
 	print("[TABLE] " + texto)
 
 
-## FUSÕES (só DADO, nunca regra): lê fusions.json do Starter.
-## A regra mora no FusionSystem real; aqui só carrega p/ passar adiante.
+## FUSÕES (só DADO, nunca regra): lê fusions.json da pasta do --project
+## (se válido) ou da embutida. A regra mora no FusionSystem real.
 func _carregar_fusoes() -> Dictionary:
-	var base: String = DataLoaderScript.starter_kit_dir()
+	var base: String = DataLoaderScript.project_base_dir()
 	var res: Dictionary = DataLoaderScript.load_json_file(base.path_join("fusions.json"))
 	if not bool(res.get("ok", false)):
 		print("[TABLE] Aviso: fusões não carregaram (%s), sem fusão." % str(res.get("error", "")))
