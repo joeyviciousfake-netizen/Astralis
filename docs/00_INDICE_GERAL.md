@@ -1,6 +1,6 @@
 # ASTRALIS — ÍNDICE GERAL
 
-VERSION: 1.5
+VERSION: 1.7
 STATUS: AUTHORITATIVE (split de `Documentação.md` v1.1 + decisões v1.2/v1.3)
 AUDIENCE: AI AGENTS
 LANGUAGE: PT-BR
