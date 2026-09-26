@@ -63,7 +63,7 @@ def baixar(nome, sub="", tipo="output"):
     return urllib.request.urlopen(f"{BASE}/view?{q}", timeout=120).read()
 
 
-def inpaint_arquivo(up_img, up_mask, prompt, seed=11):
+def inpaint_arquivo(up_img, up_mask, prompt, seed=11, denoise=0.4):
     neg = "deformed, blurry, extra fingers, text, watermark"
     wf = {
         "1": {"class_type": "DiffusersLoader",
@@ -83,7 +83,7 @@ def inpaint_arquivo(up_img, up_mask, prompt, seed=11):
         "8": {"class_type": "KSampler",
               "inputs": {"seed": seed, "steps": 24, "cfg": 5.5,
                          "sampler_name": "euler_ancestral",
-                         "scheduler": "karras", "denoise": 0.55,
+                         "scheduler": "karras", "denoise": denoise,
                          "model": ["1", 0], "positive": ["7", 0],
                          "negative": ["7", 1], "latent_image": ["7", 2]}},
         "9": {"class_type": "VAEDecode",
@@ -129,21 +129,27 @@ def detalhar(img_path, saida=None):
                 pmask = os.path.join(tmp, "mask.png")
                 rec_r.save(pcrop)
                 mw, mh = rec_r.size
+                # mascara JUSTA na caixa detectada (nao no recorte todo):
+                # so mexe na mao, o resto nem e tocado
+                sx = mw / rec.width
                 m = Image.new("L", (mw, mh), 0)
                 from PIL import ImageDraw
                 d = ImageDraw.Draw(m)
-                d.ellipse([mw * 0.12, mh * 0.12, mw * 0.88, mh * 0.88], fill=255)
+                bx0 = (x1 - qx0) * sx - mw * 0.08
+                by0 = (y1 - qy0) * sx - mh * 0.08
+                bx1 = (x2 - qx0) * sx + mw * 0.08
+                by1 = (y2 - qy0) * sx + mh * 0.08
+                d.rounded_rectangle([bx0, by0, bx1, by1], radius=18, fill=255)
                 m.save(pmask)
                 up_c = upload_img(pcrop, "det_crop.png")
                 up_m = upload_img(pmask, "det_mask.png")
                 res = inpaint_arquivo(up_c, up_m, prompt)
                 novo = Image.open(io.BytesIO(baixar(res["filename"]))).convert("RGB")
                 novo = novo.resize(rec.size)
-                alfa = Image.new("L", rec.size, 0)
+                alfa = Image.new("L", (mw, mh), 0)
                 da = ImageDraw.Draw(alfa)
-                da.ellipse([rec.width * 0.18, rec.height * 0.18,
-                            rec.width * 0.82, rec.height * 0.82], fill=255)
-                alfa = alfa.filter(ImageFilter.GaussianBlur(14))
+                da.rounded_rectangle([bx0, by0, bx1, by1], radius=18, fill=255)
+                alfa = alfa.resize(rec.size).filter(ImageFilter.GaussianBlur(8))
                 base.paste(novo, (qx0, qy0), alfa)
                 achados += 1
         print(f"{modelo}: {achados} regiao(oes) refeita(s)", flush=True)
