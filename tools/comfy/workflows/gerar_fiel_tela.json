@@ -122,7 +122,7 @@
    32,
    0,
    6,
-   8,
+   1,
    "CONDITIONING"
   ],
   [
@@ -130,7 +130,7 @@
    32,
    1,
    6,
-   9,
+   2,
    "CONDITIONING"
   ],
   [
@@ -138,7 +138,7 @@
    5,
    0,
    6,
-   10,
+   3,
    "LATENT"
   ],
   [
@@ -172,7 +172,6 @@
    "id": 1,
    "mode": 0,
    "order": 1,
-   "inputs": [],
    "outputs": [
     {
      "links": [
@@ -388,7 +387,6 @@
    "id": 5,
    "mode": 0,
    "order": 5,
-   "inputs": [],
    "outputs": [
     {
      "links": [
@@ -422,7 +420,6 @@
    "id": 20,
    "mode": 0,
    "order": 20,
-   "inputs": [],
    "outputs": [
     {
      "links": [
@@ -454,7 +451,6 @@
    "id": 21,
    "mode": 0,
    "order": 21,
-   "inputs": [],
    "outputs": [
     {
      "links": [
@@ -486,7 +482,6 @@
    "id": 22,
    "mode": 0,
    "order": 22,
-   "inputs": [],
    "outputs": [
     {
      "links": [
@@ -625,7 +620,6 @@
    "id": 30,
    "mode": 0,
    "order": 30,
-   "inputs": [],
    "outputs": [
     {
      "links": [
@@ -657,7 +651,6 @@
    "id": 31,
    "mode": 0,
    "order": 31,
-   "inputs": [],
    "outputs": [
     {
      "links": [
