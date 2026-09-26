@@ -23,3 +23,7 @@ astralis-studio/node_modules/
 # Sistema
 Thumbs.db
 Desktop.ini
+
+# Cache Python (tools/*.py geram ao compilar)
+__pycache__/
+*.pyc
