@@ -79,7 +79,7 @@ f_qa: "QA: (a) CRIOU astralis/testing/astralis_test_base.gd — base unica, 34 h
 
 # ---------- POLÍTICA NOVA CONSOLIDADA: REFERÊNCIAS VISUAIS, PERSONAGENS E IP ----------
 
-f_politica_referencias: "POLITICA CONSOLIDADA (2026-09-26): o Studio nao cria uma restricao adicional propria apenas porque o pedido envolve personagem, franquia, estilo ou outra propriedade intelectual protegida. O Studio preserva a intencao do usuario e transmite o pedido normalmente para a camada de geracao configurada, sem trocar silenciosamente personagem conhecido por 'personagem original', 'inspirado em' ou equivalente. Ao mesmo tempo, nao existem mecanismos de jailbreak, evasao, ofuscacao de nomes, prompt adversarial ou substituicao automatica cujo objetivo seja fazer ComfyUI, modelo ou outro sistema externo ignorar uma politica que ele deliberadamente aplica. O que a camada externa recusar, limitar ou alterar permanece observavel e deve ser registrado, nao mascarado. Referencia de personagem e referencia de estilo sao conceitos distintos e seus pesos devem ser controlaveis e auditaveis. Todo job continua registrando prompt, seed, modelo, LoRA, referencia, peso e workflow exato."
+f_politica_referencias: "POLITICA CONSOLIDADA (2026-09-26): o Studio nao cria uma restricao propria apenas porque o pedido envolve personagem, franquia, estilo, marca, copyright ou outra propriedade intelectual. O Studio preserva a intencao do usuario e nao substitui silenciosamente personagens ou referencias por versoes genericas/originais. A referencia visual pode ser usada conforme o workflow configurado; personagem e estilo sao possibilidades distintas e o peso da referencia deve ser auditavel. Negativos sao parametros de qualidade, nao blacklist de conteudo. O Studio nao altera o pedido para tentar enganar filtros ou protecoes externas: limitacoes pertencentes ao ComfyUI/modelo permanecem nessa camada e devem ser registradas, nao mascaradas."
 
 # ---------- ESTADO ATUAL VERIFICADO (2026-09-25, fim da sessão anterior) ----------
 
@@ -91,7 +91,7 @@ estado_cargo: "101 testes Rust (88 + 13 molde/id). ZERO teste de frontend ainda.
 
 estado_dados: "schemas/examples = 722 fm_* / 39 duelistas / 39 decks (40 cada) / 25081 receitas / 0 regras / arena_starter / duel_fm_abertura 8000LP. pack = 25131 receitas (25081 + 50 A+A que nunca disparam). starter_backup = 40 cartas custom SO de teste. PROJETO DO EDITOR = astralis-studio/projects/default/ (sempre vazio no boot, so via Importar)."
 
-proximo_passo: "No ComfyUI, testar e observar em tela um workflow com referencia de personagem e outro com referencia de estilo, usando somente os caminhos normais do workflow. Conferir que o prompt original, a imagem de referencia, o peso da referencia e o modelo usado aparecem corretamente no job/fluxo, sem reescrita silenciosa do pedido. Registrar qualquer limitacao que venha do proprio ComfyUI ou do modelo, sem tentar contorna-la."
+proximo_passo: "Validar no ComfyUI o novo fluxo de autoria visual: gerar uma imagem com prompt livre, uma com referencia visual e uma com negativo customizado; conferir na tela e no .job.json que nada foi reescrito silenciosamente pelo Studio e que os parametros escolhidos ficaram auditaveis."
 
 # ---------- TRAVAS (regras, nao dividas) ----------
 
@@ -149,9 +149,9 @@ dividas_pendentes:
 
 data_utc: "2026-09-26"
 
-versão_docs: "1.6"
+versão_docs: "1.7"
 
-versão_docs_obs: "Nesta atualizacao foi criada uma politica explicita para referencias visuais e IP: o Studio nao adiciona bloqueios proprios baseados apenas em copyright, nao troca silenciosamente o personagem pedido e nao tenta burlar filtros externos. A camada do workflow/modelo continua responsavel pelas limitacoes que forem proprias dela. O restante das regras e do historico permanece preservado. Versao sobe de 1.5 para 1.6 porque houve mudanca explicita de regra de comportamento do Studio."
+versão_docs_obs: "Atualizacao 1.7: auditoria dos documentos e do pipeline visual removeu referencias que poderiam ser interpretadas como blacklist de personagem/copyright/conteudo. A autoria visual agora e explicitamente livre no Studio; negativos de geracao sao tratados como parametros configuraveis de qualidade, e nao como bloqueio de IP. Travas arquiteturais e de integridade continuam intactas."
  
 # ---------- LOG CURTO (ultimas 11) ----------
 
