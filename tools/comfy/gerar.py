@@ -11,11 +11,13 @@ Modelo padrao: Illustrious-XL-v2.0 (anime, otimo p/ arte de carta).
 --ref <imagem> envia uma referencia p/ o IP-Adapter conforme o workflow configurado — pede Comfy reiniciado apos instalar o node.
 --peso-ref <0..1> forca da referencia (padrao 0.5).
 --negative <texto> substitui o negativo padrao de qualidade; vazio tambem e permitido.
+--raw envia o prompt sem gatilho LoRA nem sufixo automatico de qualidade/TCG.
+--ref-weight-type <tipo> escolhe o `weight_type` do IPAdapterAdvanced; padrao: style transfer precise.
 --ckpt <arquivo> troca a base; --base2 = NoobAI (alternativa p/ humanoides);
    --cfg <n> afina o CFG.
 --detalhar refina mao + rosto com detector (Impact, mais lento).
 --up sobe 2x com UltraSharp (1024 -> 2048, nitido p/ impressao).
- negative padrao de qualidade; nao funciona como blacklist de conteudo.
+ negative padrao de qualidade; nao funciona como blacklist de conteudo. O modo --raw preserva o prompt literal.
 """
 import json
 import os
@@ -55,13 +57,14 @@ def api(method, path, data=None):
 
 def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
           estilo=True, estilo2=False, up=False, ref=None, peso_ref=PESO_REF,
-          ckpt=CKPT, detalhar=False, negative=NEGATIVO_PADRAO):
+          ckpt=CKPT, detalhar=False, negative=NEGATIVO_PADRAO,
+          raw=False, ref_weight_type="style transfer precise"):
     seed = seed if seed is not None else random.randint(0, 2**31 - 1)
     lora_nome, lora_forca, gatilho = LORA_ESTILO, FORCA_ESTILO, GATILHO_ESTILO
     if estilo2:
         estilo, lora_nome = True, LORA_ESTILO2
         lora_forca, gatilho = FORCA_ESTILO2, GATILHO_ESTILO2
-    if estilo:
+    if estilo and not raw:
         prompt_pos = f"{gatilho}, {prompt_pos}"
     modelo_no, clip_no = "1", "2"
     if ref:
@@ -118,7 +121,7 @@ def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
                                "image": ["22", 0],
                                "clip_vision": ["21", 0],
                                "weight": peso_ref,
-                               "weight_type": "style transfer precise",
+                               "weight_type": ref_weight_type,
                                "combine_embeds": "concat",
                                "start_at": 0.0, "end_at": 1.0,
                                "embeds_scaling": "V only"}}
@@ -147,7 +150,8 @@ def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
                 receita = {"trabalho": pid, "seed": seed, "prompt": prompt_pos,
                            "tamanho": [width, height], "lora": lora_nome if estilo else None,
                            "referencia": ref, "peso_ref": peso_ref if ref else None,
-                           "negative": negative, "up": up, "detalhar": detalhar, "base": ckpt,
+                           "negative": negative, "raw": raw, "ref_weight_type": ref_weight_type,
+                           "up": up, "detalhar": detalhar, "base": ckpt,
                            "fluxo_tela": "tools/comfy/workflows/gerar_tela.json"}
                 try:
                     outdir = os.path.join(os.path.expanduser("~"),
@@ -191,10 +195,18 @@ if __name__ == "__main__":
     ckpt = full[full.index("--ckpt") + 1] if "--ckpt" in full else CKPT
     cfgv = float(full[full.index("--cfg") + 1]) if "--cfg" in full else 6.0
     negative = full[full.index("--negative") + 1] if "--negative" in full else NEGATIVO_PADRAO
+    ref_weight_type = (full[full.index("--ref-weight-type") + 1]
+                       if "--ref-weight-type" in full else "style transfer precise")
+    raw = "--raw" in full
+    explicit_style = "--estilo" in full or "--estilo2" in full
+    if raw and not explicit_style:
+        estilo = False
+    else:
+        estilo = True
     if "--base2" in full:
         ckpt, cfgv = BASE2, CFG_BASE2
     det = "--detalhar" in full
-    value_flags = {"--ref", "--peso-ref", "--ckpt", "--cfg", "--negative"}
+    value_flags = {"--ref", "--peso-ref", "--ckpt", "--cfg", "--negative", "--ref-weight-type"}
     pos_tokens = []
     i = 0
     while i < len(full):
@@ -216,9 +228,12 @@ if __name__ == "__main__":
             pass
     w = nums[0] if len(nums) > 0 else 1024
     h = nums[1] if len(nums) > 1 else 1024
-    gerar(f"{pos}, trading card game illustration, detailed anime fantasy art, "
-          f"masterpiece, best quality, amazing quality", w, h,
-          estilo="--sem-estilo" not in full,
-          estilo2="--estilo2" in full, up="--up" in full,
+    final_prompt = pos if raw else (
+        f"{pos}, trading card game illustration, detailed anime fantasy art, "
+        "masterpiece, best quality, amazing quality")
+    if "--sem-estilo" in full:
+        estilo = False
+    gerar(final_prompt, w, h,
+          estilo=estilo, estilo2="--estilo2" in full, up="--up" in full,
           ref=ref, peso_ref=peso, ckpt=ckpt, cfg=cfgv, detalhar=det,
-          negative=negative)
+          negative=negative, raw=raw, ref_weight_type=ref_weight_type)

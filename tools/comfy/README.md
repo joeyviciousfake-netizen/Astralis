@@ -24,22 +24,21 @@ Hardware: RTX 5060 8 GB + 24 GB RAM. Geração 1024² ≈ 1 min.
 
 1. Abra o ComfyUI Desktop (a API precisa estar no ar).
 2. Gerar (com estilo TCG ligado por padrão):
-   `python tools/comfy/gerar.py "um mago sombrio com cajado" [largura altura] [--sem-estilo] [--estilo2] [--up] [--base2] [--ref <imagem> --peso-ref 0.5]`
-   `--base2` troca p/ NoobAI (melhor em humanoide/mãos); `--cfg` afina.
+   `python tools/comfy/gerar.py "um mago sombrio com cajado" [largura altura] [--sem-estilo] [--estilo2] [--up] [--base2] [--raw] [--negative <texto>] [--ref <imagem> --peso-ref 0.5] [--ref-weight-type <tipo>]`
+   `--base2` troca p/ NoobAI (melhor em humanoide/mãos); `--cfg` afina. `--raw` envia o prompt exatamente como digitado e desliga as adições automáticas; `--estilo`/`--estilo2` podem ser usados explicitamente.
    `--detalhar` refina mãos+rosto sozinho (detecta, refaz em alta, cola sem costura).
    `--ref` envia uma imagem de referência ao IP-Adapter. O preset atual usa `style transfer precise`, mas isso é configuração técnica do workflow, não uma regra de conteúdo; o usuário pode alterar o workflow para outras formas de referência (precisa do node `ComfyUI_IPAdapter_plus`).
 3. Limpar assinatura/marca da borda de baixo:
    `python tools/comfy/limpar.py <imagem> [--base 12] [--saida <png>] [--denoise 0.9]`
 4. Descrever imagem (olha e escreve o que ve, vira base de prompt):
    `python tools/comfy/descrever.py <imagem> [--saida <txt>]`
-5. Ver na tela do ComfyUI: arraste `tools/comfy/workflows/gerar_tela.json`
-   ou `limpar_tela.json` para dentro da tela (são os mesmos fluxos dos scripts).
+5. Ver na tela do ComfyUI: arraste `gerar_tela.json`, `gerar_livre_tela.json` ou `limpar_tela.json` para dentro da tela. `gerar_livre_tela.json` é o fluxo de autoria direta: sem LoRA obrigatório, prompt editável e negativo apenas de qualidade.
    Seus trabalhos por comando também aparecem na fila e no output.
 
 ## Regras
 
 - O Studio não impõe blacklist de personagem, franquia, copyright, marca ou estilo.
-- O negativo padrão do `gerar.py` é apenas de qualidade (`bad quality`, etc.). Para efeitos visuais específicos, use `--negative` ou edite o workflow na tela.
+- O negativo padrão do `gerar.py` é apenas de qualidade (`bad quality`, etc.). Use `--negative` ou edite o workflow para definir exatamente os condicionamentos desejados.
 - Referências visuais são parâmetros do workflow: nenhuma substituição automática por personagem genérico/original é feita.
 - Resultado bom vira asset do projeto via fluxo normal
   (importar asset → `.apack` leva junto).
