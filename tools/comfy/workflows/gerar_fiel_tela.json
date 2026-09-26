@@ -8,7 +8,7 @@
   [
    1,
    1,
-   0,
+   1,
    2,
    0,
    "CLIP"
@@ -122,7 +122,7 @@
    32,
    0,
    6,
-   1,
+   8,
    "CONDITIONING"
   ],
   [
@@ -130,7 +130,7 @@
    32,
    1,
    6,
-   2,
+   9,
    "CONDITIONING"
   ],
   [
@@ -138,7 +138,7 @@
    5,
    0,
    6,
-   3,
+   10,
    "LATENT"
   ],
   [
@@ -176,7 +176,6 @@
    "outputs": [
     {
      "links": [
-      1,
       2
      ],
      "name": "MODEL",
@@ -184,7 +183,9 @@
      "type": "MODEL"
     },
     {
-     "links": [],
+     "links": [
+      1
+     ],
      "name": "CLIP",
      "slot_index": 1,
      "type": "CLIP"
