@@ -175,8 +175,6 @@
    "outputs": [
     {
      "links": [
-      1,
-      2,
       2
      ],
      "name": "MODEL",
@@ -185,7 +183,6 @@
     },
     {
      "links": [
-      3,
       1
      ],
      "name": "CLIP",
@@ -194,7 +191,6 @@
     },
     {
      "links": [
-      15,
       19
      ],
      "name": "VAE",
@@ -223,9 +219,9 @@
    "id": 2,
    "inputs": [
     {
-     "link": 1,
      "name": "clip",
-     "type": "CLIP"
+     "type": "CLIP",
+     "link": 1
     },
     {
      "name": "stop_at_clip_layer",
@@ -240,7 +236,6 @@
    "outputs": [
     {
      "links": [
-      3,
       3
      ],
      "name": "CLIP",
@@ -269,14 +264,14 @@
    "id": 9,
    "inputs": [
     {
-     "link": 2,
      "name": "model",
-     "type": "MODEL"
+     "type": "MODEL",
+     "link": 2
     },
     {
-     "link": 3,
      "name": "clip",
-     "type": "CLIP"
+     "type": "CLIP",
+     "link": 3
     },
     {
      "name": "lora_name",
@@ -305,7 +300,6 @@
    "outputs": [
     {
      "links": [
-      4,
       4
      ],
      "name": "MODEL",
@@ -314,8 +308,6 @@
     },
     {
      "links": [
-      9,
-      10,
       9,
       10
      ],
@@ -350,7 +342,6 @@
    "outputs": [
     {
      "links": [
-      5,
       5
      ],
      "name": "IPADAPTER",
@@ -382,7 +373,6 @@
    "outputs": [
     {
      "links": [
-      7,
       7
      ],
      "name": "CLIP_VISION",
@@ -430,7 +420,6 @@
    "outputs": [
     {
      "links": [
-      6,
       6
      ],
      "name": "IMAGE",
@@ -466,24 +455,24 @@
    "id": 23,
    "inputs": [
     {
-     "link": 4,
      "name": "model",
-     "type": "MODEL"
+     "type": "MODEL",
+     "link": 4
     },
     {
-     "link": 5,
      "name": "ipadapter",
-     "type": "IPADAPTER"
+     "type": "IPADAPTER",
+     "link": 5
     },
     {
-     "link": 6,
      "name": "image",
-     "type": "IMAGE"
+     "type": "IMAGE",
+     "link": 6
     },
     {
-     "link": 7,
      "name": "clip_vision",
-     "type": "CLIP_VISION"
+     "type": "CLIP_VISION",
+     "link": 7
     },
     {
      "name": "weight",
@@ -533,7 +522,6 @@
    "outputs": [
     {
      "links": [
-      8,
       8
      ],
      "name": "MODEL",
@@ -574,9 +562,9 @@
      }
     },
     {
-     "link": 9,
      "name": "clip",
-     "type": "CLIP"
+     "type": "CLIP",
+     "link": 9
     }
    ],
    "mode": 0,
@@ -584,7 +572,6 @@
    "outputs": [
     {
      "links": [
-      11,
       11
      ],
      "name": "CONDITIONING",
@@ -620,9 +607,9 @@
      }
     },
     {
-     "link": 10,
      "name": "clip",
-     "type": "CLIP"
+     "type": "CLIP",
+     "link": 10
     }
    ],
    "mode": 0,
@@ -630,7 +617,6 @@
    "outputs": [
     {
      "links": [
-      12,
       12
      ],
      "name": "CONDITIONING",
@@ -662,7 +648,6 @@
    "outputs": [
     {
      "links": [
-      13,
       17
      ],
      "name": "LATENT",
@@ -693,9 +678,9 @@
    "id": 6,
    "inputs": [
     {
-     "link": 8,
      "name": "model",
-     "type": "MODEL"
+     "type": "MODEL",
+     "link": 8
     },
     {
      "name": "seed",
@@ -747,19 +732,19 @@
      }
     },
     {
-     "link": 15,
      "name": "positive",
-     "type": "CONDITIONING"
+     "type": "CONDITIONING",
+     "link": 15
     },
     {
-     "link": 16,
      "name": "negative",
-     "type": "CONDITIONING"
+     "type": "CONDITIONING",
+     "link": 16
     },
     {
-     "link": 17,
      "name": "latent_image",
-     "type": "LATENT"
+     "type": "LATENT",
+     "link": 17
     }
    ],
    "mode": 0,
@@ -767,7 +752,6 @@
    "outputs": [
     {
      "links": [
-      14,
       18
      ],
      "name": "LATENT",
@@ -802,14 +786,14 @@
    "id": 7,
    "inputs": [
     {
-     "link": 18,
      "name": "samples",
-     "type": "LATENT"
+     "type": "LATENT",
+     "link": 18
     },
     {
-     "link": 19,
      "name": "vae",
-     "type": "VAE"
+     "type": "VAE",
+     "link": 19
     }
    ],
    "mode": 0,
@@ -817,7 +801,6 @@
    "outputs": [
     {
      "links": [
-      17,
       20
      ],
      "name": "IMAGE",
@@ -843,9 +826,9 @@
    "id": 8,
    "inputs": [
     {
-     "link": 20,
      "name": "images",
-     "type": "IMAGE"
+     "type": "IMAGE",
+     "link": 20
     }
    ],
    "mode": 0,
