@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Descritor de imagem pronto e provado (pedido do usuario). Politica de referencias visuais/IP consolidada: o Studio nao cria uma censura propria para personagens ou franquias; preserva a intencao do pedido e nao reescreve o prompt para tentar escapar de filtros externos. Detalhe em f_descreve e f_politica_referencias. Git pronto p/ commit. Auditoria das travas visuais aplicada na branch chore/visual-authoring-policy."
+onde_estamos: "Pipeline de imagens zerado por ordem do usuario (2026-09-26): sem geracao de imagens, sem modelos, sem scripts, sem historico visual nos docs. Repo so com jogo + editor + dados. Git limpo."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
@@ -18,26 +18,6 @@ f_importar_def2: "EDITOR (2026-09-25, 3a tanda, mesmo sintoma 'escolhi e nada ca
 f_reload_dev: "EDITOR + USER (D32, 2026-09-25, 4a tanda): no modo dev, escolher o pack dava RELOAD e abria zerado. Causa em cadeia provada: (1) +page.svelte onMount chama preparar_boot em TODO mount; (2) main.rs preparar_boot apagava tudo sem distinguir processo novo de reload (sem flag); (3) gatilho vite.config.js watch.ignored so tinha src-tauri — os ~722 writes + fusions.json 2,3MB do Importar disparavam full reload no WebView, ai reload -> boot apaga -> tela vazia. CORRIGIDO: Rust boot 1x por processo (AtomicBool, 1a chamada zera D29, seguintes so garantem esqueleto + msg 'mantidos'); vite ignora projects/**; faixa verde em sessionStorage (sobrevive a F5/HMR, morre ao fechar). +2 testes Rust. cargo 58->60, build ok, svelte-check 0. Prod intacto: processo novo = flag false = zera."
 
 f_aviso_boot: "EDITOR UX (2026-09-25, 5a tanda): com projeto carregado (722 + faixa verde) o aviso ambar 'Projeto zerado (805 apagados)' continuava na tela. Causa: avisoBoot e estado da +page.svelte:45, setado no boot com limpou=true; o Importar OK mora no filho ExportStudio e nunca avisava a +page. CORRIGIDO: ExportStudio dispara 'astralis:projeto-carregado' no import OK e ao restaurar faixa verde do sessionStorage; +page ouve e zera avisoBoot, e apos loadAll no mount zera se ha cartas; {#if} virou 'avisoBoot && cardsLen===0' (trava: nunca zerado+722 juntos). 'Sessao ja aberta' do reload ja era silenciosa (limpou=false). cargo 60/60, build ok, check 0."
-
-f_descreve: "DESCRITOR (usuario lembrou da ideia): Florence-2-base via node kijai (modelo baixa sozinho) + tools/comfy/descrever.py + workflows/descrever_tela.json (PreviewAny p/ ver na tela). Prova na images.jpg: descreveu certo (personagem redondo, cartola vermelha, engrenagens, asas, espadas, fundo verde). Pegadinhas: DownloadAndLoad sem 'attention'; Florence2Run tem text_input E task separados; caption sai em saida 'caption'; prompt API sem no de saida = 400."
-
-f_refgo: "PROVA DO --ref (usuario mandou images.jpg do mago do tempo real): gerado criatura ORIGINAL em pose de acao com o ESTILO da ref (vortice verde + engrenagem + paleta, personagem nosso: diabrete azul do tempo com relogio de bolso). Downloads/relogio_acao.png. Metodo validado: ref de estilo + personagem original."
-
-f_refino2: "CALIBRAGEM (usuario: 'parece que piorou' — tinha razao, a mao erguida estava boa e o refino a refez pior): causa = denoise 0.55 + mascara eliptica gigante refez ate o que estava bom. Correcao: denoise 0.4 + mascara JUSTA na caixa detectada (+8%) com cantos arredondados; resto intocado. Prova: mago_detalhado2.png = mao boa preservada, rosto limpo. Licao: refinador e p/ resgate, nao p/ toda imagem."
-
-f_refino: "REFINO PROPRIO (Impact Pack nao serve p/ YOLO .pt nesta versao — so ONNX com NMS triplo, e o nosso convertido volta vazio; documentado): tools/comfy/detalhar.py (roda no python do Comfy) detecta maos+rostos com YOLO .pt, recorta com margem, refaz via SDXL-inpaint e cola com pena. gerar.py --detalhar chama ele sozinho. Prova: base_mago_noobai -> mago_detalhado.png (2 maos + rosto refeitos). Anti-letreiro reforçado no negativo (text/letters/logo/card frame/border/ui...)."
-
-f_bases: "RECOMECAR DO ZERO (usuario exigiu perfeicao): baixado NoobAI-XL-v1.1 6,62GB + bake-off 3 prompts x 2 bases mesma seed (dragao/mago-maos/golem, sem LoRA). RESULTADO HONESTO: dragao = Illustrious limpa x NoobAI cheia de UI falsa (Illustrious vence); mago/maos = NoobAI cravou 5 dedos sem texto, Illustrious fofa com copyright falso (NoobAI vence); golem = Illustrious limpa x NoobAI dramatica mas cheia de UI falsa (Illustrious vence). VEREDITO: Illustrious segue padrao (limpa, LoRAs nossos), NoobAI vira --base2 p/ humanoides/maos. Impact Pack + ultralytics + detectores mao/rosto instalados (falta restart p/ carregar nodes; --detalhar vem depois). Provas base_*.png em Downloads."
-
-f_comfy_ver: "FISCALIZACAO (usuario quer ver e conferir; MCP avaliado: tambem e API no fundo, nao mostra nada na tela — recusado com motivo). Solucao: todo trabalho grava .job.json junto da imagem no output (prompt, seed, lora, ref, peso, fluxo de tela). Na tela: fila mostra rodando, historico guarda, e arrastar tools/comfy/workflows/*.json abre o fluxo exato. gerar.py/limpar.py gravam receita."
-
-f_ipadapter: "REFERENCIA VISUAL (usuario exigiu profissional): node cubiq ComfyUI_IPAdapter_plus (git clone) + ip-adapter-plus_sdxl_vit-h 808MB + CLIP-ViT-H 2,4GB (nomes oficiais). gerar.py --ref <img> [--peso-ref 0.5] via IPAdapterAdvanced 'style transfer precise'. workflows de TELA em tools/comfy/workflows/ (gerar_tela + limpar_tela, validados por checker contra object_info ao vivo). Prova --ref: golem com ref do mago = neon verde/roxo forte ate cantos de moldura (0.65 forte demais) -> padrao 0.5. Perguntas que morderam: UpscaleImageUsingModel virou ImageUpscaleWithModel; InpaintModelConditioning nova (sem VAEEncode, noise BOOLEAN, latente saida 2); mascara via ImageToMask (LoadImage sozinho zera); weight_type 'style transfer (SDXL)' nao existe aqui, vale 'style transfer precise'; erro 500 = log em ComfyUI-Installs/.../logs/comfyui.log."
-
-f_duelo_loras: "DUELO (usuario indicou o 14k/14mil cartas, Civitai 130658): baixado 651MB + duelo mesma seed 12345 mesmo monstro (guerreiro do trovao). A = illustrious atual: duel monster classico (armadura roxa, capa) mas com emblema e texto falsos. B = 14k: demonio sombrio dramatico pintado, sem texto. VEREDITO: ficam os 2 (A padrao classico, B --estilo2 sombrio). gerar.py ganhou --estilo2. Provas em Downloads: duelo_estiloA_classico.png + duelo_estiloB_14k.png."
-
-f_comfy_power: "POWER-UP D37 (usuario achou leve e pediu mais): (1) LoRA estilo TCG 'yugioh_style_illustrious' 218MB (Civitai, feito p/ Illustrious, gatilho yugioh_style 0.7, ensina o TRACO nao o personagem — cada carta sai diferente no mesmo estilo); (2) hi-res --up 1024->2048 via 4x-UltraSharp; (3) limpar.py = inpaint automatico da borda de baixo (DiffusersLoader + ImageToMask, denoise 0.9). Provas: dragao de fogo 2048 estilo TCG + mago sem assinatura (2 tentativas: mascara chegava zerada, corrigido com ImageToMask). Perguntas da API que morderam: LoraLoader em ciclo, ImageUpscaleWithModel (era outro nome), InpaintModelConditioning nova (pixels/mascara direto, noise BOOLEAN, latente saida 2)."
-
-f_comfy: "D37 (pedido do usuario): ComfyUI Desktop virou agente de imagens via API localhost:8188 (Comfy 0.37.4, RTX 5060 8GB). Baixados: Illustrious-XL-v2.0 6,46GB (checkpoints) + sdxl_vae 319MB + SDXL-inpainting-0.1 fp16 6,62GB (diffusers; unet/te via BITS por SSL do Python, resto hf). Prova: dragao branco olhos azuis 1024 gerado e conferido (~1min). Pipeline em tools/comfy/gerar.py + README. Modelos fora do git, na maquina do Max."
 
 f_molde: "FEATURE D36 (ideia do usuario, systems+runtime+editor+qa): layout da carta = MOLDE EM DADO. SYSTEMS: card_layout.schema.json V1 (canvas 59x86 por-mil, 9 kinds fechados, rect+style+visible_when) + default oficial nas medidas do scan + layouts/ no Project Data + change_protocol completo (manifest, 04§4.8, README, fm_import check_layout, checar_card_layout). RUNTIME: card_layout.gd (le layouts/ do projeto, default embutido = fallback, memoizado) + card_view.gd desenha as 9 peças pelo molde. EDITOR: aba Molde (LayoutStudio + store, arrastar + alças + painel + desfazer + restaurar + salvar validado, CardPreview le o molde) + ler/salvar/validar no Rust + teto 64 no id (divergencia perigosa achada pelo QA e fechada). QA: test_card_layout 10->14 (compat Rust x jogo pinada, 11+2 divergencias documentadas em teste) + tests/README. Provas: GUT 116/116 1877 asserts, cargo 101/101, build+check 0, fm_import OK. V2: molde por carta + fontes proprias."
 
@@ -77,10 +57,6 @@ f_runtime_bugs: "RUNTIME: (a) --setup nao passava por _resolver_abs mas --projec
 
 f_qa: "QA: (a) CRIOU astralis/testing/astralis_test_base.gd — base unica, 34 helpers duplicados apagados, -476 linhas nos testes, ZERO mudanca de assercao. Descobriu que class_name NAO funciona no headless (godot -s nao reconstroi cache de classe global) — ficou extends por caminho. (b) 37 preloads mortos removidos. (c) 9 TESTES NOVOS de --project (3 -> 12): o feature mais nova do runtime era intocada. Como OS.set_cmdline_user_args() nao existe no Godot 4.7, os testes rodam o JOGO DE VERDADE como processo filho (OS.execute) e leem a saida real — nao e duble. (d) tests/README.md REESCRITO com a verdade. GUT 85 -> 94 testes, 1283 -> 1412 asserts."
 
-# ---------- POLÍTICA NOVA CONSOLIDADA: REFERÊNCIAS VISUAIS, PERSONAGENS E IP ----------
-
-f_politica_referencias: "POLITICA CONSOLIDADA (2026-09-26): o Studio nao cria uma restricao propria apenas porque o pedido envolve personagem, franquia, estilo, marca, copyright ou outra propriedade intelectual. O Studio preserva a intencao do usuario e nao substitui silenciosamente personagens ou referencias por versoes genericas/originais. A referencia visual pode ser usada conforme o workflow configurado; personagem e estilo sao possibilidades distintas e o peso da referencia deve ser auditavel. Negativos sao parametros de qualidade, nao blacklist de conteudo. O Studio nao altera o pedido para tentar enganar filtros ou protecoes externas: limitacoes pertencentes ao ComfyUI/modelo permanecem nessa camada e devem ser registradas, nao mascaradas."
-
 # ---------- ESTADO ATUAL VERIFICADO (2026-09-25, fim da sessão anterior) ----------
 
 verificado_agora: "GUT 94/94 passed, 1412 asserts, ~43s, 0 SCRIPT ERROR, 0 orphans (rodado pelo Lead, nao por agente). Jogo headless sem --project: [BOARD] 20 slots / [TABLE] Arena 20 slots + mao p0(1240,980,95) p1(1240,20,60) / [TABLE] 25081 receitas / Duelo comecou. cargo test 55 passed 0 failed 0 warnings. npm run build ok. svelte-check 0 errors 0 warnings. python tools/fm_import.py --check OK. Os 7 schemas validam como JSON."
@@ -91,7 +67,7 @@ estado_cargo: "101 testes Rust (88 + 13 molde/id). ZERO teste de frontend ainda.
 
 estado_dados: "schemas/examples = 722 fm_* / 39 duelistas / 39 decks (40 cada) / 25081 receitas / 0 regras / arena_starter / duel_fm_abertura 8000LP. pack = 25131 receitas (25081 + 50 A+A que nunca disparam). starter_backup = 40 cartas custom SO de teste. PROJETO DO EDITOR = astralis-studio/projects/default/ (sempre vazio no boot, so via Importar)."
 
-proximo_passo: "Validar no ComfyUI o modo RAW e o workflow gerar_livre_tela.json: gerar uma imagem com prompt literal, outra com referencia configurada e outra com negativo customizado; conferir na tela e no .job.json que os parametros escolhidos ficaram auditaveis."
+proximo_passo: "Definir com o usuario o novo ponto de partida do zero, do jeito certo."
 
 # ---------- TRAVAS (regras, nao dividas) ----------
 
@@ -104,7 +80,7 @@ travas:
 
   - "D31: contrato apertado (attack/def 9999, flow.mode sequence, starting_lp 99999, arena 1920x1080). Mudou schema = atualizar AI_MANIFEST contract_files + docs/04 + schemas/README + espelhar no main.rs + rodar fm_import --check + DECISOES + SESSAO."
 
-  - "D15-D37 travadas. Nao reabrir sem permissao. Ferramentas oficiais (D14/D18/D19): godot-mcp + GUT 9.7.1. Godot 4.7.2 em Godot/ (ignorado no git)."
+  - "D15-D36 travadas. Nao reabrir sem permissao. Ferramentas oficiais (D14/D18/D19): godot-mcp + GUT 9.7.1. Godot 4.7.2 em Godot/ (ignorado no git)."
 
   - "ANTIVIRUS (2026-09-25): o Windows Defender acusa src-tauri/target/debug/deps/astralis_studio-<hash>.exe de trojan. investigated: e FALSO POSITIVO. O arquivo e binario de TESTE gerado pelo proprio Cargo quando roda cargo test (nao e codigo escrito por agente, nao esta no git, target/ e ignorado, SHA256 50D4B22E...); o main.rs nao tem rede, registro, persistencia, injecao nem ofuscacao, e as unicas crates sao tauri/tauri-build/tauri-plugin-shell/serde/serde_json. Motivo do falso positivo: binario Rust debug sem assinatura + Tauri (embute WebView2, abre processo com cmd /C start, escreve em %TEMP%) = assinatura classica de heuristica. O aviso VOLTA toda vez que rodar cargo test/cargo build — apagar o arquivo nao resolve. O usuario DEIXOU COMO ESTA de proposito (nao quer mexer em antivirus). Se aparecer de novo, NAO investigar de novo: e o mesmo aviso. src-tauri/target/ tem 3,74 GB de cache puro, apagavel quando quiser."
 
@@ -115,8 +91,6 @@ travas:
   - "POLITICA DE REFERENCIAS: personagem e estilo sao referencias distintas. --ref pode ser usado como imagem de referencia; --peso-ref controla a influencia; o workflow deve deixar claro qual no recebeu a imagem e qual peso foi usado."
 
   - "POLITICA DE REFERENCIAS: nenhuma rotina de jailbreak, evasao de filtro, ofuscacao de nomes, prompt adversarial ou substituicao lexical com objetivo de enganar ou burlar protecoes de uma ferramenta externa."
-
-  - "POLITICA DE REFERENCIAS: se ComfyUI, checkpoint, node, servidor, modelo ou outro componente externo recusar ou alterar um pedido, o Studio nao deve fingir que executou normalmente. A falha deve continuar identificavel e auditavel."
 
   - "POLITICA DE REFERENCIAS: toda geracao deve continuar registrando .job.json com prompt, seed, modelo, LoRA, referencia, pesos e workflow utilizado, para diferenciar pedido do usuario, configuracao do Studio e comportamento da camada externa."
 
@@ -145,13 +119,10 @@ dividas_pendentes:
 
   - "QA: 'cancelar no meio da fila de fusao' e o caminho feliz do --project dentro do processo (so cobertos pelo jogo filho) foram provados por teste DESCARTAVEL e nao viraram teste permanente. Falta o QA transformar em teste fixo (o cenario da fusao cabe em test_fusao_fiel.gd)."
 
-  - "COMFY/REFERENCIAS: ainda falta provar manualmente na sessao atual que os workflows de referencia de personagem e de estilo mostram na tela o pedido original e o peso configurado, e que uma recusa externa permanece visivel em vez de ser mascarada."
-
 data_utc: "2026-09-26"
 
 versão_docs: "1.8"
 
-versão_docs_obs: "Atualizacao 1.8: alem de remover a blacklist visual propria do Studio, o pipeline ganhou modo RAW para prompt literal, referencia IP-Adapter configuravel e workflow de tela de geracao livre sem LoRA obrigatorio. Travas arquiteturais e de integridade continuam intactas."
  
 # ---------- LOG CURTO (ultimas 11) ----------
 
@@ -170,15 +141,6 @@ log_curto:
 
   - "2026-09-25: BUG DO IMPORTAR: 'Importar pack' nao fazia nada (evento disparava antes do painel montar). Corrigido + preventivo do WebView2 + texto das 50 fusoes A+A + avisos com teto. Achou-se de passagem que abrir o app sujava o git — corrigido tambem."
 
-  - "2026-09-25: POWER-UP/COMFY: refino proprio, IPAdapter, duelo de LoRAs, NoobAI/Illustrious, hi-res 2x, limpeza automatica de borda e jobs auditaveis em .job.json."
-
   - "2026-09-25: EDITOR VISUAL: CardPreview, molde em dado, Campo de Testes, importar/exportar .apack e correcao de eventos com lazy-mount. Build/check e testes documentados permaneceram verdes nos pontos registrados acima."
 
-  - "2026-09-26: POLITICA DE REFERENCIAS/IP CONSOLIDADA: removida a ideia de censura adicional do Studio baseada apenas em copyright. Preservar a intencao do pedido, separar referencia de personagem e referencia de estilo, registrar tudo em .job.json e nao tentar burlar filtros ou protecoes externas."
-
-  - "2026-09-26: AUDITORIA VISUAL: removidas as travas de conteudo/IP encontradas nos docs e no pipeline ComfyUI — IP-Adapter deixa de ser descrito como estilo-only, negativo padrao deixa de bloquear text/logo/copyright e passa a ser configuravel por `--negative`, workflow de tela alinhado. Travas arquiteturais de runtime, schema, integridade e distribuicao permanecem."
-  - "2026-09-26: PIPELINE LIVRE: modo --raw, --ref-weight-type e workflow gerar_livre_tela.json adicionados; prompt pode ser literal sem adicoes automaticas quando RAW e escolhido."
-  - "2026-09-26: SESSAO_ATUAL consolidada em bloco YAML unico, chaves unicas, proximo_passo preenchido e versao_docs 1.8."
-  - "2026-09-26: FIEL V3 (outra IA + bake-off cego): SetUnionControlNetType=openpose (no 33) MELHOROU a pose; LoRA congelado em 0.5 (0.0/0.3 quebram em bola+coadjuvante; 0.5~=0.7); ficha geometrica da outra IA COLAPSOU (mandala mecanica, revertida — palavras de arquetipo sustentam a criatura); grounding Florence acha partes sem instalar nada (relogio [368,388,678,681] na ref); partes.py checa presenca/posicao; reparo.py faz inpaint regional (mascara no corpo + crop da ref; bug da 1a caixa=resolvido, mas pintar relogio novo resiste ate 0.55 — resto preservado). Melhor marca: ficha antiga+union+0.5/0.7 seed 777 (Downloads/relogio_fiel_voando2.png). Tela alinhada (17 nos/21 fios). Proximo era regional no passo 1."
-  - "2026-09-26: ZERADO (ordem do usuario, sem montar nada depois): apagados todos os modelos e nodes que baixamos no ComfyUI — Illustrious 6,46GB + NoobAI 6,62GB + inpainting 6,62GB + IPAdapter/CLIP-Vision + 2 LoRAs + VAE + UltraSharp + ControlNet Union + Florence-base + PromptGen-large + detectores YOLO + caches HF + open_clip (pip) + nodes IPAdapter/Florence2/Impact-Pack (~26GB livres). Ficou so o ComfyUI stock (pastas + placeholders + configs, API 200). Repo intacto, outputs e scripts preservados."
 ```
