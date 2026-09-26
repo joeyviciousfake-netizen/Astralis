@@ -1,0 +1,20 @@
+{
+  "personagem": "relogio_tempo",
+  "fonte_ref": "C:/Users/Max/Downloads/images.jpg",
+  "silhueta": "corpo-bola vermelho perfeitamente redondo, pequeno, com asas roxas abertas dos dois lados",
+  "corpo": "esfera vermelha lisa, sem bracos/pernas longos; pes pequenos com sapatos roxos de bobo",
+  "rosto": "sem boca nem nariz: dois olhos brancos grandes e redondos com pupila azul + relogio azul na barriga com ponteiros verdes e ponto vermelho no centro",
+  "roupa": "sem roupa: o corpo e a fantasia; gola de engrenagem dourada no pescoco",
+  "acessorios": [
+    "ombros de engrenagem dourada dos dois lados",
+    "chapeu-cilindro vermelho pequeno no topo da cabeca",
+    "cajado dourado fino e comprido com ponta afiada",
+    "luvas brancas nas maos",
+    "asas de pena roxa com detalhe azul"
+  ],
+  "cores": ["vermelho corpo", "azul relogio", "verde ponteiros e fundo", "dourado engrenagens e cajado", "roxo asas e sapatos", "branco luvas e olhos"],
+  "estilo": "anime carta de monstro, traco limpo, cor chapada com sombra",
+  "fundo_ref": "vortice verde em espiral",
+  "prompt_aparencia": "small round red clockwork magician creature, perfectly spherical red body, huge blue circular clock face covering the belly with green hour and minute hands and red center dot, two big round white eyes with blue pupils above the clock, golden gear collar around neck, golden gear shoulder pads on both sides, small red cylindrical chimney hat like a short tube on top of head, purple and blue feathered wings on both sides, white gloves on hands, purple jester shoes on both small feet, thin long golden staff with pointed tip held in hand",
+  "nao_fazer": ["rosto humano", "menina anime", "cartola de bobo", "espadas", "boca", "nariz", "corpo humanoide", "texto", "marca"]
+}

@@ -17,6 +17,15 @@ novo — é ferramenta operada pelo Lead via terminal.
 | UltraSharp 4x | `upscale_models/4x-UltraSharp.pth` | ~67 MB | hi-res 1024 → 2048 |
 | IP-Adapter Plus SDXL | `ipadapter/ip-adapter-plus_sdxl_vit-h.safetensors` | 808 MB | referência visual (fluxo configurável) |
 | CLIP Vision H | `clip_vision/CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors` | 2,4 GB | olhos do IP-Adapter |
+| ControlNet Union SDXL | `controlnet/controlnet-union-sdxl-1.0.safetensors` | 2,5 GB | controle de pose (esqueleto OpenPose) — workflow fiel v2 |
+| Florence-2-large PromptGen v2 | `ComfyUI-Installs/.../models/LLM/Florence-2-large-PromptGen-v2.0` | ~1,5 GB | descritor profissional (analise + legenda + tags) — `ficha.py` |
+| CLIP ViT-B/32 | cache do Python (`nota.py` baixa sozinho) | ~350 MB | nota de fidelidade 0..1 (filtro grosso, não veredito) |
+
+> Nota de rede (2026-09-26): o Python do ComfyUI está com SSL quebrado
+> (certificado autoassinado na cadeia) e NÃO baixa do HuggingFace sozinho.
+> Modelo que o node pedir e não achar: baixe por fora com o script
+> temporário de download HF (Python do sistema alcança a rede) direto p/
+> a pasta do node, e rode de novo.
 
 Hardware: RTX 5060 8 GB + 24 GB RAM. Geração 1024² ≈ 1 min.
 
@@ -32,7 +41,19 @@ Hardware: RTX 5060 8 GB + 24 GB RAM. Geração 1024² ≈ 1 min.
    `python tools/comfy/limpar.py <imagem> [--base 12] [--saida <png>] [--denoise 0.9]`
 4. Descrever imagem (olha e escreve o que ve, vira base de prompt):
    `python tools/comfy/descrever.py <imagem> [--saida <txt>]`
-5. Ver na tela do ComfyUI: arraste `gerar_tela.json`, `gerar_livre_tela.json` ou `limpar_tela.json` para dentro da tela. `gerar_livre_tela.json` é o fluxo de autoria direta: sem LoRA obrigatório, prompt editável e negativo apenas de qualidade.
+5. Workflow FIEL v2 (mesmo personagem, pose nova — o padrão p/ os 700):
+   `python tools/comfy/ficha.py <ref> --nome <id>` gera o RASCUNHO da ficha;
+   humano revisa e congela `prompt_aparencia` + `nao_fazer` (1x por personagem).
+   `python tools/comfy/gerar_fiel.py --ref <img> --ficha fichas/<id>.json --pose <nome> --acao "<nova acao>"`
+   junta identidade (IPAdapter `strong middle` 0.75) + pose (ControlNet Union 1.0
+   com esqueleto de `pose.py`: neutra, pular, voar_lancar, surfar, correr).
+   `python tools/comfy/nota.py <ref> <geradas...>` dá a nota 0..1 p/ bake-off.
+   Na tela: arraste `gerar_fiel_tela.json`. Ficha modelo: `fichas/relogio.json`.
+   Regra honesta: nota é filtro grosso (fundo parecido infla); veredito final é
+   checklist humano (silhueta, partes obrigatórias, pose). Não negativar
+   citando o defeito com enfase costuma piorar (virou bobo com chifres ao
+   proibir "jester" — registrado no bake-off do relógio).
+6. Ver na tela do ComfyUI: arraste `gerar_tela.json`, `gerar_livre_tela.json` ou `limpar_tela.json` para dentro da tela. `gerar_livre_tela.json` é o fluxo de autoria direta: sem LoRA obrigatório, prompt editável e negativo apenas de qualidade.
    Seus trabalhos por comando também aparecem na fila e no output.
 
 ## Regras
