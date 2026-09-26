@@ -8,7 +8,8 @@ novo — é ferramenta operada pelo Lead via terminal.
 
 | Modelo | Pasta/arquivo | Tamanho | Uso |
 |---|---|---|---|
-| Illustrious-XL-v2.0 | `checkpoints/Illustrious-XL-v2.0.safetensors` | 6,46 GB | arte anime (cartas) |
+| Illustrious-XL-v2.0 | `checkpoints/Illustrious-XL-v2.0.safetensors` | 6,46 GB | base padrão (limpa, CFA 5) |
+| NoobAI-XL-v1.1 | `checkpoints/NoobAI-XL-v1.1.safetensors` | 6,62 GB | base alternativa (humanoides/mãos, CFG 6.5, `--base2`) |
 | SDXL VAE | `vae/sdxl_vae.safetensors` | 319 MB | decodificador dedicado |
 | SDXL inpainting 0.1 | `diffusers/sdxl-1.0-inpainting-0.1/` (fp16) | 6,62 GB | limpar molduras (via `DiffusersLoader`) |
 | LoRA estilo TCG | `loras/yugioh_style_illustrious.safetensors` | 218 MB | traço estilo carta (gatilho `yugioh_style`, força 0,7) |
@@ -23,7 +24,8 @@ Hardware: RTX 5060 8 GB + 24 GB RAM. Geração 1024² ≈ 1 min.
 
 1. Abra o ComfyUI Desktop (a API precisa estar no ar).
 2. Gerar (com estilo TCG ligado por padrão):
-   `python tools/comfy/gerar.py "um mago sombrio com cajado" [largura altura] [--sem-estilo] [--estilo2] [--up] [--ref <imagem> --peso-ref 0.5]`
+   `python tools/comfy/gerar.py "um mago sombrio com cajado" [largura altura] [--sem-estilo] [--estilo2] [--up] [--base2] [--ref <imagem> --peso-ref 0.5]`
+   `--base2` troca p/ NoobAI (melhor em humanoide/mãos); `--cfg` afina.
    `--ref` mostra uma imagem de referência e copia SÓ o estilo
    (precisa do node `ComfyUI_IPAdapter_plus`; referência quadrada funciona melhor).
 3. Limpar assinatura/marca da borda de baixo:

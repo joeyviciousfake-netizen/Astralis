@@ -10,7 +10,9 @@ Modelo padrao: Illustrious-XL-v2.0 (anime, otimo p/ arte de carta).
 --estilo2 usa o LoRA 14k (sabor mais sombrio/pintado).
 --ref <imagem> mostra uma referencia p/ o IP-Adapter copiar SO o estilo
    (nunca o desenho) — pede Comfy reiniciado apos instalar o node.
---peso-ref <0..1> forca da referencia (padrao 0.65).
+--peso-ref <0..1> forca da referencia (padrao 0.5).
+--ckpt <arquivo> troca a base; --base2 = NoobAI (alternativa p/ humanoides);
+   --cfg <n> afina o CFG.
 --up sobe 2x com UltraSharp (1024 -> 2048, nitido p/ impressao).
  negative fixo anti-texto/marca (carta nao pode ter assinatura).
 """
@@ -30,6 +32,8 @@ GATILHO_ESTILO = "yugioh_style"
 LORA_ESTILO2 = "yugioh_14k_sdxl.safetensors"
 FORCA_ESTILO2 = 0.7
 GATILHO_ESTILO2 = "glowing, yugioh style, yugioh monster, duel monster"
+BASE2 = "NoobAI-XL-v1.1.safetensors"
+CFG_BASE2 = 6.5
 IPADAPTER = "ip-adapter-plus_sdxl_vit-h.safetensors"
 CLIP_VISION = "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"
 PESO_REF = 0.5
@@ -48,7 +52,8 @@ def api(method, path, data=None):
 
 
 def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
-          estilo=True, estilo2=False, up=False, ref=None, peso_ref=PESO_REF):
+          estilo=True, estilo2=False, up=False, ref=None, peso_ref=PESO_REF,
+          ckpt=CKPT):
     seed = seed if seed is not None else random.randint(0, 2**31 - 1)
     lora_nome, lora_forca, gatilho = LORA_ESTILO, FORCA_ESTILO, GATILHO_ESTILO
     if estilo2:
@@ -58,7 +63,6 @@ def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
         prompt_pos = f"{gatilho}, {prompt_pos}"
     modelo_no, clip_no = "1", "2"
     if ref:
-        import os, sys
         sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
         from limpar import upload
         up = upload(ref)
@@ -74,7 +78,7 @@ def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
         wf_ref = {}
     wf = {
         "1": {"class_type": "CheckpointLoaderSimple",
-              "inputs": {"ckpt_name": CKPT}},
+              "inputs": {"ckpt_name": ckpt}},
         "2": {"class_type": "CLIPSetLastLayer",
               "inputs": {"stop_at_clip_layer": -2, "clip": ["1", 1]}},
         "3": {"class_type": "CLIPTextEncode",
@@ -153,6 +157,10 @@ if __name__ == "__main__":
     full = sys.argv[1:]
     ref = full[full.index("--ref") + 1] if "--ref" in full else None
     peso = float(full[full.index("--peso-ref") + 1]) if "--peso-ref" in full else PESO_REF
+    ckpt = full[full.index("--ckpt") + 1] if "--ckpt" in full else CKPT
+    cfgv = float(full[full.index("--cfg") + 1]) if "--cfg" in full else 6.0
+    if "--base2" in full:
+        ckpt, cfgv = BASE2, CFG_BASE2
     pos = [a for a in full if not a.startswith("--") and a != ref
            and a != str(peso)]
     pos = pos[0] if len(pos) > 0 else "fantasy monster"
@@ -170,4 +178,4 @@ if __name__ == "__main__":
           f"masterpiece, best quality, amazing quality", w, h,
           estilo="--sem-estilo" not in full,
           estilo2="--estilo2" in full, up="--up" in full,
-          ref=ref, peso_ref=peso)
+          ref=ref, peso_ref=peso, ckpt=ckpt, cfg=cfgv)
