@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Descritor de imagem pronto e provado (pedido do usuario). Politica de referencias visuais/IP consolidada: o Studio nao cria uma censura propria para personagens ou franquias; preserva a intencao do pedido e nao reescreve o prompt para tentar escapar de filtros externos. Detalhe em f_descreve e f_politica_referencias. Git pronto p/ commit."
+onde_estamos: "Descritor de imagem pronto e provado (pedido do usuario). Politica de referencias visuais/IP consolidada: o Studio nao cria uma censura propria para personagens ou franquias; preserva a intencao do pedido e nao reescreve o prompt para tentar escapar de filtros externos. Detalhe em f_descreve e f_politica_referencias. Git pronto p/ commit. Auditoria das travas visuais aplicada na branch chore/visual-authoring-policy."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
@@ -176,5 +176,6 @@ log_curto:
 
   - "2026-09-26: POLITICA DE REFERENCIAS/IP CONSOLIDADA: removida a ideia de censura adicional do Studio baseada apenas em copyright. Preservar a intencao do pedido, separar referencia de personagem e referencia de estilo, registrar tudo em .job.json e nao tentar burlar filtros ou protecoes externas."
 
-  - "2026-09-26: SESSAO_ATUAL consolidada em bloco YAML unico, chaves unicas, proximo_passo preenchido e versao_docs 1.6."
+  - "2026-09-26: AUDITORIA VISUAL: removidas as travas de conteudo/IP encontradas nos docs e no pipeline ComfyUI — IP-Adapter deixa de ser descrito como estilo-only, negativo padrao deixa de bloquear text/logo/copyright e passa a ser configuravel por `--negative`, workflow de tela alinhado. Travas arquiteturais de runtime, schema, integridade e distribuicao permanecem."
+  - "2026-09-26: SESSAO_ATUAL consolidada em bloco YAML unico, chaves unicas, proximo_passo preenchido e versao_docs 1.7."
 ```
