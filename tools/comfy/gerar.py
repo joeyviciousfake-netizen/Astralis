@@ -15,6 +15,7 @@ Modelo padrao: Illustrious-XL-v2.0 (anime, otimo p/ arte de carta).
  negative fixo anti-texto/marca (carta nao pode ter assinatura).
 """
 import json
+import os
 import random
 import sys
 import time
@@ -130,6 +131,20 @@ def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
         if pid in h and h[pid].get("status", {}).get("completed"):
             for im in h[pid]["outputs"]["8"]["images"]:
                 print("PRONTO: output/%s" % im["filename"], flush=True)
+                receita = {"trabalho": pid, "seed": seed, "prompt": prompt_pos,
+                           "tamanho": [width, height], "lora": lora_nome if estilo else None,
+                           "referencia": ref, "peso_ref": peso_ref if ref else None,
+                           "up": up, "fluxo_tela": "tools/comfy/workflows/gerar_tela.json"}
+                try:
+                    outdir = os.path.join(os.path.expanduser("~"),
+                                          "AppData", "Local", "Comfy-Desktop",
+                                          "ComfyUI-Shared", "output")
+                    base = os.path.splitext(im["filename"])[0] + ".job.json"
+                    json.dump(receita, open(os.path.join(outdir, base), "w", encoding="utf-8"),
+                              ensure_ascii=False, indent=1)
+                    print("receita:", base, flush=True)
+                except OSError:
+                    pass
             return h[pid]["outputs"]["8"]["images"]
     raise TimeoutError("geracao demorou demais (10 min)")
 

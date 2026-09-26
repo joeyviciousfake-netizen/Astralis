@@ -113,6 +113,19 @@ def limpar(img_path, pct_base=10, saida=None, denoise=0.9,
                 dst = saida or os.path.splitext(img_path)[0] + "_limpo.png"
                 open(dst, "wb").write(raw)
                 print("LIMPO:", dst, flush=True)
+                receita = {"trabalho": pid, "imagem": img_path,
+                           "faixa_base_pct": pct_base, "denoise": denoise,
+                           "fluxo_tela": "tools/comfy/workflows/limpar_tela.json"}
+                try:
+                    outdir = os.path.join(os.path.expanduser("~"),
+                                          "AppData", "Local", "Comfy-Desktop",
+                                          "ComfyUI-Shared", "output")
+                    base = os.path.splitext(im["filename"])[0] + ".job.json"
+                    json.dump(receita, open(os.path.join(outdir, base), "w", encoding="utf-8"),
+                              ensure_ascii=False, indent=1)
+                    print("receita:", base, flush=True)
+                except OSError:
+                    pass
             return
     raise TimeoutError("limpeza demorou demais")
 
