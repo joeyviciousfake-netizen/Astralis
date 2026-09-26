@@ -20,6 +20,8 @@ UI do jogo: telas estruturais fixas (MainMenu, Campaign, Load, Duel, Deck, Resul
 
 Assets (card art, characters, portraits, backgrounds, UI, music, SFX): Studio importa/organiza/visualiza/referencia/valida. Astralis carrega/usa/cacheia/libera. Sem lógica de gameplay.
 
+Autoria visual é aberta por padrão: o Studio não mantém blacklist por personagem, franquia, copyright, marca, estilo ou aparência. O usuário escolhe texto, imagens de referência, arte e identidade visual; o Studio não substitui silenciosamente o pedido por uma versão genérica ou "original".
+
 Matriz: Studio cria/edita, Astralis interpreta/executa. Ex.: effect definition Studio cria, Astralis executa; battle rules Astralis responsável, Studio não implementa; preview/teste Astralis executa, Studio controla/inicia.
 
 ## 9.3 [MELHORIA V1.2] Starter Kit + Wizard
