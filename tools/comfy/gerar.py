@@ -8,6 +8,9 @@ A imagem cai na pasta output do ComfyUI e o caminho e impresso no final.
 Modelo padrao: Illustrious-XL-v2.0 (anime, otimo p/ arte de carta).
 --sem-estilo desliga o LoRA estilo TCG (padrao: ligado 0.7).
 --estilo2 usa o LoRA 14k (sabor mais sombrio/pintado).
+--ref <imagem> mostra uma referencia p/ o IP-Adapter copiar SO o estilo
+   (nunca o desenho) — pede Comfy reiniciado apos instalar o node.
+--peso-ref <0..1> forca da referencia (padrao 0.65).
 --up sobe 2x com UltraSharp (1024 -> 2048, nitido p/ impressao).
  negative fixo anti-texto/marca (carta nao pode ter assinatura).
 """
@@ -26,6 +29,9 @@ GATILHO_ESTILO = "yugioh_style"
 LORA_ESTILO2 = "yugioh_14k_sdxl.safetensors"
 FORCA_ESTILO2 = 0.7
 GATILHO_ESTILO2 = "glowing, yugioh style, yugioh monster, duel monster"
+IPADAPTER = "ip-adapter-plus_sdxl_vit-h.safetensors"
+CLIP_VISION = "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"
+PESO_REF = 0.5
 UPSCALER = "4x-UltraSharp.pth"
 NEGATIVO = ("bad quality, worst quality, sketch, blurry, censored, "
             "text, watermark, signature, username")
@@ -41,7 +47,7 @@ def api(method, path, data=None):
 
 
 def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
-          estilo=True, estilo2=False, up=False):
+          estilo=True, estilo2=False, up=False, ref=None, peso_ref=PESO_REF):
     seed = seed if seed is not None else random.randint(0, 2**31 - 1)
     lora_nome, lora_forca, gatilho = LORA_ESTILO, FORCA_ESTILO, GATILHO_ESTILO
     if estilo2:
@@ -49,6 +55,22 @@ def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
         lora_forca, gatilho = FORCA_ESTILO2, GATILHO_ESTILO2
     if estilo:
         prompt_pos = f"{gatilho}, {prompt_pos}"
+    modelo_no, clip_no = "1", "2"
+    if ref:
+        import os, sys
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from limpar import upload
+        up = upload(ref)
+        wf_ref = {
+            "20": {"class_type": "IPAdapterModelLoader",
+                   "inputs": {"ipadapter_file": IPADAPTER}},
+            "21": {"class_type": "CLIPVisionLoader",
+                   "inputs": {"clip_name": CLIP_VISION}},
+            "22": {"class_type": "LoadImage",
+                   "inputs": {"image": up["name"]}},
+        }
+    else:
+        wf_ref = {}
     wf = {
         "1": {"class_type": "CheckpointLoaderSimple",
               "inputs": {"ckpt_name": CKPT}},
@@ -76,10 +98,24 @@ def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
                    "inputs": {"lora_name": lora_nome,
                               "strength_model": lora_forca,
                               "strength_clip": lora_forca,
-                              "model": ["1", 0], "clip": ["2", 0]}}
+                              "model": [modelo_no, 0], "clip": ["2", 0]}}
         wf["3"]["inputs"]["clip"] = ["9", 1]
         wf["4"]["inputs"]["clip"] = ["9", 1]
         wf["6"]["inputs"]["model"] = ["9", 0]
+        modelo_no = "9"
+    if ref:
+        wf.update(wf_ref)
+        wf["23"] = {"class_type": "IPAdapterAdvanced",
+                    "inputs": {"model": [modelo_no, 0],
+                               "ipadapter": ["20", 0],
+                               "image": ["22", 0],
+                               "clip_vision": ["21", 0],
+                               "weight": peso_ref,
+                               "weight_type": "style transfer precise",
+                               "combine_embeds": "concat",
+                               "start_at": 0.0, "end_at": 1.0,
+                               "embeds_scaling": "V only"}}
+        wf["6"]["inputs"]["model"] = ["23", 0]
     if up:
         wf["10"] = {"class_type": "UpscaleModelLoader",
                     "inputs": {"model_name": UPSCALER}}
@@ -99,11 +135,24 @@ def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
 
 
 if __name__ == "__main__":
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    pos = args[0] if len(args) > 0 else "fantasy monster"
-    w = int(args[1]) if len(args) > 1 else 1024
-    h = int(args[2]) if len(args) > 2 else 1024
+    full = sys.argv[1:]
+    ref = full[full.index("--ref") + 1] if "--ref" in full else None
+    peso = float(full[full.index("--peso-ref") + 1]) if "--peso-ref" in full else PESO_REF
+    pos = [a for a in full if not a.startswith("--") and a != ref
+           and a != str(peso)]
+    pos = pos[0] if len(pos) > 0 else "fantasy monster"
+    nums = []
+    for a in full:
+        if a.startswith("--") or a == ref:
+            continue
+        try:
+            nums.append(int(a))
+        except ValueError:
+            pass
+    w = nums[0] if len(nums) > 0 else 1024
+    h = nums[1] if len(nums) > 1 else 1024
     gerar(f"{pos}, trading card game illustration, detailed anime fantasy art, "
           f"masterpiece, best quality, amazing quality", w, h,
-          estilo="--sem-estilo" not in sys.argv,
-          estilo2="--estilo2" in sys.argv, up="--up" in sys.argv)
+          estilo="--sem-estilo" not in full,
+          estilo2="--estilo2" in full, up="--up" in full,
+          ref=ref, peso_ref=peso)

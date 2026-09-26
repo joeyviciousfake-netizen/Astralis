@@ -14,6 +14,8 @@ novo — é ferramenta operada pelo Lead via terminal.
 | LoRA estilo TCG | `loras/yugioh_style_illustrious.safetensors` | 218 MB | traço estilo carta (gatilho `yugioh_style`, força 0,7) |
 | LoRA 14k (sabor sombrio) | `loras/yugioh_14k_sdxl.safetensors` | 651 MB | treinado em 14 mil cartas, traço mais pintado/dramático (gatilho `glowing, yugioh style, yugioh monster, duel monster`, `--estilo2`) |
 | UltraSharp 4x | `upscale_models/4x-UltraSharp.pth` | ~67 MB | hi-res 1024 → 2048 |
+| IP-Adapter Plus SDXL | `ipadapter/ip-adapter-plus_sdxl_vit-h.safetensors` | 808 MB | referência visual (só estilo) |
+| CLIP Vision H | `clip_vision/CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors` | 2,4 GB | olhos do IP-Adapter |
 
 Hardware: RTX 5060 8 GB + 24 GB RAM. Geração 1024² ≈ 1 min.
 
@@ -21,10 +23,14 @@ Hardware: RTX 5060 8 GB + 24 GB RAM. Geração 1024² ≈ 1 min.
 
 1. Abra o ComfyUI Desktop (a API precisa estar no ar).
 2. Gerar (com estilo TCG ligado por padrão):
-   `python tools/comfy/gerar.py "um mago sombrio com cajado" [largura altura] [--sem-estilo] [--estilo2] [--up]`
+   `python tools/comfy/gerar.py "um mago sombrio com cajado" [largura altura] [--sem-estilo] [--estilo2] [--up] [--ref <imagem> --peso-ref 0.5]`
+   `--ref` mostra uma imagem de referência e copia SÓ o estilo
+   (precisa do node `ComfyUI_IPAdapter_plus`; referência quadrada funciona melhor).
 3. Limpar assinatura/marca da borda de baixo:
    `python tools/comfy/limpar.py <imagem> [--base 12] [--saida <png>] [--denoise 0.9]`
-4. A imagem cai no `output` do ComfyUI; o script imprime o nome do arquivo.
+4. Ver na tela do ComfyUI: arraste `tools/comfy/workflows/gerar_tela.json`
+   ou `limpar_tela.json` para dentro da tela (são os mesmos fluxos dos scripts).
+   Seus trabalhos por comando também aparecem na fila e no output.
 
 ## Regras
 
