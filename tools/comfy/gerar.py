@@ -7,6 +7,7 @@ Requer o ComfyUI Desktop aberto (http://127.0.0.1:8188).
 A imagem cai na pasta output do ComfyUI e o caminho e impresso no final.
 Modelo padrao: Illustrious-XL-v2.0 (anime, otimo p/ arte de carta).
 --sem-estilo desliga o LoRA estilo TCG (padrao: ligado 0.7).
+--estilo2 usa o LoRA 14k (sabor mais sombrio/pintado).
 --up sobe 2x com UltraSharp (1024 -> 2048, nitido p/ impressao).
  negative fixo anti-texto/marca (carta nao pode ter assinatura).
 """
@@ -22,6 +23,9 @@ CKPT = "Illustrious-XL-v2.0.safetensors"
 LORA_ESTILO = "yugioh_style_illustrious.safetensors"
 FORCA_ESTILO = 0.7
 GATILHO_ESTILO = "yugioh_style"
+LORA_ESTILO2 = "yugioh_14k_sdxl.safetensors"
+FORCA_ESTILO2 = 0.7
+GATILHO_ESTILO2 = "glowing, yugioh style, yugioh monster, duel monster"
 UPSCALER = "4x-UltraSharp.pth"
 NEGATIVO = ("bad quality, worst quality, sketch, blurry, censored, "
             "text, watermark, signature, username")
@@ -37,10 +41,14 @@ def api(method, path, data=None):
 
 
 def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
-          estilo=True, up=False):
+          estilo=True, estilo2=False, up=False):
     seed = seed if seed is not None else random.randint(0, 2**31 - 1)
+    lora_nome, lora_forca, gatilho = LORA_ESTILO, FORCA_ESTILO, GATILHO_ESTILO
+    if estilo2:
+        estilo, lora_nome = True, LORA_ESTILO2
+        lora_forca, gatilho = FORCA_ESTILO2, GATILHO_ESTILO2
     if estilo:
-        prompt_pos = f"{GATILHO_ESTILO}, {prompt_pos}"
+        prompt_pos = f"{gatilho}, {prompt_pos}"
     wf = {
         "1": {"class_type": "CheckpointLoaderSimple",
               "inputs": {"ckpt_name": CKPT}},
@@ -65,9 +73,9 @@ def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
     }
     if estilo:
         wf["9"] = {"class_type": "LoraLoader",
-                   "inputs": {"lora_name": LORA_ESTILO,
-                              "strength_model": FORCA_ESTILO,
-                              "strength_clip": FORCA_ESTILO,
+                   "inputs": {"lora_name": lora_nome,
+                              "strength_model": lora_forca,
+                              "strength_clip": lora_forca,
                               "model": ["1", 0], "clip": ["2", 0]}}
         wf["3"]["inputs"]["clip"] = ["9", 1]
         wf["4"]["inputs"]["clip"] = ["9", 1]
@@ -97,4 +105,5 @@ if __name__ == "__main__":
     h = int(args[2]) if len(args) > 2 else 1024
     gerar(f"{pos}, trading card game illustration, detailed anime fantasy art, "
           f"masterpiece, best quality, amazing quality", w, h,
-          estilo="--sem-estilo" not in sys.argv, up="--up" in sys.argv)
+          estilo="--sem-estilo" not in sys.argv,
+          estilo2="--estilo2" in sys.argv, up="--up" in sys.argv)

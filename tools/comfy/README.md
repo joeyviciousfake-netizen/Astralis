@@ -12,6 +12,7 @@ novo — é ferramenta operada pelo Lead via terminal.
 | SDXL VAE | `vae/sdxl_vae.safetensors` | 319 MB | decodificador dedicado |
 | SDXL inpainting 0.1 | `diffusers/sdxl-1.0-inpainting-0.1/` (fp16) | 6,62 GB | limpar molduras (via `DiffusersLoader`) |
 | LoRA estilo TCG | `loras/yugioh_style_illustrious.safetensors` | 218 MB | traço estilo carta (gatilho `yugioh_style`, força 0,7) |
+| LoRA 14k (sabor sombrio) | `loras/yugioh_14k_sdxl.safetensors` | 651 MB | treinado em 14 mil cartas, traço mais pintado/dramático (gatilho `glowing, yugioh style, yugioh monster, duel monster`, `--estilo2`) |
 | UltraSharp 4x | `upscale_models/4x-UltraSharp.pth` | ~67 MB | hi-res 1024 → 2048 |
 
 Hardware: RTX 5060 8 GB + 24 GB RAM. Geração 1024² ≈ 1 min.
@@ -20,7 +21,7 @@ Hardware: RTX 5060 8 GB + 24 GB RAM. Geração 1024² ≈ 1 min.
 
 1. Abra o ComfyUI Desktop (a API precisa estar no ar).
 2. Gerar (com estilo TCG ligado por padrão):
-   `python tools/comfy/gerar.py "um mago sombrio com cajado" [largura altura] [--sem-estilo] [--up]`
+   `python tools/comfy/gerar.py "um mago sombrio com cajado" [largura altura] [--sem-estilo] [--estilo2] [--up]`
 3. Limpar assinatura/marca da borda de baixo:
    `python tools/comfy/limpar.py <imagem> [--base 12] [--saida <png>] [--denoise 0.9]`
 4. A imagem cai no `output` do ComfyUI; o script imprime o nome do arquivo.
