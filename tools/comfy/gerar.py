@@ -198,6 +198,11 @@ if __name__ == "__main__":
     ref_weight_type = (full[full.index("--ref-weight-type") + 1]
                        if "--ref-weight-type" in full else "style transfer precise")
     raw = "--raw" in full
+    explicit_style = "--estilo" in full or "--estilo2" in full
+    if raw and not explicit_style:
+        estilo = False
+    else:
+        estilo = True
     if "--base2" in full:
         ckpt, cfgv = BASE2, CFG_BASE2
     det = "--detalhar" in full
@@ -223,9 +228,12 @@ if __name__ == "__main__":
             pass
     w = nums[0] if len(nums) > 0 else 1024
     h = nums[1] if len(nums) > 1 else 1024
-    gerar(f"{pos}, trading card game illustration, detailed anime fantasy art, "
-          f"masterpiece, best quality, amazing quality", w, h,
-          estilo="--sem-estilo" not in full,
-          estilo2="--estilo2" in full, up="--up" in full,
+    final_prompt = pos if raw else (
+        f"{pos}, trading card game illustration, detailed anime fantasy art, "
+        "masterpiece, best quality, amazing quality")
+    if "--sem-estilo" in full:
+        estilo = False
+    gerar(final_prompt, w, h,
+          estilo=estilo, estilo2="--estilo2" in full, up="--up" in full,
           ref=ref, peso_ref=peso, ckpt=ckpt, cfg=cfgv, detalhar=det,
           negative=negative, raw=raw, ref_weight_type=ref_weight_type)
