@@ -41,7 +41,8 @@ Não vem de scripting, plugins arbitrários, custom code.
 Studio parece: simples, moderno, visual, contextual, poderoso, especializado.
 Não parece: Godot, Unreal, IDE, programming environment. Usuário não escreve GDScript/Rust/Svelte/JSON manualmente (JSON é detalhe interno).
 
-Limitações são design intencional do produto.
+Limitações estruturais (schema, runtime, UX e integridade do projeto) continuam sendo design intencional do produto.
+Isso não significa criar uma blacklist própria de conteúdo visual: o Studio não bloqueia, troca ou reescreve personagens, franquias, estilos, marcas ou outras referências visuais apenas por sua origem.
 
 ## 2.6 Anti-overengineering
 

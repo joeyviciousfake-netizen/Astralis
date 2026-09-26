@@ -8,14 +8,14 @@ A imagem cai na pasta output do ComfyUI e o caminho e impresso no final.
 Modelo padrao: Illustrious-XL-v2.0 (anime, otimo p/ arte de carta).
 --sem-estilo desliga o LoRA estilo TCG (padrao: ligado 0.7).
 --estilo2 usa o LoRA 14k (sabor mais sombrio/pintado).
---ref <imagem> mostra uma referencia p/ o IP-Adapter copiar SO o estilo
-   (nunca o desenho) — pede Comfy reiniciado apos instalar o node.
+--ref <imagem> envia uma referencia p/ o IP-Adapter conforme o workflow configurado — pede Comfy reiniciado apos instalar o node.
 --peso-ref <0..1> forca da referencia (padrao 0.5).
+--negative <texto> substitui o negativo padrao de qualidade; vazio tambem e permitido.
 --ckpt <arquivo> troca a base; --base2 = NoobAI (alternativa p/ humanoides);
    --cfg <n> afina o CFG.
 --detalhar refina mao + rosto com detector (Impact, mais lento).
 --up sobe 2x com UltraSharp (1024 -> 2048, nitido p/ impressao).
- negative fixo anti-texto/marca (carta nao pode ter assinatura).
+ negative padrao de qualidade; nao funciona como blacklist de conteudo.
 """
 import json
 import os
@@ -41,9 +41,7 @@ IPADAPTER = "ip-adapter-plus_sdxl_vit-h.safetensors"
 CLIP_VISION = "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"
 PESO_REF = 0.5
 UPSCALER = "4x-UltraSharp.pth"
-NEGATIVO = ("bad quality, worst quality, sketch, blurry, censored, "
-            "text, letters, words, caption, watermark, signature, username, "
-            "logo, copyright, card frame, border, text box, ui, interface")
+NEGATIVO_PADRAO = "bad quality, worst quality, sketch, blurry"
 
 
 def api(method, path, data=None):
@@ -57,7 +55,7 @@ def api(method, path, data=None):
 
 def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
           estilo=True, estilo2=False, up=False, ref=None, peso_ref=PESO_REF,
-          ckpt=CKPT, detalhar=False):
+          ckpt=CKPT, detalhar=False, negative=NEGATIVO_PADRAO):
     seed = seed if seed is not None else random.randint(0, 2**31 - 1)
     lora_nome, lora_forca, gatilho = LORA_ESTILO, FORCA_ESTILO, GATILHO_ESTILO
     if estilo2:
@@ -88,7 +86,7 @@ def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
         "3": {"class_type": "CLIPTextEncode",
               "inputs": {"text": prompt_pos, "clip": ["2", 0]}},
         "4": {"class_type": "CLIPTextEncode",
-              "inputs": {"text": NEGATIVO, "clip": ["2", 0]}},
+              "inputs": {"text": negative, "clip": ["2", 0]}},
         "5": {"class_type": "EmptyLatentImage",
               "inputs": {"width": width, "height": height, "batch_size": 1}},
         "6": {"class_type": "KSampler",
@@ -149,7 +147,7 @@ def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
                 receita = {"trabalho": pid, "seed": seed, "prompt": prompt_pos,
                            "tamanho": [width, height], "lora": lora_nome if estilo else None,
                            "referencia": ref, "peso_ref": peso_ref if ref else None,
-                           "up": up, "detalhar": detalhar, "base": ckpt,
+                           "negative": negative, "up": up, "detalhar": detalhar, "base": ckpt,
                            "fluxo_tela": "tools/comfy/workflows/gerar_tela.json"}
                 try:
                     outdir = os.path.join(os.path.expanduser("~"),
@@ -192,16 +190,26 @@ if __name__ == "__main__":
     peso = float(full[full.index("--peso-ref") + 1]) if "--peso-ref" in full else PESO_REF
     ckpt = full[full.index("--ckpt") + 1] if "--ckpt" in full else CKPT
     cfgv = float(full[full.index("--cfg") + 1]) if "--cfg" in full else 6.0
+    negative = full[full.index("--negative") + 1] if "--negative" in full else NEGATIVO_PADRAO
     if "--base2" in full:
         ckpt, cfgv = BASE2, CFG_BASE2
     det = "--detalhar" in full
-    pos = [a for a in full if not a.startswith("--") and a != ref
-           and a != str(peso)]
-    pos = pos[0] if len(pos) > 0 else "fantasy monster"
-    nums = []
-    for a in full:
-        if a.startswith("--") or a == ref:
+    value_flags = {"--ref", "--peso-ref", "--ckpt", "--cfg", "--negative"}
+    pos_tokens = []
+    i = 0
+    while i < len(full):
+        a = full[i]
+        if a in value_flags:
+            i += 2
             continue
+        if a.startswith("--"):
+            i += 1
+            continue
+        pos_tokens.append(a)
+        i += 1
+    pos = pos_tokens[0] if pos_tokens else "fantasy monster"
+    nums = []
+    for a in pos_tokens[1:]:
         try:
             nums.append(int(a))
         except ValueError:
@@ -212,4 +220,5 @@ if __name__ == "__main__":
           f"masterpiece, best quality, amazing quality", w, h,
           estilo="--sem-estilo" not in full,
           estilo2="--estilo2" in full, up="--up" in full,
-          ref=ref, peso_ref=peso, ckpt=ckpt, cfg=cfgv, detalhar=det)
+          ref=ref, peso_ref=peso, ckpt=ckpt, cfg=cfgv, detalhar=det,
+          negative=negative)

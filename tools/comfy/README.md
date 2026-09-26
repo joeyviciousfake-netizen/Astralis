@@ -15,7 +15,7 @@ novo — é ferramenta operada pelo Lead via terminal.
 | LoRA estilo TCG | `loras/yugioh_style_illustrious.safetensors` | 218 MB | traço estilo carta (gatilho `yugioh_style`, força 0,7) |
 | LoRA 14k (sabor sombrio) | `loras/yugioh_14k_sdxl.safetensors` | 651 MB | treinado em 14 mil cartas, traço mais pintado/dramático (gatilho `glowing, yugioh style, yugioh monster, duel monster`, `--estilo2`) |
 | UltraSharp 4x | `upscale_models/4x-UltraSharp.pth` | ~67 MB | hi-res 1024 → 2048 |
-| IP-Adapter Plus SDXL | `ipadapter/ip-adapter-plus_sdxl_vit-h.safetensors` | 808 MB | referência visual (só estilo) |
+| IP-Adapter Plus SDXL | `ipadapter/ip-adapter-plus_sdxl_vit-h.safetensors` | 808 MB | referência visual (fluxo configurável) |
 | CLIP Vision H | `clip_vision/CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors` | 2,4 GB | olhos do IP-Adapter |
 
 Hardware: RTX 5060 8 GB + 24 GB RAM. Geração 1024² ≈ 1 min.
@@ -27,8 +27,7 @@ Hardware: RTX 5060 8 GB + 24 GB RAM. Geração 1024² ≈ 1 min.
    `python tools/comfy/gerar.py "um mago sombrio com cajado" [largura altura] [--sem-estilo] [--estilo2] [--up] [--base2] [--ref <imagem> --peso-ref 0.5]`
    `--base2` troca p/ NoobAI (melhor em humanoide/mãos); `--cfg` afina.
    `--detalhar` refina mãos+rosto sozinho (detecta, refaz em alta, cola sem costura).
-   `--ref` mostra uma imagem de referência e copia SÓ o estilo
-   (precisa do node `ComfyUI_IPAdapter_plus`; referência quadrada funciona melhor).
+   `--ref` envia uma imagem de referência ao IP-Adapter. O preset atual usa `style transfer precise`, mas isso é configuração técnica do workflow, não uma regra de conteúdo; o usuário pode alterar o workflow para outras formas de referência (precisa do node `ComfyUI_IPAdapter_plus`).
 3. Limpar assinatura/marca da borda de baixo:
    `python tools/comfy/limpar.py <imagem> [--base 12] [--saida <png>] [--denoise 0.9]`
 4. Descrever imagem (olha e escreve o que ve, vira base de prompt):
@@ -39,8 +38,9 @@ Hardware: RTX 5060 8 GB + 24 GB RAM. Geração 1024² ≈ 1 min.
 
 ## Regras
 
-- Carta nunca leva texto/marca gerados: o negativo fixo barra
-  (`text, watermark, signature`).
+- O Studio não impõe blacklist de personagem, franquia, copyright, marca ou estilo.
+- O negativo padrão do `gerar.py` é apenas de qualidade (`bad quality`, etc.). Para efeitos visuais específicos, use `--negative` ou edite o workflow na tela.
+- Referências visuais são parâmetros do workflow: nenhuma substituição automática por personagem genérico/original é feita.
 - Resultado bom vira asset do projeto via fluxo normal
   (importar asset → `.apack` leva junto).
 - Prova de funcionamento: dragão branco de olhos azuis 1024²
