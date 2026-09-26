@@ -31,7 +31,9 @@ Hardware: RTX 5060 8 GB + 24 GB RAM. Geração 1024² ≈ 1 min.
    (precisa do node `ComfyUI_IPAdapter_plus`; referência quadrada funciona melhor).
 3. Limpar assinatura/marca da borda de baixo:
    `python tools/comfy/limpar.py <imagem> [--base 12] [--saida <png>] [--denoise 0.9]`
-4. Ver na tela do ComfyUI: arraste `tools/comfy/workflows/gerar_tela.json`
+4. Descrever imagem (olha e escreve o que ve, vira base de prompt):
+   `python tools/comfy/descrever.py <imagem> [--saida <txt>]`
+5. Ver na tela do ComfyUI: arraste `tools/comfy/workflows/gerar_tela.json`
    ou `limpar_tela.json` para dentro da tela (são os mesmos fluxos dos scripts).
    Seus trabalhos por comando também aparecem na fila e no output.
 
