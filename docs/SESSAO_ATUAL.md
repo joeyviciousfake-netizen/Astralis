@@ -40,7 +40,7 @@ estado_gut: "116 testes / 1877 asserts em 13 arquivos + base (+4 compat molde Ru
 estado_cargo: "101 testes Rust (88 + 13 molde/id). ZERO teste de frontend ainda."
 estado_dados: "schemas/examples = 722 fm_* / 39 duelistas / 39 decks (40 cada) / 25081 receitas / 0 regras / arena_starter / duel_fm_abertura 8000LP. pack = 25131 receitas (25081 + 50 A+A que nunca disparam). starter_backup = 40 cartas custom SO de teste. PROJETO DO EDITOR = astralis-studio/projects/default/ (sempre vazio no boot, so via Importar)."
 
-próximo_passo: "Usuario COMPARA OS 2 ESTILOS em Downloads (duelo_estiloA_classico vs duelo_estiloB_14k) e diz qual vira padrao, ou pede mais artes (descreve o monstro + estilo A/B)."
+próximo_passo: "Usuario COMPARA MAGO DO TEMPO em Downloads (tempo_estiloA vs tempo_estiloB, mesma seed 777): A = anime vintage com moldura dourada + texto falso; B = pintado rico sem texto. Diz qual vira padrao."
 
 # ---------- TRAVAS (regras, nao dividas) ----------
 travas:
