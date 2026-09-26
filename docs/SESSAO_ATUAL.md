@@ -91,7 +91,7 @@ estado_cargo: "101 testes Rust (88 + 13 molde/id). ZERO teste de frontend ainda.
 
 estado_dados: "schemas/examples = 722 fm_* / 39 duelistas / 39 decks (40 cada) / 25081 receitas / 0 regras / arena_starter / duel_fm_abertura 8000LP. pack = 25131 receitas (25081 + 50 A+A que nunca disparam). starter_backup = 40 cartas custom SO de teste. PROJETO DO EDITOR = astralis-studio/projects/default/ (sempre vazio no boot, so via Importar)."
 
-proximo_passo: "Validar no ComfyUI o novo fluxo de autoria visual: gerar uma imagem com prompt livre, uma com referencia visual e uma com negativo customizado; conferir na tela e no .job.json que nada foi reescrito silenciosamente pelo Studio e que os parametros escolhidos ficaram auditaveis."
+proximo_passo: "Validar no ComfyUI o modo RAW e o workflow gerar_livre_tela.json: gerar uma imagem com prompt literal, outra com referencia configurada e outra com negativo customizado; conferir na tela e no .job.json que os parametros escolhidos ficaram auditaveis."
 
 # ---------- TRAVAS (regras, nao dividas) ----------
 
@@ -149,9 +149,9 @@ dividas_pendentes:
 
 data_utc: "2026-09-26"
 
-versão_docs: "1.7"
+versão_docs: "1.8"
 
-versão_docs_obs: "Atualizacao 1.7: auditoria dos documentos e do pipeline visual removeu referencias que poderiam ser interpretadas como blacklist de personagem/copyright/conteudo. A autoria visual agora e explicitamente livre no Studio; negativos de geracao sao tratados como parametros configuraveis de qualidade, e nao como bloqueio de IP. Travas arquiteturais e de integridade continuam intactas."
+versão_docs_obs: "Atualizacao 1.8: alem de remover a blacklist visual propria do Studio, o pipeline ganhou modo RAW para prompt literal, referencia IP-Adapter configuravel e workflow de tela de geracao livre sem LoRA obrigatorio. Travas arquiteturais e de integridade continuam intactas."
  
 # ---------- LOG CURTO (ultimas 11) ----------
 
@@ -177,5 +177,6 @@ log_curto:
   - "2026-09-26: POLITICA DE REFERENCIAS/IP CONSOLIDADA: removida a ideia de censura adicional do Studio baseada apenas em copyright. Preservar a intencao do pedido, separar referencia de personagem e referencia de estilo, registrar tudo em .job.json e nao tentar burlar filtros ou protecoes externas."
 
   - "2026-09-26: AUDITORIA VISUAL: removidas as travas de conteudo/IP encontradas nos docs e no pipeline ComfyUI — IP-Adapter deixa de ser descrito como estilo-only, negativo padrao deixa de bloquear text/logo/copyright e passa a ser configuravel por `--negative`, workflow de tela alinhado. Travas arquiteturais de runtime, schema, integridade e distribuicao permanecem."
-  - "2026-09-26: SESSAO_ATUAL consolidada em bloco YAML unico, chaves unicas, proximo_passo preenchido e versao_docs 1.7."
+  - "2026-09-26: PIPELINE LIVRE: modo --raw, --ref-weight-type e workflow gerar_livre_tela.json adicionados; prompt agora pode ser literal sem adicoes automaticas quando o autor escolher RAW."
+  - "2026-09-26: SESSAO_ATUAL consolidada em bloco YAML unico, chaves unicas, proximo_passo preenchido e versao_docs 1.8."
 ```
