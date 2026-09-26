@@ -2,8 +2,8 @@
  "config": {},
  "extra": {},
  "groups": [],
- "last_link_id": 20,
- "last_node_id": 32,
+ "last_link_id": 21,
+ "last_node_id": 33,
  "links": [
   [
    1,
@@ -103,7 +103,7 @@
   ],
   [
    13,
-   30,
+   33,
    0,
    32,
    2,
@@ -164,6 +164,14 @@
    8,
    0,
    "IMAGE"
+  ],
+  [
+   21,
+   30,
+   0,
+   33,
+   0,
+   "CONTROL_NET"
   ]
  ],
  "nodes": [
@@ -330,8 +338,8 @@
    "type": "LoraLoader",
    "widgets_values": [
     "yugioh_style_illustrious.safetensors",
-    0.7,
-    0.7
+    0.5,
+    0.5
    ]
   },
   {
@@ -592,7 +600,7 @@
    ],
    "type": "CLIPTextEncode",
    "widgets_values": [
-    "yugioh_style, small round red clockwork magician creature, perfectly spherical red body, huge blue circular clock face covering the belly, jumping high casting a green time vortex spell, trading card game illustration, detailed anime fantasy art, masterpiece"
+    "yugioh_style, small round red clockwork magician creature, perfectly spherical red body, huge blue circular clock face covering the belly with green hour and minute hands and red center dot, two big round white eyes with blue pupils above the clock, golden gear collar around neck, golden gear shoulder pads on both sides, small red cylindrical chimney hat like a short tube on top of head, purple and blue feathered wings on both sides, white gloves on hands, purple jester shoes on both small feet, thin long golden staff with pointed tip held in hand, jumping high casting a green time vortex spell, trading card game illustration, detailed anime fantasy art, masterpiece"
    ]
   },
   {
@@ -832,7 +840,7 @@
     }
    ],
    "mode": 0,
-   "order": 15,
+   "order": 16,
    "outputs": [],
    "pos": [
     1960,
@@ -858,7 +866,7 @@
    "outputs": [
     {
      "links": [
-      13
+      21
      ],
      "name": "CONTROL_NET",
      "slot_index": 0,
@@ -901,7 +909,7 @@
     }
    ],
    "mode": 0,
-   "order": 13,
+   "order": 14,
    "outputs": [
     {
      "links": [
@@ -939,7 +947,7 @@
    "flags": {},
    "id": 32,
    "mode": 0,
-   "order": 14,
+   "order": 15,
    "inputs": [
     {
      "name": "positive",
@@ -1017,6 +1025,51 @@
     1.0,
     0.0,
     1.0
+   ]
+  },
+  {
+   "flags": {},
+   "id": 33,
+   "mode": 0,
+   "order": 13,
+   "inputs": [
+    {
+     "name": "control_net",
+     "type": "CONTROL_NET",
+     "link": 21
+    },
+    {
+     "name": "type",
+     "type": "COMBO",
+     "widget": {
+      "name": "type"
+     }
+    }
+   ],
+   "outputs": [
+    {
+     "links": [
+      13
+     ],
+     "name": "CONTROL_NET",
+     "slot_index": 0,
+     "type": "CONTROL_NET"
+    }
+   ],
+   "pos": [
+    400,
+    820
+   ],
+   "properties": {
+    "Node name for S&R": "SetUnionControlNetType"
+   },
+   "size": [
+    340,
+    80
+   ],
+   "type": "SetUnionControlNetType",
+   "widgets_values": [
+    "openpose"
    ]
   }
  ],

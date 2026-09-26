@@ -28,7 +28,7 @@ import urllib.request
 BASE = "http://127.0.0.1:8188"
 CKPT = "Illustrious-XL-v2.0.safetensors"
 LORA_ESTILO = "yugioh_style_illustrious.safetensors"
-FORCA_ESTILO = 0.7
+FORCA_ESTILO = 0.5
 GATILHO_ESTILO = "yugioh_style"
 IPADAPTER = "ip-adapter-plus_sdxl_vit-h.safetensors"
 CLIP_VISION = "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"
@@ -53,7 +53,7 @@ def api(method, path, data=None):
 def gerar(ref, ficha_path, pose_nome, acao, width=1024, height=1024,
           steps=28, cfg=6.0, seed=None, estilo=True, ckpt=CKPT,
           peso_id=PESO_ID, tipo_id=TIPO_ID, forca_pose=FORCA_POSE,
-          negative=NEGATIVO):
+          forca_estilo=FORCA_ESTILO, sem_uniao=False, negative=NEGATIVO):
     seed = seed if seed is not None else random.randint(0, 2**31 - 1)
     ficha = json.load(open(ficha_path, encoding="utf-8"))
     aparencia = ficha["prompt_aparencia"]
@@ -83,8 +83,8 @@ def gerar(ref, ficha_path, pose_nome, acao, width=1024, height=1024,
               "inputs": {"width": width, "height": height, "batch_size": 1}},
         "9": {"class_type": "LoraLoader",
               "inputs": {"lora_name": LORA_ESTILO,
-                         "strength_model": FORCA_ESTILO if estilo else 0.0,
-                         "strength_clip": FORCA_ESTILO if estilo else 0.0,
+                         "strength_model": forca_estilo if estilo else 0.0,
+                         "strength_clip": forca_estilo if estilo else 0.0,
                          "model": ["1", 0], "clip": ["2", 0]}},
         "20": {"class_type": "IPAdapterModelLoader",
                "inputs": {"ipadapter_file": IPADAPTER}},
@@ -100,11 +100,14 @@ def gerar(ref, ficha_path, pose_nome, acao, width=1024, height=1024,
                           "end_at": 1.0, "embeds_scaling": "V only"}},
         "30": {"class_type": "ControlNetLoader",
                "inputs": {"control_net_name": CONTROLNET}},
+        "33": {"class_type": "SetUnionControlNetType",
+               "inputs": {"control_net": ["30", 0], "type": "openpose"}},
         "31": {"class_type": "LoadImage",
                "inputs": {"image": up_pose["name"]}},
         "32": {"class_type": "ControlNetApplyAdvanced",
                "inputs": {"positive": ["3", 0], "negative": ["4", 0],
-                          "control_net": ["30", 0], "image": ["31", 0],
+                          "control_net": ["30", 0] if sem_uniao else ["33", 0],
+                          "image": ["31", 0],
                           "strength": forca_pose, "start_percent": 0.0,
                           "end_percent": 1.0}},
         "6": {"class_type": "KSampler",
@@ -136,6 +139,7 @@ def gerar(ref, ficha_path, pose_nome, acao, width=1024, height=1024,
                            "tipo_id": tipo_id, "pose": pose_nome,
                            "acao": acao, "forca_pose": forca_pose,
                            "base": ckpt, "lora": LORA_ESTILO if estilo else None,
+                           "forca_estilo": forca_estilo if estilo else 0.0,
                            "controlnet": CONTROLNET,
                            "fluxo_tela": "tools/comfy/workflows/gerar_fiel_tela.json"}
                 try:
@@ -164,6 +168,8 @@ if __name__ == "__main__":
         sys.exit(1)
     gerar(ref, ficha, opt("--pose", "voar_lancar"), opt("--acao", "heroic pose"),
           estilo="--sem-estilo" not in a,
+          forca_estilo=float(opt("--forca-estilo", FORCA_ESTILO)),
+          sem_uniao="--sem-uniao" in a,
           peso_id=float(opt("--peso-id", PESO_ID)),
           tipo_id=opt("--tipo-id", TIPO_ID),
           forca_pose=float(opt("--forca-pose", FORCA_POSE)),

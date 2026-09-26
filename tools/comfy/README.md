@@ -46,7 +46,17 @@ Hardware: RTX 5060 8 GB + 24 GB RAM. Geração 1024² ≈ 1 min.
    humano revisa e congela `prompt_aparencia` + `nao_fazer` (1x por personagem).
    `python tools/comfy/gerar_fiel.py --ref <img> --ficha fichas/<id>.json --pose <nome> --acao "<nova acao>"`
    junta identidade (IPAdapter `strong middle` 0.75) + pose (ControlNet Union 1.0
-   com esqueleto de `pose.py`: neutra, pular, voar_lancar, surfar, correr).
+   com tipo `openpose` explícito via SetUnionControlNetType + esqueleto de
+   `pose.py`: neutra, pular, voar_lancar, surfar, correr).
+   Config congelada no piloto do relógio: LoRA TCG em 0.5 (0.0/0.3 quebram o
+   personagem em bola+coadjuvante; 0.5≈0.7, fica 0.5); ficha com palavras de
+   arquétipo MANTIDAS (tirar "creature/magician/belly" colapsou tudo em mandala
+   mecânica — testado e revertido; a teoria de "só geometria" perdeu no bake-off).
+   `python tools/comfy/partes.py checar <gerada> <ficha>` confere partes críticas
+   por grounding (caixa+região) sem node novo; `python tools/comfy/reparo.py
+   <gerada> <ref> <ficha> <parte>` tenta inpaint regional da parte (máscara no
+   corpo achado por grounding + crop da ref via IPAdapter; ainda em ajuste de
+   força — pintar elemento novo resiste, reparar preserva o resto).
    `python tools/comfy/nota.py <ref> <geradas...>` dá a nota 0..1 p/ bake-off.
    Na tela: arraste `gerar_fiel_tela.json`. Ficha modelo: `fichas/relogio.json`.
    Regra honesta: nota é filtro grosso (fundo parecido infla); veredito final é
