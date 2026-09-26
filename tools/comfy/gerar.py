@@ -11,6 +11,9 @@ Modelo padrao: Illustrious-XL-v2.0 (anime, otimo p/ arte de carta).
 --ref <imagem> envia uma referencia p/ o IP-Adapter conforme o workflow configurado — pede Comfy reiniciado apos instalar o node.
 --peso-ref <0..1> forca da referencia (padrao 0.5).
 --negative <texto> substitui o negativo padrao de qualidade; vazio tambem e permitido.
+--raw envia o prompt literal, sem sufixo automatico e sem LoRA automatico.
+--ref-weight-type <tipo> escolhe o `weight_type` do IPAdapterAdvanced; padrao: style transfer precise.
+--negative <texto> substitui o negativo padrao de qualidade; vazio tambem e permitido.
 --ckpt <arquivo> troca a base; --base2 = NoobAI (alternativa p/ humanoides);
    --cfg <n> afina o CFG.
 --detalhar refina mao + rosto com detector (Impact, mais lento).
@@ -61,7 +64,7 @@ def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
     if estilo2:
         estilo, lora_nome = True, LORA_ESTILO2
         lora_forca, gatilho = FORCA_ESTILO2, GATILHO_ESTILO2
-    if estilo:
+    if estilo and not raw:
         prompt_pos = f"{gatilho}, {prompt_pos}"
     modelo_no, clip_no = "1", "2"
     if ref:
@@ -118,7 +121,7 @@ def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
                                "image": ["22", 0],
                                "clip_vision": ["21", 0],
                                "weight": peso_ref,
-                               "weight_type": "style transfer precise",
+                               "weight_type": ref_weight_type,
                                "combine_embeds": "concat",
                                "start_at": 0.0, "end_at": 1.0,
                                "embeds_scaling": "V only"}}
@@ -190,6 +193,10 @@ if __name__ == "__main__":
     peso = float(full[full.index("--peso-ref") + 1]) if "--peso-ref" in full else PESO_REF
     ckpt = full[full.index("--ckpt") + 1] if "--ckpt" in full else CKPT
     cfgv = float(full[full.index("--cfg") + 1]) if "--cfg" in full else 6.0
+    negative = full[full.index("--negative") + 1] if "--negative" in full else NEGATIVO_PADRAO
+    ref_weight_type = (full[full.index("--ref-weight-type") + 1]
+                       if "--ref-weight-type" in full else "style transfer precise")
+    raw = "--raw" in full
     negative = full[full.index("--negative") + 1] if "--negative" in full else NEGATIVO_PADRAO
     if "--base2" in full:
         ckpt, cfgv = BASE2, CFG_BASE2
