@@ -26,6 +26,7 @@ Hardware: RTX 5060 8 GB + 24 GB RAM. Geração 1024² ≈ 1 min.
 2. Gerar (com estilo TCG ligado por padrão):
    `python tools/comfy/gerar.py "um mago sombrio com cajado" [largura altura] [--sem-estilo] [--estilo2] [--up] [--base2] [--ref <imagem> --peso-ref 0.5]`
    `--base2` troca p/ NoobAI (melhor em humanoide/mãos); `--cfg` afina.
+   `--detalhar` refina mãos+rosto sozinho (detecta, refaz em alta, cola sem costura).
    `--ref` mostra uma imagem de referência e copia SÓ o estilo
    (precisa do node `ComfyUI_IPAdapter_plus`; referência quadrada funciona melhor).
 3. Limpar assinatura/marca da borda de baixo:

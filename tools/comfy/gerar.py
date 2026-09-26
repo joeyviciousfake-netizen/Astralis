@@ -13,13 +13,16 @@ Modelo padrao: Illustrious-XL-v2.0 (anime, otimo p/ arte de carta).
 --peso-ref <0..1> forca da referencia (padrao 0.5).
 --ckpt <arquivo> troca a base; --base2 = NoobAI (alternativa p/ humanoides);
    --cfg <n> afina o CFG.
+--detalhar refina mao + rosto com detector (Impact, mais lento).
 --up sobe 2x com UltraSharp (1024 -> 2048, nitido p/ impressao).
  negative fixo anti-texto/marca (carta nao pode ter assinatura).
 """
 import json
 import os
 import random
+import subprocess
 import sys
+import tempfile
 import time
 import urllib.parse
 import urllib.request
@@ -39,7 +42,8 @@ CLIP_VISION = "CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors"
 PESO_REF = 0.5
 UPSCALER = "4x-UltraSharp.pth"
 NEGATIVO = ("bad quality, worst quality, sketch, blurry, censored, "
-            "text, watermark, signature, username")
+            "text, letters, words, caption, watermark, signature, username, "
+            "logo, copyright, card frame, border, text box, ui, interface")
 
 
 def api(method, path, data=None):
@@ -53,7 +57,7 @@ def api(method, path, data=None):
 
 def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
           estilo=True, estilo2=False, up=False, ref=None, peso_ref=PESO_REF,
-          ckpt=CKPT):
+          ckpt=CKPT, detalhar=False):
     seed = seed if seed is not None else random.randint(0, 2**31 - 1)
     lora_nome, lora_forca, gatilho = LORA_ESTILO, FORCA_ESTILO, GATILHO_ESTILO
     if estilo2:
@@ -127,6 +131,13 @@ def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
         wf["11"] = {"class_type": "ImageUpscaleWithModel",
                     "inputs": {"upscale_model": ["10", 0], "image": ["7", 0]}}
         wf["8"]["inputs"]["images"] = ["11", 0]
+    if detalhar:
+        import subprocess
+        import tempfile
+        venv = ("C:/Users/Max/AppData/Local/Comfy-Desktop/ComfyUI-Installs/"
+                "ComfyUI/ComfyUI/.venv/Scripts/python.exe")
+        det = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                           "detalhar.py")
     pid = api("POST", "/prompt", {"prompt": wf})["prompt_id"]
     print("trabalho:", pid, "| seed:", seed, flush=True)
     for _ in range(120):
@@ -138,7 +149,8 @@ def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
                 receita = {"trabalho": pid, "seed": seed, "prompt": prompt_pos,
                            "tamanho": [width, height], "lora": lora_nome if estilo else None,
                            "referencia": ref, "peso_ref": peso_ref if ref else None,
-                           "up": up, "fluxo_tela": "tools/comfy/workflows/gerar_tela.json"}
+                           "up": up, "detalhar": detalhar, "base": ckpt,
+                           "fluxo_tela": "tools/comfy/workflows/gerar_tela.json"}
                 try:
                     outdir = os.path.join(os.path.expanduser("~"),
                                           "AppData", "Local", "Comfy-Desktop",
@@ -149,6 +161,27 @@ def gerar(prompt_pos, width=1024, height=1024, steps=28, cfg=6.0, seed=None,
                     print("receita:", base, flush=True)
                 except OSError:
                     pass
+                if detalhar:
+                    q = urllib.parse.urlencode(
+                        {"filename": im["filename"],
+                         "subfolder": im["subfolder"], "type": im["type"]})
+                    raw = urllib.request.urlopen(
+                        f"{BASE}/view?{q}", timeout=120).read()
+                    with tempfile.NamedTemporaryFile(
+                            suffix=".png", delete=False) as tf:
+                        tf.write(raw)
+                        tmp_img = tf.name
+                    dst = os.path.join(
+                        os.path.expanduser("~"), "AppData", "Local",
+                        "Comfy-Desktop", "ComfyUI-Shared", "output",
+                        os.path.splitext(im["filename"])[0] + "_det.png")
+                    r = subprocess.run(
+                        [venv, det, tmp_img, "--saida", dst],
+                        capture_output=True, text=True, timeout=1500)
+                    print(r.stdout[-500:] if r.stdout else r.stderr[-500:],
+                          flush=True)
+                    os.remove(tmp_img)
+                    print("DETALHADO:", os.path.basename(dst), flush=True)
             return h[pid]["outputs"]["8"]["images"]
     raise TimeoutError("geracao demorou demais (10 min)")
 
@@ -161,6 +194,7 @@ if __name__ == "__main__":
     cfgv = float(full[full.index("--cfg") + 1]) if "--cfg" in full else 6.0
     if "--base2" in full:
         ckpt, cfgv = BASE2, CFG_BASE2
+    det = "--detalhar" in full
     pos = [a for a in full if not a.startswith("--") and a != ref
            and a != str(peso)]
     pos = pos[0] if len(pos) > 0 else "fantasy monster"
@@ -178,4 +212,4 @@ if __name__ == "__main__":
           f"masterpiece, best quality, amazing quality", w, h,
           estilo="--sem-estilo" not in full,
           estilo2="--estilo2" in full, up="--up" in full,
-          ref=ref, peso_ref=peso, ckpt=ckpt, cfg=cfgv)
+          ref=ref, peso_ref=peso, ckpt=ckpt, cfg=cfgv, detalhar=det)
