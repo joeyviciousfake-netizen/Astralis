@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Molde vazio Normal testado 2026-09-27: normal_clean_template.png 1626x2370 ok 85% (sem monstro/nome/estrelas/texto/ATK, arte cinza #808080, caixa creme, sem fantasma roxo). Falta polir: barra titulo com mancha laranja residual + base com blur ATK. Repo intacto."
+onde_estamos: "Molde Normal V2 2026-09-27 95%: normal_clean_template_v2.png 1626x2370 sem laranja/fantasma roxo, friso reto, base nitida (11 iteracoes, patch transfer corr 0.97 + grao mono sigma 3.0, SDXL rejeitado pois alucinou). Resta em 200%: 7 circulos sutis nas estrelas + degrau retangular no friso direito + nuance roxa. Repo intacto."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
@@ -67,7 +67,7 @@ estado_cargo: "101 testes Rust (88 + 13 molde/id). ZERO teste de frontend ainda.
 
 estado_dados: "schemas/examples = 722 fm_* / 39 duelistas / 39 decks (40 cada) / 25081 receitas / 0 regras / arena_starter / duel_fm_abertura 8000LP. pack = 25131 receitas (25081 + 50 A+A que nunca disparam). starter_backup = 40 cartas custom SO de teste. PROJETO DO EDITOR = astralis-studio/projects/default/ (sempre vazio no boot, so via Importar)."
 
-proximo_passo: "Polir barra titulo e base do molde Normal e repetir p/ as outras 5 cores."
+proximo_passo: "V3: apagar 7 fantasmas das estrelas + costura do friso direito, depois replicar p/ 5 cores."
 
 # ---------- TRAVAS (regras, nao dividas) ----------
 
