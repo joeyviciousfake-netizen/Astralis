@@ -71,6 +71,12 @@ export function starName(id: string): string {
   return GUARDIAN_STARS.find((s) => s.id === id)?.name ?? id;
 }
 
+// Molduras padrão da carta (D23): as 6 JPGs 813x1185 viram o fundo do
+// CardPreview, no lugar do desenho CSS antigo. Os arquivos versionados ficam
+// em static/frames/ (o que o navegador/WebView mostra); a cópia de dados
+// fica em projects/default/assets/frames/ (sobrevive ao boot D29, que só
+// limpa assets/cards|portraits|backgrounds). Só visual (R1/R4): a escolha é
+// pelo dado da carta, nada de regra.
 // Mesma paleta do FM-Studio por tipo: monstro âmbar, magia esmeralda, trap rosa.
 export function cardTypeBg(t: string): string {
   if (t === "spell") return "bg-gradient-to-br from-emerald-600 via-teal-600 to-emerald-700 border-emerald-600";
@@ -78,4 +84,50 @@ export function cardTypeBg(t: string): string {
   if (t === "equip") return "bg-gradient-to-br from-sky-600 via-blue-600 to-sky-700 border-sky-600";
   if (t === "ritual") return "bg-gradient-to-br from-violet-600 via-purple-600 to-violet-700 border-violet-600";
   return "bg-gradient-to-br from-amber-600 via-yellow-600 to-amber-700 border-amber-600";
+}
+
+// ---- Molduras (fundo-imagem do CardPreview) ----
+// Chave = moldura; valor = caminho servido pelo app (static/frames/).
+export const FRAMES: Record<string, string> = {
+  normal: "/frames/normal.jpg",
+  effect: "/frames/effect.jpg",
+  fusion: "/frames/fusion.jpg",
+  ritual: "/frames/ritual.jpg",
+  spell: "/frames/spell.jpg",
+  trap: "/frames/trap.jpg",
+};
+
+export const FRAME_LABELS: Record<string, string> = {
+  normal: "Monstro normal",
+  effect: "Monstro com efeito",
+  fusion: "Monstro de fusão",
+  ritual: "Monstro de ritual",
+  spell: "Magia",
+  trap: "Armadilha",
+};
+
+// Escolha da moldura pelo dado da carta (automática, sem estado de sessão):
+// magia/equipamento → magia (equipamento é magia de equipamento, sem moldura
+// própria); armadilha → armadilha; ritual → ritual; monstro de fusão →
+// fusão; monstro com efeito → efeito; resto → normal.
+export function escolherMoldura(tipoCarta: string, temEfeito: boolean, ehFusao: boolean): string {
+  if (tipoCarta === "spell" || tipoCarta === "equip") return "spell";
+  if (tipoCarta === "trap") return "trap";
+  if (tipoCarta === "ritual") return "ritual";
+  if (ehFusao) return "fusion";
+  if (temEfeito) return "effect";
+  return "normal";
+}
+
+export function frameSrc(tipoCarta: string, temEfeito: boolean, ehFusao: boolean): string {
+  return FRAMES[escolherMoldura(tipoCarta, temEfeito, ehFusao)] ?? FRAMES.normal;
+}
+
+// Linha de tipo que aparece na caixa de texto da carta.
+export function linhaTipo(tipoCarta: string, tipoMonstro: string, temEfeito: boolean): string {
+  if (tipoCarta === "spell") return "[Magia]";
+  if (tipoCarta === "trap") return "[Armadilha]";
+  if (tipoCarta === "equip") return "[Equipamento]";
+  if (tipoCarta === "ritual") return `[${monsterTypeName(tipoMonstro)}/Ritual]`;
+  return `[${monsterTypeName(tipoMonstro)}/${temEfeito ? "Efeito" : "Normal"}]`;
 }

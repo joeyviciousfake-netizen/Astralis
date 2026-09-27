@@ -357,6 +357,7 @@
         <CardPreview
           nome={modelo.nome}
           idCarta={modelo.id}
+          tipoCarta="monster"
           tipoMonstro={modelo.tipo}
           atributo={modelo.attr}
           nivel={modelo.nivel}

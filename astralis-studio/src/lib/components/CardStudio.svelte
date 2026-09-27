@@ -11,7 +11,7 @@ import { useEffects } from "$lib/stores/effects.svelte";
   import { useSectionShell } from "$lib/section";
   import { errMsg } from "$lib/stores/ipc";
   import { invoke } from "@tauri-apps/api/core";
-  import { typeName, monsterTypeName, attrName, cardTypeBg, MONSTER_TYPES, ATTRIBUTES, GUARDIAN_STARS, starName } from "$lib/cardMeta";
+  import { typeName, monsterTypeName, attrName, cardTypeBg, MONSTER_TYPES, ATTRIBUTES, GUARDIAN_STARS } from "$lib/cardMeta";
   import AssetDrop from "$lib/components/AssetDrop.svelte";
   import CardPreview from "$lib/components/CardPreview.svelte";
   import snapshot from "../../generated/cards-snapshot.json";
@@ -82,6 +82,9 @@ import { useEffects } from "$lib/stores/effects.svelte";
   let effectPick = $state("");
 
   let isMonster = $derived(typeEdit === "monster");
+  // Moldura de fusão: a carta avisa nas tags (ex.: "fusao_blue_eyes") — só
+  // dado, sem regra. O fundo do preview segue o tipo automaticamente.
+  let ehFusao = $derived(/fus[ãa]o|fusion/i.test(tagsEdit));
 
   // sync edits quando a seleção muda (só no id novo)
   let lastSyncId: string | null = null;
@@ -693,53 +696,26 @@ import { useEffects } from "$lib/stores/effects.svelte";
           </div>
         </div>
         <div class="rounded-2xl border border-zinc-700 bg-zinc-900 p-4 md:col-span-2">
-          <p class="text-[10px] tracking-widest text-zinc-500 font-semibold mb-2">PRÉVIA — {isMonster ? "clique na arte para trocar a imagem" : "resumo"}</p>
-          {#if isMonster}
-            <CardPreview
-              nome={nameEdit}
-              idCarta={isNew ? idEdit : (store.selected?.id ?? idEdit)}
-              tipoMonstro={mtypeEdit}
-              atributo={attrEdit}
-              nivel={lvlEdit}
-              descricao={descEdit}
-              atk={atkEdit}
-              def={defEdit}
-              temEfeito={effectsEdit.length > 0}
-              artwork={artEdit}
-              arteUrl={artePreviewUrl}
-              sugestaoArte={isNew ? idEdit : (store.selected?.id ?? "arte")}
-              aoImportarArte={(c) => { artEdit = c; }}
-              aoArquivoArte={aoArquivoArte}
-            />
-            <p class="mt-2 text-[11px] text-zinc-500 text-center">A imagem nova aparece na hora; o botão <span class="text-zinc-300 font-semibold">Salvar</span> grava o campo artwork (com validação). A borda é só visualização e não salva.</p>
-          {:else}
-            <p class="mb-2 text-[11px] text-amber-300/90 text-center">Carta de verdade desenhada só para monstros por enquanto — magias, armadilhas e outras vêm depois.</p>
-            <div class="mx-auto w-56 rounded-2xl border-2 {cardTypeBg(typeEdit)} bg-zinc-950 p-3 shadow-xl">
-              <p class="text-center text-sm font-black truncate">{nameEdit || "(sem nome)"}</p>
-              <p class="text-center text-[10px] text-zinc-400">{typeName(typeEdit)}</p>
-              {#if gstar1Edit || gstar2Edit}
-                <p class="text-center text-[10px] text-amber-300/90">☆ {[gstar1Edit, gstar2Edit].filter(Boolean).map(starName).join(" + ")}</p>
-              {/if}
-              {#if artEdit.trim()}
-                <div class="mt-2 h-24 rounded-lg bg-zinc-900 border border-zinc-800 flex flex-col items-center justify-center gap-0.5 px-2">
-                  <span class="text-2xl">{typeEdit === "spell" ? "✨" : typeEdit === "trap" ? "🪤" : "🐲"}</span>
-                  <span class="text-[9px] font-mono text-zinc-500 truncate max-w-full">{artEdit.trim()}</span>
-                </div>
-              {:else}
-                <div class="mt-2 h-24 rounded-lg bg-zinc-800 border border-zinc-700 flex flex-col items-center justify-center gap-0.5">
-                  <span class="text-2xl grayscale opacity-50">🖼</span>
-                  <span class="text-[9px] text-zinc-500">sem arte (cinza automático)</span>
-                </div>
-              {/if}
-              <p class="mt-1.5 text-[11px] text-zinc-400 leading-snug line-clamp-3">{descEdit || "(sem descrição)"}</p>
-              {#if !artEdit.trim()}
-                <p class="mt-1.5 text-[10px] text-amber-300/90 text-center">⚠ sem arte — o jogo mostra um cinza no lugar</p>
-              {/if}
-              {#if !descEdit.trim()}
-                <p class="mt-1 text-[10px] text-amber-300/90 text-center">⚠ sem texto (comum no pack FM)</p>
-              {/if}
-            </div>
-          {/if}
+          <p class="text-[10px] tracking-widest text-zinc-500 font-semibold mb-2">PRÉVIA — moldura de {typeName(typeEdit).toLowerCase()} · clique na arte para trocar a imagem</p>
+          <CardPreview
+            nome={nameEdit}
+            idCarta={isNew ? idEdit : (store.selected?.id ?? idEdit)}
+            tipoCarta={typeEdit}
+            tipoMonstro={mtypeEdit}
+            atributo={attrEdit}
+            nivel={lvlEdit}
+            descricao={descEdit}
+            atk={atkEdit}
+            def={defEdit}
+            temEfeito={effectsEdit.length > 0}
+            ehFusao={ehFusao}
+            artwork={artEdit}
+            arteUrl={artePreviewUrl}
+            sugestaoArte={isNew ? idEdit : (store.selected?.id ?? "arte")}
+            aoImportarArte={(c) => { artEdit = c; }}
+            aoArquivoArte={aoArquivoArte}
+          />
+          <p class="mt-2 text-[11px] text-zinc-500 text-center">A imagem nova aparece na hora; o botão <span class="text-zinc-300 font-semibold">Salvar</span> grava o campo artwork (com validação). O fundo é a moldura padrão do tipo — não salva na carta.</p>
         </div>
       </div>
     {:else}

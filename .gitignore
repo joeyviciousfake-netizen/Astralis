@@ -15,6 +15,10 @@ dist/
 astralis-studio/projects/default/backups/
 astralis-studio/projects/*/backups/
 
+# Molduras padrão copiadas p/ dados do projeto (o original versionado está em static/frames/)
+astralis-studio/projects/default/assets/frames/
+astralis-studio/projects/*/assets/frames/
+
 # Studio (Rust/Tauri/Svelte)
 astralis-studio/target/
 astralis-studio/node_modules/
