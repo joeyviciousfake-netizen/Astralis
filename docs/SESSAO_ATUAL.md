@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Arte importada visivel (2026-09-27): comando ler_asset + cache, preview mostra assets/fm. Cargo 104, check 0. Commit 3423d97. Falta teste manual no app."
+onde_estamos: "Pack COMPLETO pronto (2026-09-27): 722 artes + 722 descricoes FM originais (YGOFM-gamedata), CHECK OK, ~57MB. Falta importar no app."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
@@ -67,7 +67,7 @@ estado_cargo: "101 testes Rust (88 + 13 molde/id). ZERO teste de frontend ainda.
 
 estado_dados: "schemas/examples = 722 fm_* / 39 duelistas / 39 decks (40 cada) / 25081 receitas / 0 regras / arena_starter / duel_fm_abertura 8000LP. pack = 25131 receitas (25081 + 50 A+A que nunca disparam). starter_backup = 40 cartas custom SO de teste. PROJETO DO EDITOR = astralis-studio/projects/default/ (sempre vazio no boot, so via Importar)."
 
-proximo_passo: "Abrir o Studio, importar o COM_IMAGENS e conferir a arte na fm_0001."
+proximo_passo: "Importar o COMPLETO no Studio e conferir fm_0001 com arte + descricao."
 
 # ---------- TRAVAS (regras, nao dividas) ----------
 
