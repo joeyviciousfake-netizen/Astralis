@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Pipeline de imagens zerado por ordem do usuario (2026-09-26): sem geracao de imagens, sem modelos, sem scripts, sem historico visual nos docs. Repo so com jogo + editor + dados. Git limpo."
+onde_estamos: "ComfyUI REMOVER_QUALQUER_COISA_V1 montado e testado em Normal-card (2026-09-27): modelos base ok (SDXL 6.6GB + VAE + Tile/Canny + LaMa + Fooocus patch + RealESRGAN), 4 nodes instalados, workflow 20 nodes em ComfyUI-Shared, saida 1626x2370 3.1s 1.22GB VRAM diff-fora 0. Repo Astralis intacto, git limpo. FALHA VISUAL: Ramo A LaMa deixou fantasma DARK + borrou 2 estrelas — precisa Ramo B SDXL/Fooocus + mascara sem estrelas."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
@@ -67,7 +67,7 @@ estado_cargo: "101 testes Rust (88 + 13 molde/id). ZERO teste de frontend ainda.
 
 estado_dados: "schemas/examples = 722 fm_* / 39 duelistas / 39 decks (40 cada) / 25081 receitas / 0 regras / arena_starter / duel_fm_abertura 8000LP. pack = 25131 receitas (25081 + 50 A+A que nunca disparam). starter_backup = 40 cartas custom SO de teste. PROJETO DO EDITOR = astralis-studio/projects/default/ (sempre vazio no boot, so via Importar)."
 
-proximo_passo: "Definir com o usuario o novo ponto de partida do zero, do jeito certo."
+proximo_passo: "Ativar Ramo B (inpaint_head Fooocus + controlnet_aux) e refazer mascara sem pegar estrelas, retestar as 6 molduras."
 
 # ---------- TRAVAS (regras, nao dividas) ----------
 
@@ -119,7 +119,7 @@ dividas_pendentes:
 
   - "QA: 'cancelar no meio da fila de fusao' e o caminho feliz do --project dentro do processo (so cobertos pelo jogo filho) foram provados por teste DESCARTAVEL e nao viraram teste permanente. Falta o QA transformar em teste fixo (o cenario da fusao cabe em test_fusao_fiel.gd)."
 
-data_utc: "2026-09-26"
+data_utc: "2026-09-27"
 
 versão_docs: "1.8"
 
