@@ -187,7 +187,7 @@ func test_molde_valido_do_projeto_move_peca() -> void:
 	var pcs: Dictionary = CardLayoutScript.pecas_por_kind(ativo)
 	assert_eq(float((pcs["name"] as Dictionary)["rect"]["x"]), 500.0, "Molde moveu o nome p/ x=500.")
 	assert_eq(float((pcs["name"] as Dictionary)["rect"]["y"]), 200.0, "Resto do rect veio do molde.")
-	assert_eq(float((pcs["art_window"] as Dictionary)["rect"]["x"]), 90.0, "Peça ausente = default do scan.")
+	assert_eq(float((pcs["art_window"] as Dictionary)["rect"]["x"]), 95.0, "Peça ausente = default do scan.")
 	var vista := _vista_nova()
 	vista.setup(_carta_monstro(), ativo)
 	assert_eq(str(vista.get("_layout_id")), "qa_molde_ok", "Carta usou o molde do projeto.")
@@ -261,11 +261,11 @@ func test_peca_ausente_e_campo_ausente_viram_default() -> void:
 	var nome: Dictionary = pcs["name"]
 	assert_eq(float((nome["rect"] as Dictionary).get("x", 0.0)), 100.0, "Rect do molde fica.")
 	assert_eq(str((nome["style"] as Dictionary).get("color", "")), "#112233", "Style do molde fica.")
-	assert_eq(float((nome["style"] as Dictionary).get("font_size", 0.0)), 37.0, "Style ausente = default (fonte 37).")
+	assert_eq(float((nome["style"] as Dictionary).get("font_size", 0.0)), 38.0, "Style ausente = default (fonte 38).")
 	assert_eq(int((nome["style"] as Dictionary).get("z", 0)), 5, "Style ausente = default (z 5).")
 	assert_eq(str(nome.get("visible_when", "")), "always", "visible_when ausente do nome = always.")
 	assert_eq(str((pcs["atkdef_bar"] as Dictionary).get("visible_when", "")), "monster_only", "visible_when ausente do ATK = monster_only.")
-	assert_eq(float(((pcs["art_window"] as Dictionary)["rect"] as Dictionary).get("x", 0.0)), 90.0, "Peça ausente = default (arte x 90).")
+	assert_eq(float(((pcs["art_window"] as Dictionary)["rect"] as Dictionary).get("x", 0.0)), 95.0, "Peça ausente = default (arte x 95).")
 
 
 # ---------- (6) VISIBLE_WHEN ESCONDE ATK ----------
@@ -365,7 +365,7 @@ func test_mesa_real_renderiza_com_molde() -> void:
 			assert_eq(((v.get("_pecas") as Dictionary).size()), 8, "Carta da mesa tem as 8 peças.")
 			assert_eq(str(v.get("_layout_id")), "card_layout_monster_default", "Carta da mesa usa o molde default.")
 			var nome := ((v.get("_pecas") as Dictionary)["name"] as Control)
-			assert_almost_eq(nome.position.x, 4.55, 0.01, "Nome da mesa no x do molde (35‰ de 130).")
+			assert_almost_eq(nome.position.x, 5.2, 0.01, "Nome da mesa no x do molde (40‰ de 130).")
 	assert_true(vistas > 0, "Mão tem CardViews de verdade (%d)." % vistas)
 
 
@@ -494,7 +494,7 @@ func test_molde_movido_formato_studio_lido_pelo_jogo() -> void:
 	assert_eq(str(lido.get("id", "")), "card_layout_monster_default", "Jogo leu o arquivo do Studio (não o default).")
 	var pcs: Dictionary = CardLayoutScript.pecas_por_kind(lido)
 	assert_eq(float(((pcs["name"] as Dictionary)["rect"] as Dictionary).get("x", 0.0)), 70.0, "Jogo moveu o nome p/ x=70.")
-	assert_eq(float(((pcs["art_window"] as Dictionary)["rect"] as Dictionary).get("x", 0.0)), 90.0, "Resto ficou no oficial (arte x 90).")
+	assert_eq(float(((pcs["art_window"] as Dictionary)["rect"] as Dictionary).get("x", 0.0)), 95.0, "Resto ficou no oficial (arte x 95).")
 	# Roundtrip pelo disco: o que volta é igual ao que o Studio salvou.
 	var f := FileAccess.open(_proj.path_join("layouts/card_layout_monster_default.json"), FileAccess.READ)
 	assert_true(f != null, "Arquivo do Studio existe no disco.")

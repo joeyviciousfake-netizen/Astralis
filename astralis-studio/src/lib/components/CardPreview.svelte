@@ -1,16 +1,20 @@
 <script lang="ts">
   // CardPreview — carta estilo Yu-Gi-Oh (só visual, sem gameplay).
-  // FUNDO = uma das 6 molduras JPG 813x1185 (static/frames/), escolhida pelo
-  // dado da carta (ver escolherMoldura em cardMeta): Normal/Effect/Fusion/
-  // Ritual/Spell/Trap. Proporção 813/1185 ≈ 59/86 (oficial).
-  // Os campos (nome, estrelas=level, arte clicável, tipo, descrição, ATK/DEF,
-  // atributo) ficam posicionados SOBRE os espaços da imagem, nas posições do
-  // `molde` (mesma fusão do jogo: peça ausente = default do scan); sem molde
-  // = tudo default. Aba Molde continua valendo (D36): só o fundo mudou, o
-  // desenho CSS antigo (gradientes + botões de borda) foi removido.
-  // Preview PURO: não valida, não salva, não mexe em regra. A arte que o
-  // usuário escolhe entra no fluxo existente (importar_asset → campo artwork
-  // → botão Salvar da tela).
+  // FUNDO = uma das 6 molduras JPG (static/frames/), escolhida pelo dado da
+  // carta (ver escolherMoldura em cardMeta): Normal/Effect/Fusion/Ritual/
+  // Spell/Trap. Proporção 813/1185 = 0,6861 (original 59x86).
+  // Os campos ficam SOBRE os espaços da imagem, nas posições do `molde`
+  // (mesma fusão do jogo: peça ausente = default; sem molde = tudo default).
+  // Default = scan das refs D23 (Normal-card Dark Magician + Spell-card
+  // Messenger, 813x1185): nome 4,0/2,8/81x4,4 fs38; orbe x85/2,8 d9,2%L
+  // (w90 h62 quadrado); estrelas y11,2 h4,2 d~4,7%L fs32; arte 9,5/16,8/
+  // 81x55,6 quadrada; texto 5,5/73,5/89x21,5 fs19; tipo fs22; atk y91,5 h2,5
+  // fs24 à direita abaixo do filete; rodapé 3,5/96/93x2,5 fs11. Magia/
+  // armadilha sem selo impresso no frame → orbe SPELL/TRAP + faixa
+  // "[SPELL CARD ∞]" / "[TRAP CARD ∞]" centralizada na fileira das estrelas.
+  // Aba Molde continua valendo (D36): o dado manda — a correção abaixo é só
+  // o default quando a peça falta; peça presente no molde vence.
+  // Preview PURO: não valida, não salva, não mexe em regra.
   import AssetDrop from "$lib/components/AssetDrop.svelte";
   import { attrName, frameSrc, linhaTipo, escolherMoldura, FRAME_LABELS, attributeIcon, STAR_IMG } from "$lib/cardMeta";
   import MOLDE_OFICIAL from "../../../../schemas/examples/layouts/card_layout_monster_default.json";
@@ -62,28 +66,74 @@
   let moldura = $derived(escolherMoldura(tipoCarta, temEfeito, ehFusao));
   let molduraSrc = $derived(frameSrc(tipoCarta, temEfeito, ehFusao));
   let ehMonstro = $derived(tipoCarta === "monster" || tipoCarta === "ritual");
-  // Orbe de atributo e estrelas só existem nas molduras de monstro (as de
-  // magia/armadilha têm o próprio selo impresso na imagem).
-  let mostrarOrbe = $derived(ehMonstro);
-  let mostrarEstrelas = $derived(tipoCarta === "monster");
+  // Ritual também é monstro com nível (tem estrelas). Magia/equip/armadilha
+  // não têm nível: no lugar das estrelas vai a faixa centralizada do tipo.
+  let mostrarEstrelas = $derived(tipoCarta === "monster" || tipoCarta === "ritual");
+  let mostrarFaixaMagia = $derived(tipoCarta === "spell" || tipoCarta === "equip" || tipoCarta === "trap");
+  // Orbe: frames não trazem selo impresso, então o overlay mostra sempre —
+  // monstro/ritual = atributo da carta; magia/equip = selo SPELL; armadilha
+  // = selo TRAP (igual à ref Messenger of Peace, que tem o selo no canto).
+  let iconeAtributo = $derived(
+    tipoCarta === "spell" || tipoCarta === "equip"
+      ? attributeIcon("spell")
+      : tipoCarta === "trap"
+        ? attributeIcon("trap")
+        : attributeIcon(atributo),
+  );
+  let mostrarOrbe = $derived(!!iconeAtributo);
+  // Faixa acima da arte nas magias/armadilhas: "[SPELL CARD ∞]" /
+  // "[TRAP CARD ∞]" (ref Spell-card.jpg, centralizado, maiúsculas + infinito).
+  let faixaMagia = $derived(tipoCarta === "trap" ? "[TRAP CARD ∞]" : "[SPELL CARD ∞]");
+  // Nome branco nas molduras escuras (magia esmeralda / armadilha rosa),
+  // preto nas claras (monstros âmbar / ritual azul) — igual às refs.
+  let nomeClaro = $derived(tipoCarta === "spell" || tipoCarta === "trap" || tipoCarta === "equip");
+  // Texto de monstro normal (sem efeito) é flavor em itálico (ref Dark
+  // Magician: "The ultimate wizard..." entre aspas); com efeito/magia é reto.
+  let textoItalico = $derived(tipoCarta === "monster" && !temEfeito && !ehFusao);
 
   let pedidoArte = $state(0);
 
   let estrelas = $derived(Math.min(12, Math.max(1, Math.floor(Number(nivel) || 1))));
 
-  // ---- MOLDE (D23): posição/tamanho/fonte/cor vêm do dado, não de número
-  // fixo. Peça ausente no molde = default do scan (mesma fusão do jogo em
-  // card_layout.gd). Sem molde (uso antigo) = tudo default = visual idêntico.
+  // ---- MOLDE (D23/D36): posição/tamanho/fonte/cor vêm do dado, não de
+  // número fixo. Peça ausente no molde = default do scan das refs 813x1185
+  // (CORRECAO abaixo, que ajusta o MOLDE_OFICIAL ainda com medidas do scan
+  // antigo); peça presente no molde (aba Molde / projects) vence a correção.
+  // Sem molde = tudo default corrigido = visual fiel às refs.
   // Conversões por-mil → tela: x/y/w/h em % do próprio eixo (÷10); font_size
-  // em ‰ da ALTURA → cqw (1% da largura): cqw = fs × 86 ÷ 590 (nome 37→5,39).
+  // em ‰ da ALTURA → cqw (1% da largura): cqw = fs × 1185 ÷ 8130 (nome 38→5,54).
   type RectMolde = { x: number; y: number; w: number; h: number };
   type EstiloMolde = { font_size?: number; bold?: boolean; color?: string; align?: string; z?: number };
+  // Medidas % das refs (813x1185) → por-mil: barra título y2,8 h4,4 x4,0 w81
+  // fs38; orbe x85 y2,8 w90 h62 (= quadrado 75px); estrelas y11,2 h4,2 d4,7%L
+  // fs32; arte x9,5 y16,8 w81 h55,6 (quadrada 659px); texto x5,5 y73,5 w89
+  // h21,5 fs19; tipo fs22; atk y91,5 h2,5 fs24; rodapé y96 h2,5 fs11.
+  const CORRECAO: Record<string, { rect?: Partial<RectMolde>; style?: EstiloMolde }> = {
+    name: { rect: { x: 40, y: 28, w: 810, h: 44 }, style: { font_size: 38, bold: true, align: "left", z: 5 } },
+    attribute_orb: { rect: { x: 850, y: 28, w: 90, h: 62 }, style: { z: 6 } },
+    level_stars: { rect: { x: 35, y: 112, w: 885, h: 42 }, style: { font_size: 32, bold: false, align: "right", z: 5 } },
+    art_window: { rect: { x: 95, y: 168, w: 810, h: 556 }, style: { z: 4 } },
+    type_line: { rect: { x: 95, y: 748, w: 810, h: 30 }, style: { font_size: 22, bold: true, align: "left", z: 5 } },
+    text_box: { rect: { x: 55, y: 735, w: 890, h: 215 }, style: { font_size: 19, bold: false, align: "left", z: 3 } },
+    atkdef_bar: { rect: { x: 95, y: 915, w: 810, h: 25 }, style: { font_size: 24, bold: true, align: "right", z: 5 } },
+    footer: { rect: { x: 35, y: 960, w: 930, h: 25 }, style: { font_size: 11, bold: false, align: "left", z: 5 } },
+  };
   function pecaMolde(kind: string): { rect: RectMolde; style: EstiloMolde } {
     const base = ((MOLDE_OFICIAL as unknown as Molde).pieces ?? []).find((p) => p.kind === kind) ?? {};
+    const fix = CORRECAO[kind] ?? {};
     const over = ((molde as Molde | null)?.pieces ?? []).find((p) => p.kind === kind) ?? {};
     return {
-      rect: { x: 0, y: 0, w: 0, h: 0, ...((base as { rect?: object }).rect ?? {}), ...((over as { rect?: object }).rect ?? {}) } as RectMolde,
-      style: { ...((base as { style?: object }).style ?? {}), ...((over as { style?: object }).style ?? {}) } as EstiloMolde,
+      rect: {
+        x: 0, y: 0, w: 0, h: 0,
+        ...((base as { rect?: object }).rect ?? {}),
+        ...(fix.rect ?? {}),
+        ...((over as { rect?: object }).rect ?? {}),
+      } as RectMolde,
+      style: {
+        ...((base as { style?: object }).style ?? {}),
+        ...(fix.style ?? {}),
+        ...((over as { style?: object }).style ?? {}),
+      } as EstiloMolde,
     };
   }
   let pNome = $derived(pecaMolde("name"));
@@ -96,9 +146,18 @@
   let pRodape = $derived(pecaMolde("footer"));
   const pc = (v: number) => `${v / 10}%`;
   const fsCqw = (s: EstiloMolde, padrao: number) =>
-    typeof s.font_size === "number" ? (s.font_size * 86) / 590 : padrao;
+    typeof s.font_size === "number" ? (s.font_size * 1185) / 8130 : padrao;
   const negrito = (s: EstiloMolde, padrao: boolean) =>
     typeof s.bold === "boolean" ? s.bold : padrao;
+  // Cor do nome: molde manda, mas o default do scan antigo é escuro — nas
+  // molduras escuras (magia/equip/armadilha) a ref é branca. Sem cor própria
+  // no molde, usa branco nelas e marrom-escuro nos monstros.
+  function corNome(s: EstiloMolde): string {
+    const doMolde = ((molde as Molde | null)?.pieces ?? []).find((p) => p.kind === "name")?.style?.color;
+    if (typeof doMolde === "string" && doMolde) return doMolde;
+    if (typeof s.color === "string" && s.color.toLowerCase() !== "#2a1c08") return s.color;
+    return nomeClaro ? "#ffffff" : "#2a1c08";
+  }
   const corTxt = (s: EstiloMolde, padrao: string) =>
     typeof s.color === "string" ? s.color : padrao;
   const just = (s: EstiloMolde, padrao: string) => {
@@ -106,10 +165,6 @@
     return a === "center" ? "center" : a === "right" ? "flex-end" : "flex-start";
   };
   const alinhTxt = (s: EstiloMolde, padrao: string) => (s.align ?? padrao) as string;
-
-  // Orbe de atributo: PNG circular com kanji (static/attributes/), um por
-  // atributo da carta. Vazio/desconhecido = sem orbe (esconde, sem inventar).
-  let iconeAtributo = $derived(attributeIcon(atributo));
 
   // Arte de verdade só quando dá para mostrar sem inventar caminho: imagem
   // local recém-escolhida (arteUrl) ou URL pronta (http/data). Caminho
@@ -125,54 +180,55 @@
 </script>
 
 <div class="w-full max-w-[320px] mx-auto" style="container-type: inline-size;">
-  <!-- Carta: proporção 813/1185 das molduras (≈ 59/86 oficial). O FUNDO é a
-       moldura JPG (img cobrindo a carta toda); os campos ficam por cima, nas
-       posições do molde. Fundo escuro sólido só enquanto a imagem carrega. -->
+  <!-- Carta 813x1185 (0,6861 = 59/86). FUNDO = moldura JPG cobrindo tudo;
+       campos por cima nas posições do molde. Fundo escuro só ao carregar. -->
   <div
     class="w-full relative overflow-hidden"
-    style="aspect-ratio: 59 / 86; border-radius: 2cqw; background: #1c130a; box-shadow: 0 10px 30px rgba(0,0,0,0.55);"
+    style="aspect-ratio: 813 / 1185; border-radius: 2cqw; background: #1c130a; box-shadow: 0 10px 30px rgba(0,0,0,0.55);"
     title="Moldura: {FRAME_LABELS[moldura] ?? moldura}"
   >
     <img src={molduraSrc} alt="" aria-hidden="true" class="absolute inset-0 w-full h-full" style="object-fit: fill;" />
     <div class="absolute inset-0">
-      <!-- 2. Nome: texto sobre a placa da moldura (a placa desenhada é a
-           da própria imagem; aqui só o texto, sem caixa). Posição do molde;
-           padding direito reserva o orbe. -->
+      <!-- Nome sobre a placa (só texto; a placa é da imagem). Ref: y2,8 h4,4
+           x4,0 w81 — termina onde o orbe começa (x85), sem texto embaixo dele.
+           Monstro = preto; magia/armadilha = branco (refs). -->
       <div class="absolute" style="left: {pc(pNome.rect.x)}; top: {pc(pNome.rect.y)}; width: {pc(pNome.rect.w)}; height: {pc(pNome.rect.h)};">
         <div
           class="w-full h-full overflow-hidden flex items-center"
-          style="padding: 0.4cqw 10cqw 0.4cqw 2.4cqw; justify-content: {just(pNome.style, 'left')};"
+          style="padding: 0.4cqw 1.5cqw 0.4cqw 2.4cqw; justify-content: {just(pNome.style, 'left')};"
         >
           <p
             class="truncate"
-            style="font-family: Georgia, 'Times New Roman', serif; font-weight: {negrito(pNome.style, true) ? 700 : 400}; font-size: {fsCqw(pNome.style, 5.4)}cqw; color: {corTxt(pNome.style, '#2a1c08')}; line-height: 1.15;"
+            style="font-family: Georgia, 'Times New Roman', serif; font-weight: {negrito(pNome.style, true) ? 700 : 400}; font-size: {fsCqw(pNome.style, 5.54)}cqw; color: {corNome(pNome.style)}; line-height: 1.15; letter-spacing: 0.02em;"
             title={nome || "(sem nome)"}
-          >{nome || "(sem nome)"}</p>
+          >{(nome || "(sem nome)").toUpperCase()}</p>
         </div>
       </div>
 
-      <!-- 3. Orbe de atributo: PNG do atributo da carta (static/attributes/),
-           só nas molduras de monstro (magia/armadilha têm o próprio selo
-           impresso na imagem). Posição vem do molde; vazio/desconhecido =
-           esconde. -->
+      <!-- Orbe: PNG com kanji (static/attributes/). Ref: x85 y2,8 d9,2%L
+           (quadrado). Monstro = atributo; magia = SPELL; armadilha = TRAP. -->
       {#if mostrarOrbe && iconeAtributo}
       <div
         class="absolute"
         style="left: {pc(pOrbe.rect.x)}; top: {pc(pOrbe.rect.y)}; width: {pc(pOrbe.rect.w)}; aspect-ratio: 1 / 1;"
         title="Atributo: {attrName(atributo)}"
       >
-        <img src={iconeAtributo} alt="Atributo {attrName(atributo)}" class="w-full h-full" style="object-fit: contain;" />
+        <img src={iconeAtributo} alt="Atributo {attrName(atributo)}" class="w-full h-full" style="object-fit: contain; filter: drop-shadow(0 0.3cqw 0.3cqw rgba(0,0,0,0.45));" />
       </div>
       {/if}
 
-      <!-- 4. Estrelas = level do dado, a bola laranja (static/estrelas/)
-           repetida N vezes. Só em monstro normal/efeito/fusão
-           (ritual/magia/armadilha não têm nível no dado V1). -->
+      <!-- Estrelas = level (monstro/ritual, à direita — ref Dark Magician com
+           7). Magia/armadilha: faixa "[SPELL CARD ∞]" / "[TRAP CARD ∞]"
+           centralizada na mesma fileira (ref Messenger, y11,2 h4,2). -->
       {#if mostrarEstrelas}
-      <div class="absolute flex items-center" style="left: {pc(pEstrelas.rect.x)}; right: {(1000 - pEstrelas.rect.x - pEstrelas.rect.w) / 10}%; top: {pc(pEstrelas.rect.y)}; height: {pc(pEstrelas.rect.h)}; gap: 0.6cqw; justify-content: {just(pEstrelas.style, 'right')};" title="Nível {estrelas}">
+      <div class="absolute flex items-center" style="left: {pc(pEstrelas.rect.x)}; right: {(1000 - pEstrelas.rect.x - pEstrelas.rect.w) / 10}%; top: {pc(pEstrelas.rect.y)}; height: {pc(pEstrelas.rect.h)}; gap: 0.8cqw; justify-content: {just(pEstrelas.style, 'right')};" title="Nível {estrelas}">
         {#each Array(estrelas) as _, i (i)}
-          <img src={STAR_IMG} alt="★" style="height: {fsCqw(pEstrelas.style, 6.5)}cqw; aspect-ratio: 1 / 1; object-fit: contain;" />
+          <img src={STAR_IMG} alt="★" style="height: {fsCqw(pEstrelas.style, 4.67)}cqw; aspect-ratio: 1 / 1; object-fit: contain;" />
         {/each}
+      </div>
+      {:else if mostrarFaixaMagia}
+      <div class="absolute flex items-center justify-center" style="left: {pc(pEstrelas.rect.x)}; right: {(1000 - pEstrelas.rect.x - pEstrelas.rect.w) / 10}%; top: {pc(pEstrelas.rect.y)}; height: {pc(pEstrelas.rect.h)};" title={faixaMagia}>
+        <p class="truncate" style="font-family: Georgia, 'Times New Roman', serif; font-weight: 700; font-size: {fsCqw(pEstrelas.style, 4.4)}cqw; color: #111111; line-height: 1.2; letter-spacing: 0.04em;">{faixaMagia}</p>
       </div>
       {/if}
 
@@ -206,36 +262,37 @@
         {/if}
       </button>
 
-      <!-- 6. Caixa de texto sobre o espaço da imagem: linha de tipo (varia
-           com o tipo da carta), descrição e ATK/DEF (só monstro). Posições
-           do molde; a caixa desenhada em CSS saiu — o pergaminho agora é a
-           própria moldura JPG. -->
+      <!-- Caixa de texto (pergaminho da imagem): monstro tem "[TIPO]" no topo
+           (ref, maiúsculas) + descrição + ATK/DEF à direita abaixo do filete
+           (só monstro — o filete é da moldura); magia tem só texto corrido
+           (o tipo já está na faixa acima da arte — ref Messenger). -->
       <div
         class="absolute overflow-hidden"
         style="left: {pc(pTexto.rect.x)}; top: {pc(pTexto.rect.y)}; width: {pc(pTexto.rect.w)}; height: {pc(pTexto.rect.h)};"
       >
-        <div class="w-full h-full flex flex-col" style="padding: 1.8cqw 3.4cqw 1.4cqw;">
-          <p class="truncate" style="font-family: Georgia, 'Times New Roman', serif; font-weight: {negrito(pTipo.style, true) ? 700 : 400}; font-size: {fsCqw(pTipo.style, 3.2)}cqw; color: {corTxt(pTipo.style, '#2a1c08')}; line-height: 1.3; text-align: {alinhTxt(pTipo.style, 'left')};">{linhaTipo(tipoCarta, tipoMonstro, temEfeito)}</p>
-          <div class="w-full overflow-y-auto" style="flex: 1 1 auto; min-height: 0; margin-top: 0.8cqw;">
+        <div class="w-full h-full flex flex-col" style="padding: 1.6cqw 3.2cqw 1.2cqw;">
+          {#if !mostrarFaixaMagia}
+          <p class="truncate" style="font-family: Georgia, 'Times New Roman', serif; font-weight: {negrito(pTipo.style, true) ? 700 : 400}; font-size: {fsCqw(pTipo.style, 3.21)}cqw; color: {corTxt(pTipo.style, '#2a1c08')}; line-height: 1.3; text-align: {alinhTxt(pTipo.style, 'left')};">{linhaTipo(tipoCarta, tipoMonstro, temEfeito).toUpperCase()}</p>
+          {/if}
+          <div class="w-full overflow-y-auto" style="flex: 1 1 auto; min-height: 0; margin-top: {mostrarFaixaMagia ? 0 : 0.8}cqw;">
             {#if (descricao ?? "").trim()}
-              <p style="font-family: Georgia, 'Times New Roman', serif; font-size: {fsCqw(pTexto.style, 2.9)}cqw; color: {corTxt(pTexto.style, '#2a1c08')}; line-height: 1.4; white-space: pre-line; text-align: {alinhTxt(pTexto.style, 'left')};">{(descricao ?? "").trim()}</p>
+              <p style="font-family: Georgia, 'Times New Roman', serif; {textoItalico ? 'font-style: italic;' : ''} font-size: {fsCqw(pTexto.style, 2.77)}cqw; color: {corTxt(pTexto.style, '#2a1c08')}; line-height: 1.4; white-space: pre-line; text-align: {alinhTxt(pTexto.style, 'left')};">{(descricao ?? "").trim()}</p>
             {:else}
-              <p style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: {fsCqw(pTexto.style, 2.9)}cqw; color: #8a7a55; line-height: 1.4;">(sem texto — comum no pack FM)</p>
+              <p style="font-family: Georgia, 'Times New Roman', serif; font-style: italic; font-size: {fsCqw(pTexto.style, 2.77)}cqw; color: #8a7a55; line-height: 1.4;">(sem texto — comum no pack FM)</p>
             {/if}
           </div>
           {#if ehMonstro}
-          <div style="margin-top: 1cqw; padding-top: 0.8cqw;">
-            <p style="font-family: Georgia, 'Times New Roman', serif; font-weight: {negrito(pAtk.style, true) ? 700 : 400}; font-size: {fsCqw(pAtk.style, 3.8)}cqw; color: {corTxt(pAtk.style, '#2a1c08')}; line-height: 1.2; text-align: {alinhTxt(pAtk.style, 'right')};">ATK/{atk} DEF/{def}</p>
+          <div style="margin-top: 0.6cqw;">
+            <p style="font-family: Georgia, 'Times New Roman', serif; font-weight: {negrito(pAtk.style, true) ? 700 : 400}; font-size: {fsCqw(pAtk.style, 3.5)}cqw; color: {corTxt(pAtk.style, '#2a1c08')}; line-height: 1.2; text-align: {alinhTxt(pAtk.style, 'right')};">ATK/{atk} DEF/{def}</p>
           </div>
           {/if}
         </div>
       </div>
 
-      <!-- 7. Microtexto de rodapé: 96→98,5%H (top 96% h 2,5%),
-           nº da carta à esquerda + copyright à direita, minúsculo. -->
+      <!-- Rodapé minúsculo (ref: y96 h2,5): id à esquerda + © à direita. -->
       <div class="absolute flex items-center justify-between" style="left: {pc(pRodape.rect.x)}; right: {(1000 - pRodape.rect.x - pRodape.rect.w) / 10}%; top: {pc(pRodape.rect.y)}; height: {pc(pRodape.rect.h)};">
-        <p class="truncate" style="font-size: {fsCqw(pRodape.style, 1.9)}cqw; font-family: ui-monospace, monospace; color: {corTxt(pRodape.style, '#ffffff')}cc;" title={idCarta}>{idCarta || "···"}</p>
-        <p style="font-size: {fsCqw(pRodape.style, 1.9)}cqw; color: {corTxt(pRodape.style, '#ffffff')}99; white-space: nowrap;">© ASTRALIS</p>
+        <p class="truncate" style="font-size: {fsCqw(pRodape.style, 1.6)}cqw; font-family: ui-monospace, monospace; color: {corTxt(pRodape.style, '#ffffff')}cc;" title={idCarta}>{idCarta || "···"}</p>
+        <p style="font-size: {fsCqw(pRodape.style, 1.6)}cqw; color: {corTxt(pRodape.style, '#ffffff')}99; white-space: nowrap;">© ASTRALIS</p>
       </div>
     </div>
   </div>
