@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Pipeline de imagens zerado por ordem do usuario (2026-09-27): sem geracao de imagens, sem modelos, sem scripts, sem historico visual nos docs. Repo so com jogo + editor + dados. Git limpo."
+onde_estamos: "Molduras JPG padrao no editor (2026-09-27, ordem do usuario): 6 molduras de Downloads/Imagens/Moldura viraram fundo do CardPreview por tipo (normal/effect/fusion/ritual/spell/trap); template CSS antigo removido; D36 intacto (molde em dado manda nas posicoes). Commit 6871d20, build+check 0, cargo 101/101. Git limpo."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
@@ -67,7 +67,7 @@ estado_cargo: "101 testes Rust (88 + 13 molde/id). ZERO teste de frontend ainda.
 
 estado_dados: "schemas/examples = 722 fm_* / 39 duelistas / 39 decks (40 cada) / 25081 receitas / 0 regras / arena_starter / duel_fm_abertura 8000LP. pack = 25131 receitas (25081 + 50 A+A que nunca disparam). starter_backup = 40 cartas custom SO de teste. PROJETO DO EDITOR = astralis-studio/projects/default/ (sempre vazio no boot, so via Importar)."
 
-proximo_passo: "Aguardar definicao do usuario sobre o proximo passo."
+proximo_passo: "Abrir o Studio e conferir as 6 molduras nas cartas, depois ajustar posicoes se precisar."
 
 # ---------- TRAVAS (regras, nao dividas) ----------
 
