@@ -105,3 +105,20 @@ texto 6%/74%/88%x21%; rodapé 96-98,5).
   nem no editor hoje.
 - Validação espelhada no Studio (`checar_card_layout` + 7 testes Rust);
   `tools/fm_import.py --check` segue verde (722/39/39/25081 intactos).
+
+## 4.9 Verso da carta — `card.card_back` (COMPATÍVEL, `schema_version` continua 1)
+
+O editor já grava `card_back?: string` (verso custom por carta). Contrato
+apenas alcança o dado (R3/R4): nenhum motor, nenhuma regra nova.
+
+- Contrato (`schemas/card.schema.json`, `schema_version` 1): campo opcional
+  `card_back` tipo `string` (qualquer texto, inclusive `""`). Ausente ou
+  vazio = verso padrão. `required` intacto; `additionalProperties: false`
+  continua — `card_back` entrou em `properties`, então carta com verso
+  passa e carta sem verso nem passa pelo campo novo.
+- Runtime V1 ignora o conteúdo (só dado visual, sem efeito em mesa); editor
+  mostra o verso custom ou o padrão (`CARD_BACK_DEFAULT`).
+- Dado FM existente (722 cartas sem `card_back`) continua válido, sem
+  migração (04.3). Validação espelhada no Studio (`checar_carta` aceita
+  ausente/string, recusa não-string); `tools/fm_import.py --check` segue
+  verde (722/39/39/25081 intactos).

@@ -131,3 +131,35 @@ export function linhaTipo(tipoCarta: string, tipoMonstro: string, temEfeito: boo
   if (tipoCarta === "ritual") return `[${monsterTypeName(tipoMonstro)}/Ritual]`;
   return `[${monsterTypeName(tipoMonstro)}/${temEfeito ? "Efeito" : "Normal"}]`;
 }
+
+// ---- Atributo / estrela / verso padrão (D23) ----
+// PNGs circulares com kanji em static/attributes|estrelas|backs (versionado,
+// o que o navegador/WebView mostra); a cópia de dados fica em
+// projects/default/assets/attributes|estrelas|backs (padrão frames/:
+// sobrevive ao boot D29, que só limpa assets/cards|portraits|backgrounds).
+// Só visual (R1/R4): a escolha é pelo dado da carta, nada de regra.
+// Orbe = imagem do atributo da carta; atributo vazio/desconhecido = sem orbe
+// (fallback: esconder, nunca inventar um).
+export const ATTRIBUTE_ICONS: Record<string, string> = {
+  light: "/attributes/light.png",
+  dark: "/attributes/dark.png",
+  fire: "/attributes/fire.png",
+  water: "/attributes/water.png",
+  earth: "/attributes/earth.png",
+  wind: "/attributes/wind.png",
+  divine: "/attributes/divine.png",
+  spell: "/attributes/spell.png",
+  trap: "/attributes/trap.png",
+};
+
+export function attributeIcon(id: string): string | null {
+  const a = (id ?? "").trim().toLowerCase();
+  return ATTRIBUTE_ICONS[a] ?? null;
+}
+
+// Nível = esta bola laranja repetida N vezes (sem desenho CSS).
+export const STAR_IMG = "/estrelas/estrela.png";
+
+// Verso padrão da carta. Campo `card_back` OPCIONAL na carta:
+// vazio/ausente = este padrão.
+export const CARD_BACK_DEFAULT = "/backs/verso_padrao.png";

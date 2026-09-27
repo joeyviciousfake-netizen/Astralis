@@ -12,7 +12,7 @@
   // usuário escolhe entra no fluxo existente (importar_asset → campo artwork
   // → botão Salvar da tela).
   import AssetDrop from "$lib/components/AssetDrop.svelte";
-  import { attrName, frameSrc, linhaTipo, escolherMoldura, FRAME_LABELS } from "$lib/cardMeta";
+  import { attrName, frameSrc, linhaTipo, escolherMoldura, FRAME_LABELS, attributeIcon, STAR_IMG } from "$lib/cardMeta";
   import MOLDE_OFICIAL from "../../../../schemas/examples/layouts/card_layout_monster_default.json";
   import type { Molde } from "$lib/stores/layout.svelte";
 
@@ -107,16 +107,9 @@
   };
   const alinhTxt = (s: EstiloMolde, padrao: string) => (s.align ?? padrao) as string;
 
-  const ORBE: Record<string, { kanji: string; en: string; fundo: string }> = {
-    light: { kanji: "光", en: "LIGHT", fundo: "radial-gradient(circle at 35% 30%, #fff7cc, #f5b301 60%, #8a5a00)" },
-    dark: { kanji: "闇", en: "DARK", fundo: "radial-gradient(circle at 35% 30%, #d8b4fe, #6d28d9 60%, #2e1065)" },
-    fire: { kanji: "炎", en: "FIRE", fundo: "radial-gradient(circle at 35% 30%, #fecaca, #dc2626 60%, #450a0a)" },
-    water: { kanji: "水", en: "WATER", fundo: "radial-gradient(circle at 35% 30%, #bae6fd, #0284c7 60%, #082f49)" },
-    earth: { kanji: "地", en: "EARTH", fundo: "radial-gradient(circle at 35% 30%, #fde68a, #b45309 60%, #451a03)" },
-    wind: { kanji: "風", en: "WIND", fundo: "radial-gradient(circle at 35% 30%, #bbf7d0, #16a34a 60%, #052e16)" },
-    divine: { kanji: "神", en: "DIVINE", fundo: "radial-gradient(circle at 35% 30%, #ffffff, #eab308 60%, #713f12)" },
-  };
-  let orbe = $derived(ORBE[atributo] ?? ORBE.earth);
+  // Orbe de atributo: PNG circular com kanji (static/attributes/), um por
+  // atributo da carta. Vazio/desconhecido = sem orbe (esconde, sem inventar).
+  let iconeAtributo = $derived(attributeIcon(atributo));
 
   // Arte de verdade só quando dá para mostrar sem inventar caminho: imagem
   // local recém-escolhida (arteUrl) ou URL pronta (http/data). Caminho
@@ -158,36 +151,37 @@
         </div>
       </div>
 
-      <!-- 3. Orbe de atributo: só nas molduras de monstro (magia/armadilha
-           têm o próprio selo impresso na imagem). Posição vem do molde. -->
-      {#if mostrarOrbe}
+      <!-- 3. Orbe de atributo: PNG do atributo da carta (static/attributes/),
+           só nas molduras de monstro (magia/armadilha têm o próprio selo
+           impresso na imagem). Posição vem do molde; vazio/desconhecido =
+           esconde. -->
+      {#if mostrarOrbe && iconeAtributo}
       <div
-        class="absolute flex flex-col items-center justify-center"
-        style="left: {pc(pOrbe.rect.x)}; top: {pc(pOrbe.rect.y)}; width: {pc(pOrbe.rect.w)}; aspect-ratio: 1 / 1; border-radius: 9999px; background: {orbe.fundo}; border: 0.6cqw solid #2a1c08; box-shadow: 0 0.5cqw 1.5cqw rgba(0,0,0,0.5);"
+        class="absolute"
+        style="left: {pc(pOrbe.rect.x)}; top: {pc(pOrbe.rect.y)}; width: {pc(pOrbe.rect.w)}; aspect-ratio: 1 / 1;"
         title="Atributo: {attrName(atributo)}"
       >
-        <span style="font-size: 1.4cqw; line-height: 1; color: #fff; opacity: 0.9; font-weight: 700; letter-spacing: 0.02em;">{orbe.en}</span>
-        <span style="font-size: 4.2cqw; line-height: 1.05; color: #fff; text-shadow: 0 0.2cqw 0.4cqw rgba(0,0,0,0.6);">{orbe.kanji}</span>
+        <img src={iconeAtributo} alt="Atributo {attrName(atributo)}" class="w-full h-full" style="object-fit: contain;" />
       </div>
       {/if}
 
-      <!-- 4. Estrelas = level do dado. Só em monstro normal/efeito/fusão
+      <!-- 4. Estrelas = level do dado, a bola laranja (static/estrelas/)
+           repetida N vezes. Só em monstro normal/efeito/fusão
            (ritual/magia/armadilha não têm nível no dado V1). -->
       {#if mostrarEstrelas}
       <div class="absolute flex items-center" style="left: {pc(pEstrelas.rect.x)}; right: {(1000 - pEstrelas.rect.x - pEstrelas.rect.w) / 10}%; top: {pc(pEstrelas.rect.y)}; height: {pc(pEstrelas.rect.h)}; gap: 0.6cqw; justify-content: {just(pEstrelas.style, 'right')};" title="Nível {estrelas}">
         {#each Array(estrelas) as _, i (i)}
-          <span style="font-size: {fsCqw(pEstrelas.style, 6.5)}cqw; line-height: 1; color: {corTxt(pEstrelas.style, '#ff9d0a')}; text-shadow: 0 0 1cqw rgba(255,157,10,0.8), 0 0.3cqw 0.6cqw rgba(0,0,0,0.6);">★</span>
+          <img src={STAR_IMG} alt="★" style="height: {fsCqw(pEstrelas.style, 6.5)}cqw; aspect-ratio: 1 / 1; object-fit: contain;" />
         {/each}
       </div>
       {/if}
 
-      <!-- 5. Arte QUADRADA: top 16,5%H, laterais 9%→91% (largura 82%W),
-           altura igual (82%W ≈56,3%H, termina ~72,8%). Moldura metálica
-           ~1,2%W (border) + fio escuro interno (overlay). Cover. -->
+      <!-- 5. Arte CRUA no quadrado: sem borda do editor (a moldura JPG já
+           traz a borda cinza impressa). Só a imagem, cover. -->
       <button
         type="button"
         class="absolute overflow-hidden text-left transition"
-        style="left: {pc(pArte.rect.x)}; top: {pc(pArte.rect.y)}; width: {pc(pArte.rect.w)}; height: {pc(pArte.rect.h)}; border-radius: 1.2cqw; border: 1.2cqw solid #8a7d64; background: #101014; cursor: pointer; padding: 0;"
+        style="left: {pc(pArte.rect.x)}; top: {pc(pArte.rect.y)}; width: {pc(pArte.rect.w)}; height: {pc(pArte.rect.h)}; background: #101014; cursor: pointer; padding: 0; border: none;"
         onclick={() => { pedidoArte += 1; }}
         title="Clique para trocar a imagem (abre o seletor de PNG)"
         aria-label="Trocar imagem da carta"
@@ -204,10 +198,6 @@
             {/if}
           </span>
         {/if}
-        <span
-          class="absolute pointer-events-none"
-          style="inset: 0; box-shadow: inset 0 0 0 0.4cqw #1a1208;"
-        ></span>
         {#if !esconderBorda}
         <span
           class="absolute"
@@ -234,7 +224,7 @@
             {/if}
           </div>
           {#if ehMonstro}
-          <div style="border-top: 0.3cqw solid #3d2a12; margin-top: 1cqw; padding-top: 0.8cqw;">
+          <div style="margin-top: 1cqw; padding-top: 0.8cqw;">
             <p style="font-family: Georgia, 'Times New Roman', serif; font-weight: {negrito(pAtk.style, true) ? 700 : 400}; font-size: {fsCqw(pAtk.style, 3.8)}cqw; color: {corTxt(pAtk.style, '#2a1c08')}; line-height: 1.2; text-align: {alinhTxt(pAtk.style, 'right')};">ATK/{atk} DEF/{def}</p>
           </div>
           {/if}

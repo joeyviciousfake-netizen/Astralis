@@ -11,7 +11,7 @@ import { useEffects } from "$lib/stores/effects.svelte";
   import { useSectionShell } from "$lib/section";
   import { errMsg } from "$lib/stores/ipc";
   import { invoke } from "@tauri-apps/api/core";
-  import { typeName, monsterTypeName, attrName, cardTypeBg, MONSTER_TYPES, ATTRIBUTES, GUARDIAN_STARS } from "$lib/cardMeta";
+  import { typeName, monsterTypeName, attrName, cardTypeBg, MONSTER_TYPES, ATTRIBUTES, GUARDIAN_STARS, CARD_BACK_DEFAULT } from "$lib/cardMeta";
   import AssetDrop from "$lib/components/AssetDrop.svelte";
   import CardPreview from "$lib/components/CardPreview.svelte";
   import snapshot from "../../generated/cards-snapshot.json";
@@ -73,8 +73,31 @@ import { useEffects } from "$lib/stores/effects.svelte";
     limparPreviaArte();
     artePreviewUrl = URL.createObjectURL(f);
   }
+  // Verso da carta (D23): campo OPCIONAL card_back, vazio = verso padrão
+  // (static/backs/verso_padrao.png). Troca pelo mesmo fluxo da arte
+  // (AssetDrop tipo="carta" → projects/default/assets/cards/...).
+  let versoEdit = $state("");
+  let versoPreviewUrl = $state<string | null>(null);
+  function limparPreviaVerso() {
+    if (versoPreviewUrl) URL.revokeObjectURL(versoPreviewUrl);
+    versoPreviewUrl = null;
+  }
+  function aoArquivoVerso(f: File) {
+    limparPreviaVerso();
+    versoPreviewUrl = URL.createObjectURL(f);
+  }
+  // O que a miniatura do verso mostra: imagem local recém-escolhida, URL
+  // pronta ou o padrão. Caminho relativo do projeto (assets/...) não abre no
+  // navegador — aí mostra o padrão com o caminho escrito embaixo.
+  let versoMostravel = $derived.by(() => {
+    if (versoPreviewUrl) return versoPreviewUrl;
+    const v = versoEdit.trim();
+    if (!v) return CARD_BACK_DEFAULT;
+    if (v.startsWith("data:image/") || v.startsWith("http://") || v.startsWith("https://") || v.startsWith("/")) return v;
+    return CARD_BACK_DEFAULT;
+  });
   // Snapshot dos originais (ao selecionar) — campo alterado mostra ↺.
-  type Orig = { name: string; desc: string; art: string; type: string; mtype: string; attr: string; lvl: number; atk: number; def: number; g1: string; g2: string; pwd: string; chip: string; effects: string[]; tags: string };
+  type Orig = { name: string; desc: string; art: string; back: string; type: string; mtype: string; attr: string; lvl: number; atk: number; def: number; g1: string; g2: string; pwd: string; chip: string; effects: string[]; tags: string };
   let orig = $state<Orig | null>(null);
   let fieldErrors = $state<Array<{ campo: string; mensagem: string; nivel: string }>>([]);
   let playMsg = $state("");
@@ -96,6 +119,7 @@ import { useEffects } from "$lib/stores/effects.svelte";
       nameEdit = sel.name ?? "";
       descEdit = sel.description ?? "";
       artEdit = sel.artwork ?? "";
+      versoEdit = sel.card_back ?? "";
       typeEdit = sel.card_type ?? "monster";
       mtypeEdit = sel.monster_type ?? "warrior";
       attrEdit = sel.attribute ?? "earth";
@@ -113,8 +137,9 @@ import { useEffects } from "$lib/stores/effects.svelte";
       playMsg = "";
       // Troca de carta: a prévia local da arte anterior não vale mais.
       limparPreviaArte();
+      limparPreviaVerso();
       orig = {
-        name: nameEdit, desc: descEdit, art: artEdit, type: typeEdit,
+        name: nameEdit, desc: descEdit, art: artEdit, back: versoEdit, type: typeEdit,
         mtype: mtypeEdit, attr: attrEdit, lvl: lvlEdit, atk: atkEdit,
         def: defEdit, g1: gstar1Edit, g2: gstar2Edit, pwd: pwdEdit,
         chip: chipEdit, effects: [...effectsEdit], tags: tagsEdit,
@@ -266,6 +291,9 @@ import { useEffects } from "$lib/stores/effects.svelte";
     // Dados FM: só entram quando preenchidos (vazio = ausente = N/A).
     if (gstar1Edit) card.guardian_star_1 = gstar1Edit;
     if (gstar2Edit) card.guardian_star_2 = gstar2Edit;
+    // Verso: OPCIONAL (vazio = ausente = verso padrão). PENDENTE Systems:
+    // incluir card_back no schemas/card.schema.json.
+    if (versoEdit.trim()) card.card_back = versoEdit.trim();
     if (pwdEdit.trim()) card.password = pwdEdit.trim();
     if (chipEdit.trim()) {
       const n = Math.floor(Number(chipEdit.trim()));
@@ -283,6 +311,7 @@ import { useEffects } from "$lib/stores/effects.svelte";
       const saved = await store.update(card);
       orig = {
         name: saved.name, desc: saved.description ?? "", art: saved.artwork ?? "",
+        back: saved.card_back ?? "",
         type: saved.card_type, mtype: saved.monster_type ?? "warrior",
         attr: saved.attribute ?? "earth", lvl: saved.level ?? 1,
         atk: saved.attack ?? 0, def: saved.defense ?? 0,
@@ -334,6 +363,7 @@ import { useEffects } from "$lib/stores/effects.svelte";
     nameEdit = `${sel.name} (cópia)`;
     descEdit = sel.description ?? "";
     artEdit = sel.artwork ?? "";
+    versoEdit = sel.card_back ?? "";
     typeEdit = sel.card_type;
     mtypeEdit = sel.monster_type ?? "warrior";
     attrEdit = sel.attribute ?? "earth";
@@ -349,6 +379,7 @@ import { useEffects } from "$lib/stores/effects.svelte";
     orig = null;
     fieldErrors = [];
     limparPreviaArte();
+    limparPreviaVerso();
     detailFlash.flashSave("Cópia pronta — ajuste e clique em Salvar", true);
   }
 
@@ -359,6 +390,7 @@ import { useEffects } from "$lib/stores/effects.svelte";
     nameEdit = "";
     descEdit = "";
     artEdit = "";
+    versoEdit = "";
     typeEdit = "monster";
     mtypeEdit = "warrior";
     attrEdit = "earth";
@@ -375,6 +407,7 @@ import { useEffects } from "$lib/stores/effects.svelte";
     fieldErrors = [];
     playMsg = "";
     limparPreviaArte();
+    limparPreviaVerso();
     store.selectedId = null;
   }
 
@@ -670,6 +703,24 @@ import { useEffects } from "$lib/stores/effects.svelte";
             {#if orig && tagsEdit !== orig.tags}<button class="text-[11px] text-zinc-500 hover:text-zinc-200" title="Restaurar" onclick={() => resetField("tags", (x) => { tagsEdit = x; })}>↺</button>{/if}
           </div>
           <input class="w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 text-sm focus:outline-none focus:border-violet-600" bind:value={tagsEdit} placeholder="starter, dragao" />
+        </div>
+        <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 md:col-span-2">
+          <div class="flex items-center gap-1.5 mb-1.5">
+            <p class="text-[10px] tracking-widest text-zinc-500 font-semibold">VERSO DA CARTA (opcional — vazio = padrão)</p>
+            {#if orig && versoEdit !== orig.back}<button class="text-[11px] text-zinc-500 hover:text-zinc-200" title="Restaurar" onclick={() => resetField("back", (x) => { versoEdit = x; })}>↺</button>{/if}
+          </div>
+          <div class="flex gap-3 items-start">
+            <img src={versoMostravel} alt="Verso da carta" class="w-20 shrink-0 rounded-lg border border-zinc-700" style="aspect-ratio: 59 / 86; object-fit: cover;" />
+            <div class="flex-1 min-w-0">
+              <AssetDrop tipo="carta" sugestao="{isNew ? idEdit : (store.selected?.id ?? 'verso')}_verso" value={versoEdit} onimport={(c) => versoEdit = c} onarquivo={aoArquivoVerso} />
+              <input class="mt-1.5 w-full px-2.5 py-1.5 rounded-lg bg-zinc-950 border border-zinc-800 text-xs font-mono focus:outline-none focus:border-violet-600" bind:value={versoEdit} oninput={() => limparPreviaVerso()} placeholder="vazio = verso_padrao.png" />
+              {#if !versoEdit.trim()}
+                <p class="mt-1 text-[11px] text-zinc-500">Padrão: verso_padrao.png (o verso azul-marrom do anime).</p>
+              {:else if !versoPreviewUrl && !versoEdit.trim().startsWith("data:image/") && !versoEdit.trim().startsWith("http://") && !versoEdit.trim().startsWith("https://") && !versoEdit.trim().startsWith("/")}
+                <p class="mt-1 text-[11px] text-zinc-500 truncate" title={versoEdit.trim()}>📁 {versoEdit.trim()} — caminho do projeto (a miniatura mostra o padrão no navegador).</p>
+              {/if}
+            </div>
+          </div>
         </div>
         <div class="rounded-xl border border-zinc-800 bg-zinc-900/60 p-3 md:col-span-2">
           <p class="text-[10px] tracking-widest text-zinc-500 font-semibold mb-1.5">EFEITOS (só vale o que o Astralis sabe executar)</p>

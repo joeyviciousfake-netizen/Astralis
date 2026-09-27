@@ -86,6 +86,9 @@ schemas/
       - `card_layout.schema.json`: canvas fixo `{w:59,h:86,unit:per_mil}` + `pieces` 0-9 com `kind` do enum fechado (`name|attribute_orb|level_stars|art_window|type_line|text_box|atkdef_bar|footer|frame`, máx 1 por kind), `layout_for` V1 = `"monster"`, `rect{x,y,w,h}` 0-1000 com `x+w<=1000` e `y+h<=1000` (soma e unicidade conferem no Studio + `--check`, não no draft-07), `style{font_size 0-1000,bold,color #rrggbb,align,z 0-10}` tudo opcional, `visible_when[always,monster_only]`. Peça ausente = default do scan.
       - Default oficial `examples/layouts/card_layout_monster_default.json`: as 9 peças nas medidas do scan (arte 90,165,820,563 quadrada até ~72,8%; texto 60,740,880,210; rodapé 35,960,930,25; `atkdef_bar` = único `monster_only`).
       - Mínimo válido: `{"schema_version":1,"id":"layout_teste","name":"Teste"}` (sem `pieces` = tudo default). Inválidos (reprovados no `--check`): `kind:"sombra"`, `rect` com `x+w>1000`, kind repetido, `color:"marrom"`, `visible_when:"so_efeito"`, `schema_version:2`.
+16. Verso da carta (COMPATÍVEL, `schema_version` continua 1 — só adição opcional em `card.schema.json`, doc 04.9; dado FM sem `card_back` continua válido):
+      - `card_back` opcional tipo `string` (qualquer texto, inclusive `""`). Ausente ou vazio = verso padrão. Só dado visual, sem regra (R1/R4); runtime V1 ignora o conteúdo.
+      - Mínimo válido: `{"schema_version":1,"id":"card_teste","name":"Teste","card_type":"spell"}` (sem `card_back` = verso padrão) e com `"card_back":"assets/cards/verso_custom.png"` ou `"card_back":""` (ambos passam). Inválido: `"card_back":123` (precisa ser texto).
 
 ### Como validar agora
 

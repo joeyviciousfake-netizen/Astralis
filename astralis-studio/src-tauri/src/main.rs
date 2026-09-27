@@ -731,6 +731,17 @@ fn checar_carta(carta: &serde_json::Value, catalogo: &Catalogo) -> Vec<ErroValid
             "Custo em starchips precisa ser 0 ou mais (999999 = não comprável). Clique em Starchips e ajuste — ou deixe em branco.",
         )),
     }
+    // Verso da carta (schemas/card.schema.json, doc 04.9): OPCIONAL, só dado
+    // (R1/R4). Ausente ou "" = verso padrão; presente precisa ser texto.
+    match carta.get("card_back") {
+        None => {}
+        Some(serde_json::Value::String(_)) => {}
+        _ => erros.push(erro(
+            "Verso",
+            "field-card_back",
+            "Verso precisa ser um caminho de imagem (texto) — ou deixe em branco (verso padrão).",
+        )),
+    }
 
     if let Some(tags) = carta.get("tags") {
         if !tags.is_array() {

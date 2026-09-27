@@ -9,6 +9,7 @@
     "name": { "type": "string", "minLength": 1, "description": "Nome exibido (pode ser traduzido sem trocar o id)." },
     "description": { "type": "string", "description": "Texto exibido na carta." },
     "artwork": { "type": "string", "description": "Caminho do asset, ex: assets/cards/card_x.png. Pode ser placeholder." },
+    "card_back": { "type": "string", "description": "OPCIONAL. Caminho do verso da carta, ex: assets/cards/verso_custom.png. Vazio/ausente = verso padrão. Só dado, sem regra (R1/R4)." },
     "card_type": { "type": "string", "enum": ["monster", "spell", "trap", "equip", "ritual"], "description": "spell = magia (inclui Magic do FM, nunca renomear); equip = carta de equipamento FM; ritual = magia de ritual FM (na fonte FM é categoria não-monstro, sem ATK/DEF)." },
     "monster_type": { "type": "string", "enum": ["dragon", "spellcaster", "warrior", "beast", "aqua", "rock", "pyro", "thunder", "plant", "zombie", "fairy", "insect", "machine", "fiend", "beast-warrior", "winged-beast", "dinosaur", "reptile", "sea-serpent", "fish"], "description": "Obrigatório se card_type=monster. fish/dinosaur/etc. vêm do FM (fish não estava na lista original e foi incluído p/ não deixar 17 cartas órfãs)." },
     "attribute": { "type": "string", "enum": ["light", "dark", "fire", "water", "earth", "wind", "divine"], "description": "Obrigatório se card_type=monster. FM usa Light/Dark/Fire/Water/Earth/Wind (minúsculo aqui); divine é extra Astralis." },

@@ -21,6 +21,10 @@ export type Card = {
   guardian_star_2?: string;
   password?: string;
   starchip_cost?: number;
+  // Verso da carta (D23): OPCIONAL, vazio/ausente = verso padrão
+  // (static/backs/verso_padrao.png). Só dado, sem regra (R1/R4).
+  // PENDENTE Systems: incluir no schemas/card.schema.json.
+  card_back?: string;
   effects?: string[];
   tags?: string[];
 };

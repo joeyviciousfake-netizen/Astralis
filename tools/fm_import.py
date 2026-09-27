@@ -219,7 +219,7 @@ def load_json(path: Path):
 
 
 def check_card(c, enums, errs, where):
-    allowed = {"schema_version", "id", "name", "description", "artwork", "card_type",
+    allowed = {"schema_version", "id", "name", "description", "artwork", "card_back", "card_type",
                "monster_type", "attribute", "level", "attack", "defense", "effects", "tags",
                "guardian_star_1", "guardian_star_2", "password", "starchip_cost"}
     if c.get("schema_version") != 1:
@@ -257,6 +257,9 @@ def check_card(c, enums, errs, where):
         errs.append("%s %s: password %r" % (where, c.get("id"), c["password"]))
     if "starchip_cost" in c and (not isinstance(c["starchip_cost"], int) or c["starchip_cost"] < 0):
         errs.append("%s %s: starchip_cost %r" % (where, c.get("id"), c["starchip_cost"]))
+    # Verso da carta (doc 04.9): opcional, ausente/vazio = padrao; se presente, precisa ser texto.
+    if "card_back" in c and not isinstance(c["card_back"], str):
+        errs.append("%s %s: card_back %r (precisa ser texto)" % (where, c.get("id"), c["card_back"]))
     if "effects" in c and (not isinstance(c["effects"], list)
                             or any(not ID_RE.fullmatch(e) for e in c["effects"])):
         errs.append("%s %s: effects invalido" % (where, c.get("id")))
