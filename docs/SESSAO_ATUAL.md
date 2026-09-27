@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "ComfyUI ZERADO por ordem do usuario 2026-09-27: 4 nodes, 9 modelos, 2 workflows, scripts Temp e saidas molde_vazio/teste_moldura apagados e conferidos. So resta o ComfyUI base. Usuario arranjou outro jeito de editar imagens. Repo Astralis intacto."
+onde_estamos: "Pipeline de imagens zerado por ordem do usuario (2026-09-27): sem geracao de imagens, sem modelos, sem scripts, sem historico visual nos docs. Repo so com jogo + editor + dados. Git limpo."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
@@ -67,7 +67,7 @@ estado_cargo: "101 testes Rust (88 + 13 molde/id). ZERO teste de frontend ainda.
 
 estado_dados: "schemas/examples = 722 fm_* / 39 duelistas / 39 decks (40 cada) / 25081 receitas / 0 regras / arena_starter / duel_fm_abertura 8000LP. pack = 25131 receitas (25081 + 50 A+A que nunca disparam). starter_backup = 40 cartas custom SO de teste. PROJETO DO EDITOR = astralis-studio/projects/default/ (sempre vazio no boot, so via Importar)."
 
-proximo_passo: "Aguardar o novo jeito do usuario para editar imagens das molduras."
+proximo_passo: "Aguardar definicao do usuario sobre o proximo passo."
 
 # ---------- TRAVAS (regras, nao dividas) ----------
 
@@ -83,16 +83,6 @@ travas:
   - "D15-D36 travadas. Nao reabrir sem permissao. Ferramentas oficiais (D14/D18/D19): godot-mcp + GUT 9.7.1. Godot 4.7.2 em Godot/ (ignorado no git)."
 
   - "ANTIVIRUS (2026-09-25): o Windows Defender acusa src-tauri/target/debug/deps/astralis_studio-<hash>.exe de trojan. investigated: e FALSO POSITIVO. O arquivo e binario de TESTE gerado pelo proprio Cargo quando roda cargo test (nao e codigo escrito por agente, nao esta no git, target/ e ignorado, SHA256 50D4B22E...); o main.rs nao tem rede, registro, persistencia, injecao nem ofuscacao, e as unicas crates sao tauri/tauri-build/tauri-plugin-shell/serde/serde_json. Motivo do falso positivo: binario Rust debug sem assinatura + Tauri (embute WebView2, abre processo com cmd /C start, escreve em %TEMP%) = assinatura classica de heuristica. O aviso VOLTA toda vez que rodar cargo test/cargo build — apagar o arquivo nao resolve. O usuario DEIXOU COMO ESTA de proposito (nao quer mexer em antivirus). Se aparecer de novo, NAO investigar de novo: e o mesmo aviso. src-tauri/target/ tem 3,74 GB de cache puro, apagavel quando quiser."
-
-  - "POLITICA DE REFERENCIAS: o Studio nao inventa uma barreira adicional contra personagens, franquias ou designs conhecidos apenas por serem protegidos por copyright. Nao substituir silenciosamente o alvo por um personagem generico ou original."
-
-  - "POLITICA DE REFERENCIAS: preservar a intencao do pedido do usuario na camada do Studio. O texto enviado ao workflow deve corresponder ao pedido escolhido, salvo transformacoes tecnicas explicitamente configuradas pelo proprio workflow."
-
-  - "POLITICA DE REFERENCIAS: personagem e estilo sao referencias distintas. --ref pode ser usado como imagem de referencia; --peso-ref controla a influencia; o workflow deve deixar claro qual no recebeu a imagem e qual peso foi usado."
-
-  - "POLITICA DE REFERENCIAS: nenhuma rotina de jailbreak, evasao de filtro, ofuscacao de nomes, prompt adversarial ou substituicao lexical com objetivo de enganar ou burlar protecoes de uma ferramenta externa."
-
-  - "POLITICA DE REFERENCIAS: toda geracao deve continuar registrando .job.json com prompt, seed, modelo, LoRA, referencia, pesos e workflow utilizado, para diferenciar pedido do usuario, configuracao do Studio e comportamento da camada externa."
 
 # ---------- DÍVIDAS QUE SOBRARAM (levantadas, NAO corrigidas — por decisão de escopo) ----------
 
