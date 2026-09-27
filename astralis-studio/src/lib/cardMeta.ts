@@ -157,6 +157,55 @@ export function attributeIcon(id: string): string | null {
   return ATTRIBUTE_ICONS[a] ?? null;
 }
 
+// ---- Arte do projeto (só exibe dado, R1/R4) ----
+// O CardPreview mostrava placeholder cinza para `artwork: assets/...` porque
+// o navegador/WebView não abre caminho relativo do projeto. O resolvedor lê
+// via comando Tauri `ler_asset` (só abaixo de projects/default/assets/) e
+// guarda a data URL pronta num Map de sessão (cada arte é lida UMA vez).
+// `data:`/`http` continuam diretos; caminho relativo volta null até carregar
+// (o placeholder atual cobre esse meio-tempo). Nada de gameplay aqui.
+import { invokeLoad } from "$lib/stores/ipc";
+
+// Data URL pronta por caminho (sessão): assets/fm/card_0001.png -> data:...
+const cacheArteProjeto = new Map<string, string>();
+// Leitura em voo por caminho (duas cartas com a mesma arte dividem 1 invoke).
+const arteEmVoo = new Map<string, Promise<string | null>>();
+
+// Leitura do cache (síncrona): o que já foi lido volta na hora.
+export function arteDoProjeto(caminho: string): string | null {
+  return cacheArteProjeto.get((caminho ?? "").trim()) ?? null;
+}
+
+// Resolve `artwork` para URL mostrável: direto se já for URL, via `ler_asset`
+// (1x por caminho, com cache) se for assets/..., null se não der para mostrar.
+export function arteParaUrl(caminho: string): Promise<string | null> {
+  const a = (caminho ?? "").trim();
+  if (!a) return Promise.resolve(null);
+  if (a.startsWith("data:image/") || a.startsWith("http://") || a.startsWith("https://")) {
+    return Promise.resolve(a);
+  }
+  if (!a.startsWith("assets/")) return Promise.resolve(null);
+  const pronta = cacheArteProjeto.get(a);
+  if (pronta) return Promise.resolve(pronta);
+  const voo = arteEmVoo.get(a);
+  if (voo) return voo;
+  const p = invokeLoad<{ dados_base64: string; mime: string }>("ler_asset", { caminho: a }).then(
+    (r) => {
+      const mime = (r?.mime || "image/png").trim() || "image/png";
+      const url = `data:${mime};base64,${r.dados_base64}`;
+      cacheArteProjeto.set(a, url);
+      arteEmVoo.delete(a);
+      return url as string | null;
+    },
+    () => {
+      arteEmVoo.delete(a);
+      return null;
+    },
+  );
+  arteEmVoo.set(a, p);
+  return p;
+}
+
 // Nível = esta bola laranja repetida N vezes (sem desenho CSS).
 export const STAR_IMG = "/estrelas/estrela.png";
 

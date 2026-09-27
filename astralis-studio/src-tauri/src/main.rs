@@ -3604,6 +3604,64 @@ fn importar_asset(pedido: PedidoAsset) -> Result<ResultadoOk, String> {
     })
 }
 
+// ---- LER ASSET (só exibe dado, R1/R4) ----
+// O CardPreview mostrava placeholder cinza para `artwork: assets/...` porque o
+// navegador/WebView não abre caminho relativo do projeto. Este comando lê o
+// arquivo abaixo de projects/default/assets/ e devolve base64 + mime para o
+// frontend montar `data:<mime>;base64,...` (cache de sessão no cardMeta.ts).
+// Só LEITURA de dado (R1/R4: nunca calcula jogo). Trava ZipSlip igual ao
+// apack (apack::zip_seguro: `..`, absoluto e unidade barrados); fora de
+// assets/ barrado; teto 5 MB por arquivo (mesmo do importar_asset/apack).
+#[derive(Debug, serde::Serialize)]
+struct AssetLido {
+    dados_base64: String,
+    mime: String,
+}
+
+fn mime_do_asset(caminho: &str) -> Option<&'static str> {
+    let minusculo = caminho.to_lowercase();
+    if minusculo.ends_with(".png") {
+        Some("image/png")
+    } else if minusculo.ends_with(".webp") {
+        Some("image/webp")
+    } else if minusculo.ends_with(".jpg") || minusculo.ends_with(".jpeg") {
+        Some("image/jpeg")
+    } else if minusculo.ends_with(".ogg") {
+        Some("audio/ogg")
+    } else {
+        None
+    }
+}
+
+fn ler_asset_de(proj: &std::path::Path, caminho: &str) -> Result<AssetLido, String> {
+    let pedido = caminho.trim();
+    if pedido.is_empty() {
+        return Err("Falta o caminho da imagem. A carta precisa ter artwork em 'assets/...'.".to_string());
+    }
+    if !pedido.starts_with("assets/") || !apack::zip_seguro(pedido) {
+        return Err(format!("Caminho fora de assets/: \"{pedido}\" (barrado por segurança) — use 'assets/...'."));
+    }
+    let mime = mime_do_asset(pedido).ok_or_else(|| {
+        format!("Extensão proibida em \"{pedido}\" (só mostro: png, webp, jpg, jpeg, ogg).")
+    })?;
+    let bytes = match std::fs::read(proj.join(pedido)) {
+        Ok(b) => b,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            return Err(format!("Imagem não encontrada em {pedido} (fase: ler). Importe o pack COM_IMAGENS ou confira o artwork da carta."))
+        }
+        Err(e) => return Err(format!("Não consegui ler a imagem em {pedido} (fase: ler): {e}")),
+    };
+    if bytes.len() as u64 > apack::MAX_ASSET_BYTES {
+        return Err(format!("Imagem em \"{pedido}\" passa de 5 MB (teto por arquivo) — não mostrei."));
+    }
+    Ok(AssetLido { dados_base64: apack::codificar_base64(&bytes), mime: mime.to_string() })
+}
+
+#[tauri::command]
+fn ler_asset(caminho: String) -> Result<AssetLido, String> {
+    ler_asset_de(&pasta_projeto()?, &caminho)
+}
+
 // ---- BOOT VAZIO (ordem do usuário, D29) ----
 // Toda vez que o editor abre, ele abre VAZIO: APAGA todo o conteúdo de
 // projects/default/ e recria o esqueleto vazio — SEM backup, sem pasta
@@ -3874,6 +3932,7 @@ fn main() {
             salvar_deck,
             validar_deck,
             importar_asset,
+            ler_asset,
             ler_fusoes,
             salvar_fusoes,
             testar_fusao,
@@ -5478,5 +5537,53 @@ mod testes {
         // de 600 também (o que é velho some, o que é novo fica).
         assert_eq!(guardado[0].contains("evento 100"), true, "primeira linha guardada: {}", guardado[0]);
         assert!(guardado[DIAG_MAX_LINHAS - 1].contains("evento 599"), "última linha guardada: {}", guardado[DIAG_MAX_LINHAS - 1]);
+    }
+
+    // ---- ler_asset (a carta mostra a arte do projeto, R1/R4: só exibe) ----
+
+    #[test]
+    fn ler_asset_ok_devolve_base64_e_mime() {
+        let base = std::env::temp_dir().join("astralis-studio-test-ler-asset-ok");
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(base.join("assets/fm")).unwrap();
+        let png = vec![137, 80, 78, 71, 13, 10, 26, 10, 1, 2, 3];
+        std::fs::write(base.join("assets/fm/card_0001.png"), &png).unwrap();
+        let r = ler_asset_de(&base, "assets/fm/card_0001.png").unwrap();
+        assert_eq!(r.mime, "image/png");
+        assert_eq!(decodificar_base64(&r.dados_base64).unwrap(), png);
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn ler_asset_fora_de_assets_recusado() {
+        let base = std::env::temp_dir().join("astralis-studio-test-ler-asset-fora");
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(base.join("assets")).unwrap();
+        for fuga in [
+            "../fora.png",
+            "assets/../../fora.png",
+            "/absoluto.png",
+            "C:/win.png",
+            "cards/x.png",
+            "assets\\..\\fora.png",
+        ] {
+            let r = ler_asset_de(&base, fuga);
+            assert!(r.is_err(), "{fuga} tinha que ser barrado");
+            assert!(r.unwrap_err().contains("fora de assets"), "{fuga} sem fase PT-BR");
+        }
+        let _ = std::fs::remove_dir_all(&base);
+    }
+
+    #[test]
+    fn ler_asset_inexistente_avisa_onde_em_ptbr() {
+        let base = std::env::temp_dir().join("astralis-studio-test-ler-asset-falta");
+        let _ = std::fs::remove_dir_all(&base);
+        std::fs::create_dir_all(base.join("assets/fm")).unwrap();
+        let r = ler_asset_de(&base, "assets/fm/card_9999.png");
+        assert!(r.is_err(), "imagem que não existe tem que falhar");
+        let msg = r.unwrap_err();
+        assert!(msg.contains("não encontrada"), "{msg}");
+        assert!(msg.contains("assets/fm/card_9999.png"), "{msg}");
+        let _ = std::fs::remove_dir_all(&base);
     }
 }

@@ -11,7 +11,7 @@
   // Não há mais camada de correção por cima do default.
   // Preview PURO: não valida, não salva, não mexe em regra.
   import AssetDrop from "$lib/components/AssetDrop.svelte";
-  import { attrName, frameSrc, linhaTipo, escolherMoldura, FRAME_LABELS, attributeIcon, STAR_IMG } from "$lib/cardMeta";
+  import { attrName, frameSrc, linhaTipo, escolherMoldura, FRAME_LABELS, attributeIcon, STAR_IMG, arteDoProjeto, arteParaUrl } from "$lib/cardMeta";
   import type { Molde } from "$lib/stores/layout.svelte";
 
   let {
@@ -163,12 +163,27 @@
 
   // Arte de verdade só quando dá para mostrar sem inventar caminho: imagem
   // local recém-escolhida (arteUrl) ou URL pronta (http/data). Caminho
-  // relativo do projeto (assets/...) não abre no navegador — aí é placeholder
-  // cinza com o caminho escrito (igual ao resto do Studio).
+  // relativo do projeto (assets/...) é lido via `ler_asset` (cache de sessão
+  // no cardMeta.ts) — null enquanto carrega, com o placeholder cinza atual.
+  let arteProjeto = $state<string | null>(null);
+  $effect(() => {
+    const a = (artwork ?? "").trim();
+    if (!a.startsWith("assets/")) {
+      arteProjeto = null;
+      return;
+    }
+    arteProjeto = arteDoProjeto(a);
+    if (!arteProjeto) {
+      void arteParaUrl(a).then((url) => {
+        if (url) arteProjeto = url;
+      });
+    }
+  });
   let arteMostravel = $derived.by(() => {
     if (arteUrl) return arteUrl;
     const a = (artwork ?? "").trim();
     if (a.startsWith("data:image/") || a.startsWith("http://") || a.startsWith("https://")) return a;
+    if (a.startsWith("assets/")) return arteProjeto;
     return null;
   });
   let caminhoCurto = $derived((artwork ?? "").trim());
