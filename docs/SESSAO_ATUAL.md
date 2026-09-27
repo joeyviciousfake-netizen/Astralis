@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Carta por imagem D37 (2026-09-27): sem borda dupla na arte, sem linha extra na descricao, 9 atributos + estrela + verso padrao como imagens, card_back opcional no contrato (schema 1, FM intacto). Build+check 0, cargo 101, fm_import verde. Git limpo."
+onde_estamos: "Icones sem halo D37 (2026-09-27): 9 atributos + estrela com alfa via flood fill (>235, feather 1px), halo branco fora, cor intacta. Commit 21298a6. Git limpo."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
@@ -67,7 +67,7 @@ estado_cargo: "101 testes Rust (88 + 13 molde/id). ZERO teste de frontend ainda.
 
 estado_dados: "schemas/examples = 722 fm_* / 39 duelistas / 39 decks (40 cada) / 25081 receitas / 0 regras / arena_starter / duel_fm_abertura 8000LP. pack = 25131 receitas (25081 + 50 A+A que nunca disparam). starter_backup = 40 cartas custom SO de teste. PROJETO DO EDITOR = astralis-studio/projects/default/ (sempre vazio no boot, so via Importar)."
 
-proximo_passo: "Abrir o Studio e conferir carta com moldura, atributo, estrela e verso novos."
+proximo_passo: "Abrir o Studio e conferir os icones sem halo sobre as molduras."
 
 # ---------- TRAVAS (regras, nao dividas) ----------
 
