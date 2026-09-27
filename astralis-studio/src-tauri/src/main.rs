@@ -4761,7 +4761,7 @@ mod testes {
         assert!(!base.join("layouts").join(MOLDE_ARQUIVO).exists(), "molde customizado devia ter sido apagado");
         assert!(base.join("layouts").is_dir(), "pasta layouts/ devia continuar de pé");
         let de_volta = ler_molde_de(&base).expect("ler pós-boot");
-        assert_eq!(de_volta["pieces"].as_array().unwrap()[0]["rect"]["x"], serde_json::json!(40), "pós-boot o ler devia voltar ao oficial");
+        assert_eq!(de_volta["pieces"].as_array().unwrap()[0]["rect"]["x"], serde_json::json!(54), "pós-boot o ler devia voltar ao oficial");
         let _ = std::fs::remove_dir_all(&base);
     }
 

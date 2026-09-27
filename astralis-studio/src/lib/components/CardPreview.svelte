@@ -3,21 +3,15 @@
   // FUNDO = uma das 6 molduras JPG (static/frames/), escolhida pelo dado da
   // carta (ver escolherMoldura em cardMeta): Normal/Effect/Fusion/Ritual/
   // Spell/Trap. Proporção 813/1185 = 0,6861 (original 59x86).
-  // Os campos ficam SOBRE os espaços da imagem, nas posições do `molde`
-  // (mesma fusão do jogo: peça ausente = default; sem molde = tudo default).
-  // Default = scan das refs D23 (Normal-card Dark Magician + Spell-card
-  // Messenger, 813x1185): nome 4,0/2,8/81x4,4 fs38; orbe x85/2,8 d9,2%L
-  // (w90 h62 quadrado); estrelas y11,2 h4,2 d~4,7%L fs32; arte 9,5/16,8/
-  // 81x55,6 quadrada; texto 5,5/73,5/89x21,5 fs19; tipo fs22; atk y91,5 h2,5
-  // fs24 à direita abaixo do filete; rodapé 3,5/96/93x2,5 fs11. Magia/
-  // armadilha sem selo impresso no frame → orbe SPELL/TRAP + faixa
-  // "[SPELL CARD ∞]" / "[TRAP CARD ∞]" centralizada na fileira das estrelas.
-  // Aba Molde continua valendo (D36): o dado manda — a correção abaixo é só
-  // o default quando a peça falta; peça presente no molde vence.
+  // Os campos ficam SOBRE os espaços da imagem, nas posições de MEDIDAS
+  // (única fonte de medida: scan a pixel das molduras limpas 813x1185 +
+  // refs Normal-card Dark Magician e Spell-card Messenger — ver tabela).
+  // O molde (aba Molde / D36) continua vencendo quando a peça existir:
+  // peça presente no molde sobrepõe o default; peça ausente = MEDIDAS puras.
+  // Não há mais camada de correção por cima do default.
   // Preview PURO: não valida, não salva, não mexe em regra.
   import AssetDrop from "$lib/components/AssetDrop.svelte";
   import { attrName, frameSrc, linhaTipo, escolherMoldura, FRAME_LABELS, attributeIcon, STAR_IMG } from "$lib/cardMeta";
-  import MOLDE_OFICIAL from "../../../../schemas/examples/layouts/card_layout_monster_default.json";
   import type { Molde } from "$lib/stores/layout.svelte";
 
   let {
@@ -95,43 +89,44 @@
 
   let estrelas = $derived(Math.min(12, Math.max(1, Math.floor(Number(nivel) || 1))));
 
-  // ---- MOLDE (D23/D36): posição/tamanho/fonte/cor vêm do dado, não de
-  // número fixo. Peça ausente no molde = default do scan das refs 813x1185
-  // (CORRECAO abaixo, que ajusta o MOLDE_OFICIAL ainda com medidas do scan
-  // antigo); peça presente no molde (aba Molde / projects) vence a correção.
-  // Sem molde = tudo default corrigido = visual fiel às refs.
-  // Conversões por-mil → tela: x/y/w/h em % do próprio eixo (÷10); font_size
-  // em ‰ da ALTURA → cqw (1% da largura): cqw = fs × 1185 ÷ 8130 (nome 38→5,54).
+  // ---- MEDIDAS (única fonte do default): scan a pixel das molduras limpas
+  // 813x1185 (normal/spell/trap conferidos — geometria igual, desvio <2px)
+  // + refs Normal-card (orbe/estrelas/ATK) e Spell-card (faixa). x/w em ‰ da
+  // LARGURA (÷10 = %), y/h em ‰ da ALTURA, font_size em ‰ da ALTURA.
+  // Placa título x26-794 y25-136 (texto dentro, até x664 p/ não invadir o
+  // orbe); orbe ref x677-754 y52-128 (d~77px, só existe na ref — o frame
+  // limpo não traz círculo); fileira y140-204 (7 estrelas ref x368-727 à
+  // direita, d~40px; faixa magia centralizada na mesma fileira); arte cinza
+  // útil x100-720 y220-836 (620x617, área DENTRO da borda azul); creme útil
+  // x60-759 y899-1115 (dentro da borda laranja); tipo no topo do creme
+  // y907; filete ATK ref y1078, texto y1080-1102 à direita até x753; rodapé
+  // y1140-1170 (fundo bege entre creme e borda do cartão).
+  // Conversão font_size ‰ → cqw (1% da largura): cqw = fs × 1185 ÷ 8130
+  // (nome 38→5,54 = 45px; estrela 32→4,67 = 38px; texto 19→2,77 = 22px).
   type RectMolde = { x: number; y: number; w: number; h: number };
   type EstiloMolde = { font_size?: number; bold?: boolean; color?: string; align?: string; z?: number };
-  // Medidas % das refs (813x1185) → por-mil: barra título y2,8 h4,4 x4,0 w81
-  // fs38; orbe x85 y2,8 w90 h62 (= quadrado 75px); estrelas y11,2 h4,2 d4,7%L
-  // fs32; arte x9,5 y16,8 w81 h55,6 (quadrada 659px); texto x5,5 y73,5 w89
-  // h21,5 fs19; tipo fs22; atk y91,5 h2,5 fs24; rodapé y96 h2,5 fs11.
-  const CORRECAO: Record<string, { rect?: Partial<RectMolde>; style?: EstiloMolde }> = {
-    name: { rect: { x: 40, y: 28, w: 810, h: 44 }, style: { font_size: 38, bold: true, align: "left", z: 5 } },
-    attribute_orb: { rect: { x: 850, y: 28, w: 90, h: 62 }, style: { z: 6 } },
-    level_stars: { rect: { x: 35, y: 112, w: 885, h: 42 }, style: { font_size: 32, bold: false, align: "right", z: 5 } },
-    art_window: { rect: { x: 95, y: 168, w: 810, h: 556 }, style: { z: 4 } },
-    type_line: { rect: { x: 95, y: 748, w: 810, h: 30 }, style: { font_size: 22, bold: true, align: "left", z: 5 } },
-    text_box: { rect: { x: 55, y: 735, w: 890, h: 215 }, style: { font_size: 19, bold: false, align: "left", z: 3 } },
-    atkdef_bar: { rect: { x: 95, y: 915, w: 810, h: 25 }, style: { font_size: 24, bold: true, align: "right", z: 5 } },
-    footer: { rect: { x: 35, y: 960, w: 930, h: 25 }, style: { font_size: 11, bold: false, align: "left", z: 5 } },
+  const MEDIDAS: Record<string, { rect: RectMolde; style: EstiloMolde }> = {
+    name: { rect: { x: 54, y: 27, w: 763, h: 78 }, style: { font_size: 38, bold: true, align: "left", z: 5 } },
+    attribute_orb: { rect: { x: 833, y: 44, w: 95, h: 65 }, style: { z: 6 } },
+    level_stars: { rect: { x: 34, y: 118, w: 886, h: 54 }, style: { font_size: 32, bold: false, align: "right", z: 5 } },
+    art_window: { rect: { x: 123, y: 186, w: 764, h: 521 }, style: { z: 4 } },
+    type_line: { rect: { x: 91, y: 765, w: 827, h: 27 }, style: { font_size: 22, bold: true, align: "left", z: 5 } },
+    text_box: { rect: { x: 74, y: 759, w: 861, h: 183 }, style: { font_size: 19, bold: false, align: "left", z: 3 } },
+    atkdef_bar: { rect: { x: 91, y: 911, w: 836, h: 20 }, style: { font_size: 24, bold: true, align: "right", z: 5 } },
+    footer: { rect: { x: 34, y: 962, w: 931, h: 25 }, style: { font_size: 11, bold: false, align: "left", z: 5 } },
   };
+  // Fusão em 2 camadas: default = MEDIDAS; peça presente no molde (aba Molde
+  // / projects, D36) vence por campo. Sem molde = tudo MEDIDAS = fiel às refs.
   function pecaMolde(kind: string): { rect: RectMolde; style: EstiloMolde } {
-    const base = ((MOLDE_OFICIAL as unknown as Molde).pieces ?? []).find((p) => p.kind === kind) ?? {};
-    const fix = CORRECAO[kind] ?? {};
+    const def = MEDIDAS[kind] ?? { rect: { x: 0, y: 0, w: 0, h: 0 }, style: {} };
     const over = ((molde as Molde | null)?.pieces ?? []).find((p) => p.kind === kind) ?? {};
     return {
       rect: {
-        x: 0, y: 0, w: 0, h: 0,
-        ...((base as { rect?: object }).rect ?? {}),
-        ...(fix.rect ?? {}),
+        ...def.rect,
         ...((over as { rect?: object }).rect ?? {}),
       } as RectMolde,
       style: {
-        ...((base as { style?: object }).style ?? {}),
-        ...(fix.style ?? {}),
+        ...def.style,
         ...((over as { style?: object }).style ?? {}),
       } as EstiloMolde,
     };
@@ -149,13 +144,13 @@
     typeof s.font_size === "number" ? (s.font_size * 1185) / 8130 : padrao;
   const negrito = (s: EstiloMolde, padrao: boolean) =>
     typeof s.bold === "boolean" ? s.bold : padrao;
-  // Cor do nome: molde manda, mas o default do scan antigo é escuro — nas
-  // molduras escuras (magia/equip/armadilha) a ref é branca. Sem cor própria
-  // no molde, usa branco nelas e marrom-escuro nos monstros.
+  // Cor do nome: molde manda; sem cor no molde nem no default, usa branco
+  // nas molduras escuras (magia/equip/armadilha, ref Messenger) e
+  // marrom-escuro nos monstros (ref Dark Magician).
   function corNome(s: EstiloMolde): string {
     const doMolde = ((molde as Molde | null)?.pieces ?? []).find((p) => p.kind === "name")?.style?.color;
     if (typeof doMolde === "string" && doMolde) return doMolde;
-    if (typeof s.color === "string" && s.color.toLowerCase() !== "#2a1c08") return s.color;
+    if (typeof s.color === "string" && s.color) return s.color;
     return nomeClaro ? "#ffffff" : "#2a1c08";
   }
   const corTxt = (s: EstiloMolde, padrao: string) =>
@@ -189,9 +184,9 @@
   >
     <img src={molduraSrc} alt="" aria-hidden="true" class="absolute inset-0 w-full h-full" style="object-fit: fill;" />
     <div class="absolute inset-0">
-      <!-- Nome sobre a placa (só texto; a placa é da imagem). Ref: y2,8 h4,4
-           x4,0 w81 — termina onde o orbe começa (x85), sem texto embaixo dele.
-           Monstro = preto; magia/armadilha = branco (refs). -->
+      <!-- Nome sobre a placa (só texto; a placa é da imagem). MEDIDAS: placa
+           x26-794 y25-136, texto até x664 (não invade o orbe, que começa
+           em x677). Monstro = preto; magia/armadilha = branco (refs). -->
       <div class="absolute" style="left: {pc(pNome.rect.x)}; top: {pc(pNome.rect.y)}; width: {pc(pNome.rect.w)}; height: {pc(pNome.rect.h)};">
         <div
           class="w-full h-full overflow-hidden flex items-center"
@@ -205,8 +200,10 @@
         </div>
       </div>
 
-      <!-- Orbe: PNG com kanji (static/attributes/). Ref: x85 y2,8 d9,2%L
-           (quadrado). Monstro = atributo; magia = SPELL; armadilha = TRAP. -->
+      <!-- Orbe: PNG com kanji (static/attributes/). MEDIDAS da ref: x677-754
+           y52-128 (d~77px, quadrado). Monstro = atributo; magia = SPELL;
+           armadilha = TRAP. O frame limpo não traz círculo — o overlay é o
+           selo, igual à ref Messenger of Peace. -->
       {#if mostrarOrbe && iconeAtributo}
       <div
         class="absolute"
@@ -218,8 +215,9 @@
       {/if}
 
       <!-- Estrelas = level (monstro/ritual, à direita — ref Dark Magician com
-           7). Magia/armadilha: faixa "[SPELL CARD ∞]" / "[TRAP CARD ∞]"
-           centralizada na mesma fileira (ref Messenger, y11,2 h4,2). -->
+           7, x368-727, d~40px). Magia/armadilha: faixa "[SPELL CARD ∞]" /
+           "[TRAP CARD ∞]" centralizada na mesma fileira y140-204
+           (ref Messenger). O frame limpo traz o vão vazio. -->
       {#if mostrarEstrelas}
       <div class="absolute flex items-center" style="left: {pc(pEstrelas.rect.x)}; right: {(1000 - pEstrelas.rect.x - pEstrelas.rect.w) / 10}%; top: {pc(pEstrelas.rect.y)}; height: {pc(pEstrelas.rect.h)}; gap: 0.8cqw; justify-content: {just(pEstrelas.style, 'right')};" title="Nível {estrelas}">
         {#each Array(estrelas) as _, i (i)}
@@ -289,7 +287,7 @@
         </div>
       </div>
 
-      <!-- Rodapé minúsculo (ref: y96 h2,5): id à esquerda + © à direita. -->
+      <!-- Rodapé minúsculo (MEDIDAS y1140 h30): id à esquerda + © à direita. -->
       <div class="absolute flex items-center justify-between" style="left: {pc(pRodape.rect.x)}; right: {(1000 - pRodape.rect.x - pRodape.rect.w) / 10}%; top: {pc(pRodape.rect.y)}; height: {pc(pRodape.rect.h)};">
         <p class="truncate" style="font-size: {fsCqw(pRodape.style, 1.6)}cqw; font-family: ui-monospace, monospace; color: {corTxt(pRodape.style, '#ffffff')}cc;" title={idCarta}>{idCarta || "···"}</p>
         <p style="font-size: {fsCqw(pRodape.style, 1.6)}cqw; color: {corTxt(pRodape.style, '#ffffff')}99; white-space: nowrap;">© ASTRALIS</p>

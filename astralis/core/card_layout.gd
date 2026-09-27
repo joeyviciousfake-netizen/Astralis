@@ -42,42 +42,42 @@ static func peca_padrao(kind: String) -> Dictionary:
 	match kind:
 		"name":
 			return {"id": "name_bar", "kind": "name",
-				"rect": {"x": 40.0, "y": 28.0, "w": 810.0, "h": 44.0},
+				"rect": {"x": 54.0, "y": 27.0, "w": 763.0, "h": 78.0},
 				"style": {"font_size": 38.0, "bold": true, "color": "#2a1c08", "align": "left", "z": 5},
 				"visible_when": "always"}
 		"attribute_orb":
 			return {"id": "attribute_orb", "kind": "attribute_orb",
-				"rect": {"x": 850.0, "y": 28.0, "w": 90.0, "h": 62.0},
+				"rect": {"x": 833.0, "y": 44.0, "w": 95.0, "h": 65.0},
 				"style": {"z": 6},
 				"visible_when": "always"}
 		"level_stars":
 			return {"id": "level_stars", "kind": "level_stars",
-				"rect": {"x": 35.0, "y": 112.0, "w": 885.0, "h": 42.0},
+				"rect": {"x": 34.0, "y": 118.0, "w": 886.0, "h": 54.0},
 				"style": {"font_size": 32.0, "bold": false, "color": "#ff9d0a", "align": "right", "z": 5},
 				"visible_when": "always"}
 		"art_window":
 			return {"id": "art_window", "kind": "art_window",
-				"rect": {"x": 95.0, "y": 168.0, "w": 810.0, "h": 556.0},
+				"rect": {"x": 123.0, "y": 186.0, "w": 764.0, "h": 521.0},
 				"style": {"z": 4},
 				"visible_when": "always"}
 		"type_line":
 			return {"id": "type_line", "kind": "type_line",
-				"rect": {"x": 95.0, "y": 748.0, "w": 810.0, "h": 30.0},
+				"rect": {"x": 91.0, "y": 765.0, "w": 827.0, "h": 23.0},
 				"style": {"font_size": 22.0, "bold": true, "color": "#2a1c08", "align": "left", "z": 5},
 				"visible_when": "always"}
 		"text_box":
 			return {"id": "text_box", "kind": "text_box",
-				"rect": {"x": 55.0, "y": 735.0, "w": 890.0, "h": 215.0},
+				"rect": {"x": 74.0, "y": 759.0, "w": 861.0, "h": 183.0},
 				"style": {"font_size": 19.0, "bold": false, "color": "#2a1c08", "align": "left", "z": 3},
 				"visible_when": "always"}
 		"atkdef_bar":
 			return {"id": "atkdef_bar", "kind": "atkdef_bar",
-				"rect": {"x": 95.0, "y": 915.0, "w": 810.0, "h": 25.0},
+				"rect": {"x": 91.0, "y": 911.0, "w": 836.0, "h": 17.0},
 				"style": {"font_size": 24.0, "bold": true, "color": "#2a1c08", "align": "right", "z": 5},
 				"visible_when": "monster_only"}
 		"footer":
 			return {"id": "footer", "kind": "footer",
-				"rect": {"x": 35.0, "y": 960.0, "w": 930.0, "h": 25.0},
+				"rect": {"x": 34.0, "y": 962.0, "w": 931.0, "h": 21.0},
 				"style": {"font_size": 11.0, "bold": false, "color": "#ffffff", "align": "left", "z": 5},
 				"visible_when": "always"}
 		"frame":
