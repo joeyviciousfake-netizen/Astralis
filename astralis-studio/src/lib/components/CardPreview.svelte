@@ -175,11 +175,12 @@
 </script>
 
 <div class="w-full max-w-[320px] mx-auto" style="container-type: inline-size;">
-  <!-- Carta 813x1185 (0,6861 = 59/86). FUNDO = moldura JPG cobrindo tudo;
+  <!-- Carta segue a moldura original 832x1248 (D38 corrigida: molduras do
+       usuário, sem edição). FUNDO = moldura JPG cobrindo tudo;
        campos por cima nas posições do molde. Fundo escuro só ao carregar. -->
   <div
     class="w-full relative overflow-hidden"
-    style="aspect-ratio: 813 / 1185; border-radius: 2cqw; background: #1c130a; box-shadow: 0 10px 30px rgba(0,0,0,0.55);"
+    style="aspect-ratio: 832 / 1248; border-radius: 2cqw; background: #1c130a; box-shadow: 0 10px 30px rgba(0,0,0,0.55);"
     title="Moldura: {FRAME_LABELS[moldura] ?? moldura}"
   >
     <img src={molduraSrc} alt="" aria-hidden="true" class="absolute inset-0 w-full h-full" style="object-fit: fill;" />
