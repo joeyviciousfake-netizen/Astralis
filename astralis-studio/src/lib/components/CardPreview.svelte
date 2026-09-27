@@ -130,7 +130,7 @@
        posições do molde. Fundo escuro sólido só enquanto a imagem carrega. -->
   <div
     class="w-full relative overflow-hidden"
-    style="aspect-ratio: 59 / 86; border-radius: 4.5cqw; background: #1c130a; box-shadow: 0 10px 30px rgba(0,0,0,0.55);"
+    style="aspect-ratio: 59 / 86; border-radius: 2cqw; background: #1c130a; box-shadow: 0 10px 30px rgba(0,0,0,0.55);"
     title="Moldura: {FRAME_LABELS[moldura] ?? moldura}"
   >
     <img src={molduraSrc} alt="" aria-hidden="true" class="absolute inset-0 w-full h-full" style="object-fit: fill;" />
