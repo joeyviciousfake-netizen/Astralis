@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Alinhamento D38 (2026-09-27): carta 813/1185 com tudo medido das refs (Normal=montros, Spell=magias), molde oficial+jogo+testes espelhados. GUT 14/14, cargo 101, check 0, fm_import verde. Commit 979ad61. Git limpo."
+onde_estamos: "Carta refeita do zero D38 (2026-09-27): 6 molduras limpas 813x1185 + preview fonte unica medida nelas + molde+jogo+testes espelhados. GUT 116/116 1877 asserts, cargo 101, check 0, fm_import verde. Commit b701d83. Git limpo."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
@@ -67,7 +67,7 @@ estado_cargo: "101 testes Rust (88 + 13 molde/id). ZERO teste de frontend ainda.
 
 estado_dados: "schemas/examples = 722 fm_* / 39 duelistas / 39 decks (40 cada) / 25081 receitas / 0 regras / arena_starter / duel_fm_abertura 8000LP. pack = 25131 receitas (25081 + 50 A+A que nunca disparam). starter_backup = 40 cartas custom SO de teste. PROJETO DO EDITOR = astralis-studio/projects/default/ (sempre vazio no boot, so via Importar)."
 
-proximo_passo: "Abrir o Studio e conferir a carta alinhada igual às referências."
+proximo_passo: "Colocar as imagens lado a lado com as referencias e conferir perfeito."
 
 # ---------- TRAVAS (regras, nao dividas) ----------
 
