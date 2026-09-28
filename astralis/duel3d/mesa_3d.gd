@@ -56,6 +56,17 @@ const LARG_CARTA := 1.0
 ## Inclinação da mão em graus no eixo X (LIVRE, ordem do usuário):
 ## mude à vontade, nada recalcula pela câmera. Rival usa 180 + este.
 const TILT_MAO_LIVRE := -54.0
+## Arco da MÃO (só desenho). Passo = distância entre cartas; Y/Z = altura e
+## profundidade: TROCAR AQUI à vontade (ordem do usuário: nada disso muda).
+## O X do CENTRO do arco NÃO mora aqui — ele é CALCULADO da câmera real em
+## `_x_centro_da_mao`, senão a mão fica torta na tela (ver `_pos_mao_arco`).
+const MAO_P0_PASSO := 1.12
+const MAO_P1_PASSO := 0.7
+const MAO_P0_YZ := Vector2(4.35, 6.1)   # Vector2(y, z): sua mão (perto, embaixo)
+const MAO_P1_YZ := Vector2(1.4, -4.75)  # Vector2(y, z): mão do rival (longe)
+## X de mundo do centro do arco SEM câmera (fallback: só não quebra o desenho).
+const MAO_P0_X_SEM_CAM := 0.3
+const MAO_P1_X_SEM_CAM := -2.8
 ## Proporção exata da carta real 59x86mm (0,6860). Tudo que é carta, slot
 ## ou pilha usa essa proporção — nenhuma carta fica de tamanho diferente.
 const ALT_CARTA := 86.0 / 59.0
@@ -178,6 +189,11 @@ var _sel_atk := -1
 var _pad_dir := Vector2i.ZERO
 var _pad_tempo := 0.0
 var _foco := Vector3.ZERO
+## X de mundo do centro do arco da mão (x = p0, y = p1), CALCULADO da câmera
+## real e memorizado (a câmera é fixa, então o cálculo acontece UMA vez).
+var _x_centro_mao := Vector2.ZERO
+## instance_id da câmera usada no cálculo acima (0 = ainda não calculou).
+var _x_centro_mao_cam := 0
 var _pulso := 0.0
 var _foto_destino := ""
 var _foto_frames := -1
@@ -228,12 +244,7 @@ func _ready() -> void:
 	if _cam != null:
 		print("[MESA3D] Cam: pos=%s fov=%s alvo=%s." % [str(_cam.global_position), str(_cam.fov), str(CAM_ALVO)])
 		print("[MESA3D] Slot p0_m2 na tela: %s." % str(_cam.unproject_position(_pos_slot(0, "monstro", 2))))
-		print("[MESA3D] Calib: centro campo=%s mao=%s mao+1x=%s rival=%s base=%s." % [
-			str(_cam.unproject_position(Vector3(0, 0.35, 0.0))),
-			str(_cam.unproject_position(_pos_mao_arco(2, 5, 0))),
-			str(_cam.unproject_position(_pos_mao_arco(2, 5, 0) + Vector3(1, 0, 0))),
-			str(_cam.unproject_position(_pos_mao_arco(2, 5, 1))),
-			str(_cam.unproject_position(_pos_mao_arco(2, 5, 0) + Vector3(0, -0.4286, 0.5896)))])
+		_calibrar_mao()
 	_ver_autoquit()
 
 
@@ -906,14 +917,88 @@ func _fantasia(inst: Dictionary) -> Dictionary:
 # ---- DESENHO A PARTIR DO ESTADO REAL (só leitura, sem regra) ----
 
 func _pos_mao_arco(i: int, n: int, lado: int) -> Vector3:
-	# Mão embaixo...
+	# Mão em arco SIMÉTRICO (t=0 no meio: 1ª e última equidistantes do centro)
+	# e CENTRALIZADO NA TELA (bug do usuário 2026-09-28: o X era chutado "no
+	# olho" e a sua mão e a do rival saíam tortas). O X do centro agora vem
+	# da CÂMERA REAL; passo e Y/Z continuam os do usuário (não mudam).
 	var t := float(i) - float(maxi(n - 1, 0)) / 2.0
+	var c := _x_centro_da_mao()
 	if lado == 0:
-		# Mão centrada no CENTRO VISUAL do campo (ordem do usuário): por
-		# perspectiva, o centro da mão fica à esquerda do centro do mundo.
-		return Vector3(0.3 + t * 1.12, 4.35, 6.1)
-	# Rival idem (mais longe = desloca p/ a esquerda).
-	return Vector3(-2.8 + t * 0.7, 1.4, -4.75)
+		return Vector3(c.x + t * MAO_P0_PASSO, MAO_P0_YZ.x, MAO_P0_YZ.y)
+	return Vector3(c.y + t * MAO_P1_PASSO, MAO_P1_YZ.x, MAO_P1_YZ.y)
+
+
+## X de mundo do centro do arco de CADA lado, calculado para o centro do arco
+## cair no MESMO X de tela do centro do campo (as DUAS mãos centralizadas).
+## A câmera é FIXA, então isto roda UMA vez e fica memorizado: no redesenho
+## vira só a leitura de 2 floats. Sem câmera = X antigo, o desenho não quebra.
+func _x_centro_da_mao() -> Vector2:
+	var id_cam := 0
+	if _cam != null and is_instance_valid(_cam):
+		id_cam = _cam.get_instance_id()
+	if id_cam != 0 and id_cam == _x_centro_mao_cam:
+		return _x_centro_mao
+	if id_cam == 0:
+		_x_centro_mao = Vector2(MAO_P0_X_SEM_CAM, MAO_P1_X_SEM_CAM)
+	else:
+		# Alvo = X de tela onde o centro do campo cai (o próprio ponto (0,*,0)).
+		var alvo := _cam.unproject_position(Vector3(0.0, TOPO, 0.0)).x
+		_x_centro_mao = Vector2(_x_mao_no_alvo(MAO_P0_YZ.x, MAO_P0_YZ.y, alvo),
+			_x_mao_no_alvo(MAO_P1_YZ.x, MAO_P1_YZ.y, alvo))
+	_x_centro_mao_cam = id_cam
+	return _x_centro_mao
+
+
+## X de mundo (com Y e Z travados) que faz o ponto cair em `alvo_x` na tela.
+## Secante de 2 passos sobre a projeção da câmera — unproject_position é
+## matemática pura (roda igual com render e headless).
+func _x_mao_no_alvo(y: float, z: float, alvo_x: float) -> float:
+	var x0 := 0.0
+	var x1 := 1.0
+	var f0 := _cam.unproject_position(Vector3(x0, y, z)).x - alvo_x
+	var f1 := _cam.unproject_position(Vector3(x1, y, z)).x - alvo_x
+	for _k in range(2):
+		if absf(f1 - f0) < 0.00001:
+			return x1
+		var x := x1 - f1 * (x1 - x0) / (f1 - f0)
+		var f := _cam.unproject_position(Vector3(x, y, z)).x - alvo_x
+		x0 = x1
+		f0 = f1
+		x1 = x
+		f1 = f
+	return x1
+
+
+## Calibração do DESENHO (prova + ferramenta de ajuste futuro): mede, em
+## PIXELS de tela, o quanto o centro do arco de cada mão sai do centro do
+## campo. Os dois `erro` em ~0.00 = as DUAS mãos centralizadas. `escala` diz
+## quantos pixels vale 1 unidade de mundo na mão (para mexer em
+## MAO_P0_PASSO/MAO_P1_PASSO) e `arco` é a largura que o arco ocupa na tela.
+## Texto só-ASCII de propósito: a saída do jogo lido como processo filho vem
+## no code page do Windows (ver test_project_arg).
+func _calibrar_mao() -> void:
+	if _cam == null or not is_instance_valid(_cam):
+		print("[MESA3D] Calib: sem câmera, arco no X de fallback.")
+		return
+	var n := [5, 5]
+	if _st != null:
+		n[0] = maxi(((_st.players[0] as Dictionary)["hand"] as Array).size(), 1)
+		n[1] = maxi(((_st.players[1] as Dictionary)["hand"] as Array).size(), 1)
+	var tela := _cam.get_viewport().get_visible_rect().size
+	var alvo := _cam.unproject_position(Vector3(0.0, TOPO, 0.0)).x
+	print("[MESA3D] Calib: tela=%dx%d centro_da_tela=%.1f centro_do_campo=%.1f" % [
+		int(tela.x), int(tela.y), tela.x * 0.5, alvo])
+	for lado in [0, 1]:
+		var q: int = n[lado]
+		# Índice do MEIO do arco (com número par o meio cai entre 2 cartas).
+		var meio := int(ceil(float(maxi(q - 1, 0)) / 2.0))
+		var centro := _pos_mao_arco(meio, q, lado)
+		var sx := _cam.unproject_position(centro).x
+		print("[MESA3D] Calib:   p%d cartas=%d x_mundo=%.3f tela=%.2f erro=%.2fpx escala=%.1fpx/u arco=[%.0f..%.0f]px" % [
+			lado, q, centro.x, sx, sx - alvo,
+			absf(_cam.unproject_position(centro + Vector3(1, 0, 0)).x - sx),
+			_cam.unproject_position(_pos_mao_arco(0, q, lado)).x,
+			_cam.unproject_position(_pos_mao_arco(maxi(q - 1, 0), q, lado)).x])
 
 
 func _limpar_cartas() -> void:
