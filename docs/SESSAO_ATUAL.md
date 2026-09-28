@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Sem luzes (2026-09-27): tudo unshaded estilo anime, flash virou overlay de tela. GUT 14/14. Commit f5f8ad0."
+onde_estamos: "Artes claras (2026-09-27): tonemap LINEAR, cor pura sem ACES. MCP limpo. Commit 637a75e."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
