@@ -2,7 +2,9 @@ class_name DuelManager
 extends RefCounted
 
 ## DuelManager — monta o duelo a partir do duel_setup (DADO) e expõe o jogo.
-## - embaralha cada deck com a seed do setup (determinístico);
+## - embaralha cada deck com a seed do setup: seed != 0 = determinístico
+##   (mesmo número = mesmo duelo, é o que o Test Lab e os testes usam);
+##   seed 0/ausente = SEM semente, sorteio de verdade a cada partida;
 ## - mão inicial 5 p/ cada lado, SEM carta extra (FM fiel: draw up to five);
 ## - todo início de turno completa a mão até 5 (regra no TurnManager DRAW refill);
 ## - LP inicial do setup; ordem first_p1/first_p2/random.
@@ -38,7 +40,21 @@ func _montar(setup: Dictionary, decks: Dictionary, cards: Dictionary) -> void:
 	if lp <= 0:
 		lp = 4000
 	var seed_val: int = int(setup.get("seed", 0))
-	rng.seed = seed_val
+	# ---------- CONTRATO DA SEMENTE (duel_setup.seed = DADO, R3) ----------
+	# seed != 0 -> SEMENTE FIXA: o mesmo numero reproduz o MESMO duelo,
+	#   carta por carta. E o que o Test Lab (doc 10), o Campo de Testes e
+	#   os testes do GUT usam, porque precisam de repetibilidade.
+	# seed == 0 (ou ausente) -> SEM SEMENTE: sorteio de verdade a cada
+	#   partida. Antes este rng era semeado com 0, e 0 e uma semente VALIDA
+	#   e fixa: o "random" dava sempre o mesmo primeiro jogador e o
+	#   embaralhamento era sempre o mesmo (dado travado fingindo ser
+	#   sorteio). Agora quem manda 0 quer dizer "nao ha semente aqui".
+	# A semeadura/randomize acontece ANTES de _embaralhar os dois barulhos
+	# e do sorteio de quem comeca (abaixo), para o sorteio realmente variar.
+	if seed_val == 0:
+		rng.randomize()
+	else:
+		rng.seed = seed_val
 	var d1: Dictionary = setup.get("duelist1", {})
 	var d2: Dictionary = setup.get("duelist2", {})
 	var baralho1: Array = _construir_baralho(_ids_do_deck(str(d1.get("deck_id", ""))))
@@ -63,6 +79,15 @@ func _montar(setup: Dictionary, decks: Dictionary, cards: Dictionary) -> void:
 		teste = setup.get("test_state", {})
 	if not teste.is_empty():
 		primeiro = 0
+	# Uma linha de log do MOTOR: como a semente foi tratada e QUEM COMECA
+	# (o sorteio e do motor, R3; a tela so honra esse numero). ASCII puro de
+	# proposito: a saida do jogo lido como processo filho (o --setup /
+	# --project) volta no code page do Windows.
+	print("[Duel] Seed %d -> %s. Primeiro jogador: %s." % [
+		seed_val,
+		"sem semente, sorteio de verdade" if seed_val == 0 else "semente fixa, deterministico",
+		"p0 (voce)" if primeiro == 0 else "p1 (rival)",
+	])
 	state = GameState.create(baralho1, baralho2, lp, primeiro, not teste.is_empty())
 	if teste.is_empty():
 		for i in range(5):
