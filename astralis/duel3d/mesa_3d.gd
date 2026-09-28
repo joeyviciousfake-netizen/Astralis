@@ -1278,9 +1278,6 @@ func _construir_painel_foco(hud: Control) -> void:
 	caixa.add_theme_constant_override("separation", 6)
 	caixa.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	linha.add_child(caixa)
-	_lbl_foco_nome = _rotulo_hud("FocoNome", "—", Vector2.ZERO, 26, Color(0.10, 0.35, 0.12))
-	_lbl_foco_nome.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	caixa.add_child(_lbl_foco_nome)
 	# Carta inteira como na ref: moldura JPG do projeto + arte + nome +
 	# orbe + estrelas posicionados na moldura (igual ao editor).
 	var molde := Control.new()
@@ -1331,11 +1328,33 @@ func _construir_painel_foco(hud: Control) -> void:
 	_caixa_foco_estrelas.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_caixa_foco_estrelas.add_theme_constant_override("separation", 1)
 	molde.add_child(_caixa_foco_estrelas)
+	# Bloco de descrição SEPARADO da imagem (ref): tamanho FIXO — texto
+	# longo nunca muda o tamanho do bloco (corta com clip).
+	var bloco := PanelContainer.new()
+	bloco.name = "BlocoDesc"
+	var est_b := StyleBoxFlat.new()
+	est_b.bg_color = Color(0.62, 0.48, 0.30, 0.97)
+	est_b.border_color = Color(0.40, 0.24, 0.10)
+	est_b.set_border_width_all(2)
+	est_b.set_corner_radius_all(6)
+	est_b.content_margin_left = 10
+	est_b.content_margin_right = 10
+	est_b.content_margin_top = 8
+	est_b.content_margin_bottom = 8
+	bloco.add_theme_stylebox_override("panel", est_b)
+	bloco.custom_minimum_size = Vector2(300, 330)
+	bloco.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	caixa.add_child(bloco)
+	var coluna := VBoxContainer.new()
+	coluna.name = "Bloco"
+	coluna.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	coluna.add_theme_constant_override("separation", 4)
+	bloco.add_child(coluna)
 	var faixa := HBoxContainer.new()
 	faixa.name = "FocoFaixa"
 	faixa.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	faixa.add_theme_constant_override("separation", 8)
-	caixa.add_child(faixa)
+	coluna.add_child(faixa)
 	_cor_foco_attr = ColorRect.new()
 	_cor_foco_attr.name = "FocoAttrIcon"
 	_cor_foco_attr.custom_minimum_size = Vector2(28, 28)
@@ -1345,12 +1364,18 @@ func _construir_painel_foco(hud: Control) -> void:
 	faixa.add_child(_lbl_foco_attr)
 	_lbl_foco_stats = _rotulo_hud("FocoStats", "", Vector2.ZERO, 24, Color(0.10, 0.10, 0.14))
 	faixa.add_child(_lbl_foco_stats)
-	_lbl_foco_tipo = _rotulo_hud("FocoTipo", "", Vector2.ZERO, 22, Color(0.10, 0.38, 0.12))
-	caixa.add_child(_lbl_foco_tipo)
-	_lbl_foco_desc = _rotulo_hud("FocoDesc", "", Vector2.ZERO, 20, Color(0.12, 0.12, 0.16))
+	_lbl_foco_nome = _rotulo_hud("FocoNome", "—", Vector2.ZERO, 24, Color(0.10, 0.35, 0.12))
+	_lbl_foco_nome.clip_text = true
+	coluna.add_child(_lbl_foco_nome)
+	_lbl_foco_tipo = _rotulo_hud("FocoTipo", "", Vector2.ZERO, 20, Color(0.10, 0.38, 0.12))
+	_lbl_foco_tipo.clip_text = true
+	coluna.add_child(_lbl_foco_tipo)
+	_lbl_foco_desc = _rotulo_hud("FocoDesc", "", Vector2.ZERO, 19, Color(0.12, 0.12, 0.16))
 	_lbl_foco_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_lbl_foco_desc.custom_minimum_size = Vector2(300, 190)
-	caixa.add_child(_lbl_foco_desc)
+	_lbl_foco_desc.custom_minimum_size = Vector2(280, 170)
+	_lbl_foco_desc.clip_text = true
+	_lbl_foco_desc.vertical_alignment = VERTICAL_ALIGNMENT_TOP
+	coluna.add_child(_lbl_foco_desc)
 	var barra := ColorRect.new()
 	barra.name = "BarraVermelha"
 	barra.color = Color(0.75, 0.10, 0.15)

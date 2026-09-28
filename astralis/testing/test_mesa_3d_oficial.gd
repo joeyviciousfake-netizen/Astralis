@@ -222,7 +222,7 @@ func test_indicador_atk_def_e_fila() -> void:
 	await wait_process_frames(1)
 	var foco: Dictionary = mesa.call("_carta_focada")
 	assert_false((foco.get("dado", {}) as Dictionary).is_empty(), "Foco encontra a carta do slot.")
-	assert_true(str((mesa.get_node("HUD/PainelCarta/Linha/Caixa/FocoNome") as Label).text) != "—", "Painel espelha o foco (%s)." % sid)
+	assert_true(str((mesa.get_node("HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoNome") as Label).text) != "—", "Painel espelha o foco (%s)." % sid)
 
 
 func test_verso_marrom_com_espiral() -> void:
@@ -334,13 +334,14 @@ func test_painel_esquerdo_carta_focada() -> void:
 	assert_true(mesa.get_node_or_null(NodePath("HUD/PainelCarta")) != null, "Painel esquerdo existe.")
 	var est := (mesa.get_node("HUD/PainelCarta") as PanelContainer).get_theme_stylebox("panel") as StyleBoxFlat
 	assert_eq(est.border_color, Color(0.45, 0.28, 0.12), "Painel com moldura marrom estilo carta.")
-	for caminho in ["HUD/PainelCarta/Linha/Caixa/FocoNome", "HUD/PainelCarta/Linha/Caixa/CartaMolde/Moldura",
+	for caminho in ["HUD/PainelCarta/Linha/Caixa/BlocoDesc", "HUD/PainelCarta/Linha/Caixa/CartaMolde",
+			"HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoNome", "HUD/PainelCarta/Linha/Caixa/CartaMolde/Moldura",
 			"HUD/PainelCarta/Linha/Caixa/CartaMolde/FocoArte", "HUD/PainelCarta/Linha/Caixa/CartaMolde/FocoCor",
 			"HUD/PainelCarta/Linha/Caixa/CartaMolde/FocoNomeMolde", "HUD/PainelCarta/Linha/Caixa/CartaMolde/FocoOrbe",
 			"HUD/PainelCarta/Linha/Caixa/CartaMolde/FocoEstrelasBox",
-			"HUD/PainelCarta/Linha/Caixa/FocoFaixa/FocoAttrIcon", "HUD/PainelCarta/Linha/Caixa/FocoFaixa/FocoAttr",
-			"HUD/PainelCarta/Linha/Caixa/FocoFaixa/FocoStats",
-			"HUD/PainelCarta/Linha/Caixa/FocoTipo", "HUD/PainelCarta/Linha/Caixa/FocoDesc",
+			"HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoFaixa/FocoAttrIcon", "HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoFaixa/FocoAttr",
+			"HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoFaixa/FocoStats",
+			"HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoTipo", "HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoDesc",
 			"HUD/PainelCarta/Linha/BarraVermelha"]:
 		assert_true(mesa.get_node_or_null(NodePath(caminho)) != null, "Painel tem: " + caminho)
 	var st = mesa.get("_st")
@@ -350,14 +351,18 @@ func test_painel_esquerdo_carta_focada() -> void:
 	mesa.set("_col", 0)
 	mesa.call("_atualizar_hud")
 	await wait_process_frames(1)
-	var nome := str((mesa.get_node("HUD/PainelCarta/Linha/Caixa/FocoNome") as Label).text)
+	var nome := str((mesa.get_node("HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoNome") as Label).text)
 	assert_false(nome.is_empty() or nome == "—", "Painel mostra o nome real da carta focada: " + nome)
-	var stats := str((mesa.get_node("HUD/PainelCarta/Linha/Caixa/FocoFaixa/FocoStats") as Label).text)
+	var stats := str((mesa.get_node("HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoFaixa/FocoStats") as Label).text)
 	assert_true(stats.contains("ATK/") and stats.contains("DEF/"), "Faixa ATK/DEF do dado real: " + stats)
-	var attr := str((mesa.get_node("HUD/PainelCarta/Linha/Caixa/FocoFaixa/FocoAttr") as Label).text)
+	var attr := str((mesa.get_node("HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoFaixa/FocoAttr") as Label).text)
 	assert_false(attr.is_empty(), "Faixa mostra o atributo: " + attr)
-	var desc := str((mesa.get_node("HUD/PainelCarta/Linha/Caixa/FocoDesc") as Label).text)
+	var desc := str((mesa.get_node("HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoDesc") as Label).text)
 	assert_false(desc.is_empty(), "Painel mostra a descrição (ou guardiãs + atributo).")
+	# Bloco com tamanho FIXO (ref): descrição longa nunca muda o tamanho.
+	var bloco := mesa.get_node("HUD/PainelCarta/Linha/Caixa/BlocoDesc") as Control
+	assert_eq(bloco.custom_minimum_size, Vector2(300, 330), "Bloco de descrição tem tamanho fixo.")
+	assert_true((mesa.get_node("HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoDesc") as Label).clip_text, "Descrição corta com clip (não estoura o bloco).")
 
 
 func test_fases_no_meio_laterais_e_tokens() -> void:
