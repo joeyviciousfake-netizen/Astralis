@@ -91,8 +91,12 @@ func test_nos_chave_3d_existem() -> void:
 		assert_true(str((p as Node).name).begins_with("Painel_p"), "Painel flutuante: " + str((p as Node).name))
 		assert_true((p as Node).get_node_or_null(NodePath("Base")) != null, "Painel tem base escura: " + str((p as Node).name))
 		assert_true((p as Node).get_node_or_null(NodePath("Borda")) != null, "Painel tem borda com brilho: " + str((p as Node).name))
-	for lbl in ["HUD/PlacaVoce/LpVoce", "HUD/PlacaTurno/CaixaTurno/Turno", "HUD/PlacaRival/LpRival",
-			"HUD/TagVoce", "HUD/TagRival", "HUD/BarraStart/StartHelp"]:
+	# FASE 3: LP e nome ganharam rótulos separados dentro da placa (o valor
+	# em amarelo, como na ref), e a aba inventada "Single" saiu de vez.
+	for lbl in ["HUD/PlacaVoce/Linha/LpVoce", "HUD/PlacaVoce/Linha/NomeVoce",
+			"HUD/PlacaTurno/CaixaTurno/Turno", "HUD/PlacaRival/Linha/LpRival",
+			"HUD/PlacaRival/Linha/NomeRival", "HUD/BarraTopo", "HUD/BarraFases",
+			"HUD/BarraStart/StartHelp"]:
 		assert_true(mesa.get_node_or_null(NodePath(lbl)) != null, "HUD existe: " + lbl)
 
 
@@ -275,7 +279,7 @@ func test_indicador_atk_def_e_fila() -> void:
 	await wait_process_frames(1)
 	var foco: Dictionary = mesa.call("_carta_focada")
 	assert_false((foco.get("dado", {}) as Dictionary).is_empty(), "Foco encontra a carta do slot.")
-	assert_true(str((mesa.get_node("HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoNome") as Label).text) != "—", "Painel espelha o foco (%s)." % sid)
+	assert_true(str((mesa.get_node("HUD/PainelCarta/FocoNome") as Label).text) != "—", "Painel espelha o foco (%s)." % sid)
 
 
 func test_verso_marrom_com_espiral() -> void:
@@ -451,23 +455,39 @@ func test_maos_centralizadas_no_x_do_campo() -> void:
 
 
 func test_placas_topo_com_dado_real_sem_marca() -> void:
-	# Ref: placa do seu LP esq / TURN centro / rival+LP dir. Sem KONAMI.
+	# FASE 3 (doc 15 §15.3): a barra metálica azul ocupa SÓ a faixa do campo
+	# (x 562..1920) e as 3 placas ficam nas faixas medidas da ref
+	# (você 576..960 / TURN 1190..1460 / rival 1458..1920). Os valores de LP
+	# e turno saem SEMPRE do estado real; a aba "Single" foi removida porque
+	# era texto inventado (nosso contrato não tem modo de duelo).
 	var mesa: Node = await _mesa3d_nova()
 	var st = mesa.get("_st")
-	for caminho in ["HUD/PlacaVoce", "HUD/PlacaTurno", "HUD/PlacaRival"]:
-		assert_true(mesa.get_node_or_null(NodePath(caminho)) != null, "Placa existe: " + caminho)
+	for caminho in ["HUD/BarraTopo", "HUD/PlacaVoce", "HUD/PlacaTurno", "HUD/PlacaRival"]:
+		assert_true(mesa.get_node_or_null(NodePath(caminho)) != null, "Peça do topo existe: " + caminho)
+	var barra := mesa.get_node("HUD/BarraTopo") as Control
+	assert_eq(barra.position, Vector2(562, 0), "Barra metálica começa na borda do painel esquerdo (x 562).")
+	assert_true(barra.size.x >= 1358.0 and barra.size.y <= 93.0, "Barra metálica vai até a direita com altura ~8,5%%: %s" % str(barra.size))
 	var voce := (mesa.get_node("HUD/PlacaVoce") as Control).position
 	var turno := (mesa.get_node("HUD/PlacaTurno") as Control).position
 	var rival := (mesa.get_node("HUD/PlacaRival") as Control).position
 	assert_true(voce.x < turno.x, "Sua placa à esquerda do TURN.")
 	assert_true(turno.x < rival.x, "TURN ao centro, rival à direita.")
+	assert_true(voce.x >= 562.0 and voce.x + 384.0 <= 960.0, "Sua placa na faixa 576..960 da ref: %d." % int(voce.x))
+	assert_true(turno.x >= 1190.0 and turno.x + 270.0 <= 1460.0, "Caixa TURN na faixa 1190..1460 da ref: %d." % int(turno.x))
+	assert_true(rival.x >= 1458.0 and rival.x + 462.0 <= 1920.0, "Placa rival na faixa 1458..1920 da ref: %d." % int(rival.x))
 	assert_true(str((mesa.get_node("HUD/PlacaTurno/CaixaTurno/TurnoTitulo") as Label).text).contains("TURN"), "Turno mostra TURN.")
 	assert_eq(str((mesa.get_node("HUD/PlacaTurno/CaixaTurno/Turno") as Label).text), str(int(st.turn_number)), "TURN com o turno real.")
+	# O VALOR de LP fica sozinho no rótulo (amarelo) e o NOME em outro rótulo
+	# — os dois com o dado real, como na ref.
 	var lp0: int = int((st.players[0] as Dictionary)["lp"])
-	assert_eq(str((mesa.get_node("HUD/PlacaVoce/LpVoce") as Label).text), "LP %d %s" % [lp0, str(mesa.get("_nome_voce")).to_upper()], "Sua placa com LP + nome reais.")
-	var nome_rival: String = str(mesa.get("_nome_rival")).to_upper()
 	var lp1: int = int((st.players[1] as Dictionary)["lp"])
-	assert_eq(str((mesa.get_node("HUD/PlacaRival/LpRival") as Label).text), "%s LP %d" % [nome_rival, lp1], "Placa rival com nome + LP reais.")
+	assert_eq(str((mesa.get_node("HUD/PlacaVoce/Linha/LpVoce") as Label).text), str(lp0), "Sua placa com o LP real.")
+	assert_eq(str((mesa.get_node("HUD/PlacaRival/Linha/LpRival") as Label).text), str(lp1), "Placa rival com o LP real.")
+	assert_eq(str((mesa.get_node("HUD/PlacaVoce/Linha/NomeVoce") as Label).text), str(mesa.get("_nome_voce")).to_upper(), "Sua placa com o nome real.")
+	assert_eq(str((mesa.get_node("HUD/PlacaRival/Linha/NomeRival") as Label).text), str(mesa.get("_nome_rival")).to_upper(), "Placa rival com o nome real.")
+	# Aba "Single" removida: nosso duelo não tem modo declarado.
+	assert_true(mesa.get_node_or_null(NodePath("HUD/TagVoce")) == null, "Sem aba inventada TagVoce.")
+	assert_true(mesa.get_node_or_null(NodePath("HUD/TagRival")) == null, "Sem aba inventada TagRival.")
 	# Sem marca da ref nem marca d'água do print em nenhum texto da cena.
 	var todos: Array = []
 	_coletar(mesa, todos)
@@ -483,8 +503,11 @@ func test_placas_topo_com_dado_real_sem_marca() -> void:
 
 
 func test_retratos_rival_e_voce() -> void:
-	# Ref: retrato do rival no canto superior direito (moldura laranja) +
-	# retrato seu à esquerda do campo. Sem foto = silhueta com a inicial.
+	# FASE 3: moldura clara com FUNDO EM GRADIENTE + inicial (placeholder
+	# elegante). O pack do FM NÃO traz retrato de duelista (os 39 duelistas
+	# vêm com `portrait` vazio), então a foto real nunca aparece — se um dia
+	# vier, a foto substitui o placeholder. Rival no topo à direita, você à
+	# esquerda do campo.
 	var mesa: Node = await _mesa3d_nova()
 	for caminho in ["HUD/RetratoRival", "HUD/RetratoVoce"]:
 		assert_true(mesa.get_node_or_null(NodePath(caminho)) != null, "Retrato existe: " + caminho)
@@ -495,34 +518,63 @@ func test_retratos_rival_e_voce() -> void:
 	assert_true(rv.x < 900.0, "Seu retrato à esquerda do campo.")
 	for quem in ["Rival", "Voce"]:
 		var foto := mesa.get_node("HUD/Retrato%s/Foto" % quem) as TextureRect
+		var fundo := mesa.get_node("HUD/Retrato%s/Fundo" % quem) as TextureRect
 		var silhueta := mesa.get_node("HUD/Retrato%s/Silhueta" % quem) as Label
 		assert_true(foto != null and silhueta != null, "Retrato %s tem foto + silhueta." % quem)
-		assert_true(foto.visible != silhueta.visible, "Retrato %s: foto OU silhueta." % quem)
+		# O placeholder não é mais um quadrado chapado: tem gradiente real.
+		assert_true(fundo != null and fundo.texture != null, "Retrato %s tem fundo em gradiente." % quem)
+		assert_false(foto.visible and silhueta.visible, "Retrato %s: foto OU placeholder, nunca os dois." % quem)
 		if silhueta.visible:
 			var nome: String = str(mesa.get("_nome_rival" if quem == "Rival" else "_nome_voce"))
-			assert_eq(silhueta.text, nome.strip_edges().substr(0, 1).to_upper(), "Silhueta com a inicial do nome (%s)." % quem)
+			assert_eq(silhueta.text, nome.strip_edges().substr(0, 1).to_upper(), "Placeholder com a inicial do nome (%s)." % quem)
 	assert_true(mesa.get_node_or_null(NodePath("HUD/RetratoRivalNome")) == null, "Sem nome sob retrato (nome vive na placa).")
 	assert_true(mesa.get_node_or_null(NodePath("HUD/RetratoVoceNome")) == null, "Sem nome sob retrato (nome vive na placa).")
 
 
 func test_painel_esquerdo_carta_focada() -> void:
-	# Ref nova: painel 2D fixo à esquerda estilo CARTA (fundo bege, nome e
-	# tipo verdes, barra vermelha), carta GRANDE + faixa ATK/DEF + NOME +
-	# [TIPO] + DESCRIÇÃO do dado real.
+	# FASE 3 (doc 15 §15.3): painel esquerdo AZUL-MARINHO com as faixas medidas
+	# na ref — carta y 16..562, ATK/DEF + orbes + contador y 562..648, NOME
+	# amarelo y 670..756, TIPO verde y 756..799, DESCRIÇÃO branca com barra
+	# laranja y 810..1080. Tudo com o DADO REAL da carta focada.
 	var mesa: Node = await _mesa3d_nova()
 	assert_true(mesa.get_node_or_null(NodePath("HUD/PainelCarta")) != null, "Painel esquerdo existe.")
-	var est := (mesa.get_node("HUD/PainelCarta") as PanelContainer).get_theme_stylebox("panel") as StyleBoxFlat
-	assert_eq(est.border_color, Color(0.45, 0.28, 0.12), "Painel com moldura marrom estilo carta.")
-	for caminho in ["HUD/PainelCarta/Linha/Caixa/BlocoDesc", "HUD/PainelCarta/Linha/Caixa/CartaMolde",
-			"HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoNome", "HUD/PainelCarta/Linha/Caixa/CartaMolde/Moldura",
-			"HUD/PainelCarta/Linha/Caixa/CartaMolde/FocoArte", "HUD/PainelCarta/Linha/Caixa/CartaMolde/FocoCor",
-			"HUD/PainelCarta/Linha/Caixa/CartaMolde/FocoNomeMolde", "HUD/PainelCarta/Linha/Caixa/CartaMolde/FocoOrbe",
-			"HUD/PainelCarta/Linha/Caixa/CartaMolde/FocoEstrelasBox",
-			"HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoFaixa/FocoAttrIcon", "HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoFaixa/FocoAttr",
-			"HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoFaixa/FocoStats",
-			"HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoTipo", "HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoDesc",
-			"HUD/PainelCarta/Linha/BarraVermelha"]:
+	# Fundo azul-marinho (#1b2340) ocupando a faixa x 0..562, altura toda.
+	var fundo := mesa.get_node("HUD/FundoPainelEsq") as ColorRect
+	assert_eq(fundo.color, Color(0.106, 0.137, 0.251, 1.0), "Fundo do painel no azul-marinho da ref (#1b2340).")
+	assert_eq(fundo.size.x, 562, "Fundo do painel na faixa x 0..562 da ref.")
+	assert_eq(fundo.size.y, 1080, "Fundo do painel com altura toda.")
+	for caminho in ["HUD/PainelCarta/CartaMolde", "HUD/PainelCarta/CartaMolde/Moldura",
+			"HUD/PainelCarta/CartaMolde/FocoArte", "HUD/PainelCarta/CartaMolde/FocoCor",
+			"HUD/PainelCarta/CartaMolde/FocoNomeMolde", "HUD/PainelCarta/CartaMolde/FocoOrbe",
+			"HUD/PainelCarta/CartaMolde/FocoEstrelasBox", "HUD/PainelCarta/FocoFaixa",
+			"HUD/PainelCarta/FocoFaixa/FocoAttrIcon", "HUD/PainelCarta/FocoFaixa/FocoStats",
+			"HUD/PainelCarta/FocoFaixa/FocoOrbeFaixa", "HUD/PainelCarta/FocoFaixa/FocoOrbeTipo",
+			"HUD/PainelCarta/FocoFaixa/FocoCopias", "HUD/PainelCarta/FocoNome",
+			"HUD/PainelCarta/FocoTipo", "HUD/PainelCarta/BlocoDesc",
+			"HUD/PainelCarta/BlocoDesc/FocoAttr", "HUD/PainelCarta/BlocoDesc/FocoDesc",
+			"HUD/PainelCarta/BlocoDesc/BarraVermelha"]:
 		assert_true(mesa.get_node_or_null(NodePath(caminho)) != null, "Painel tem: " + caminho)
+	# As faixas da ref: a carta preserva a proporção da moldura real
+	# (832x1248 = 0,667) e fica entre y 16 e 562.
+	var molde := mesa.get_node("HUD/PainelCarta/CartaMolde") as Control
+	assert_eq(molde.position.y, 16, "Carta começa em y 16 como na ref.")
+	assert_true(molde.size.y <= 546, "Carta cabe na faixa y 16..562 da ref: %d." % int(molde.size.y))
+	assert_true(molde.size.x < 502.0, "Carta com a proporção da moldura (não esticada na faixa): %d." % int(molde.size.x))
+	assert_true(molde.position.x + molde.size.x <= 562, "Carta dentro da faixa do painel, sem vazar.")
+	# Faixa ATK/DEF fica logo abaixo da carta, como na ref.
+	var faixa := mesa.get_node("HUD/PainelCarta/FocoFaixa") as Control
+	assert_true(faixa.position.y >= 562 and faixa.position.y + faixa.size.y <= 648, "Faixa ATK/DEF na faixa y 562..648: %d." % int(faixa.position.y))
+	# NOME amarelo, TIPO verde e DESCRIÇÃO branca, nas faixas da ref.
+	var l_nome := mesa.get_node("HUD/PainelCarta/FocoNome") as Label
+	var l_tipo := mesa.get_node("HUD/PainelCarta/FocoTipo") as Label
+	assert_eq(l_nome.get_theme_color("font_color"), Color(1.0, 0.85, 0.15, 1.0), "NOME em amarelo como na ref.")
+	assert_eq(l_tipo.get_theme_color("font_color"), Color(0.30, 0.95, 0.45, 1.0), "TIPO em verde como na ref.")
+	assert_true(l_nome.position.y >= 670 and l_nome.position.y + l_nome.size.y <= 756, "NOME na faixa y 670..756: %d." % int(l_nome.position.y))
+	assert_true(l_tipo.position.y >= 756 and l_tipo.position.y + l_tipo.size.y <= 799, "TIPO na faixa y 756..799: %d." % int(l_tipo.position.y))
+	var bloco := mesa.get_node("HUD/PainelCarta/BlocoDesc") as Control
+	assert_true(bloco.position.y >= 810, "DESCRIÇÃO começa em y 810 como na ref: %d." % int(bloco.position.y))
+	assert_eq((mesa.get_node("HUD/PainelCarta/BlocoDesc/BarraVermelha") as ColorRect).color, Color(1.0, 0.55, 0.0, 1.0), "Barra de rolagem laranja da ref.")
+	# Agora o CONTEÚDO: nome, ATK/DEF, atributo e descrição do DADO REAL.
 	var st = mesa.get("_st")
 	var mao: Array = (st.players[0] as Dictionary)["hand"]
 	assert_true(mao.size() > 0, "Preparo: mão p0 tem carta.")
@@ -530,31 +582,73 @@ func test_painel_esquerdo_carta_focada() -> void:
 	mesa.set("_col", 0)
 	mesa.call("_atualizar_hud")
 	await wait_process_frames(1)
-	var nome := str((mesa.get_node("HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoNome") as Label).text)
+	var nome := str(l_nome.text)
 	assert_false(nome.is_empty() or nome == "—", "Painel mostra o nome real da carta focada: " + nome)
-	var stats := str((mesa.get_node("HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoFaixa/FocoStats") as Label).text)
+	var stats := str((mesa.get_node("HUD/PainelCarta/FocoFaixa/FocoStats") as Label).text)
 	assert_true(stats.contains("ATK/") and stats.contains("DEF/"), "Faixa ATK/DEF do dado real: " + stats)
-	var attr := str((mesa.get_node("HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoFaixa/FocoAttr") as Label).text)
-	assert_false(attr.is_empty(), "Faixa mostra o atributo: " + attr)
-	var desc := str((mesa.get_node("HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoDesc") as Label).text)
+	var attr := str((mesa.get_node("HUD/PainelCarta/BlocoDesc/FocoAttr") as Label).text)
+	assert_false(attr.is_empty(), "Painel mostra o atributo: " + attr)
+	var tipo := str(l_tipo.text)
+	assert_true(tipo.begins_with("["), "TIPO entre colchetes como na ref: " + tipo)
+	var desc := str((mesa.get_node("HUD/PainelCarta/BlocoDesc/FocoDesc") as Label).text)
 	assert_false(desc.is_empty(), "Painel mostra a descrição (ou guardiãs + atributo).")
+	# Orbes: o 1º é o ATRIBUTO (vem do asset real). O 2º (tipo) só aparece
+	# se o dado for magia/armadilha — carta sem esse atributo não ganha
+	# orbe inventado.
+	var orbe_attr := mesa.get_node("HUD/PainelCarta/FocoFaixa/FocoOrbeFaixa") as TextureRect
+	assert_true(orbe_attr.visible and orbe_attr.texture != null, "Orbe do atributo visível com o asset real.")
+	var foco: Dictionary = mesa.call("_carta_focada") as Dictionary
+	var dado_foco: Dictionary = foco.get("dado", {}) as Dictionary
+	var ctipo := str(dado_foco.get("card_type", "monster"))
+	if ctipo == "spell" or ctipo == "trap":
+		assert_true((mesa.get_node("HUD/PainelCarta/FocoFaixa/FocoOrbeTipo") as TextureRect).visible, "Orbe de tipo visível em " + ctipo + ".")
+	# Contador de cópias: só aparece se o baralho do jogador TEM a carta.
+	var copias := str((mesa.get_node("HUD/PainelCarta/FocoFaixa/FocoCopias") as Label).text)
+	var cid := str(dado_foco.get("card_id", dado_foco.get("id", "")))
+	var esperado_copia: int = int(mesa.call("_contar_copia_carta", cid))
+	assert_eq(copias, ("x%d" % esperado_copia) if esperado_copia > 0 else "", "Contador de cópias bate com o baralho real (%d)." % esperado_copia)
 	# Bloco com tamanho FIXO (ref): descrição longa nunca muda o tamanho.
-	var bloco := mesa.get_node("HUD/PainelCarta/Linha/Caixa/BlocoDesc") as Control
-	assert_eq(bloco.custom_minimum_size, Vector2(300, 330), "Bloco de descrição tem tamanho fixo.")
-	assert_true((mesa.get_node("HUD/PainelCarta/Linha/Caixa/BlocoDesc/Bloco/FocoDesc") as Label).clip_text, "Descrição corta com clip (não estoura o bloco).")
+	assert_true(bloco.custom_minimum_size.y > 0 and bloco.size.y > 0, "Bloco de descrição tem tamanho fixo.")
+	assert_true((mesa.get_node("HUD/PainelCarta/BlocoDesc/FocoDesc") as Label).clip_text, "Descrição corta com clip (não estoura o bloco).")
+	assert_true(bloco.position.y + bloco.size.y <= 1080.0, "Bloco de descrição não estoura a tela.")
 
 
 func test_fases_no_meio_laterais_e_tokens() -> void:
-	# SEM fases Tag Force (ordem do usuário, duelo segue o FM):
-	# nenhum nó de fase existe; laterais + tokens continuam.
+	# FASE 3 (doc 15 §15.3): as fases passaram a ser uma barra 2D no MEIO do
+	# campo, no meio da altura, com as 4 fases REAIS do motor
+	# (DRAW/MAIN/BATTLE/END). Nosso duelo é Forbidden Memories e NÃO tem
+	# DP/SP/MP1/BP/MP2/EP (§15.1) — mostrar essas seria inventar mecânica.
+	# Laterais, contadores e tokens continuam.
 	var mesa: Node = await _mesa3d_nova()
 	var st = mesa.get("_st")
-	assert_true(_n3d(mesa, "Campo/Fases") == null, "Sem fileira de fases.")
+	assert_true(_n3d(mesa, "Campo/Fases") == null, "Sem fileira de fases no 3D (agora é barra 2D).")
 	for tag in ["DP", "SP", "MP1", "BP", "MP2", "EP"]:
 		assert_true(_n3d(mesa, "Campo/Fases/Fase_" + tag) == null, "Sem fase: " + tag)
+		var caixa_falsa := mesa.get_node_or_null(NodePath("HUD/BarraFases/Fase_" + tag))
+		assert_true(caixa_falsa == null, "Barra de fases não inventa a fase: " + tag)
+	var barra := mesa.get_node("HUD/BarraFases") as Control
+	# y 497..551 = 46%..51% da altura na ref, no meio do campo.
+	assert_true(barra.position.y >= 497 and barra.position.y + barra.size.y <= 551, "Barra de fases na faixa y 497..551 da ref: %d." % int(barra.position.y))
+	var caixa_turno := mesa.get_node("HUD/BarraFases") as Control
+	assert_true(caixa_turno.position.x >= 562.0, "Barra de fases começa depois do painel esquerdo.")
+	# As 4 fases REAIS existem, e só a fase real do estado acende.
+	for fase in ["DRAW", "MAIN", "BATTLE", "END"]:
+		var p := mesa.get_node_or_null(NodePath("HUD/BarraFases/Fase_" + fase)) as PanelContainer
+		assert_true(p != null, "Caixinha da fase real existe: " + fase)
+		assert_eq(str((p.get_node("Txt") as Label).text), fase, "Caixinha mostra o rótulo da fase real: " + fase)
+	var real := String(st.phase).to_upper()
+	var acesas := 0
+	for fase in ["DRAW", "MAIN", "BATTLE", "END"]:
+		var p2 := mesa.get_node("HUD/BarraFases/Fase_" + fase) as PanelContainer
+		var est2 := p2.get_theme_stylebox("panel") as StyleBoxFlat
+		if est2.bg_color == Color(1.0, 0.83, 0.0, 1.0):
+			acesas += 1
+			assert_eq(fase, real, "Só a fase REAL do estado acende (%s)." % real)
+	assert_eq(acesas, 1, "Exatamente uma fase acesa (a do estado: %s)." % real)
 	for caminho in ["Campo/Laterais/DeckRival", "Campo/Laterais/DeckVoce", "Campo/Laterais/CemRival", "Campo/Laterais/CemVoce"]:
 		assert_true(_n3d(mesa, caminho) != null, "Lateral existe: " + caminho)
-	# Contadores = números puros do estado real (ref: 33/32/6).
+	# Contadores = números puros do estado real (ref: 33/32/6), agora em
+	# placa escura DENTRO do campo.
 	var esperados := {
 		"Campo/Laterais/ContaDeckVoce": ((st.players[0] as Dictionary)["deck"] as Array).size(),
 		"Campo/Laterais/ContaCemVoce": ((st.players[0] as Dictionary)["graveyard"] as Array).size(),
@@ -563,8 +657,20 @@ func test_fases_no_meio_laterais_e_tokens() -> void:
 		"Campo/ContaMaoRival": ((st.players[1] as Dictionary)["hand"] as Array).size(),
 	}
 	for caminho in esperados.keys():
-		assert_true(_n3d(mesa, caminho) != null, "Contador existe: " + caminho)
-		assert_eq(str((_n3d(mesa, caminho) as Label3D).text), str(int(esperados[caminho])), "Contador com o número real: " + caminho)
+		var placa := _n3d(mesa, caminho)
+		assert_true(placa != null, "Contador existe: " + caminho)
+		# FASE 3: o número é o rótulo DENTRO de uma placa escura deitada no
+		# campo (não mais um número solto no canto da tela).
+		assert_true(_n3d(mesa, caminho + "/Vidro") != null, "Contador sobre placa de vidro: " + caminho)
+		assert_true(_n3d(mesa, caminho + "/Aro") != null, "Contador com aro: " + caminho)
+		assert_eq((placa as Node3D).rotation_degrees, Vector3.ZERO, "Placa do contador deitada no campo: " + caminho)
+		var num := _n3d(mesa, caminho + "/Numero") as Label3D
+		assert_true(num != null, "Contador tem o número dentro da placa: " + caminho)
+		assert_eq(str(num.text), str(int(esperados[caminho])), "Contador com o número real: " + caminho)
+		assert_eq((num as Label3D).modulate, Color(1, 1, 1), "Número do contador em branco: " + caminho)
+	# O cemitério no turno 1 é 0 REAL (nada foi descartado ainda) — o número
+	# não pode ser "corrigido" para algo inventado.
+	assert_true(mesa.get("_lbl_conta_cem_voce") != null, "Contador de cemitério do jogador existe.")
 	assert_true(mesa.get_node_or_null(NodePath("HUD/MaoRival")) == null, "Sem MaoRival em texto (número vive no 3D).")
 	for caminho in ["Campo/Tokens/TokenX", "Campo/Tokens/TokenBussola"]:
 		assert_true(_n3d(mesa, caminho) != null, "Token decorativo existe: " + caminho)

@@ -107,6 +107,19 @@ const LARG_CARTA := 1.0
 ## dado). Ela CRESCE junto com o campo (ESCALA_CAMPO), então a proporção
 ## peça/carta é a mesma em qualquer enquadramento.
 const PECA_EM_CARTAS := 1.40
+## Lado do ladrilho de CIMA (só o ladrilho, não o cursor): um pouco maior
+## que a carta DEITADA (ALT_CARTA = 1,4576 larguras), para a carta de DEF
+## caber dentro da peça em vez de encostar/cortar na borda.
+const PECA_PROF_CARTAS := 1.52
+## X (em unidades de `_ponto_lateral`, ou seja já passando por
+## ESCALA_CAMPO) da faixa onde ficam baralho e cemitério. Medido: a última
+## coluna do campo acaba em mundo x 5,44 e a janela do campo CORTA em
+## 6,35 (z do rival) e 5,55 (z do jogador) — a coluna enche a janela, então
+## a pilha é uma FITA estreita (0,45 carta) apoiada na borda, como na ref,
+## e não um bloco largo cortado. Em mundo x 5,26 a fita cabe nas duas
+## profundidades sem sair da janela.
+const PILHA_X := 4.28
+const PILHA_L := 0.45
 ## Janela de arte da MOLDURA REAL (medida no JPG do usuário, D38 — o JPG
 ## é 832x1248 e a janela fica em x 11,90%..89,18% e y 18,27%..70,99%).
 ## Usada no 3D e no painel 2D: a arte preenche a janela sem sobra, seja a
@@ -115,6 +128,66 @@ const JANELA_ART_X0 := 0.1190
 const JANELA_ART_X1 := 0.8918
 const JANELA_ART_Y0 := 0.1827
 const JANELA_ART_Y1 := 0.7099
+
+## ---- HUD 2D (doc 15 §15.3 — TUDO medido na referência, em px do canvas
+## 1920x1080; a referência é 1024x583 e o §15.3 traz os %) ----------------
+## PAINEL ESQUERDO: a faixa inteira x 0..562, altura toda.
+const PAINEL_ESQ_L := 562
+## Carta focada: y 16..562 (1,5%..52% da altura na ref). A moldura real é
+## 832x1248 (0,667 de proporção), então numa caixa de 546 de altura a carta
+## tem 364 de largura e fica CENTRADA na faixa (x 99..463).
+const PAINEL_CARTA_Y0 := 16
+const PAINEL_CARTA_Y1 := 562
+const PAINEL_CARTA_L := 364
+## ATK/DEF + orbes + contador: y 562..648.
+const PAINEL_STATS_Y0 := 562
+const PAINEL_STATS_Y1 := 648
+## NOME (amarelo) y 670..756; TIPO (verde) y 756..799; DESCRIÇÃO y 810..1080.
+const PAINEL_NOME_Y0 := 670
+const PAINEL_NOME_Y1 := 756
+const PAINEL_TIPO_Y0 := 756
+const PAINEL_TIPO_Y1 := 799
+const PAINEL_DESC_Y0 := 810
+## BARRA SUPERIOR metálica: x 562..1920 (29,3%..100%), y 0..92 (8,5% da alt).
+const BARRA_TOPO_X0 := 562
+const BARRA_TOPO_Y1 := 92
+const PLACA_VOCE_X0 := 576
+const PLACA_VOCE_X1 := 960
+const CAIXA_TURNO_X0 := 1190
+const CAIXA_TURNO_X1 := 1460
+const PLACA_RIVAL_X0 := 1458
+const PLACA_RIVAL_X1 := 1920
+## BARRA DE FASES: no meio do campo, y 497..551 (46%..51% da altura na ref).
+const BARRA_FASES_Y0 := 497
+const BARRA_FASES_Y1 := 551
+const BARRA_FASES_L := 152      # largura de cada caixinha
+const BARRA_FASES_GAP := 8
+## RETRATOS: moldura no estilo da ref. O rival fica no canto superior
+## DIREITO da faixa do campo; o jogador, no canto superior ESQUERDO da
+## mesma faixa (simétrico ao rival), longe do painel da carta.
+const RETRATO_L := 136
+const RETRATO_RIVAL_X := 1770
+const RETRATO_RIVAL_Y := 96
+const RETRATO_VOCE_X := 578
+const RETRATO_VOCE_Y := 96
+## START / Help: canto inferior direito (x 84%..98%, y 96%..100% na ref).
+const START_X := 1680
+const START_Y := 1020
+const START_L := 214
+const START_A := 44
+## Cores da ref (amarelo do valor/nome, verde do tipo, laranja da barra).
+const COR_PAINEL := Color(0.106, 0.137, 0.251, 1.0)   # #1b2340 azul-marinho
+const COR_PAINEL_BORDA := Color(0.30, 0.38, 0.62, 1.0)
+const COR_LP_VALOR := Color(1.0, 0.83, 0.00, 1.0)
+const COR_NOME := Color(1.0, 0.85, 0.15, 1.0)
+const COR_TIPO := Color(0.30, 0.95, 0.45, 1.0)
+const COR_DESCRICAO := Color(0.92, 0.94, 1.00, 1.0)
+const COR_SCROLL := Color(1.0, 0.55, 0.00, 1.0)
+const COR_METAL_TOPO := Color(0.46, 0.62, 0.96, 1.0)
+const COR_METAL_BASE := Color(0.10, 0.17, 0.44, 1.0)
+const COR_FASE_ATIVA := Color(1.0, 0.83, 0.00, 1.0)
+const COR_FASE_TXT := Color(0.85, 0.90, 1.00, 1.0)
+const COR_FOCO_AZUL := Color(0.35, 0.70, 1.0, 1.0)
 ## Inclinação da mão em graus no eixo X (LIVRE, ordem do usuário):
 ## mude à vontade, nada recalcula pela câmera. Rival usa 180 + este.
 ## Fase 2 (doc 15 §15.3): a mão é PEQUENA, no rodapé, DE PÉ (quase a prumo,
@@ -158,6 +231,10 @@ const PAD_REPETE := 0.25
 ## Fusão: 2+ levantadas -> slot PRIMEIRO -> fila -> FINAL + estrela.
 const FASE_MAO := 0
 const FASE_CAMPO := 1
+## Fases REAIS do motor (`GameState.phase`, turn_manager.gd): o duelo é
+## Forbidden Memories e NÃO tem DP/SP/MP1/BP/MP2/EP (§15.1) — a barra de
+## fases do HUD mostra estas 4 e nada inventado.
+const FASES_REAIS := ["DRAW", "MAIN", "BATTLE", "END"]
 const SUB_MAO_ESCOLHA := 0
 const SUB_FACE := 1
 const SUB_SLOT := 2
@@ -183,6 +260,16 @@ var _flash_tela: ColorRect = null
 var _deck_pos := [Vector3(4.9, 0.6, 1.6), Vector3(-4.9, 0.6, -2.2)]
 
 var _lbl_lp_rival: Label = null
+## Nomes nas placas do topo (dado real do duelista, nunca inventado).
+var _lbl_placa_nome_voce: Label = null
+var _lbl_placa_nome_rival: Label = null
+## Barra de FASES REAIS (DRAW/MAIN/BATTLE/END): fase -> caixinha. Só desenho;
+## o texto vem de `GameState.phase` (doc 15 §15.3).
+var _caixas_fase: Dictionary = {}
+## Orbes e contador da carta focada (painel esquerdo, estilo da ref).
+var _orbe_foco: TextureRect = null
+var _orbe_tipo_foco: TextureRect = null
+var _lbl_copia_foco: Label = null
 var _lbl_mao_rival: Label = null
 var _lbl_fase: Label = null
 var _lbl_log: Label = null
@@ -202,7 +289,7 @@ var _retrato_voce_foto: TextureRect = null
 var _retrato_voce_silhueta: Label = null
 var _lbl_retrato_rival_nome: Label = null
 var _lbl_retrato_voce_nome: Label = null
-var _painel_foco: PanelContainer = null
+var _painel_foco: Control = null
 var _tex_foco_arte: TextureRect = null
 var _cor_foco_arte: ColorRect = null
 var _tex_foco_moldura: TextureRect = null
@@ -584,59 +671,81 @@ func _construir_campo() -> void:
 	# cemitérios à esquerda, com o número em cima. `_ponto_lateral` aplica
 	# a mesma escala do campo, então elas ficam do lado do vidro, nunca
 	# em cima dele, quando o campo cresce (ESCALA_CAMPO).
-	var tam_pilha := Vector3(1.0 * ESCALA_CAMPO, 0.35, 1.46 * ESCALA_CAMPO)
-	laterais.add_child(_caixa("DeckRival", tam_pilha, _ponto_lateral(4.9, TOPO + 0.17, -2.2), _mat(Color(0.42, 0.24, 0.10))))
-	laterais.add_child(_caixa("DeckVoce", tam_pilha, _ponto_lateral(4.9, TOPO + 0.17, 1.6), _mat(Color(0.45, 0.26, 0.11))))
-	var tam_cem := Vector3(1.0 * ESCALA_CAMPO, 0.22, 1.46 * ESCALA_CAMPO)
-	laterais.add_child(_caixa("CemRival", tam_cem, _ponto_lateral(-4.9, TOPO + 0.11, -2.2), _mat(Color(0.30, 0.16, 0.20), 0.25)))
-	laterais.add_child(_caixa("CemVoce", tam_cem, _ponto_lateral(-4.9, TOPO + 0.11, 1.6), _mat(Color(0.16, 0.24, 0.30), 0.25)))
-	_lbl_conta_deck_rival = _rotulo3d("0", 60, Color(0.9, 0.85, 1.0))
-	_lbl_conta_deck_rival.name = "ContaDeckRival"
-	_lbl_conta_deck_rival.position = _ponto_lateral(4.9, 1.15, -2.2)
-	laterais.add_child(_lbl_conta_deck_rival)
-	_lbl_conta_cem_rival = _rotulo3d("0", 60, Color(1.0, 0.75, 0.75))
-	_lbl_conta_cem_rival.name = "ContaCemRival"
-	_lbl_conta_cem_rival.position = _ponto_lateral(-4.9, 1.0, -2.2)
-	laterais.add_child(_lbl_conta_cem_rival)
-	_lbl_conta_deck_voce = _rotulo3d("0", 60, Color(1.0, 0.95, 0.7))
-	_lbl_conta_deck_voce.name = "ContaDeckVoce"
-	_lbl_conta_deck_voce.position = _ponto_lateral(4.9, 1.15, 1.6)
-	laterais.add_child(_lbl_conta_deck_voce)
-	_lbl_conta_cem_voce = _rotulo3d("0", 60, Color(0.75, 1.0, 1.0))
-	_lbl_conta_cem_voce.name = "ContaCemVoce"
-	_lbl_conta_cem_voce.position = _ponto_lateral(-4.9, 1.0, 1.6)
-	laterais.add_child(_lbl_conta_cem_voce)
-	# Número de cartas na mão do rival (a ref mostra o 6 ao lado da mão dele).
-	_lbl_conta_mao_rival = _rotulo3d("0", 60, Color(0.8, 0.8, 0.9))
-	_lbl_conta_mao_rival.name = "ContaMaoRival"
-	_lbl_conta_mao_rival.position = _ponto_lateral(2.7, 2.7, -4.75)
-	campo.add_child(_lbl_conta_mao_rival)
+	var tam_pilha := Vector3(PILHA_L * ESCALA_CAMPO, 0.35, 1.46 * ESCALA_CAMPO)
+	# Baralho e cemitério são FITAS estreitas na borda da última coluna
+	# (doc 15 §15.3): a coluna do campo enche a janela até a borda, então um
+	# bloco largo saía cortado. Assim as duas pilhas ficam inteiras, nas
+	# duas profundidades, com o contador em cima.
+	laterais.add_child(_caixa("DeckRival", tam_pilha, _ponto_lateral(PILHA_X, TOPO + 0.17, -2.2), _mat(Color(0.42, 0.24, 0.10))))
+	laterais.add_child(_caixa("DeckVoce", tam_pilha, _ponto_lateral(PILHA_X, TOPO + 0.17, 1.6), _mat(Color(0.45, 0.26, 0.11))))
+	var tam_cem := Vector3(PILHA_L * ESCALA_CAMPO, 0.22, 1.46 * ESCALA_CAMPO)
+	laterais.add_child(_caixa("CemRival", tam_cem, _ponto_lateral(-PILHA_X, TOPO + 0.11, -2.2), _mat(Color(0.30, 0.16, 0.20), 0.25)))
+	laterais.add_child(_caixa("CemVoce", tam_cem, _ponto_lateral(-PILHA_X, TOPO + 0.11, 1.6), _mat(Color(0.16, 0.24, 0.30), 0.25)))
+	# CONTADORES em cima das pilhas, dentro da janela 3D (doc 15 §15.3: o
+	# número fica SOBRE a pilha, não nas laterais da tela). Placa azul-clara
+	# com o número branco. Baralho à DIREITA, cemitério à ESQUERDA, e as
+	# posições batem com as pilhas acima — nada aqui é inventado, o número
+	# sempre vem do estado real em `_atualizar_contadores`.
+	_lbl_conta_deck_rival = _placa_contador(laterais, "ContaDeckRival", _ponto_lateral(PILHA_X, TOPO + 0.42, -2.2), 0.52, 0.34)
+	_lbl_conta_cem_rival = _placa_contador(laterais, "ContaCemRival", _ponto_lateral(-PILHA_X, TOPO + 0.30, -2.2), 0.52, 0.34)
+	_lbl_conta_deck_voce = _placa_contador(laterais, "ContaDeckVoce", _ponto_lateral(PILHA_X, TOPO + 0.42, 1.6), 0.52, 0.34)
+	_lbl_conta_cem_voce = _placa_contador(laterais, "ContaCemVoce", _ponto_lateral(-PILHA_X, TOPO + 0.30, 1.6), 0.52, 0.34)
+	# Cartas na mão do RIVAL (dado real): a contagem fica ao lado do leque de
+	# cartas, não num ponto solto no canto da tela.
+	_lbl_conta_mao_rival = _placa_contador(campo, "ContaMaoRival", _ponto_lateral(1.6, TOPO + 0.30, -6.10), 0.46, 0.30)
 	_construir_tokens(campo)
 	_no_cartas = Node3D.new()
 	_no_cartas.name = "Cartas"
 	_vp.add_child(_no_cartas)
-	# Cursor = MOLDURA vazada branca (ref: borda de seleção, não tijolo),
-	# do tamanho da peça de vidro (cresce com o campo).
+	# Cursor = retângulo AZUL BRILHANTE, grosso, do tamanho da peça de vidro
+	# (cresce com o campo) + a MÃO BRANCA no centro (doc 15 §15.3).
 	_cursor3d = Node3D.new()
 	_cursor3d.name = "Cursor3D"
 	_cursor3d.position = Vector3(0, TOPO, _ponto_lateral(0.0, 0.0, 4.15).z)
 	_vp.add_child(_cursor3d)
-	var mat_cur := _mat(Color(0.90, 0.95, 1.0), 1.0)
+	var mat_cur := _mat(COR_FOCO_AZUL, 0.85)
 	var bw := _peca_lado() * 1.24
 	var bh := _peca_lado() * 1.24
-	var t := 0.09 * ESCALA_CAMPO
+	var t := 0.15 * ESCALA_CAMPO
 	_cursor3d.add_child(_caixa("Aba", Vector3(bw, 0.06, t), Vector3(0, 0, bh / 2.0), mat_cur))
 	_cursor3d.add_child(_caixa("Abaixo", Vector3(bw, 0.06, t), Vector3(0, 0, -bh / 2.0), mat_cur))
 	_cursor3d.add_child(_caixa("Esq", Vector3(t, 0.06, bh), Vector3(-bw / 2.0, 0, 0), mat_cur))
 	_cursor3d.add_child(_caixa("Dir", Vector3(t, 0.06, bh), Vector3(bw / 2.0, 0, 0), mat_cur))
+	_construir_mao_cursor()
 	print("[MESA3D] Campo: 20 painéis + decks/cemitérios + tokens + Cursor3D.")
 
 
-## Fileira de fases no MEIO do campo (só desenho, ref DP/SP/MP1/BP/MP2/EP).
-## A fase atual acende (dourado); SP/MP2 nunca acendem (motor sem elas).
-## Tokens decorativos da ref nova (só desenho, zero regra): círculo com
-## X à esquerda do meio + bússola à direita do meio, discos azul-escuros
-## flutuando com símbolo branco.
+## MÃO BRANCA no centro do cursor (ref): palma + 4 dedos + polegar, feita
+## de caixas brancas deitadas no ladrilho. É só desenho (zero regra), usa
+## a largura da peça (então encolhe junto com o campo) e é PEQUENA de
+## propósito: é um ponteiro, não um ladrilho — ocupava a carta inteira.
+func _construir_mao_cursor() -> void:
+	var mao := Node3D.new()
+	mao.name = "Mao"
+	var mat := _mat(Color(1.0, 1.0, 1.0), 0.55)
+	var p := _peca_lado()
+	# ÍCONE pequeno de propósito: a mão inteira ocupa ~1/6 da peça (na mão
+	# do jogador, ~1/6 da carta). Antes os dedos eram 0,3..0,4 da peça e
+	# viravam um borrão branco no meio da carta.
+	var w := p * 0.038
+	# palma
+	mao.add_child(_caixa("Palma", Vector3(w * 2.2, w * 1.5, 0.07), Vector3(0, 0, 0.16), mat))
+	# dedos: 4 barras curtas em cima da palma, do maior pro menor
+	var alturas := [0.100, 0.130, 0.125, 0.095]
+	for i in range(4):
+		var alt: float = float(alturas[i]) * p
+		var x := (-1.5 + float(i)) * w * 1.05
+		mao.add_child(_caixa("Dedo%d" % i, Vector3(w * 0.80, alt, 0.07), Vector3(x, alt * 0.5 + w * 0.75, 0.16), mat))
+	# polegar: barra curta diagonal à esquerda da palma
+	var pol := _caixa("Polegar", Vector3(w * 0.80, w * 1.3, 0.07), Vector3(-w * 1.9, w * 0.1, 0.16), mat)
+	pol.rotation_degrees = Vector3(0, 0, 40)
+	mao.add_child(pol)
+	_cursor3d.add_child(mao)
+
+
+## Tokens decorativos da ref (só desenho, zero regra): círculo com X à
+## esquerda do meio + bússola à direita do meio. As FASES NÃO são 3D —
+## a fase real do motor aparece na barra 2D do HUD (`_construir_fases`).
 func _construir_tokens(campo: Node3D) -> void:
 	var tokens := Node3D.new()
 	tokens.name = "Tokens"
@@ -680,6 +789,14 @@ func _peca_lado() -> float:
 	return PECA_EM_CARTAS * ESCALA_CAMPO
 
 
+## Lado do LADRIHO (vidro) que recebe a carta DEITADA: precisa ser um pouco
+## maior que a carta deitada (LARG_CARTA x ALT_CARTA = 0,667), senão a
+## DEF encostava na borda e ficava cortada (o Lead pediu "carta DEF
+## dentro do ladrilho"). Só apresentação; a composição do dado não muda.
+func _peca_prof_carta() -> float:
+	return PECA_PROF_CARTAS * ESCALA_CAMPO
+
+
 ## Painel de slot = PEÇA DE VIDRO da referência (doc 15 §15.3): vidro azul
 ## ESCURO translúcido (dá pra ver o céu/frente através), com aro fino mais
 ## claro em volta e ESPAÇO entre as peças (na ref são ladrilhos soltos, não
@@ -694,7 +811,7 @@ func _painel_slot(lado: int, tipo: String, indice: int) -> Node3D:
 	# ref) + aro fininho de luz (na ref é um fio, não um wireframe).
 	var mat_borda := _vidro(Color(0.40, 0.58, 0.88), 0.42, 0.05)
 	var mat_base := _vidro(Color(0.035, 0.08, 0.20), 0.72, 0.05)
-	var lado_pec := _peca_lado()
+	var lado_pec := _peca_prof_carta()
 	var base := _caixa("Base", Vector3(lado_pec, 0.05, lado_pec), Vector3(0, TOPO - 0.03, 0), mat_base)
 	no.add_child(base)
 	var t := 0.05 * ESCALA_CAMPO
@@ -1386,8 +1503,12 @@ func _rotulo_placa_clara(nome: String, texto: String, tam: int) -> Label:
 	return l
 
 
+## Retratos 2D no estilo da ref: moldura metálica clara com gradiente
+## escuro e a INICIAL do nome (o pack NÃO tem retrato de duelista — os 39
+## duelistas do FM vêm com `portrait` vazio, então nunca há foto; se um dia
+## vier, a foto real aparece no lugar do placeholder).
 func _estilo_retrato() -> StyleBoxFlat:
-	# Moldura clara do retrato (ref nova: aro claro fino).
+	# Moldura clara do retrato (ref: aro claro fino).
 	var est := StyleBoxFlat.new()
 	est.bg_color = Color(0.03, 0.03, 0.07, 0.95)
 	est.border_color = Color(0.85, 0.90, 1.0)
@@ -1400,115 +1521,37 @@ func _estilo_retrato() -> StyleBoxFlat:
 	return est
 
 
-func _construir_hud() -> void:
-	# TOPO estilo ref SEM MARCA: 3 placas metálicas flutuantes (seu LP à
-	# esquerda, TURN ao centro, rival + LP à direita, tudo dado real) +
-	# retratos (rival em cima à direita, você à esquerda do campo) +
-	# painel esquerdo fixo com a carta focada GRANDE. Tudo IGNORE (D19).
-	var hud := Control.new()
-	hud.name = "HUD"
-	hud.set_anchors_preset(Control.PRESET_FULL_RECT)
-	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(hud)
-	_construir_placas(hud)
-	_construir_retratos(hud)
-	# Textos inventados REMOVIDOS (ordem do usuário, ref não tem): MaoRival,
-	# Fase, Log, InfoSlot, FilaFusao, Dica. Só ficam placas, retratos,
-	# painel da carta, fases 3D, contadores e menus funcionais.
-	_lbl_mao_rival = null
-	_lbl_fase = null
-	_lbl_log = null
-	_lbl_slot = null
-	_lbl_fila = null
-	_lbl_dica = null
-	var barra_start := PanelContainer.new()
-	barra_start.name = "BarraStart"
-	var est_start := StyleBoxFlat.new()
-	est_start.bg_color = Color(0.02, 0.02, 0.05, 0.9)
-	est_start.border_color = Color(0.30, 0.32, 0.40)
-	est_start.set_border_width_all(2)
-	est_start.set_corner_radius_all(6)
-	barra_start.add_theme_stylebox_override("panel", est_start)
-	barra_start.position = Vector2(1690, 1020)
-	barra_start.custom_minimum_size = Vector2(214, 44)
-	barra_start.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var lbl_start := _rotulo_hud("StartHelp", "START ? Help", Vector2.ZERO, 24, Color(1, 1, 1))
-	lbl_start.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	barra_start.add_child(lbl_start)
-	hud.add_child(barra_start)
-	_flash_tela = ColorRect.new()
-	_flash_tela.name = "FlashTela"
-	_flash_tela.color = Color(1, 1, 1)
-	_flash_tela.modulate.a = 0.0
-	_flash_tela.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_flash_tela.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hud.add_child(_flash_tela)
-	_construir_painel_foco(hud)
+## Gradiente do placeholder do retrato (mesma linguagem do metal do HUD).
+func _fundo_retrato(tom: Color) -> TextureRect:
+	var g := Gradient.new()
+	g.set_color(0, tom.darkened(0.55))
+	g.set_color(1, tom.darkened(0.80))
+	var gt := GradientTexture2D.new()
+	gt.gradient = g
+	gt.width = 8
+	gt.height = 64
+	gt.fill_from = Vector2(0.0, 0.0)
+	gt.fill_to = Vector2(0.0, 1.0)
+	var tr := TextureRect.new()
+	tr.texture = gt
+	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	tr.stretch_mode = TextureRect.STRETCH_SCALE
+	tr.set_anchors_preset(Control.PRESET_FULL_RECT)
+	tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return tr
 
 
-## 3 placas do topo (ref nova, só desenho): AZUL com seu LP + nome à
-## esquerda, AZUL-ESCURA com TURN ao centro, VERMELHA com nome do rival +
-## LP à direita + etiquetas laranja "Single" embaixo das duas. Sem logo.
-func _construir_placas(hud: Control) -> void:
-	var placa_voce := PanelContainer.new()
-	placa_voce.name = "PlacaVoce"
-	placa_voce.add_theme_stylebox_override("panel", _estilo_placa(Color(0.15, 0.35, 0.85), Color(0.05, 0.12, 0.35)))
-	placa_voce.position = Vector2(16, 8)
-	placa_voce.size = Vector2(420, 56)
-	placa_voce.custom_minimum_size = Vector2(420, 56)
-	placa_voce.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_lbl_lp_voce = _rotulo_placa_clara("LpVoce", "LP 8000", 34)
-	placa_voce.add_child(_lbl_lp_voce)
-	hud.add_child(placa_voce)
-	var tag_voce := _rotulo_hud("TagVoce", "Single", Vector2(436, 66), 20, Color(1.0, 0.65, 0.2))
-	hud.add_child(tag_voce)
-	var placa_turno := PanelContainer.new()
-	placa_turno.name = "PlacaTurno"
-	placa_turno.add_theme_stylebox_override("panel", _estilo_placa(Color(0.08, 0.12, 0.45), Color(0.02, 0.04, 0.20)))
-	placa_turno.position = Vector2(860, 8)
-	placa_turno.size = Vector2(200, 84)
-	placa_turno.custom_minimum_size = Vector2(200, 84)
-	placa_turno.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var caixa_turno := VBoxContainer.new()
-	caixa_turno.name = "CaixaTurno"
-	caixa_turno.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	caixa_turno.add_theme_constant_override("separation", 0)
-	placa_turno.add_child(caixa_turno)
-	var titulo := _rotulo_placa_clara("TurnoTitulo", "TURN", 20)
-	titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	caixa_turno.add_child(titulo)
-	_lbl_turno = _rotulo_placa_clara("Turno", "1", 36)
-	_lbl_turno.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	caixa_turno.add_child(_lbl_turno)
-	_lbl_turno_num = _lbl_turno
-	hud.add_child(placa_turno)
-	var placa_rival := PanelContainer.new()
-	placa_rival.name = "PlacaRival"
-	placa_rival.add_theme_stylebox_override("panel", _estilo_placa(Color(0.80, 0.15, 0.20), Color(0.35, 0.05, 0.08)))
-	placa_rival.position = Vector2(1324, 8)
-	placa_rival.size = Vector2(580, 56)
-	placa_rival.custom_minimum_size = Vector2(580, 56)
-	placa_rival.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_lbl_lp_rival = _rotulo_placa_clara("LpRival", "RIVAL LP 8000", 28)
-	_lbl_lp_rival.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	placa_rival.add_child(_lbl_lp_rival)
-	hud.add_child(placa_rival)
-	var tag_rival := _rotulo_hud("TagRival", "Single", Vector2(1640, 66), 20, Color(1.0, 0.65, 0.2))
-	tag_rival.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	tag_rival.size = Vector2(100, 28)
-	hud.add_child(tag_rival)
-
-
-## Retratos 2D (só desenho): rival no canto superior direito, você à
-## esquerda do campo (igual à ref). Foto real ou silhueta com a inicial.
 func _construir_retratos(hud: Control) -> void:
 	var ret_rival := PanelContainer.new()
 	ret_rival.name = "RetratoRival"
 	ret_rival.add_theme_stylebox_override("panel", _estilo_retrato())
-	ret_rival.position = Vector2(1768, 72)
-	ret_rival.size = Vector2(136, 136)
-	ret_rival.custom_minimum_size = Vector2(136, 136)
+	ret_rival.position = Vector2(RETRATO_RIVAL_X, RETRATO_RIVAL_Y)
+	ret_rival.size = Vector2(RETRATO_L, RETRATO_L)
+	ret_rival.custom_minimum_size = Vector2(RETRATO_L, RETRATO_L)
 	ret_rival.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var fundo_r := _fundo_retrato(Color(0.96, 0.56, 0.30))
+	fundo_r.name = "Fundo"
+	ret_rival.add_child(fundo_r)
 	_retrato_rival_foto = TextureRect.new()
 	_retrato_rival_foto.name = "Foto"
 	_retrato_rival_foto.custom_minimum_size = Vector2(120, 120)
@@ -1527,10 +1570,13 @@ func _construir_retratos(hud: Control) -> void:
 	var ret_voce := PanelContainer.new()
 	ret_voce.name = "RetratoVoce"
 	ret_voce.add_theme_stylebox_override("panel", _estilo_retrato())
-	ret_voce.position = Vector2(384, 540)
-	ret_voce.size = Vector2(136, 136)
-	ret_voce.custom_minimum_size = Vector2(136, 136)
+	ret_voce.position = Vector2(RETRATO_VOCE_X, RETRATO_VOCE_Y)
+	ret_voce.size = Vector2(RETRATO_L, RETRATO_L)
+	ret_voce.custom_minimum_size = Vector2(RETRATO_L, RETRATO_L)
 	ret_voce.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var fundo_v := _fundo_retrato(Color(0.55, 0.85, 1.0))
+	fundo_v.name = "Fundo"
+	ret_voce.add_child(fundo_v)
 	_retrato_voce_foto = TextureRect.new()
 	_retrato_voce_foto.name = "Foto"
 	_retrato_voce_foto.custom_minimum_size = Vector2(120, 120)
@@ -1546,6 +1592,241 @@ func _construir_retratos(hud: Control) -> void:
 	ret_voce.add_child(_retrato_voce_silhueta)
 	hud.add_child(ret_voce)
 	_lbl_retrato_voce_nome = null
+
+
+## Gradiente metálico (a barra da ref é metal com bisel, não chapa): uma
+## textura de gradiente vertical gerada em código — sem arquivo externo.
+func _tex_metal(topo: Color, base: Color) -> GradientTexture2D:
+	var g := Gradient.new()
+	g.set_color(0, topo)
+	g.set_color(1, base)
+	var t := GradientTexture2D.new()
+	t.gradient = g
+	t.width = 8
+	t.height = 64
+	t.fill_from = Vector2(0.0, 0.0)
+	t.fill_to = Vector2(0.0, 1.0)
+	return t
+
+
+func _construir_hud() -> void:
+	# HUD 2D no estilo da REFERÊNCIA (doc 15 §15.3): painel esquerdo
+	# azul-marinho com a carta focada + ATK/DEF + nome + tipo + descrição,
+	# barra superior metálica (LP/TURN) só na faixa do campo, barra de
+	# FASES REAIS no meio, retratos e START. Tudo IGNORE (D19).
+	var hud := Control.new()
+	hud.name = "HUD"
+	hud.set_anchors_preset(Control.PRESET_FULL_RECT)
+	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(hud)
+	_construir_fundo_painel(hud)
+	_construir_placas(hud)
+	_construir_fases(hud)
+	_construir_retratos(hud)
+	# Textos inventados REMOVIDOS (ordem do usuário, ref não tem): MaoRival,
+	# Fase, Log, InfoSlot, FilaFusao, Dica. A FASE agora aparece na barra
+	# de fases, lendo o estado real.
+	_lbl_mao_rival = null
+	_lbl_fase = null
+	_lbl_log = null
+	_lbl_slot = null
+	_lbl_fila = null
+	_lbl_dica = null
+	var barra_start := PanelContainer.new()
+	barra_start.name = "BarraStart"
+	var est_start := StyleBoxFlat.new()
+	est_start.bg_color = Color(0.02, 0.02, 0.05, 0.9)
+	est_start.border_color = Color(0.30, 0.32, 0.40)
+	est_start.set_border_width_all(2)
+	est_start.set_corner_radius_all(6)
+	barra_start.add_theme_stylebox_override("panel", est_start)
+	barra_start.position = Vector2(START_X, START_Y)
+	barra_start.size = Vector2(START_L, START_A)
+	barra_start.custom_minimum_size = Vector2(START_L, START_A)
+	barra_start.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var lbl_start := _rotulo_hud("StartHelp", "START ? Help", Vector2.ZERO, 24, Color(1, 1, 1))
+	lbl_start.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	barra_start.add_child(lbl_start)
+	hud.add_child(barra_start)
+	_flash_tela = ColorRect.new()
+	_flash_tela.name = "FlashTela"
+	_flash_tela.color = Color(1, 1, 1)
+	_flash_tela.modulate.a = 0.0
+	_flash_tela.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_flash_tela.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(_flash_tela)
+	_construir_painel_foco(hud)
+
+
+## Fundo do painel esquerdo: azul-marinho escuro (ref) ocupando a faixa
+## inteira x 0..562, altura toda, com um fio de brilho na borda direita.
+func _construir_fundo_painel(hud: Control) -> void:
+	var fundo := ColorRect.new()
+	fundo.name = "FundoPainelEsq"
+	fundo.color = COR_PAINEL
+	fundo.position = Vector2.ZERO
+	fundo.size = Vector2(PAINEL_ESQ_L, TELA_A)
+	fundo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(fundo)
+	var brilho := ColorRect.new()
+	brilho.name = "BrilhoPainel"
+	brilho.color = COR_PAINEL_BORDA
+	brilho.position = Vector2(PAINEL_ESQ_L - 3, 0)
+	brilho.size = Vector2(3, TELA_A)
+	brilho.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(brilho)
+
+
+## Barra superior + 3 placas (doc 15 §15.3): a barra metálica azul começa
+## em x 562 (a faixa do campo, como na ref) e vai até 1920. Placa azul
+## (você) à esquerda, caixa TURN ao centro, placa vermelha (rival) à
+## direita. Valores de LP e turno SEMPRE do estado real. A aba "Single"
+## foi REMOVIDA: era texto inventado (nossa contrato não tem modo de duelo).
+func _construir_placas(hud: Control) -> void:
+	var barra := TextureRect.new()
+	barra.name = "BarraTopo"
+	barra.texture = _tex_metal(COR_METAL_TOPO, COR_METAL_BASE)
+	barra.position = Vector2(BARRA_TOPO_X0, 0)
+	barra.size = Vector2(TELA_L - BARRA_TOPO_X0, BARRA_TOPO_Y1)
+	barra.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	barra.stretch_mode = TextureRect.STRETCH_SCALE
+	barra.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(barra)
+	var bisel := ColorRect.new()
+	bisel.name = "BiselTopo"
+	bisel.color = Color(0.75, 0.85, 1.0, 0.55)
+	bisel.position = Vector2(BARRA_TOPO_X0, BARRA_TOPO_Y1 - 3)
+	bisel.size = Vector2(TELA_L - BARRA_TOPO_X0, 3)
+	bisel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(bisel)
+	# Placa azul: "LP" + VALOR em amarelo + nome do duelista (dado real).
+	var placa_voce := PanelContainer.new()
+	placa_voce.name = "PlacaVoce"
+	placa_voce.add_theme_stylebox_override("panel", _estilo_placa(Color(0.13, 0.28, 0.70, 0.92), COR_METAL_TOPO))
+	placa_voce.position = Vector2(PLACA_VOCE_X0, 6)
+	placa_voce.size = Vector2(PLACA_VOCE_X1 - PLACA_VOCE_X0, 64)
+	placa_voce.custom_minimum_size = Vector2(PLACA_VOCE_X1 - PLACA_VOCE_X0, 64)
+	placa_voce.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var linha_voce := HBoxContainer.new()
+	linha_voce.name = "Linha"
+	linha_voce.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	linha_voce.add_theme_constant_override("separation", 10)
+	linha_voce.alignment = BoxContainer.ALIGNMENT_CENTER
+	placa_voce.add_child(linha_voce)
+	linha_voce.add_child(_rotulo_placa_clara("LpRotulo", "LP", 22))
+	_lbl_lp_voce = _rotulo_placa_clara("LpVoce", "0", 30)
+	_lbl_lp_voce.add_theme_color_override("font_color", COR_LP_VALOR)
+	_lbl_lp_voce.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
+	linha_voce.add_child(_lbl_lp_voce)
+	_lbl_placa_nome_voce = _rotulo_placa_clara("NomeVoce", "", 22)
+	linha_voce.add_child(_lbl_placa_nome_voce)
+	hud.add_child(placa_voce)
+	# Caixa central TURN: rótulo pequeno em cima + número do turno.
+	var placa_turno := PanelContainer.new()
+	placa_turno.name = "PlacaTurno"
+	placa_turno.add_theme_stylebox_override("panel", _estilo_placa(Color(0.07, 0.12, 0.38, 0.94), COR_METAL_TOPO))
+	placa_turno.position = Vector2(CAIXA_TURNO_X0, 6)
+	placa_turno.size = Vector2(CAIXA_TURNO_X1 - CAIXA_TURNO_X0, 80)
+	placa_turno.custom_minimum_size = Vector2(CAIXA_TURNO_X1 - CAIXA_TURNO_X0, 80)
+	placa_turno.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var caixa_turno := VBoxContainer.new()
+	caixa_turno.name = "CaixaTurno"
+	caixa_turno.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	caixa_turno.add_theme_constant_override("separation", 0)
+	placa_turno.add_child(caixa_turno)
+	var titulo := _rotulo_placa_clara("TurnoTitulo", "TURN", 20)
+	titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caixa_turno.add_child(titulo)
+	_lbl_turno = _rotulo_placa_clara("Turno", "1", 32)
+	_lbl_turno.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	caixa_turno.add_child(_lbl_turno)
+	_lbl_turno_num = _lbl_turno
+	hud.add_child(placa_turno)
+	# Placa vermelha: nome + "LP" + VALOR (espelhada, como na ref).
+	var placa_rival := PanelContainer.new()
+	placa_rival.name = "PlacaRival"
+	placa_rival.add_theme_stylebox_override("panel", _estilo_placa(Color(0.72, 0.13, 0.18, 0.92), Color(0.95, 0.55, 0.45)))
+	placa_rival.position = Vector2(PLACA_RIVAL_X0, 6)
+	placa_rival.size = Vector2(PLACA_RIVAL_X1 - PLACA_RIVAL_X0, 64)
+	placa_rival.custom_minimum_size = Vector2(PLACA_RIVAL_X1 - PLACA_RIVAL_X0, 64)
+	placa_rival.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var linha_rival := HBoxContainer.new()
+	linha_rival.name = "Linha"
+	linha_rival.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	linha_rival.add_theme_constant_override("separation", 10)
+	linha_rival.alignment = BoxContainer.ALIGNMENT_CENTER
+	placa_rival.add_child(linha_rival)
+	_lbl_placa_nome_rival = _rotulo_placa_clara("NomeRival", "", 22)
+	linha_rival.add_child(_lbl_placa_nome_rival)
+	linha_rival.add_child(_rotulo_placa_clara("LpRotulo", "LP", 22))
+	_lbl_lp_rival = _rotulo_placa_clara("LpRival", "0", 30)
+	_lbl_lp_rival.add_theme_color_override("font_color", COR_LP_VALOR)
+	_lbl_lp_rival.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
+	linha_rival.add_child(_lbl_lp_rival)
+	hud.add_child(placa_rival)
+
+
+## BARRA DE FASES no meio do campo (doc 15 §15.3): as caixinhas metálicas
+## com a fase REAL do motor em amarelo. Nosso duelo é Forbidden Memories e
+## NÃO tem DP/SP/MP1/BP/MP2/EP (§15.1) — mostrar essas seria inventar
+## mecânica, então aqui vão exatamente as 4 fases de `GameState.phase`.
+func _construir_fases(hud: Control) -> void:
+	var barra := HBoxContainer.new()
+	barra.name = "BarraFases"
+	var total := FASES_REAIS.size() * BARRA_FASES_L + (FASES_REAIS.size() - 1) * BARRA_FASES_GAP
+	barra.position = Vector2(1241.0 - float(total) * 0.5, BARRA_FASES_Y0)
+	barra.size = Vector2(total, BARRA_FASES_Y1 - BARRA_FASES_Y0)
+	barra.add_theme_constant_override("separation", BARRA_FASES_GAP)
+	barra.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(barra)
+	_caixas_fase = {}
+	for fase in FASES_REAIS:
+		var p := PanelContainer.new()
+		p.name = "Fase_" + str(fase)
+		p.add_theme_stylebox_override("panel", _estilo_fase(false))
+		p.custom_minimum_size = Vector2(BARRA_FASES_L, BARRA_FASES_Y1 - BARRA_FASES_Y0)
+		p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var l := _rotulo_placa_clara("Txt", str(fase), 22)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		p.add_child(l)
+		barra.add_child(p)
+		_caixas_fase[str(fase)] = p
+
+
+func _estilo_fase(ativa: bool) -> StyleBoxFlat:
+	var est := StyleBoxFlat.new()
+	if ativa:
+		est.bg_color = COR_FASE_ATIVA
+		est.border_color = Color(1.0, 0.95, 0.7)
+	else:
+		est.bg_color = Color(0.10, 0.16, 0.40, 0.92)
+		est.border_color = Color(0.35, 0.45, 0.75)
+	est.set_border_width_all(2)
+	est.set_corner_radius_all(4)
+	est.content_margin_left = 6
+	est.content_margin_right = 6
+	est.content_margin_top = 4
+	est.content_margin_bottom = 4
+	return est
+
+
+## Acende a fase REAL (estado do motor) e apaga as outras. Rótulo de fase
+## é conceito, o VALOR vem sempre do `GameState.phase`.
+func _atualizar_fases() -> void:
+	if _caixas_fase.is_empty() or _st == null:
+		return
+	var atual := String(_st.phase).to_upper()
+	for fase in FASES_REAIS:
+		var p: PanelContainer = _caixas_fase[str(fase)] as PanelContainer
+		if p == null:
+			continue
+		var ativa := str(fase) == atual
+		p.add_theme_stylebox_override("panel", _estilo_fase(ativa))
+		var l := p.get_node("Txt") as Label
+		l.add_theme_color_override("font_color", Color(0.10, 0.10, 0.14) if ativa else COR_FASE_TXT)
+
+
 
 
 ## Painel esquerdo 2D fixo estilo CARTA (ref nova): fundo bege como a
@@ -1567,42 +1848,32 @@ func _ancorar_moldura(c: Control, x0: float, y0: float, x1: float, y1: float) ->
 	c.offset_bottom = 0.0
 
 
+## PAINEL ESQUERDO da ref (doc 15 §15.3), de cima para baixo, nas faixas
+## medidas no §15.3: fundo azul-marinho (feito em `_construir_fundo_painel`),
+## a CARTA (y 16..562), a faixa ATK/DEF com os orbes e o contador de
+## cópias (y 562..648), o NOME em amarelo (y 670..756), o TIPO verde entre
+## colchetes (y 756..799) e a DESCRIÇÃO branca com a barra laranja de rolagem
+## (y 810..1080). Tudo lê o dado real da carta focada; nada aqui calcula
+## regra (só desenho, D19).
 func _construir_painel_foco(hud: Control) -> void:
-	_painel_foco = PanelContainer.new()
+	_painel_foco = Control.new()
 	_painel_foco.name = "PainelCarta"
-	var est := StyleBoxFlat.new()
-	est.bg_color = Color(0.72, 0.58, 0.38, 0.97)
-	est.border_color = Color(0.45, 0.28, 0.12)
-	est.set_border_width_all(4)
-	est.set_corner_radius_all(8)
-	est.content_margin_left = 12
-	est.content_margin_right = 12
-	est.content_margin_top = 10
-	est.content_margin_bottom = 10
-	_painel_foco.add_theme_stylebox_override("panel", est)
-	_painel_foco.position = Vector2(8, 72)
-	_painel_foco.size = Vector2(356, 830)
-	_painel_foco.custom_minimum_size = Vector2(356, 830)
+	_painel_foco.position = Vector2.ZERO
+	_painel_foco.size = Vector2(PAINEL_ESQ_L, TELA_A)
+	_painel_foco.custom_minimum_size = Vector2(PAINEL_ESQ_L, TELA_A)
 	_painel_foco.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud.add_child(_painel_foco)
-	var linha := HBoxContainer.new()
-	linha.name = "Linha"
-	linha.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	linha.add_theme_constant_override("separation", 8)
-	_painel_foco.add_child(linha)
-	var caixa := VBoxContainer.new()
-	caixa.name = "Caixa"
-	caixa.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	caixa.add_theme_constant_override("separation", 6)
-	caixa.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	linha.add_child(caixa)
-	# Carta inteira como na ref: moldura JPG do projeto + arte + nome +
-	# orbe + estrelas posicionados na moldura (igual ao editor).
+	# --- CARTA (y 16..562). A moldura real é 832x1248 (0,667), então numa
+	# caixa de 546 de altura a carta tem 364 de largura, CENTRADA na faixa.
 	var molde := Control.new()
 	molde.name = "CartaMolde"
-	molde.custom_minimum_size = Vector2(300, 434)
+	var altura_carta := float(PAINEL_CARTA_Y1 - PAINEL_CARTA_Y0)
+	var largura_carta := altura_carta * (832.0 / 1248.0)
+	molde.position = Vector2(round((PAINEL_ESQ_L - largura_carta) * 0.5), PAINEL_CARTA_Y0)
+	molde.size = Vector2(round(largura_carta), altura_carta)
+	molde.custom_minimum_size = molde.size
 	molde.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	caixa.add_child(molde)
+	_painel_foco.add_child(molde)
 	_tex_foco_moldura = TextureRect.new()
 	_tex_foco_moldura.name = "Moldura"
 	_tex_foco_moldura.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -1644,61 +1915,82 @@ func _construir_painel_foco(hud: Control) -> void:
 	_caixa_foco_estrelas.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_caixa_foco_estrelas.add_theme_constant_override("separation", 1)
 	molde.add_child(_caixa_foco_estrelas)
-	# Bloco de descrição SEPARADO da imagem (ref): tamanho FIXO — texto
-	# longo nunca muda o tamanho do bloco (corta com clip).
-	var bloco := PanelContainer.new()
-	bloco.name = "BlocoDesc"
-	var est_b := StyleBoxFlat.new()
-	est_b.bg_color = Color(0.62, 0.48, 0.30, 0.97)
-	est_b.border_color = Color(0.40, 0.24, 0.10)
-	est_b.set_border_width_all(2)
-	est_b.set_corner_radius_all(6)
-	est_b.content_margin_left = 10
-	est_b.content_margin_right = 10
-	est_b.content_margin_top = 8
-	est_b.content_margin_bottom = 8
-	bloco.add_theme_stylebox_override("panel", est_b)
-	bloco.custom_minimum_size = Vector2(300, 330)
-	bloco.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	caixa.add_child(bloco)
-	var coluna := VBoxContainer.new()
-	coluna.name = "Bloco"
-	coluna.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	coluna.add_theme_constant_override("separation", 4)
-	bloco.add_child(coluna)
+	# --- FAIXA ATK/DEF (y 562..648): "ATK 3000 DEF 2000" + 2 orbes +
+	# contador de cópias da carta no baralho do jogador (dado real).
 	var faixa := HBoxContainer.new()
 	faixa.name = "FocoFaixa"
+	faixa.position = Vector2(28, PAINEL_STATS_Y0)
+	faixa.size = Vector2(PAINEL_ESQ_L - 56, PAINEL_STATS_Y1 - PAINEL_STATS_Y0)
+	faixa.custom_minimum_size = faixa.size
 	faixa.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	faixa.add_theme_constant_override("separation", 8)
-	coluna.add_child(faixa)
+	faixa.add_theme_constant_override("separation", 10)
+	faixa.alignment = BoxContainer.ALIGNMENT_CENTER
+	_painel_foco.add_child(faixa)
 	_cor_foco_attr = ColorRect.new()
 	_cor_foco_attr.name = "FocoAttrIcon"
-	_cor_foco_attr.custom_minimum_size = Vector2(28, 28)
+	_cor_foco_attr.custom_minimum_size = Vector2(26, 26)
+	_cor_foco_attr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	_cor_foco_attr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	faixa.add_child(_cor_foco_attr)
-	_lbl_foco_attr = _rotulo_hud("FocoAttr", "", Vector2.ZERO, 22, Color(0.12, 0.12, 0.18))
-	faixa.add_child(_lbl_foco_attr)
-	_lbl_foco_stats = _rotulo_hud("FocoStats", "", Vector2.ZERO, 24, Color(0.10, 0.10, 0.14))
+	_lbl_foco_stats = _rotulo_hud("FocoStats", "", Vector2.ZERO, 26, COR_LP_VALOR)
 	faixa.add_child(_lbl_foco_stats)
-	_lbl_foco_nome = _rotulo_hud("FocoNome", "—", Vector2.ZERO, 24, Color(0.10, 0.35, 0.12))
+	_orbe_foco = TextureRect.new()
+	_orbe_foco.name = "FocoOrbeFaixa"
+	_orbe_foco.custom_minimum_size = Vector2(52, 52)
+	_orbe_foco.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_orbe_foco.stretch_mode = TextureRect.STRETCH_SCALE
+	_orbe_foco.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_orbe_foco.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	faixa.add_child(_orbe_foco)
+	_orbe_tipo_foco = TextureRect.new()
+	_orbe_tipo_foco.name = "FocoOrbeTipo"
+	_orbe_tipo_foco.custom_minimum_size = Vector2(52, 52)
+	_orbe_tipo_foco.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_orbe_tipo_foco.stretch_mode = TextureRect.STRETCH_SCALE
+	_orbe_tipo_foco.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_orbe_tipo_foco.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	faixa.add_child(_orbe_tipo_foco)
+	_lbl_copia_foco = _rotulo_hud("FocoCopias", "", Vector2.ZERO, 26, COR_DESCRICAO)
+	_lbl_copia_foco.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	faixa.add_child(_lbl_copia_foco)
+	# --- NOME (y 670..756) em amarelo, do lado esquerdo como na ref.
+	_lbl_foco_nome = _rotulo_hud("FocoNome", "—", Vector2(28, PAINEL_NOME_Y0), 30, COR_NOME)
+	_lbl_foco_nome.size = Vector2(PAINEL_ESQ_L - 56, PAINEL_NOME_Y1 - PAINEL_NOME_Y0)
+	_lbl_foco_nome.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_lbl_foco_nome.clip_text = true
-	coluna.add_child(_lbl_foco_nome)
-	_lbl_foco_tipo = _rotulo_hud("FocoTipo", "", Vector2.ZERO, 20, Color(0.10, 0.38, 0.12))
+	_painel_foco.add_child(_lbl_foco_nome)
+	# --- TIPO (y 756..799) verde entre colchetes, como na ref.
+	_lbl_foco_tipo = _rotulo_hud("FocoTipo", "", Vector2(28, PAINEL_TIPO_Y0), 24, COR_TIPO)
+	_lbl_foco_tipo.size = Vector2(PAINEL_ESQ_L - 56, PAINEL_TIPO_Y1 - PAINEL_TIPO_Y0)
+	_lbl_foco_tipo.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_lbl_foco_tipo.clip_text = true
-	coluna.add_child(_lbl_foco_tipo)
-	_lbl_foco_desc = _rotulo_hud("FocoDesc", "", Vector2.ZERO, 19, Color(0.12, 0.12, 0.16))
+	_painel_foco.add_child(_lbl_foco_tipo)
+	# --- DESCRIÇÃO (y 810..1080): bloco de tamanho FIXO (texto longo nunca
+	# muda o tamanho do painel, corta com clip) + barra laranja de rolagem.
+	var bloco := Control.new()
+	bloco.name = "BlocoDesc"
+	bloco.position = Vector2(28, PAINEL_DESC_Y0)
+	bloco.size = Vector2(PAINEL_ESQ_L - 56, TELA_A - PAINEL_DESC_Y0 - 10)
+	bloco.custom_minimum_size = bloco.size
+	bloco.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_painel_foco.add_child(bloco)
+	_lbl_foco_attr = _rotulo_hud("FocoAttr", "", Vector2.ZERO, 18, Color(0.62, 0.68, 0.90))
+	bloco.add_child(_lbl_foco_attr)
+	_lbl_foco_desc = _rotulo_hud("FocoDesc", "", Vector2.ZERO, 21, COR_DESCRICAO)
+	_lbl_foco_desc.position = Vector2(0, 28)
+	_lbl_foco_desc.size = Vector2(bloco.size.x - 22, bloco.size.y - 28)
+	_lbl_foco_desc.custom_minimum_size = Vector2(bloco.size.x - 22, bloco.size.y - 28)
 	_lbl_foco_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_lbl_foco_desc.custom_minimum_size = Vector2(280, 170)
 	_lbl_foco_desc.clip_text = true
 	_lbl_foco_desc.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-	coluna.add_child(_lbl_foco_desc)
+	bloco.add_child(_lbl_foco_desc)
 	var barra := ColorRect.new()
 	barra.name = "BarraVermelha"
-	barra.color = Color(0.75, 0.10, 0.15)
-	barra.custom_minimum_size = Vector2(10, 0)
-	barra.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	barra.color = COR_SCROLL
+	barra.position = Vector2(bloco.size.x - 10, 0)
+	barra.size = Vector2(10, bloco.size.y)
 	barra.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	linha.add_child(barra)
+	bloco.add_child(barra)
 
 
 ## Menus 2D sobre a cena 3D (só desenho + controle, D19: tudo IGNORE, sem
@@ -1784,16 +2076,45 @@ func _fala(texto: String) -> void:
 func _atualizar_hud() -> void:
 	if _st == null or _lbl_lp_voce == null:
 		return
-	# Placas do topo com o DADO real: seu LP, turno, nome do rival + LP.
-	_lbl_lp_rival.text = "%s LP %d" % [_nome_rival.to_upper(), int((_st.players[1] as Dictionary)["lp"])]
-	_lbl_lp_voce.text = "LP %d %s" % [int((_st.players[0] as Dictionary)["lp"]), _nome_voce.to_upper()]
+	# Placas do topo com o DADO real: LP dos dois lados, turno e fase. O
+	# NOME fica em rótulo próprio (vem de `_nome_voce`/`_nome_rival`, que já
+	# são o dado do duelista) e o VALOR em amarelo, como na ref.
+	_lbl_lp_rival.text = "%d" % int((_st.players[1] as Dictionary)["lp"])
+	_lbl_lp_voce.text = "%d" % int((_st.players[0] as Dictionary)["lp"])
+	if _lbl_placa_nome_voce != null:
+		_lbl_placa_nome_voce.text = _nome_voce.to_upper()
+	if _lbl_placa_nome_rival != null:
+		_lbl_placa_nome_rival.text = _nome_rival.to_upper()
 	if _lbl_turno != null:
 		if bool(_st.over):
 			_lbl_turno.text = "VITÓRIA!" if int(_st.winner) == 0 else "DERROTA"
 		else:
 			_lbl_turno.text = "%d" % int(_st.turn_number)
+	_atualizar_fases()
 	_atualizar_painel_foco()
 	_atualizar_contadores()
+
+
+## Placa de CONTADOR: vidro escuro inclinado com o número branco em cima,
+## dentro do campo (doc 15 §15.3). O número vem do estado; aqui é só o
+## desenho da peça. Devolve o rótulo (o chamador escreve o valor real).
+func _placa_contador(pai: Node, nome: String, pos: Vector3, larg: float, alt: float) -> Label3D:
+	var placa := Node3D.new()
+	placa.name = nome
+	placa.position = pos
+	# Vidro AZUL-CLARO com aro quase branco: no campo escuro a placa tem que
+	# aparecer, senão o número fica solto no chão (era o que acontecia).
+	placa.add_child(_caixa("Aro", Vector3(larg * 1.20, alt * 1.42, 0.05), Vector3(0, 0, -0.02), _mat(Color(0.55, 0.68, 0.95), 0.35, 0.0, 1.0)))
+	placa.add_child(_caixa("Vidro", Vector3(larg, alt, 0.06), Vector3.ZERO, _mat(Color(0.20, 0.32, 0.60), 0.15, 0.0, 1.0)))
+	var l := _rotulo3d("0", 64, Color(1, 1, 1))
+	l.name = "Numero"
+	# Deitada (o vidro é um ladrilho no chão) e o número um pouco acima dele,
+	# como as pilhas da ref.
+	l.rotation_degrees = Vector3(-90, 0, 0)
+	l.position = Vector3(0, 0, 0.14)
+	placa.add_child(l)
+	pai.add_child(placa)
+	return l
 
 
 ## Contadores dos 2 lados (só leitura do estado real): número no deck,
@@ -1872,6 +2193,11 @@ func _atualizar_painel_foco() -> void:
 		_cor_foco_attr.color = Color(0.2, 0.2, 0.25)
 		_lbl_foco_tipo.text = ""
 		_lbl_foco_desc.text = "Mire numa carta."
+		_lbl_copia_foco.text = ""
+		_orbe_foco.texture = null
+		_orbe_tipo_foco.texture = null
+		_orbe_foco.visible = false
+		_orbe_tipo_foco.visible = false
 		_tex_foco_arte.visible = false
 		_cor_foco_arte.color = Color(0.08, 0.08, 0.12)
 		_tex_foco_moldura.texture = null
@@ -1928,6 +2254,22 @@ func _atualizar_painel_foco() -> void:
 		if not attr.is_empty():
 			desc += (" Atributo %s." % attr) if not desc.is_empty() else ("Atributo %s." % attr)
 	_lbl_foco_desc.text = desc
+	# --- Faixa ATK/DEF: os 2 orbes e o contador de cópias (dado real).
+	# Orbe 1 = ATRIBUTO; orbe 2 = TIPO, e só existe quando o dado tem
+	# atributo de magia/armadilha (spell/trap) — carta sem esse atributo não
+	# ganha orbe inventado.
+	_orbe_foco.texture = tex_o
+	_orbe_foco.visible = tex_o != null
+	var tipo_orbe := attr_cedo.to_lower() if ctipo == "spell" or ctipo == "trap" else ""
+	if not tipo_orbe.is_empty():
+		var tex_t := _tex_cache("assets/attributes/%s.png" % tipo_orbe)
+		_orbe_tipo_foco.texture = tex_t
+		_orbe_tipo_foco.visible = tex_t != null
+	else:
+		_orbe_tipo_foco.texture = null
+		_orbe_tipo_foco.visible = false
+	var copias := _contar_copia_carta(cid)
+	_lbl_copia_foco.text = ("x%d" % copias) if copias > 0 else ""
 	var tex := _textura_arte(real)
 	if tex != null:
 		_tex_foco_arte.texture = tex
@@ -1937,6 +2279,20 @@ func _atualizar_painel_foco() -> void:
 		_tex_foco_arte.visible = false
 		_cor_foco_arte.visible = true
 		_cor_foco_arte.color = _cor_atributo(attr)
+
+
+## Quantas CÓPIAS da carta focada estão no BARALHO DO JOGADOR (dado real).
+## Só conta o estado — devolve 0 se não achar, e o HUD esconde o contador
+## quando 0 (nada inventado).
+func _contar_copia_carta(cid: String) -> int:
+	if _st == null or cid.is_empty():
+		return 0
+	var p: Dictionary = (_st.players[0] as Dictionary)
+	var total := 0
+	for inst in (p.get("deck", []) as Array):
+		if inst is Dictionary and str((inst as Dictionary).get("card_id", (inst as Dictionary).get("id", ""))) == cid:
+			total += 1
+	return total
 
 
 func _texto_inst_slot(lado: int, zona_nome: String, slot: int) -> String:
