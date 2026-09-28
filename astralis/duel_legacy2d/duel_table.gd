@@ -42,7 +42,7 @@ const BattleSystem := preload("res://duel/battle_system.gd")
 const PositionSystem := preload("res://duel/position_system.gd")
 const FusionSystem := preload("res://duel/fusion_system.gd")
 const CardViewScript := preload("res://ui/card_view.gd")
-const BoardScript := preload("res://ui/duel_board.gd")
+const BoardScript := preload("res://duel_legacy2d/duel_board.gd")
 const BoardLayoutScript := preload("res://core/board_layout.gd")
 
 const ESCALA_CAMPO := 0.85

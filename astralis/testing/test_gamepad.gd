@@ -132,7 +132,7 @@ func _coletar_arvore(n: Node, out: Array) -> void:
 func test_mesa_sem_controle_clicavel() -> void:
 	# D26 parcial (100% controle): a mesa não tem controle clicável.
 	# (a) Texto da cena: nenhum Button/TextureButton declarado.
-	var caminho := "res://ui/duel_table.tscn"
+	var caminho := "res://duel_legacy2d/duel_table.tscn"
 	assert_true(FileAccess.file_exists(caminho), "duel_table.tscn existe.")
 	var arq := FileAccess.open(caminho, FileAccess.READ)
 	if arq == null:

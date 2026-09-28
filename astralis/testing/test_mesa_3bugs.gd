@@ -1,8 +1,8 @@
 extends "res://testing/astralis_test_base.gd"
 
 ## test_mesa_3bugs — GUT permanente dos 3 bugs da mesa (runtime c47d4c6).
-## Trava sem mudar regra, com mesa/carta REAIS (duel_table.tscn + CardView
-## real + Duel/Summon/Battle reais). Sem Fake (R2). Seed fixa 42 (duel_setup).
+## Trava sem mudar regra, com mesa/carta REAIS (duel_legacy2d/duel_table.tscn
+## + CardView real + Duel/Summon/Battle reais). Sem Fake (R2). Seed fixa 42 (duel_setup).
 ## (1) menu sem Atacar inválido: turno 1 confirmar na própria carta NÃO marca
 ##     o atacante e avisa o motivo; turno 3 marca (can_attack real, D17);
 ## (2) carta centrada: centro do desenho (position+pivô) = centro do slot
@@ -14,7 +14,7 @@ extends "res://testing/astralis_test_base.gd"
 ## _indice_monstro_na_mao) vêm de astralis_test_base.gd.
 
 const BattleSystem := preload("res://duel/battle_system.gd")
-const BoardScript := preload("res://ui/duel_board.gd")
+const BoardScript := preload("res://duel_legacy2d/duel_board.gd")
 const CardViewScript := preload("res://ui/card_view.gd")
 
 

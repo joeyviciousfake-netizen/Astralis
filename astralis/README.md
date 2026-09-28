@@ -7,13 +7,15 @@ Status: mesa jogável e testada (D22-D29) — invocar/atacar/fundir/passar, IA d
 
 ```text
 astralis/
-  project.godot            <- projeto "Astralis" (2D, 1920x1080, cena inicial = duel_table)
+  project.godot            <- projeto "Astralis" (3D, 1920x1080, cena inicial = duel3d/mesa_3d)
   main.tscn / main.gd      <- simulação automática do duelo no console (STP; não é o boot)
   core/                    <- data_loader, project_loader, runtime_validator, board_layout
   duel/                    <- game_state, duel_manager, turn_manager, summon/battle/damage/
-                              position/fusion_system
-  ui/                      <- duel_board (campo), duel_table (mesa jogável, orquestrador), card_view
-  testing/                 <- testes GUT (94/94 verde) + astralis_test_base.gd (base comum)
+                               position/fusion_system (regra, usada pelo 3D e pelo legado)
+  duel3d/                  <- mesa_3d (mesa 3D OFICIAL, orquestrador; boot + --cenario3d)
+  duel_legacy2d/           <- duel_table + duel_board (mesa 2D aposentada, só emergência)
+  ui/                      <- card_view (carta 2D, usada pelo legado)
+  testing/                 <- testes GUT + astralis_test_base.gd (base comum)
   campaign/ debug/ assets/ <- vazias por enquanto (.gitkeep)
   addons/gut/              <- framework de testes (único addon)
 ```
@@ -59,13 +61,22 @@ Na raiz do repo, no PowerShell:
 .\Godot\Godot_v4.7.2-stable_win64_console.exe --headless --path astralis --quit-after 30
 ```
 
+O boot abre sempre a mesa 3D. Volta ao legado 2D só em emergência:
+
+```powershell
+.\Godot\Godot_v4.7.2-stable_win64_console.exe --headless --path astralis --quit-after 30 -- --cenario3d 0
+```
+
 Saída esperada (sem erros):
 
 ```text
-[BOARD] Campo pronto: 20 slots (5+5 por lado) + 4 laterais + emblema.
-[TABLE] Arena carregada: 20 slots + mão p0(1240,980,95) p1(1240,20,60).
-[TABLE] Fusões carregadas: 25081 receitas + 0 regras.
-[TABLE] Duelo começou! Sua vez.
+[MESA3D] Ambiente: WorldEnvironment + 1 direcional + 3 omni + flash + Camera3D.
+[MESA3D] Mesa: tampo + moldura + emblema + 20 marcas + 2 decks + Cursor3D.
+[MESA3D] Arena carregada: 20 slots + mão p0(1240,980,95) p1(1240,20,60).
+[MESA3D] Fusões carregadas: 25081 receitas + 0 regras.
+[MESA3D] Mesa 3D: duelo real carregado.
+[MESA3D] Duelo começou! Sua vez.
+[MESA3D] Pronta: mão p0=5 p1=5, artes carregadas=0.
 ```
 
 Testes: ver `tests/README.md` (GUT 94/94, 1412 asserts) — tem o comando exato e o passo `--import`.

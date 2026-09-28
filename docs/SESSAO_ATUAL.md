@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Mesa 3D igualada ao 2D (2026-09-27): posicao exata na marca, fluxo fiel mao, fusao completa, menus 2D, START/RB-LB certos. Prova MCP zero erro, GUT 123/123. Commit 7c8575a. Falta teste com joypad."
+onde_estamos: "3D oficial D40 (2026-09-27): duel3d/ promovido, 2D em duel_legacy2d, boot 3D + --cenario3d, Studio passa flag em tudo. GUT 123/123, cargo 104, check 0. Falta teste com joypad."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
@@ -67,7 +67,7 @@ estado_cargo: "101 testes Rust (88 + 13 molde/id). ZERO teste de frontend ainda.
 
 estado_dados: "schemas/examples = 722 fm_* / 39 duelistas / 39 decks (40 cada) / 25081 receitas / 0 regras / arena_starter / duel_fm_abertura 8000LP. pack = 25131 receitas (25081 + 50 A+A que nunca disparam). starter_backup = 40 cartas custom SO de teste. PROJETO DO EDITOR = astralis-studio/projects/default/ (sempre vazio no boot, so via Importar)."
 
-proximo_passo: "Abrir a mesa 3D no Godot e ver o duelo em 3D com controle."
+proximo_passo: "Testar o duelo 3D com joypad (invocar, fundir, atacar)."
 
 # ---------- TRAVAS (regras, nao dividas) ----------
 

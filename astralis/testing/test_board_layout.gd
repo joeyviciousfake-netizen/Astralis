@@ -8,7 +8,7 @@ extends "res://testing/astralis_test_base.gd"
 ## _contar_monstros_na_mao) vêm de astralis_test_base.gd.
 
 const BoardLayoutScript := preload("res://core/board_layout.gd")
-const BoardScript := preload("res://ui/duel_board.gd")
+const BoardScript := preload("res://duel_legacy2d/duel_board.gd")
 const CardViewScript := preload("res://ui/card_view.gd")
 # ProjectLoaderScript/DuelManagerScript/SummonSystem/TableScript/MesaScene
 # vêm da base (astralis_test_base.gd) - R8: uma cópia só.

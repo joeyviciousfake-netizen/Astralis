@@ -21,7 +21,7 @@ extends GutTest
 ## (monta duelo, enche a mão, ocupa slot, limpa campo) ou OBSERVA o estado.
 ## Quem decide a regra é SEMPRE o sistema real do Astralis (DuelManager,
 ## Summon, Battle, Damage, Turn, Fusion, DataLoader, BoardLayout e a cena
-## duel_table.tscn). Proibido Fake/Mock/Stub de gameplay (R2) e proibido
+## duel_legacy2d/duel_table.tscn). Proibido Fake/Mock/Stub de gameplay (R2) e proibido
 ## "adaptar" um teste que falhou: teste vermelho = bug do runtime, reportar.
 ##
 ## Os preloads abaixo são os SISTEMAS REAIS. Nenhum é cópia, nenhum é dublê.
@@ -34,8 +34,8 @@ extends GutTest
 const ProjectLoaderScript := preload("res://core/project_loader.gd")
 const DuelManagerScript := preload("res://duel/duel_manager.gd")
 const SummonSystem := preload("res://duel/summon_system.gd")
-const TableScript := preload("res://ui/duel_table.gd")
-const MesaScene := preload("res://ui/duel_table.tscn")
+const TableScript := preload("res://duel_legacy2d/duel_table.gd")
+const MesaScene := preload("res://duel_legacy2d/duel_table.tscn")
 
 
 # ---------- DUELO (motor, sem cena) ----------
@@ -83,7 +83,7 @@ func _garantir_monstros_na_mao(st, player_idx: int, quantos: int) -> void:
 			k += 1
 
 
-# ---------- MESA REAL (duel_table.tscn) ----------
+# ---------- MESA REAL (duel_legacy2d/duel_table.tscn) ----------
 
 # Mesa nova de verdade: instancia a cena, espera 4 quadros (a mesa monta o
 # duelo e desenha sozinha) e devolve o nó. O GUT libera no fim do teste.

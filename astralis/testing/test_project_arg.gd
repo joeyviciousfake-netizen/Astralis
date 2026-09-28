@@ -26,7 +26,7 @@ extends "res://testing/astralis_test_base.gd"
 ## o Studio passa, e ler o que ele imprimiu: `OS.execute` com o próprio
 ## executável, `--headless --quit-after`, e `--` antes dos args de usuário.
 ## Nada aqui é dublê: quem lê a pasta é o DataLoader real e quem monta a mesa
-## é a duel_table.tscn real. O que este arquivo chama de função real
+## é a duel3d/mesa_3d.tscn real (mesa 3D oficial, D40). O que este arquivo chama de função real
 ## (pasta_projeto_valida, _resolver_abs, load_arena_data, project_arena_path,
 ## default_pos, get_pos) é o mesmo código que o jogo usa.
 ##
@@ -237,8 +237,8 @@ func test_project_relativo_invalido_avisa_e_usa_embutida() -> void:
 	var saida := _rodar_jogo(["--project", "schemas/pasta_que_nao_existe_xyz"])
 	assert_true(_contem(saida, "[DataLoader] Aviso: --project ignorado"), "Avisa que ignorou o --project inválido: %s" % saida)
 	assert_true(_contem(saida, "usando embutida"), "Aviso diz que usa a embutida.")
-	assert_true(_contem(saida, "[TABLE] Arena carregada: 20 slots"), "Jogo seguiu na embutida (arena do starter).")
-	assert_true(_contem(saida, "[TABLE] Duelo come"), "Duelo começou com o conteúdo FM da embutida.")
+	assert_true(_contem(saida, "[MESA3D] Arena carregada: 20 slots"), "Jogo seguiu na embutida (arena do starter).")
+	assert_true(_contem(saida, "[MESA3D] Duelo come"), "Duelo começou com o conteúdo FM da embutida.")
 
 
 # ---------- (1) e (2) CAMINHO FELIZ: --project VÁLIDO ----------
@@ -253,8 +253,8 @@ func test_project_valido_jogo_le_tudo_da_pasta() -> void:
 	assert_true(_contem(saida, "[DataLoader] --project usando: " + abs), "Base do jogo = a pasta do projeto: %s" % saida)
 	assert_false(_contem(saida, "[DataLoader] Aviso: --project ignorado"), "Pasta válida não gera aviso.")
 	assert_true(_contem(saida, "receitas + 0 regras"), "fusions.json veio da pasta do projeto (o FM tem 25081).")
-	assert_true(_contem(saida, "[TABLE] Arena carregada: 20 slots"), "Arena veio da pasta do projeto.")
-	assert_true(_contem(saida, "[TABLE] Duelo come"), "Duelo montou com cartas/duelistas/decks do projeto.")
+	assert_true(_contem(saida, "[MESA3D] Arena carregada: 20 slots"), "Arena veio da pasta do projeto.")
+	assert_true(_contem(saida, "[MESA3D] Duelo come"), "Duelo montou com cartas/duelistas/decks do projeto.")
 
 
 func test_project_igual_mesmo_resultado_que_espaco() -> void:
@@ -265,7 +265,7 @@ func test_project_igual_mesmo_resultado_que_espaco() -> void:
 	assert_true(_contem(com_espaco, "[DataLoader] --project usando: " + abs), "Forma com espaço: base = a pasta. %s" % com_espaco)
 	assert_true(_contem(com_igual, "[DataLoader] --project usando: " + abs), "Forma com '=': base = a mesma pasta. %s" % com_igual)
 	assert_false(_contem(com_igual, "[DataLoader] Aviso: --project ignorado"), "Forma com '=' não gera aviso.")
-	for marca in ["receitas + 0 regras", "[TABLE] Arena carregada: 20 slots", "[TABLE] Duelo come"]:
+	for marca in ["receitas + 0 regras", "[MESA3D] Arena carregada: 20 slots", "[MESA3D] Duelo come"]:
 		assert_true(_contem(com_espaco, marca), "Controle '%s' presente na forma com espaço." % marca)
 		assert_true(_contem(com_igual, marca), "Controle '%s' presente na forma com '='." % marca)
 
@@ -279,15 +279,15 @@ func test_setup_por_cima_do_project_vence_o_duel_setup() -> void:
 	# carrega a arena, então a diferença é do --setup mesmo.
 	var abs := ProjectSettings.globalize_path(_proj)
 	var controle := _rodar_jogo(["--project", abs])
-	assert_true(_contem(controle, "[TABLE] Arena carregada: 20 slots"), "Controle: sem setup, vale a arena do projeto: %s" % controle)
+	assert_true(_contem(controle, "[MESA3D] Arena carregada: 20 slots"), "Controle: sem setup, vale a arena do projeto: %s" % controle)
 	var caminho_setup := _proj.path_join("qa_setup_override.json")
 	_escrever_json(caminho_setup, _setup_do_projeto("arena_que_nao_existe_xyz"))
 	var saida := _rodar_jogo(["--project", abs, "--setup", ProjectSettings.globalize_path(caminho_setup)])
 	assert_true(_contem(saida, "[DataLoader] --project usando: " + abs), "--project continua valendo: %s" % saida)
 	assert_true(_contem(saida, "[DataLoader] --setup usando: " + ProjectSettings.globalize_path(caminho_setup)), "--setup foi lido por cima.")
-	assert_true(_contem(saida, "[TABLE] Aviso: arena "), "duel_setup do setup venceu: ele pediu uma arena que não existe.")
-	assert_false(_contem(saida, "[TABLE] Arena carregada"), "A arena do projeto NÃO foi usada (o setup mandou).")
-	assert_true(_contem(saida, "[TABLE] Duelo come"), "O jogo continua jogável com o setup por cima.")
+	assert_true(_contem(saida, "[MESA3D] Aviso: arena "), "duel_setup do setup venceu: ele pediu uma arena que não existe.")
+	assert_false(_contem(saida, "[MESA3D] Arena carregada"), "A arena do projeto NÃO foi usada (o setup mandou).")
+	assert_true(_contem(saida, "[MESA3D] Duelo come"), "O jogo continua jogável com o setup por cima.")
 
 
 func test_setup_invalido_avisa_e_segue_com_o_do_projeto() -> void:
@@ -299,8 +299,8 @@ func test_setup_invalido_avisa_e_segue_com_o_do_projeto() -> void:
 	assert_true(_contem(saida, "[DataLoader] Aviso: --setup ignorado"), "Avisa que ignorou o --setup inválido: %s" % saida)
 	assert_true(_contem(saida, "usando starter"), "Aviso diz que segue o starter (o do projeto).")
 	assert_false(_contem(saida, "[DataLoader] --setup usando:"), "Não tentou usar o setup quebrado.")
-	assert_true(_contem(saida, "[TABLE] Arena carregada: 20 slots"), "Seguiu com o duel_setup do projeto (arena dele carregou).")
-	assert_true(_contem(saida, "[TABLE] Duelo come"), "Jogo continua rodando de verdade.")
+	assert_true(_contem(saida, "[MESA3D] Arena carregada: 20 slots"), "Seguiu com o duel_setup do projeto (arena dele carregou).")
+	assert_true(_contem(saida, "[MESA3D] Duelo come"), "Jogo continua rodando de verdade.")
 
 
 # ---------- (6) ARENA AUSENTE NO PROJETO = GRADE PADRÃO (D29) ----------
@@ -318,9 +318,9 @@ func test_arena_ausente_no_projeto_usa_grade_padrao_com_espelho() -> void:
 	assert_true(_contem(saida, "[DataLoader] --project usando: " + abs), "Base = a pasta do projeto: %s" % saida)
 	assert_true(_contem(saida, "[ARENA] Arena 'arena_qa_1' "), "Arena pedida não existe no projeto (D29: não lê examples/).")
 	assert_true(_contem(saida, "[ARENA] Sem arena no projeto"), "BoardLayout devolveu caminho vazio e avisou.")
-	assert_true(_contem(saida, "[TABLE] Aviso: arena "), "Mesa cai na grade padrão embutida.")
-	assert_false(_contem(saida, "[TABLE] Arena carregada"), "Nenhuma arena foi carregada (nem a de examples/).")
-	assert_true(_contem(saida, "[TABLE] Duelo come"), "Jogo segue jogável sem arena no projeto.")
+	assert_true(_contem(saida, "[MESA3D] Aviso: arena "), "Mesa cai na grade padrão embutida.")
+	assert_false(_contem(saida, "[MESA3D] Arena carregada"), "Nenhuma arena foi carregada (nem a de examples/).")
+	assert_true(_contem(saida, "[MESA3D] Duelo come"), "Jogo segue jogável sem arena no projeto.")
 	# (6b) A grade padrão embutida: 20 slots, IDs válidos, espelho correto e
 	# mão no fallback. Este é o mesmo caminho que load_arena_data("") devolve.
 	var arena: Dictionary = BoardLayoutScript.load_arena_data("")

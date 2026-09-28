@@ -5,7 +5,7 @@ projeto Godot, em `astralis/testing/`. Ver `docs/10_PREVIEW_TESTE_DEBUG.md`.
 
 Os testes usam a mesa e os sistemas **de verdade** do Astralis: o mesmo
 `DuelManager`, `SummonSystem`, `BattleSystem`, `DamageSystem`, `TurnManager`,
-`FusionSystem`, `DataLoader`, `BoardLayout` e a mesma cena `duel_table.tscn`
+`FusionSystem`, `DataLoader`, `BoardLayout` e a mesma cena `duel3d/mesa_3d.tscn`
 que o jogo usa. Não existe cópia "fake" de nada (regra **R2**).
 
 ## Números de hoje

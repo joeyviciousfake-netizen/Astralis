@@ -462,14 +462,18 @@ fn arenas_ids() -> std::collections::HashSet<String> {
 }
 
 // Monta o trecho do jogo: --project <pasta do editor> (+ --setup <temp> no
-// duelo, por cima). O jogo lê TUDO da pasta do --project (doc: runtime
-// --project). Sem fingir: quem executa é o Astralis (R1/R4).
+// duelo, por cima) + --cenario3d 1 explícito (D40 futura: duelo oficial é o
+// 3D; trava mesmo se o padrão do jogo mudar um dia). O jogo lê TUDO da pasta
+// do --project (doc: runtime --project). Sem fingir: quem executa é o Astralis (R1/R4).
 fn montar_args_jogo(projeto: &str, setup: Option<&str>) -> Vec<String> {
     let mut args = vec!["--project".to_string(), projeto.to_string()];
     if let Some(s) = setup {
         args.push("--setup".to_string());
         args.push(s.to_string());
     }
+    // D40 futura (oficial 3D): só ativa o cenário 3D do runtime real (R1/R2).
+    args.push("--cenario3d".to_string());
+    args.push("1".to_string());
     args
 }
 
@@ -5171,10 +5175,14 @@ mod testes {
 
     #[test]
     fn args_jogo_levam_project() {
-        assert_eq!(montar_args_jogo("P", None), vec!["--project".to_string(), "P".to_string()]);
+        // D40 futura (oficial 3D): --cenario3d 1 explícito em todo lançamento.
+        assert_eq!(
+            montar_args_jogo("P", None),
+            vec!["--project".to_string(), "P".to_string(), "--cenario3d".to_string(), "1".to_string()]
+        );
         assert_eq!(
             montar_args_jogo("P", Some("S")),
-            vec!["--project".to_string(), "P".to_string(), "--setup".to_string(), "S".to_string()]
+            vec!["--project".to_string(), "P".to_string(), "--setup".to_string(), "S".to_string(), "--cenario3d".to_string(), "1".to_string()]
         );
     }
 

@@ -1,10 +1,10 @@
 extends "res://testing/astralis_test_base.gd"
 
-## test_mesa_3d — GUT da mesa 3D EXPERIMENTAL (D23, teste, R8: 1 arquivo).
+## test_mesa_3d_oficial — GUT da mesa 3D OFICIAL (D23/D40, R8: 1 arquivo).
 ## Só prepara/observa e chama os sistemas reais (R1/R2): a cena 3D desenha
 ## o GameState do DuelManager real; nenhuma regra é duplicada aqui.
 
-const Mesa3DScene := preload("res://duel3d_test/mesa_3d_test.tscn")
+const Mesa3DScene := preload("res://duel3d/mesa_3d.tscn")
 const SummonSys := preload("res://duel/summon_system.gd")
 const BoardLayout := preload("res://core/board_layout.gd")
 
@@ -18,7 +18,7 @@ func _mesa3d_nova():
 
 func test_cena_3d_carrega_com_duelo_real() -> void:
 	var mesa: Node = await _mesa3d_nova()
-	assert_true(is_instance_valid(mesa), "Cena mesa_3d_test.tscn instancia.")
+	assert_true(is_instance_valid(mesa), "Cena mesa_3d.tscn instancia.")
 	var st = mesa.get("_st")
 	assert_true(st != null, "Mesa 3D tem GameState real (DuelManager).")
 	assert_true(mesa.get("_duel") != null, "Mesa 3D tem DuelManager real.")
@@ -190,8 +190,8 @@ func test_indicador_atk_def_e_fila() -> void:
 
 func test_mesa_3d_so_joypad_sem_clique() -> void:
 	# D19: cena-teste sem Button + nenhum Control clicável.
-	var arq := FileAccess.open("res://duel3d_test/mesa_3d_test.tscn", FileAccess.READ)
-	assert_true(arq != null, "mesa_3d_test.tscn abre p/ leitura.")
+	var arq := FileAccess.open("res://duel3d/mesa_3d.tscn", FileAccess.READ)
+	assert_true(arq != null, "mesa_3d.tscn abre p/ leitura.")
 	var texto := arq.get_as_text()
 	assert_false(texto.contains("Button"), "Cena 3D sem Button (só joypad).")
 	var mesa: Node = await _mesa3d_nova()

@@ -1,12 +1,18 @@
 extends Node3D
 
-## mesa_3d_test — MESA 3D EXPERIMENTAL (teste D23, NÃO é o duelo oficial).
-## Só DESENHA o mesmo estado real do 2D (DuelManager/GameState + sistemas
-## reais Summon/Battle/Position/Turn). Zero regra aqui (R1): cada jogada
-## chama o sistema real e redesenha. Nada deste arquivo é lido pelo duelo
-## 2D (duel_table/duel_board/game_state/duel_manager intactos).
+## mesa_3d — MESA 3D OFICIAL do duelo (D23/D40, cena principal do projeto).
+## Só DESENHA o estado real (DuelManager/GameState + sistemas reais
+## Summon/Battle/Position/Turn/Fusion). Zero regra aqui (R1): cada jogada
+## chama o sistema real e redesenha. A mesa 2D aposentada mora em
+## duel_legacy2d/ (só emergência, nunca carrega no boot padrão).
 ## Controle 100% joypad (D19): só as 11 ações custom, sem mouse/teclado.
 ## Uso headless p/ validação: `-- --mesa3d-sair=5` sai sozinho após N segundos.
+##
+## Arg oficial --cenario3d (boot, documentado aqui):
+##   sem arg (ou valor diferente de 0) = abre SEMPRE esta mesa 3D;
+##   `-- --cenario3d 0` (ou `--cenario3d=0`) = volta ao legado 2D
+##   (duel_legacy2d/duel_table.tscn), só p/ emergência; se o legado não
+##   existir mais, avisa em PT-BR e segue no 3D.
 
 const ProjectLoaderScript := preload("res://core/project_loader.gd")
 const DuelManagerScript := preload("res://duel/duel_manager.gd")
@@ -38,7 +44,7 @@ const ORDEM_CAMPO_3D := [4, 3, 1, 2]
 const PAD_REPETE := 0.25
 
 ## Fluxo fiel do turno (só controle de tela, regra nos sistemas reais).
-## Espelha o 2D (duel_table FASE_MAO/SUB_*): carta ao centro -> face ->
+## Espelha o fluxo oficial (FASE_MAO/SUB_*): carta ao centro -> face ->
 ## slot (vazio OU ocupado) -> menu da estrela -> desce em Ataque.
 ## Fusão: 2+ levantadas -> slot PRIMEIRO -> fila -> FINAL + estrela.
 const FASE_MAO := 0
@@ -107,24 +113,30 @@ var _pulso := 0.0
 
 
 func _ready() -> void:
+	# Boot oficial (ver o topo: --cenario3d). Sem o arg fica no 3D; com
+	# `--cenario3d 0` troca p/ o legado 2D e PARA aqui (nada do 3D monta).
+	if _usar_legado_2d():
+		return
 	_construir_ambiente()
 	_construir_mesa()
 	_construir_hud()
 	_construir_menus()
-	# Duelo REAL (mesma fonte do 2D): ProjectLoader + DuelManager.
+	# Duelo REAL (motor de verdade): ProjectLoader + DuelManager.
 	var state: Dictionary = ProjectLoaderScript.load_initial_state()
 	var data: Dictionary = state.get("data", {})
 	_base_dir = str(data.get("base_dir", ""))
 	_duel = DuelManagerScript.new_duel(data.get("duel_setup", {}), data.get("decks", {}), data.get("cards", {}))
 	_st = _duel.get_state()
 	_cartas = data.get("cards", {})
-	# Arena REAL do projeto (igual ao 2D): desenho segue o layout, IDs intactos.
+	# Arena REAL do projeto: desenho segue o layout, IDs intactos.
 	var arena_id := str((data.get("duel_setup", {}) as Dictionary).get("arena_id", "arena_starter"))
 	_arena_data = BoardLayoutScript.load_arena_data(BoardLayoutScript.project_arena_path(arena_id))
 	_arena_layout = (_arena_data.get("slots", {}) as Dictionary)
+	_avisar_arena()
 	_fusions_data = _fusoes_do_data(data)
-	_fala("Mesa 3D de teste: duelo real carregado.")
-	_duel.advance_phase() # DRAW inicial -> MAIN (igual ao 2D, mão 5/5 sem extra).
+	_fala("Mesa 3D: duelo real carregado.")
+	_duel.advance_phase() # DRAW inicial -> MAIN (mão 5/5 sem extra, D26).
+	_fala("Duelo começou! Sua vez.")
 	_fileira = FILEIRA_MAO
 	_col = 0
 	_sel_atk = -1
@@ -139,6 +151,40 @@ func _ready() -> void:
 		((_st.players[0] as Dictionary)["hand"] as Array).size(),
 		((_st.players[1] as Dictionary)["hand"] as Array).size(), _artes_ok])
 	_ver_autoquit()
+
+
+## Boot: lê --cenario3d nas 2 formas (igual ao --project/--setup).
+## "0" = legado 2D (emergência); sem arg ou outro valor = fica no 3D.
+## Volta true quando trocou de cena (quem chamou PARA aqui).
+func _usar_legado_2d() -> bool:
+	var modo := ""
+	var args := OS.get_cmdline_user_args()
+	for i in range(args.size()):
+		var s := str(args[i])
+		if s == "--cenario3d" and i + 1 < args.size():
+			modo = str(args[i + 1]).strip_edges()
+		elif s.begins_with("--cenario3d="):
+			modo = s.trim_prefix("--cenario3d=").strip_edges()
+	if modo != "0":
+		return false
+	var legado := "res://duel_legacy2d/duel_table.tscn"
+	if not FileAccess.file_exists(legado):
+		print("[MESA3D] Aviso: --cenario3d 0 pediu o legado 2D, mas ele não existe mais — seguindo no 3D.")
+		return false
+	print("[MESA3D] --cenario3d 0: abrindo o legado 2D (emergência).")
+	get_tree().call_deferred("change_scene_to_file", legado)
+	return true
+
+
+## Espelha o log da mesa antiga p/ o boot continuar legível ([MESA3D]
+## no lugar de [TABLE]): arena carregada ou aviso + grade padrão.
+func _avisar_arena() -> void:
+	if _arena_layout.is_empty():
+		print("[MESA3D] Aviso: arena não carregou, usando grade padrão.")
+	else:
+		var h0: Dictionary = BoardLayoutScript.get_hand(_arena_data, 0)
+		var h1: Dictionary = BoardLayoutScript.get_hand(_arena_data, 1)
+		print("[MESA3D] Arena carregada: %d slots + mão p0(%d,%d,%d) p1(%d,%d,%d)." % [_arena_layout.size(), int(h0["x"]), int(h0["y"]), int(h0["step"]), int(h1["x"]), int(h1["y"]), int(h1["step"])])
 
 
 func _ver_autoquit() -> void:
@@ -312,7 +358,7 @@ func _marca_slot(lado: int, tipo: String, indice: int) -> MeshInstance3D:
 
 
 func _pos_slot(lado: int, tipo: String, indice: int) -> Vector3:
-	# Lê o XY do 2D (BoardLayout real + layout da arena, com espelho do
+	# Lê o XY oficial (BoardLayout real + layout da arena, com espelho do
 	# rival) e converte p/ XZ. Marca E carta usam este ponto: a carta fica
 	# EXATAMENTE na marca (mesmo XZ, só o Y muda).
 	var sid := BoardLayoutScript.slot_id(lado, tipo, indice)
