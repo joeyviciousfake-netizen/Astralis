@@ -6,13 +6,23 @@
   // Os campos ficam SOBRE os espaços da imagem, nas posições de MEDIDAS
   // (única fonte de medida: scan a pixel das molduras limpas 813x1185 +
   // refs Normal-card Dark Magician e Spell-card Messenger — ver tabela).
-  // O molde (aba Molde / D36) continua vencendo quando a peça existir:
-  // peça presente no molde sobrepõe o default; peça ausente = MEDIDAS puras.
+  // O molde (contrato D36, projects/default/layouts/) continua vencendo
+  // quando a peça existir: peça presente no molde sobrepõe o default;
+  // peça ausente = MEDIDAS puras.
   // Não há mais camada de correção por cima do default.
   // Preview PURO: não valida, não salva, não mexe em regra.
   import AssetDrop from "$lib/components/AssetDrop.svelte";
   import { attrName, frameSrc, linhaTipo, escolherMoldura, FRAME_LABELS, attributeIcon, STAR_IMG, arteDoProjeto, arteParaUrl } from "$lib/cardMeta";
-  import type { Molde } from "$lib/stores/layout.svelte";
+  // Tipo local do molde (D23: UI de edição removida; D36 intacto — o jogo
+  // continua desenhando pelo molde e o preview continua lendo via prop).
+  // Espelha schemas/card_layout.schema.json V1 sem importar o store apagado.
+  type Molde = {
+    pieces?: Array<{
+      kind: string;
+      rect?: { x?: number; y?: number; w?: number; h?: number };
+      style?: { font_size?: number; bold?: boolean; color?: string; align?: string; z?: number };
+    }>;
+  };
 
   let {
     nome = "",
@@ -115,8 +125,8 @@
     atkdef_bar: { rect: { x: 91, y: 911, w: 836, h: 20 }, style: { font_size: 24, bold: true, align: "right", z: 5 } },
     footer: { rect: { x: 34, y: 962, w: 931, h: 25 }, style: { font_size: 11, bold: false, align: "left", z: 5 } },
   };
-  // Fusão em 2 camadas: default = MEDIDAS; peça presente no molde (aba Molde
-  // / projects, D36) vence por campo. Sem molde = tudo MEDIDAS = fiel às refs.
+  // Fusão em 2 camadas: default = MEDIDAS; peça presente no molde (D36,
+  // projects/default/layouts/) vence por campo. Sem molde = tudo MEDIDAS.
   function pecaMolde(kind: string): { rect: RectMolde; style: EstiloMolde } {
     const def = MEDIDAS[kind] ?? { rect: { x: 0, y: 0, w: 0, h: 0 }, style: {} };
     const over = ((molde as Molde | null)?.pieces ?? []).find((p) => p.kind === kind) ?? {};
