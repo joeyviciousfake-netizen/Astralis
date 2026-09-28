@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Carta 3D inteira do projeto (2026-09-27): moldura+arte+orbe+estrelas na frente, verso do dado/verso_padrao atras, tudo lido do projeto (zero copia). MCP limpo, GUT 130/130. Commit f063ff8."
+onde_estamos: "Carta fina + painel inteiro (2026-09-27): espessura 0.005 (0,3mm real), painel mostra carta inteira com moldura+orbe+estrelas-imagem. MCP limpo, GUT 130/130. Commit 9339cea."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
