@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Mesa 3D experimental (2026-09-27, ordem do usuario): astralis/duel3d_test/ desenha o mesmo estado 2D (sem duplicar regra), 2D intacto. GUT 120/120. Commit 85c05ef."
+onde_estamos: "Mesa 3D verificada via MCP pelo Lead (2026-09-27): cena abre limpa (duelo real, mao 5/5, zero SCRIPT ERROR; warnings pre-existentes). MCP godot só existe na sessao do Lead — subagentes usam Godot headless via bash (equivale). GUT 120/120."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
