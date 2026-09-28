@@ -52,11 +52,11 @@ func test_sem_mesa_nenhum_no_de_mesa() -> void:
 		var nome := str((n as Node).name)
 		assert_false(nome in NOS_PROIBIDOS, "Nó de mesa proibido ausente: " + nome)
 		assert_false(nome.begins_with("Marca_"), "Sem Marca_ de slot: " + nome)
-	# Fundo = céu azul GX com neblina (ref nova): Sky + Fog ligados.
+	# Fundo = céu azul GX sem neblina (neblina lavava a cena): só Sky.
 	var we := mesa.get_node("WorldEnvironment") as WorldEnvironment
 	assert_true(we != null, "WorldEnvironment existe.")
 	assert_eq(we.environment.background_mode, Environment.BG_SKY, "Fundo é céu (Sky).")
-	assert_true(we.environment.fog_enabled, "Neblina ligada (profundidade).")
+	assert_false(we.environment.fog_enabled, "Sem neblina (lava os painéis).")
 
 
 func test_nos_chave_3d_existem() -> void:
