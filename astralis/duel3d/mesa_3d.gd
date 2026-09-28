@@ -1444,7 +1444,7 @@ func _redesenhar(com_efeito: bool) -> void:
 	# Campo: 5+5 monstros + magias (se houver, ex. test_state) por lado.
 	for lado in [0, 1]:
 		for zona_nome in ["monster", "spell"]:
-			var zona: Array = (_st.players[lado] as Dictionary)[zona_nome]
+			var zona := _zona_do_jogador(lado, zona_nome)
 			for i in range(zona.size()):
 				if zona[i] == null:
 					continue
@@ -1576,12 +1576,68 @@ func _rot_deitada(face_down: bool, lado: int, em_defesa: bool) -> Vector3:
 	return Vector3(-90.0, giro, 0.0)
 
 
+# ---- LEITURA DO ESTADO: UM SÓ PONTO, E BLINDADO (R1) ----
+#
+# Existem DOIS dialetos no jogo e é fácil trocar um pelo outro:
+#   - BoardLayout (slot_id / posição do ladrilho): "monstro" / "magia" (PT);
+#   - GameState.players[...]:                      "monster" / "spell" (EN).
+# Passar o nome PT para dentro de `players[]` procurava uma chave que NÃO
+# EXISTE e derrubava o jogo (Invalid access to property or key 'monstro').
+# Estas funções são o ÚNICO ponto de tradução e de leitura, e nenhuma delas
+# consegue falhar por valor de entrada: lado fora de 0..1, chave
+# desconhecida ou chave ausente viram lista vazia / 0 em vez de crash.
+
+## PT e EN das zonas do estado. Devolve "" para o que não for zona conhecida.
+func _chave_zona(nome: String) -> String:
+	match nome:
+		"monstro", "monster":
+			return "monster"
+		"magia", "spell":
+			return "spell"
+	return ""
+
+
+## O jogador do estado, com blindagem (lado fora de 0..1 = vazio).
+func _jogador(lado: int) -> Dictionary:
+	if _st == null:
+		return {}
+	var ps: Array = _st.players
+	if lado < 0 or lado >= ps.size():
+		return {}
+	return ps[lado] as Dictionary
+
+
+## Lista do jogador por chave QUALQUER (hand, deck, monster, spell,
+## graveyard, banished...), já blindada: sempre devolve um Array.
+func _lista_do_jogador(lado: int, chave: String) -> Array:
+	var p := _jogador(lado)
+	if p.is_empty():
+		return []
+	var v = p.get(chave, null)
+	return v as Array if v is Array else []
+
+
+## Número do jogador (lp, max_lp) blindado: sempre devolve um int.
+func _int_do_jogador(lado: int, chave: String, padrao: int = 0) -> int:
+	var p := _jogador(lado)
+	if p.is_empty() or not p.has(chave):
+		return padrao
+	return int(p[chave])
+
+
+## Zona do jogador com a chave JÁ TRADUZIDA (aceita "monstro" ou
+## "monster"). É esta que todo mundo deve usar para ler monstro/magia.
+func _zona_do_jogador(lado: int, nome: String) -> Array:
+	return _lista_do_jogador(lado, _chave_zona(nome))
+
+
 ## O slot REAL está em DEFESA? (só leitura do estado, para a moldura do
-## foco ficar na mesma pose da carta).
+## foco ficar na mesma pose da carta). Traduz o nome da fileira e usa a
+## leitura blindada — nenhum valor de entrada derruba o jogo.
 func _em_defesa(lado: int, zona_nome: String, slot: int) -> bool:
 	if _st == null:
 		return false
-	var zona: Array = (_st.players[lado] as Dictionary)[zona_nome]
+	var zona := _zona_do_jogador(lado, zona_nome)
 	if slot < 0 or slot >= zona.size() or zona[slot] == null:
 		return false
 	return str((zona[slot] as Dictionary).get("position", "ATK")) == "DEF"
@@ -2330,7 +2386,7 @@ func _carta_focada() -> Dictionary:
 	var lado := int(lt[0])
 	# _lado_tipo_da_fileira fala PT ("monstro"/"magia"); o estado real usa EN.
 	var zona_nome := "monster" if str(lt[1]) == "monstro" else "spell"
-	var zona: Array = (_st.players[lado] as Dictionary)[zona_nome]
+	var zona := _zona_do_jogador(lado, str(lt[1]))
 	var slot := clampi(_col, 0, 4)
 	if slot < 0 or slot >= zona.size() or zona[slot] == null:
 		return {}
@@ -2458,7 +2514,7 @@ func _contar_copia_carta(cid: String) -> int:
 
 
 func _texto_inst_slot(lado: int, zona_nome: String, slot: int) -> String:
-	var zona: Array = (_st.players[lado] as Dictionary)[zona_nome]
+	var zona := _zona_do_jogador(lado, zona_nome)
 	var sid := "p%d_%s%d" % [lado, ("m" if zona_nome == "monster" else "s"), slot]
 	if slot < 0 or slot >= zona.size() or zona[slot] == null:
 		return "Slot %s: vazio." % sid
@@ -2482,7 +2538,7 @@ func _nome_carta_mao(idx: int) -> String:
 
 ## Nome curto do que está no slot (mostra qual tem carta, sem regra nova).
 func _nome_no_slot_lado(lado: int, zona_nome: String, slot: int) -> String:
-	var zona: Array = (_st.players[lado] as Dictionary)[zona_nome]
+	var zona := _zona_do_jogador(lado, zona_nome)
 	if slot < 0 or slot >= zona.size() or zona[slot] == null:
 		return "vazio"
 	var m := zona[slot] as Dictionary

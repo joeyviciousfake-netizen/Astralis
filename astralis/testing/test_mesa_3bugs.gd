@@ -47,7 +47,7 @@ func test_menu_turno1_nao_marca_e_avisa_turno3_marca() -> void:
 	assert_eq(int(st.turn_number), 1, "Preparo: turno 1 (D17 bloqueia o lado 0).")
 	var pode1: Dictionary = BattleSystem.can_attack(st, 0, slot_atk)
 	assert_false(bool(pode1.get("ok", false)), "Motor real: turno 1 não deixa p0 atacar.")
-	assert_true(str(pode1.get("erro", "")).contains("1º turno"), "Motor diz o motivo (1º turno, erro '%s')." % str(pode1.get("erro", "")))
+	assert_true(str(pode1.get("erro", "")).contains("Turno 1"), "Motor diz o motivo (1º turno, erro '%s')." % str(pode1.get("erro", "")))
 	# Turno 1: confirmar na própria carta (cursor real no próprio campo).
 	mesa.set("_pad_fileira", TableScript.FILEIRA_MEU_CAMPO)
 	mesa.set("_pad_col", slot_atk)
@@ -58,7 +58,7 @@ func test_menu_turno1_nao_marca_e_avisa_turno3_marca() -> void:
 	assert_false((mesa.get("_popup") as Control).visible, "Turno 1: nenhum menu abre p/ ataque inválido.")
 	var fala1 := str((mesa.get("_log") as Array).back())
 	assert_true(fala1.contains("Não pode atacar"), "Turno 1: avisa que não pode (fala '%s')." % fala1)
-	assert_true(fala1.contains("1º turno"), "Turno 1: avisa o motivo (1º turno, fala '%s')." % fala1)
+	assert_true(fala1.contains("Turno 1"), "Turno 1: avisa o motivo (1º turno, fala '%s')." % fala1)
 	# Turno 3: a mesma confirmação marca (só organiza dado, regra intacta).
 	st.set("turn_number", 3)
 	assert_true(bool(BattleSystem.can_attack(st, 0, slot_atk).get("ok", false)), "Motor real: turno 3 libera o ataque.")

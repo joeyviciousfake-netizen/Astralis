@@ -14,8 +14,7 @@ extends "res://testing/astralis_test_base.gd"
 ## (7) com test_state, turno 1 BATTLE: ataque de p0 funciona e mata/dá dano
 ##     como o motor manda (fm_0001 3000 vs fm_0004 1200 = 1800 de dano);
 ## (8) sem test_state, turno 1 BATTLE: ataque de p0 continua bloqueado com
-##     "Sem ataque no 1º turno." (D15/D17 vale no duelo normal).
-## Fixtures FM reais: fm_0001 Blue-eyes 3000/2500 sol, fm_0002 Mystical Elf
+##     BattleSystem.ERRO_TURNO_1 (D15/D17 vale no duelo normal).## Fixtures FM reais: fm_0001 Blue-eyes 3000/2500 sol, fm_0002 Mystical Elf
 ## 800/2000, fm_0003 Hitotsu-me 1200/1000 lua, fm_0004 Baby Dragon 1200/700.
 ## Seed fixa 42 (a do duel_setup FM). Bug aqui vira teste permanente.
 ## Helpers (ProjectLoaderScript/DuelManagerScript/SummonSystem/
@@ -252,4 +251,4 @@ func test_sem_teste_turno1_p0_continua_bloqueado() -> void:
 	assert_eq(String(st.phase), "BATTLE", "Preparo: estamos na BATTLE do turno 1.")
 	var a: Dictionary = BattleSystem.attack(st, cur, 0, 1 - cur, -1)
 	assert_false(bool(a.get("ok", false)), "Sem test_state, p0 não ataca no turno 1.")
-	assert_eq(str(a.get("erro", "")), "Sem ataque no 1º turno.", "Erro do turno 1 é o de sempre.")
+	assert_eq(str(a.get("erro", "")), BattleSystem.ERRO_TURNO_1, "Erro do turno 1 é o de sempre.")

@@ -20,6 +20,11 @@ extends RefCounted
 ## - só ataca monstro virado p/ cima em ATK.
 
 const DamageSystem := preload("res://duel/damage_system.gd")
+## D43: a frase da recusa mora AQUI, no dono da regra, para o motor, a tela e
+## os testes falarem exatamente a mesma coisa (sem string repetida). Fala pelo
+## TURNO e não pelo lado, então serve para o jogador e para o rival: no turno
+## 1 a partida é só de invocação; o ataque abre a partir do turno 2.
+const ERRO_TURNO_1 := "Turno 1 é só para invocar: o ataque abre no turno 2."
 
 
 static func has_monsters(state, player_idx: int) -> bool:
@@ -53,13 +58,20 @@ static func can_attack(state, attacker_player: int, attacker_slot: int) -> Dicti
 		return {"ok": false, "erro": "Só monstro virado em Ataque pode atacar."}
 	if bool(atacante.get("has_attacked", false)):
 		return {"ok": false, "erro": "Este monstro já atacou neste turno."}
-	# D17/D22: jogador (lado 0) não ataca no 1º turno; inimigo pode no dele.
-	# Exceção Campo de Testes (pedido do usuário via Lead, vale sobre D15 só aqui):
-	# duelo montado com test_state (state.is_test=true, dado do duel_manager)
-	# libera o ataque no turno 1 p/ testar carta atacando de cara. Duelo normal
-	# (is_test=false) continua bloqueado como antes. Nenhum outro fluxo muda.
-	if attacker_player == 0 and int(state.turn_number) <= 1 and not bool(state.get("is_test")):
-		return {"ok": false, "erro": "Sem ataque no 1º turno."}
+	# D43: no TURNO 1 do duelo ninguém ataca - nem você, nem o rival.
+	# A regra é pelo CONTADOR DE TURNO (state.turn_number), não pelo lado:
+	# quem começa a partida está no turno 1 e só pode invocar; no momento em
+	# que passa a vez, o outro lado já entra no turno 2 e ataca normal. O
+	# "attacker_player == 0" que estava aqui antes era o buraco: com o RIVAL
+	# começando (turn_order first_p2), o turno 1 era DELE e a trava não
+	# olhava, então ele atacava de cara - foi o que o usuário viu.
+	# Exceção Campo de Testes (D34): duelo montado com test_state
+	# (state.is_test=true, dado do duel_manager) libera o ataque já no
+	# turno 1, para testar carta atacando de cara. Essa trava existe e
+	# não pode cair. Duelo normal (is_test=false) fica bloqueado.
+	# Nenhum outro fluxo muda: fase, dano, deckout e invocação intactos.
+	if int(state.turn_number) <= 1 and not bool(state.get("is_test")):
+		return {"ok": false, "erro": ERRO_TURNO_1}
 	return {"ok": true, "erro": ""}
 
 

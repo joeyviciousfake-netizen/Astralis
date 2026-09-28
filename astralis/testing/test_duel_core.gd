@@ -238,7 +238,7 @@ func test_sem_ataque_do_jogador_no_turno_1() -> void:
 	var foe: int = 1 - cur
 	var a: Dictionary = BattleSystem.attack(st, cur, 0, foe, -1)
 	assert_false(bool(a.get("ok", false)), "Jogador 0 não ataca no turno 1.")
-	assert_eq(str(a.get("erro", "")), "Sem ataque no 1º turno.", "Erro do turno 1 é o esperado.")
+	assert_eq(str(a.get("erro", "")), BattleSystem.ERRO_TURNO_1, "Erro do turno 1 é o esperado.")
 
 
 func test_so_ataca_virado_para_cima_em_atk() -> void:
