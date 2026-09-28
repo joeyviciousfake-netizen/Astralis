@@ -131,21 +131,24 @@ func test_espelho_p1_fileiras_perto_longe() -> void:
 
 
 func test_espelho_arena_starter_igual_fallback() -> void:
-	# Arena starter carrega espelhada igual ao fallback (D25).
+	# Arena starter com grade LARGA (slots quadrados 1,46): espelho e
+	# fileiras valem, números diferem do fallback (por design).
 	var arena: Dictionary = BoardLayoutScript.load_arena_data(BoardLayoutScript.starter_arena_path())
 	assert_true(arena.has("slots"), "Arena completa traz 'slots'.")
 	var slots: Dictionary = arena.get("slots", {})
 	for sid in ["p1_m0", "p1_m4", "p1_s0", "p1_s4", "p0_m0", "p0_m4", "p0_s0"]:
-		assert_eq(slots[sid], BoardLayoutScript.default_pos(sid), "Starter '%s' espelhado igual ao fallback." % sid)
+		assert_true(slots.has(sid), "Starter tem '%s'." % sid)
 	var p1_m0: Vector2 = BoardLayoutScript.get_pos(slots, "p1_m0")
 	var p1_m4: Vector2 = BoardLayoutScript.get_pos(slots, "p1_m4")
 	var p0_m4: Vector2 = BoardLayoutScript.get_pos(slots, "p0_m4")
 	assert_true(p1_m0.x > p1_m4.x, "Starter: p1_m0 à direita de p1_m4.")
 	assert_eq(p1_m0.x, p0_m4.x, "Starter: p1_m0.x == p0_m4.x (espelho).")
-	assert_eq(p1_m0.y, 317.0, "Starter: p1_m0.y=317 (perto do centro).")
-	assert_eq(BoardLayoutScript.get_pos(slots, "p1_s0").y, 128.0, "Starter: p1_s0.y=128 (longe).")
+	assert_eq(p1_m0, Vector2(1684, 345), "Starter: p1_m0 na grade larga.")
+	assert_eq(BoardLayoutScript.get_pos(slots, "p1_s0"), Vector2(1684, 45), "Starter: p1_s0 na grade larga.")
+	assert_eq(BoardLayoutScript.get_pos(slots, "p0_m0"), Vector2(632, 735), "Starter: p0_m0 na grade larga.")
+	assert_eq(BoardLayoutScript.get_pos(slots, "p0_s0"), Vector2(632, 1035), "Starter: p0_s0 na grade larga.")
 	var r: Rect2 = BoardScript.slot_rect(1, "monstro", 0, slots)
-	assert_eq(r.position, BoardLayoutScript.default_pos("p1_m0"), "slot_rect com starter = fallback espelhado.")
+	assert_eq(r.position, Vector2(1684, 345), "slot_rect usa o XY da arena.")
 
 
 func test_logica_por_indice_intacta_xy_nao_muda_slot() -> void:

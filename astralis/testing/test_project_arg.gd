@@ -348,9 +348,9 @@ func test_arena_ausente_no_projeto_usa_grade_padrao_com_espelho() -> void:
 	# A mão também cai no fallback embutido (nada quebra sem arena).
 	assert_eq(BoardLayoutScript.get_hand(arena, 0), BoardLayoutScript.default_hand(0), "Mão p0 no fallback embutido (1240/980/95).")
 	assert_eq(BoardLayoutScript.get_hand(arena, 1), BoardLayoutScript.default_hand(1), "Mão p1 no fallback embutido (1240/20/60).")
-	# E a grade padrão tem OS MESMOS números do arena_starter: trocar a base
-	# para um projeto sem arena não muda uma única coordenada do desenho.
+	# E a grade padrão tem grade PRÓPRIA (slots quadrados usam a arena
+	# larga; sem arena o desenho cai no fallback, sem quebrar nada).
 	var starter_slots: Dictionary = BoardLayoutScript.load_arena(BoardLayoutScript.starter_arena_path())
 	assert_eq(starter_slots.size(), 20, "arena_starter (pasta de teste) também tem 20 slots.")
-	for sid in starter_slots.keys():
-		assert_eq(BoardLayoutScript.default_pos(str(sid)), starter_slots[sid] as Vector2, "Grade padrão bate com arena_starter em '%s' (D29)." % str(sid))
+	assert_eq(starter_slots["p1_m0"] as Vector2, Vector2(1684, 345), "Starter usa a grade larga (slots quadrados).")
+	assert_eq(starter_slots["p0_s0"] as Vector2, Vector2(632, 1035), "Starter usa a grade larga (slots quadrados).")
