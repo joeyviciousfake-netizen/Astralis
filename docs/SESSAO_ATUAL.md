@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Mao centrada no campo (2026-09-27): calibragem pelo motor (7px), posicoes do usuario intactas. Commit 61cd95d. Git limpo, nada perdido."
+onde_estamos: "Pausado (2026-09-28): campo voltou ao centro ao endireitar perspectiva; maos precisam recentralizar. WIP commit fbc805e. Proximo: campo a direita primeiro, depois maos."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
