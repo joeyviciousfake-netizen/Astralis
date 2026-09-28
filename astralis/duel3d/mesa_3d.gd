@@ -787,7 +787,7 @@ func _moldura_da_carta(dado: Dictionary) -> String:
 
 
 ## Quad com textura do projeto (só leitura). Sem textura = nulo.
-func _quad_textura(nome: String, larg: float, alt: float, pos: Vector3, tex: Texture2D) -> MeshInstance3D:
+func _quad_textura(nome: String, larg: float, alt: float, pos: Vector3, tex: Texture2D, com_alfa: bool = false) -> MeshInstance3D:
 	var mi := MeshInstance3D.new()
 	mi.name = nome
 	var q := QuadMesh.new()
@@ -797,6 +797,8 @@ func _quad_textura(nome: String, larg: float, alt: float, pos: Vector3, tex: Tex
 	var m := StandardMaterial3D.new()
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.albedo_texture = tex
+	if com_alfa:
+		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mi.material_override = m
 	return mi
 
@@ -842,7 +844,7 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 		var attr := str(dado.get("attribute", ""))
 		var tex_orbe := _textura_arquivo("assets/attributes/%s.png" % attr.to_lower())
 		if tex_orbe != null:
-			no.add_child(_quad_textura("Orbe", 0.095, 0.0947, Vector3(0.3805, 0.6173, zf + 0.002), tex_orbe))
+			no.add_child(_quad_textura("Orbe", 0.095, 0.0947, Vector3(0.3805, 0.6173, zf + 0.002), tex_orbe, true))
 		# Estrelas = level (só monstro), à direita como na moldura.
 		if eh_monstro:
 			var tex_est := _textura_arquivo("assets/estrelas/estrela.png")
@@ -850,7 +852,7 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 				var n := clampi(int(dado.get("level", 0)), 0, 12)
 				for s in range(n):
 					var px := 0.42 - float(n - 1 - s) * (0.0457 + 0.008) - 0.0228
-					no.add_child(_quad_textura("Estrela%d" % s, 0.0457, 0.0444, Vector3(px, 0.5174, zf + 0.002), tex_est))
+					no.add_child(_quad_textura("Estrela%d" % s, 0.0457, 0.0444, Vector3(px, 0.5174, zf + 0.002), tex_est, true))
 	var nome := _rotulo3d(str(dado.get("name", "?")), 34, Color(0.12, 0.07, 0.03))
 	nome.name = "Nome"
 	nome.outline_size = 0
