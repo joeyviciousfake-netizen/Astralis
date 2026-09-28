@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Filtro azul fora (2026-09-27): ambient neutro baixo + fog 0.004, ceu so de fundo. MCP limpo, GUT 14/14. Commit 01b3f98."
+onde_estamos: "Preview com pack+aleatorio (2026-09-27, DEV some no final): editor sem --project desempacota o COMPLETO e sorteia 2 duelistas (provado: Seto x Simon, 7 artes). GUT 130/130. Commit 570fec6."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
