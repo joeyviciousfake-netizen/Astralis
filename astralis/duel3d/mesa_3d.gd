@@ -39,18 +39,40 @@ const DIV := 150.0
 const CENTRO_X := 1158.0
 const CENTRO_Y := 540.0
 const TOPO := 0.35
-## Câmera FIXA (ordem do usuário): deslocada p/ a esquerda olhando p/
-## a direita — o campo fica colado à direita da tela. Sem órbita/balanço.
+## Câmera FIXA (ordem do usuário): atrás/acima do seu campo olhando p/ a
+## direita. Sem órbita/balanço. POSIÇÃO, ALVO e FOV NÃO mudaram na fase 1
+## do doc 15 (só a janela do campo mudou de lugar).
 const CAM_POS := Vector3(0, 9, 8)
 const CAM_ALVO := Vector3(0, 0, 0.0)
 const CAM_FOV := 50.0
-## Deslocamento da LENTE (ordem do usuário): câmera centrada no campo
-## (visão simétrica, sem torto de perspectiva) e o frustum deslocado
-## joga a imagem p/ a direita (campo colado à direita, como antes).
-## Ajuste fino aqui (negativo = imagem p/ a direita).
-const CAM_OFFSET_X := 0.16
+## A LENTE NUNCA é deslocada (doc 15 §15.4): `frustum_offset` fica em 0 e a
+## projeção fica SIMÉTRICA (mesma compressão à esquerda e à direita),
+## idêntica à de quando o campo estava no meio da tela. O que joga o campo
+## p/ a direita é a JANELA (SubViewport), não a lente. O antigo
+## CAM_OFFSET_X = 0.16 foi REMOVIDO: era projeção fora do eixo (a imagem
+## saía esticada de um lado, comprimida do outro = torta).
 ## Fases estilo Tag Force REMOVIDAS (ordem do usuário, 2026-09-28): o
 ## duelo segue o Forbidden Memories, sem DP/SP/MP1/BP/MP2/EP.
+
+## ---- JANELA DO CAMPO (doc 15 §15.4 — só DESENHO, nada de regra) ----
+## O mundo 3D inteiro (céu, pilares, campo, cartas, mão, cursor) é
+## desenhado num SubViewport que ocupa SÓ a região do campo; o HUD 2D
+## continua em tela cheia por cima (Control filho da cena, como sempre).
+##   PAINEL_ESQ_PX = 29,3% da largura da tela: MEDIDA da referência
+##   (doc 15 §15.3 — na imagem de 1024 px o painel esquerdo vai de 0 a
+##   300 px, e 300/1024 = 29,3%; a referência põe o centro do campo em
+##   ~63,5% e aqui ele cai em 29,3% + 70,7%/2 = 64,6%).
+## AJUSTE FINO DO ENQUADRAMENTO É AQUI (PAINEL_ESQ_PX). Se ficar torto,
+## mexe-se neste retângulo — NUNCA na câmera (doc 15 §15.4).
+const TELA_L := 1920
+const TELA_A := 1080
+const PAINEL_ESQ_PX := 562                       # 29,3% de 1920
+const JANELA_CAMPO_X := PAINEL_ESQ_PX            # começa depois do painel 2D
+const JANELA_CAMPO_L := TELA_L - JANELA_CAMPO_X  # 1358 px (70,7% da tela)
+const JANELA_CAMPO_A := TELA_A                   # altura toda
+## Cor de fundo da faixa que sobrou à esquerda (na ref, o painel 2D é
+## escuro). Só apresentação, zero regra.
+const FUNDO_3D := Color(0.04, 0.05, 0.10)
 
 const LARG_CARTA := 1.0
 ## Inclinação da mão em graus no eixo X (LIVRE, ordem do usuário):
@@ -102,6 +124,9 @@ var _base_dir := ""
 var _artes_ok := 0
 
 var _cam: Camera3D = null
+## Janela onde o mundo 3D é desenhado (doc 15 §15.4): o SubViewport com a
+## região do campo (dentro de Camada3D/JanelaCampo), com a câmera dentro.
+var _vp: SubViewport = null
 var _no_cartas: Node3D = null
 var _no_slots: Node3D = null
 var _cursor3d: Node3D = null
@@ -204,6 +229,7 @@ func _ready() -> void:
 	# `--cenario3d 0` troca p/ o legado 2D e PARA aqui (nada do 3D monta).
 	if _usar_legado_2d():
 		return
+	_construir_janela_campo()
 	_construir_ambiente()
 	_construir_hud()
 	_construir_menus()
@@ -243,7 +269,8 @@ func _ready() -> void:
 		((_st.players[1] as Dictionary)["hand"] as Array).size(), _artes_ok])
 	if _cam != null:
 		print("[MESA3D] Cam: pos=%s fov=%s alvo=%s." % [str(_cam.global_position), str(_cam.fov), str(CAM_ALVO)])
-		print("[MESA3D] Slot p0_m2 na tela: %s." % str(_cam.unproject_position(_pos_slot(0, "monstro", 2))))
+		var px := _cam.unproject_position(_pos_slot(0, "monstro", 2))
+		print("[MESA3D] Slot p0_m2 na tela: janela=%s tela_x=%.1f." % [str(px), JANELA_CAMPO_X + px.x])
 		_calibrar_mao()
 	_ver_autoquit()
 
@@ -305,6 +332,51 @@ func _sem_render() -> bool:
 	return DisplayServer.get_name() == "headless"
 
 
+# ---- JANELA DO CAMPO (doc 15 §15.4) ----
+
+## Move a JANELA, não a câmera (doc 15 §15.4). O mundo 3D inteiro (céu,
+## pilares, campo, cartas, mão, cursor 3D) nasce dentro de um SubViewport
+## com o tamanho da região do campo, e esse viewport é mostrado por baixo
+## do HUD 2D (camada -1). A câmera fica EXATAMENTE onde já estava, sem
+## deslocamento de lente: por isso a perspectiva é idêntica à de quando o
+## campo estava no meio da tela — só mudou a janela que mostra o mundo.
+func _construir_janela_campo() -> void:
+	_vp = SubViewport.new()
+	_vp.name = "Viewport3D"
+	_vp.size = Vector2(JANELA_CAMPO_L, JANELA_CAMPO_A)
+	_vp.own_world_3d = true   # mundo 3D só desta janela (o céu não invade o HUD)
+	_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_vp.transparent_bg = false
+	# Camada -1 = ATRÁS do HUD 2D (que fica na camada 0, tela cheia).
+	var camada := CanvasLayer.new()
+	camada.name = "Camada3D"
+	camada.layer = -1
+	add_child(camada)
+	# Fundo escuro da faixa do painel esquerdo (na ref, essa faixa é escura).
+	var fundo := ColorRect.new()
+	fundo.name = "Fundo3D"
+	fundo.color = FUNDO_3D
+	fundo.position = Vector2.ZERO
+	fundo.size = Vector2(TELA_L, TELA_A)
+	fundo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	camada.add_child(fundo)
+	var janela := SubViewportContainer.new()
+	janela.name = "JanelaCampo"
+	janela.position = Vector2(JANELA_CAMPO_X, 0.0)
+	janela.size = Vector2(JANELA_CAMPO_L, JANELA_CAMPO_A)
+	# Textura 1:1 (mesmo tamanho do retângulo): sem escala/rotação na imagem.
+	janela.stretch = true
+	janela.stretch_shrink = 1
+	janela.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	janela.add_child(_vp)
+	camada.add_child(janela)
+	# O tamanho do viewport é o do container (stretch 1:1) = o retângulo medido.
+	print("[MESA3D] Janela do campo: x=%d..%d px (%.1f%%..100%% da tela), %dx%d, altura toda. Centro do campo = %.1f%% da tela. Camera SEM deslocamento." % [
+		JANELA_CAMPO_X, TELA_L, float(JANELA_CAMPO_X) / float(TELA_L) * 100.0,
+		JANELA_CAMPO_L, JANELA_CAMPO_A,
+		(float(JANELA_CAMPO_X) + float(JANELA_CAMPO_L) * 0.5) / float(TELA_L) * 100.0])
+
+
 # ---- AMBIENTE (WorldEnvironment + luzes + câmera) ----
 
 func _construir_ambiente() -> void:
@@ -333,7 +405,7 @@ func _construir_ambiente() -> void:
 	env.tonemap_exposure = 1.0
 	env.fog_enabled = false
 	we.environment = env
-	add_child(we)
+	_vp.add_child(we)
 	_construir_cenario_ceu()
 	# SEM LUZES (ordem do usuário): tudo é UNSHADED, luz não faz nada —
 	# nem sol nem omnis. Só o flash de tela (overlay 2D, ver HUD).
@@ -344,9 +416,12 @@ func _construir_ambiente() -> void:
 	_cam.position = CAM_POS
 	_cam.fov = CAM_FOV
 	_cam.current = true
-	add_child(_cam)
+	_vp.add_child(_cam)
 	_cam.look_at(CAM_ALVO)
-	_cam.frustum_offset = Vector2(CAM_OFFSET_X, 0.0)
+	# LENTE NO EIXO (doc 15 §15.4): deslocar o frustum deforma a imagem
+	# (um lado estica, o outro comprime) e o campo fica torto. Quem joga o
+	# campo p/ a direita é a JANELA do campo, criada acima.
+	_cam.frustum_offset = Vector2.ZERO
 	print("[MESA3D] Ambiente: céu azul + neblina + pilares + Camera3D FIXA (sem luzes: tudo unshaded).")
 
 
@@ -356,7 +431,7 @@ func _construir_ambiente() -> void:
 func _construir_cenario_ceu() -> void:
 	var no := Node3D.new()
 	no.name = "Ceu"
-	add_child(no)
+	_vp.add_child(no)
 	var rng := RandomNumberGenerator.new()
 	rng.seed = 20260707
 	# Pilares de vidro ao longe (ref tem torres translúcidas no horizonte).
@@ -438,7 +513,7 @@ func _caixa(nome: String, tamanho: Vector3, pos: Vector3, material: Material) ->
 func _construir_campo() -> void:
 	var campo := Node3D.new()
 	campo.name = "Campo"
-	add_child(campo)
+	_vp.add_child(campo)
 	_no_slots = Node3D.new()
 	_no_slots.name = "Slots"
 	campo.add_child(_no_slots)
@@ -482,12 +557,12 @@ func _construir_campo() -> void:
 	_construir_tokens(campo)
 	_no_cartas = Node3D.new()
 	_no_cartas.name = "Cartas"
-	add_child(_no_cartas)
+	_vp.add_child(_no_cartas)
 	# Cursor = MOLDURA vazada branca (ref: borda de seleção, não tijolo).
 	_cursor3d = Node3D.new()
 	_cursor3d.name = "Cursor3D"
 	_cursor3d.position = Vector3(0, TOPO, 4.15)
-	add_child(_cursor3d)
+	_vp.add_child(_cursor3d)
 	var mat_cur := _mat(Color(0.90, 0.95, 1.0), 1.0)
 	var bw := 1.72
 	var bh := 1.72
@@ -984,18 +1059,22 @@ func _calibrar_mao() -> void:
 	if _st != null:
 		n[0] = maxi(((_st.players[0] as Dictionary)["hand"] as Array).size(), 1)
 		n[1] = maxi(((_st.players[1] as Dictionary)["hand"] as Array).size(), 1)
-	var tela := _cam.get_viewport().get_visible_rect().size
+	var janela := _cam.get_viewport().get_visible_rect().size
 	var alvo := _cam.unproject_position(Vector3(0.0, TOPO, 0.0)).x
-	print("[MESA3D] Calib: tela=%dx%d centro_da_tela=%.1f centro_do_campo=%.1f" % [
-		int(tela.x), int(tela.y), tela.x * 0.5, alvo])
+	# X do centro do campo na TELA REAL: a janela do campo começa em
+	# JANELA_CAMPO_X, então é só somar a origem da janela ao X projetado.
+	var alvo_tela := JANELA_CAMPO_X + alvo
+	print("[MESA3D] Calib: janela=%dx%d em x=%d | tela=%dx%d centro_da_tela=%.1f centro_do_campo=%.1f (%.2f%% da tela)" % [
+		int(janela.x), int(janela.y), JANELA_CAMPO_X, TELA_L, TELA_A,
+		float(TELA_L) * 0.5, alvo_tela, alvo_tela / float(TELA_L) * 100.0])
 	for lado in [0, 1]:
 		var q: int = n[lado]
 		# Índice do MEIO do arco (com número par o meio cai entre 2 cartas).
 		var meio := int(ceil(float(maxi(q - 1, 0)) / 2.0))
 		var centro := _pos_mao_arco(meio, q, lado)
 		var sx := _cam.unproject_position(centro).x
-		print("[MESA3D] Calib:   p%d cartas=%d x_mundo=%.3f tela=%.2f erro=%.2fpx escala=%.1fpx/u arco=[%.0f..%.0f]px" % [
-			lado, q, centro.x, sx, sx - alvo,
+		print("[MESA3D] Calib:   p%d cartas=%d x_mundo=%.3f tela=%.2f tela_x=%.1f erro=%.2fpx escala=%.1fpx/u arco=[%.0f..%.0f]px" % [
+			lado, q, centro.x, sx, JANELA_CAMPO_X + sx, sx - alvo,
 			absf(_cam.unproject_position(centro + Vector3(1, 0, 0)).x - sx),
 			_cam.unproject_position(_pos_mao_arco(0, q, lado)).x,
 			_cam.unproject_position(_pos_mao_arco(maxi(q - 1, 0), q, lado)).x])

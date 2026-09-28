@@ -14,6 +14,16 @@ const BoardLayout := preload("res://core/board_layout.gd")
 ## Nomes proibidos na cena 3D (demolição da mesa, ref sem tampo/moldura).
 const NOS_PROIBIDOS := ["Mesa", "Tampo", "MolduraN", "MolduraS", "MolduraL",
 	"MolduraO", "Emblema", "TopoFundo", "Cruz"]
+## Doc 15 §15.4: o campo foi para a DIREITA da tela sem entortar a
+## perspectiva — o mundo 3D inteiro (céu, campo, cartas, mão, cursor) mora
+## dentro de um SubViewport com a região do campo, mostrado por baixo do HUD
+## 2D. Os nós 3D mantiveram os MESMOS nomes; só ganharam o prefixo da janela.
+const JANELA := "Camada3D/JanelaCampo/Viewport3D"
+
+
+## Procura um nó do MUNDO 3D (dentro da janela do campo).
+func _n3d(mesa: Node, caminho: String) -> Node:
+	return mesa.get_node_or_null(NodePath(JANELA + "/" + caminho))
 
 
 func _mesa3d_nova():
@@ -50,8 +60,8 @@ func test_cena_3d_carrega_com_duelo_real() -> void:
 func test_sem_mesa_nenhum_no_de_mesa() -> void:
 	# Ref SEM MESA: tampo, molduras douradas, emblema e marcas sumiram.
 	var mesa: Node = await _mesa3d_nova()
-	assert_true(mesa.get_node_or_null(NodePath("Mesa")) == null, "Sem nó Mesa.")
-	assert_true(mesa.get_node_or_null(NodePath("Campo")) != null, "Campo flutuante existe no lugar.")
+	assert_true(_n3d(mesa, "Mesa") == null, "Sem nó Mesa.")
+	assert_true(_n3d(mesa, "Campo") != null, "Campo flutuante existe no lugar.")
 	var todos: Array = []
 	_coletar(mesa, todos)
 	for n in todos:
@@ -59,7 +69,7 @@ func test_sem_mesa_nenhum_no_de_mesa() -> void:
 		assert_false(nome in NOS_PROIBIDOS, "Nó de mesa proibido ausente: " + nome)
 		assert_false(nome.begins_with("Marca_"), "Sem Marca_ de slot: " + nome)
 	# Fundo = céu azul GX sem neblina (neblina lavava a cena): só Sky.
-	var we := mesa.get_node("WorldEnvironment") as WorldEnvironment
+	var we := _n3d(mesa, "WorldEnvironment") as WorldEnvironment
 	assert_true(we != null, "WorldEnvironment existe.")
 	assert_eq(we.environment.background_mode, Environment.BG_SKY, "Fundo é céu (Sky).")
 	assert_false(we.environment.fog_enabled, "Sem neblina (lava os painéis).")
@@ -69,11 +79,13 @@ func test_nos_chave_3d_existem() -> void:
 	var mesa: Node = await _mesa3d_nova()
 	for caminho in ["Camera3D", "WorldEnvironment",
 			"Campo", "Campo/Slots", "Campo/Laterais", "Campo/Tokens",
-			"Cartas", "Cursor3D", "HUD", "Ceu", "HUD/FlashTela"]:
-		assert_true(mesa.get_node_or_null(NodePath(caminho)) != null, "Nó-chave existe: " + caminho)
-	assert_true((mesa.get_node("Camera3D") as Camera3D).current, "Camera3D é a atual.")
+			"Cartas", "Cursor3D", "Ceu"]:
+		assert_true(_n3d(mesa, caminho) != null, "Nó-chave 3D existe: " + caminho)
+	for lbl in ["HUD", "HUD/FlashTela", "Camada3D", "Camada3D/JanelaCampo"]:
+		assert_true(mesa.get_node_or_null(NodePath(lbl)) != null, "Nó-chave existe: " + lbl)
+	assert_true((_n3d(mesa, "Camera3D") as Camera3D).current, "Camera3D é a atual.")
 	# 20 painéis flutuantes (5+5 por lado), cada um com base escura + borda.
-	var paineis := (mesa.get_node("Campo/Slots") as Node3D).get_children()
+	var paineis := (_n3d(mesa, "Campo/Slots") as Node3D).get_children()
 	assert_eq(paineis.size(), 20, "20 painéis de slot (5+5 por lado, espelho do 2D).")
 	for p in paineis:
 		assert_true(str((p as Node).name).begins_with("Painel_p"), "Painel flutuante: " + str((p as Node).name))
@@ -88,7 +100,7 @@ func test_estado_real_reflete_no_campo_3d() -> void:
 	var mesa: Node = await _mesa3d_nova()
 	var st = mesa.get("_st")
 	# Leitura: 10 cartas desenhadas (5 abertas p0 + 5 de costas p1), campo vazio.
-	var desenhadas: int = (mesa.get_node("Cartas") as Node3D).get_child_count()
+	var desenhadas: int = (_n3d(mesa, "Cartas") as Node3D).get_child_count()
 	assert_eq(desenhadas, 10, "Campo 3D desenha as 10 da mão (5 abertas + 5 de costas).")
 	# Escrita SÓ pelo sistema real: invoca de verdade e redesenha.
 	var idx: int = _indice_monstro_na_mao(st, 0)
@@ -102,7 +114,7 @@ func test_estado_real_reflete_no_campo_3d() -> void:
 	var sid := "p0_m%d" % slot
 	var achou := false
 	var card_id := ""
-	for f in (mesa.get_node("Cartas") as Node3D).get_children():
+	for f in (_n3d(mesa, "Cartas") as Node3D).get_children():
 		if (f as Node).has_meta("slot_id") and str((f as Node).get_meta("slot_id")) == sid:
 			achou = true
 			card_id = str((f as Node).get_meta("card_id"))
@@ -133,7 +145,7 @@ func test_posicao_carta_exatamente_no_painel() -> void:
 	assert_true(bool(r1.get("ok", false)), "Sistema real invocou p1 slot %d." % slot1)
 	mesa.call("_redesenhar", false)
 	await wait_process_frames(2)
-	var slots: Node = mesa.get_node("Campo/Slots")
+	var slots: Node = _n3d(mesa, "Campo/Slots")
 	for lado in [0, 1]:
 		var zona: Array = (st.players[lado] as Dictionary)["monster"]
 		for i in range(zona.size()):
@@ -142,7 +154,7 @@ func test_posicao_carta_exatamente_no_painel() -> void:
 			var sid := "p%d_m%d" % [lado, i]
 			var painel := slots.get_node_or_null(NodePath("Painel_" + sid)) as Node3D
 			var carta: Node3D = null
-			for f in (mesa.get_node("Cartas") as Node3D).get_children():
+			for f in (_n3d(mesa, "Cartas") as Node3D).get_children():
 				if (f as Node).has_meta("slot_id") and str((f as Node).get_meta("slot_id")) == sid:
 					carta = f as Node3D
 			assert_true(painel != null, "Painel existe: " + sid)
@@ -215,7 +227,7 @@ func test_indicador_atk_def_e_fila() -> void:
 	await wait_process_frames(2)
 	var sid := "p0_m%d" % slot
 	var carta: Node3D = null
-	for f in (mesa.get_node("Cartas") as Node3D).get_children():
+	for f in (_n3d(mesa, "Cartas") as Node3D).get_children():
 		if (f as Node).has_meta("slot_id") and str((f as Node).get_meta("slot_id")) == sid:
 			carta = f as Node3D
 	assert_true(carta != null, "Carta no slot " + sid)
@@ -269,12 +281,57 @@ func test_mesa_3d_so_joypad_sem_clique() -> void:
 func test_camera_fixa_sem_orbita() -> void:
 	# Ref GX: câmera FIXA deslocada (campo colado à direita), sem órbita.
 	var mesa: Node = await _mesa3d_nova()
-	var cam := mesa.get_node("Camera3D") as Camera3D
+	var cam := _n3d(mesa, "Camera3D") as Camera3D
 	assert_true(cam != null, "Camera3D existe.")
 	assert_eq(cam.position, Vector3(0, 9, 8), "Câmera fixa (posição do usuário).")
 	assert_eq(cam.fov, 50.0, "FOV fixo com profundidade da ref.")
 	await wait_process_frames(10)
-	assert_eq((mesa.get_node("Camera3D") as Camera3D).position, Vector3(0, 9, 8), "Câmera não deriva (sem órbita).")
+	assert_eq((_n3d(mesa, "Camera3D") as Camera3D).position, Vector3(0, 9, 8), "Câmera não deriva (sem órbita).")
+
+
+func test_campo_a_direita_sem_perspectiva_torta() -> void:
+	# Doc 15 §15.4 (pedido do usuário: "a mesma perspectiva de quando fica no
+	# meio"): o campo foi para a DIREITA empurrando a JANELA (SubViewport),
+	# nunca a LENTE. Aqui travamos as 3 coisas que fazem isso:
+	#  1) a janela ocupa x 562..1920 (29,3%..100% medidos na referência);
+	#  2) a lente fica NO EIXO (frustum_offset = 0) = projeção simétrica;
+	#  3) o centro do campo cai no meio DA JANELA = 64,6% da tela.
+	var mesa: Node = await _mesa3d_nova()
+	var vp := mesa.get_node_or_null(NodePath(JANELA)) as SubViewport
+	assert_true(vp != null, "Mundo 3D dentro de um SubViewport (janela do campo).")
+	assert_eq(vp.size, Vector2i(1358, 1080), "Janela com a região do campo (1358x1080).")
+	assert_true(vp.own_world_3d, "Janela com mundo 3D próprio (o céu não invade o HUD).")
+	var camada := mesa.get_node_or_null(NodePath("Camada3D")) as CanvasLayer
+	assert_true(camada != null, "Camada da janela 3D existe.")
+	assert_eq(camada.layer, -1, "Janela 3D ATRÁS do HUD 2D (camada 0).")
+	var janela := mesa.get_node_or_null(NodePath("Camada3D/JanelaCampo")) as SubViewportContainer
+	assert_true(janela != null, "Janela do campo exibida na tela.")
+	assert_eq(janela.position, Vector2(562, 0), "Janela começa em 29,3% da largura (562 px).")
+	assert_eq(janela.size, Vector2(1358, 1080), "Janela ocupa até a borda direita, altura toda.")
+	assert_eq(janela.stretch_shrink, 1, "Textura 1:1 (sem escala/rotação na imagem do campo).")
+	# O HUD 2D continua em tela cheia, filho da cena (nada dele entrou no 3D).
+	assert_true(mesa.get_node_or_null(NodePath("HUD")) != null, "HUD 2D segue filho da cena.")
+	assert_true(mesa.get_node_or_null(NodePath(JANELA + "/HUD")) == null, "Nenhum HUD dentro da janela 3D.")
+	# A LENTE: mesma posição/alvo/FOV de sempre e SEM deslocamento.
+	var cam := _n3d(mesa, "Camera3D") as Camera3D
+	assert_eq(cam.frustum_offset, Vector2.ZERO, "Lente no eixo: frustum_offset = 0 (nada de torto).")
+	assert_eq(cam.position, Vector3(0, 9, 8), "Câmera exatamente onde estava antes da janela.")
+	# O CENTRO DO CAMPO no meio da janela = 562 + 1358/2 = 1241 px = 64,6%.
+	var centro_campo: float = cam.unproject_position(Vector3(0.0, 0.35, 0.0)).x + 562.0
+	assert_almost_eq(centro_campo, 1241.0, 1.0, "Centro do campo em 1241 px (64,6%% da tela): %.1f." % centro_campo)
+	assert_almost_eq(centro_campo / 1920.0 * 100.0, 64.6, 0.1, "Centro do campo em 64,6% da tela (ref: ~63,5%).")
+	# SIMETRIA: as pontas das fileiras equidistantes do centro (a projeção é
+	# simétrica porque a lente está no eixo). Se um lado esticar e o outro
+	# comprimir, a diferença aqui estoura e o teste pega.
+	var meio := 679.0
+	for lado in [0, 1]:
+		var esq: float = cam.unproject_position(mesa.call("_pos_slot", lado, "monstro", 0) as Vector3).x
+		var dir: float = cam.unproject_position(mesa.call("_pos_slot", lado, "monstro", 4) as Vector3).x
+		var a := minf(esq, dir)
+		var b := maxf(esq, dir)
+		assert_true(a < meio and b > meio, "Fileira p%d tem slots dos 2 lados do centro." % int(lado))
+		assert_almost_eq(meio - a, b - meio, 0.5,
+			"Fileira p%d simétrica: %.2f px à esquerda e %.2f px à direita do centro." % [int(lado), meio - a, b - meio])
 
 
 func test_maos_centralizadas_no_x_do_campo() -> void:
@@ -284,7 +341,7 @@ func test_maos_centralizadas_no_x_do_campo() -> void:
 	# mesmo X de tela do centro do campo. Medido em PIXELS, como o usuário vê.
 	var mesa: Node = await _mesa3d_nova()
 	var st = mesa.get("_st")
-	var cam := mesa.get_node("Camera3D") as Camera3D
+	var cam := _n3d(mesa, "Camera3D") as Camera3D
 	var n0: int = ((st.players[0] as Dictionary)["hand"] as Array).size()
 	var n1: int = ((st.players[1] as Dictionary)["hand"] as Array).size()
 	var alvo: float = cam.unproject_position(Vector3(0.0, 0.35, 0.0)).x
@@ -320,7 +377,7 @@ func test_maos_centralizadas_no_x_do_campo() -> void:
 	assert_almost_eq(passo1, 0.7, 0.001, "Passo por carta da mão do rival preservado (0.7).")
 	# A carta DESENHADA tem que estar no ponto que a função devolveu.
 	var vistas := 0
-	for f in (mesa.get_node("Cartas") as Node3D).get_children():
+	for f in (_n3d(mesa, "Cartas") as Node3D).get_children():
 		if not (f as Node).has_meta("mao_idx"):
 			continue
 		vistas += 1
@@ -332,7 +389,7 @@ func test_maos_centralizadas_no_x_do_campo() -> void:
 	mesa.set("_fileira", 0)
 	mesa.set("_col", _meio_do_arco(n0))
 	mesa.call("_posicionar_cursor")
-	var cur: Vector3 = (mesa.get_node("Cursor3D") as Node3D).position
+	var cur: Vector3 = (_n3d(mesa, "Cursor3D") as Node3D).position
 	assert_almost_eq(cur.x, p0_m.x, 0.001, "Cursor da mão bate com a carta centralizada.")
 
 
@@ -435,11 +492,11 @@ func test_fases_no_meio_laterais_e_tokens() -> void:
 	# nenhum nó de fase existe; laterais + tokens continuam.
 	var mesa: Node = await _mesa3d_nova()
 	var st = mesa.get("_st")
-	assert_true(mesa.get_node_or_null(NodePath("Campo/Fases")) == null, "Sem fileira de fases.")
+	assert_true(_n3d(mesa, "Campo/Fases") == null, "Sem fileira de fases.")
 	for tag in ["DP", "SP", "MP1", "BP", "MP2", "EP"]:
-		assert_true(mesa.get_node_or_null(NodePath("Campo/Fases/Fase_" + tag)) == null, "Sem fase: " + tag)
+		assert_true(_n3d(mesa, "Campo/Fases/Fase_" + tag) == null, "Sem fase: " + tag)
 	for caminho in ["Campo/Laterais/DeckRival", "Campo/Laterais/DeckVoce", "Campo/Laterais/CemRival", "Campo/Laterais/CemVoce"]:
-		assert_true(mesa.get_node_or_null(NodePath(caminho)) != null, "Lateral existe: " + caminho)
+		assert_true(_n3d(mesa, caminho) != null, "Lateral existe: " + caminho)
 	# Contadores = números puros do estado real (ref: 33/32/6).
 	var esperados := {
 		"Campo/Laterais/ContaDeckVoce": ((st.players[0] as Dictionary)["deck"] as Array).size(),
@@ -449,11 +506,11 @@ func test_fases_no_meio_laterais_e_tokens() -> void:
 		"Campo/ContaMaoRival": ((st.players[1] as Dictionary)["hand"] as Array).size(),
 	}
 	for caminho in esperados.keys():
-		assert_true(mesa.get_node_or_null(NodePath(caminho)) != null, "Contador existe: " + caminho)
-		assert_eq(str((mesa.get_node(caminho) as Label3D).text), str(int(esperados[caminho])), "Contador com o número real: " + caminho)
+		assert_true(_n3d(mesa, caminho) != null, "Contador existe: " + caminho)
+		assert_eq(str((_n3d(mesa, caminho) as Label3D).text), str(int(esperados[caminho])), "Contador com o número real: " + caminho)
 	assert_true(mesa.get_node_or_null(NodePath("HUD/MaoRival")) == null, "Sem MaoRival em texto (número vive no 3D).")
 	for caminho in ["Campo/Tokens/TokenX", "Campo/Tokens/TokenBussola"]:
-		assert_true(mesa.get_node_or_null(NodePath(caminho)) != null, "Token decorativo existe: " + caminho)
-	assert_true(mesa.get_node_or_null(NodePath("Ceu")) != null, "Céu azul existe.")
-	var filhos_ceu := (mesa.get_node("Ceu") as Node3D).get_child_count()
+		assert_true(_n3d(mesa, caminho) != null, "Token decorativo existe: " + caminho)
+	assert_true(_n3d(mesa, "Ceu") != null, "Céu azul existe.")
+	var filhos_ceu := (_n3d(mesa, "Ceu") as Node3D).get_child_count()
 	assert_true(filhos_ceu >= 24, "Céu com pilares + nuvens (10 + 14): %d." % filhos_ceu)
