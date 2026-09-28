@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Mao pra camera (2026-09-27): cartas da mao com look_at na Camera3D (retas p/ sua visao). MCP limpo, GUT 14/14. Commit ab6a68d."
+onde_estamos: "Mao paralela reta (2026-09-27): tilt fixo igual p/ todas (look_at tortava cada uma). MCP limpo, GUT 14/14. Commit e981719."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
