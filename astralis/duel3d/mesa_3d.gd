@@ -184,7 +184,6 @@ func _ready() -> void:
 	if _usar_legado_2d():
 		return
 	_construir_ambiente()
-	_construir_campo()
 	_construir_hud()
 	_construir_menus()
 	# Duelo REAL (motor de verdade): ProjectLoader + DuelManager.
@@ -201,6 +200,9 @@ func _ready() -> void:
 	_arena_data = BoardLayoutScript.load_arena_data(BoardLayoutScript.project_arena_path(arena_id))
 	_arena_layout = (_arena_data.get("slots", {}) as Dictionary)
 	_avisar_arena()
+	# Campo DEPOIS da arena (os painéis nascem no XZ real; antes nasciam
+	# na grade padrão e a carta no layout — bug silencioso).
+	_construir_campo()
 	_fusions_data = _fusoes_do_data(data)
 	_fala("Mesa 3D: duelo real carregado.")
 	_duel.advance_phase() # DRAW inicial -> MAIN (mão 5/5 sem extra, D26).
