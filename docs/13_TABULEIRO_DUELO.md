@@ -50,6 +50,17 @@ DRAW → MAIN → BATTLE → END
 - `duelist.starting_lp` é **só sugestão** do Studio (D21); quem manda no duelo é o `duel_setup`.
 - Studio nunca calcula dano/cura.
 
+### 13.4.1 Semente — `duel_setup.seed` (D42)
+
+`seed` é dado, e o motor decide o que ele significa:
+
+- **`seed = 0` (ou ausente) = SEM SEMENTE.** Sorteio de verdade a cada partida: quem começa (quando `turn_order` é `random`) e o embaralhamento dos dois baralhos mudam a cada duelo. É o padrão do duelo normal no Studio.
+- **`seed != 0` = SEMENTE FIXA.** O mesmo número reproduz o mesmo duelo, carta por carta (mesmo primeiro jogador, mesma mão, mesma ordem do baralho). É o que o Test Lab (doc 10) e o Campo de Testes (D33) usam, porque precisam de repetibilidade.
+
+Antes, `seed = 0` era tratado como uma semente válida e fixa, o que fazia o "aleatório" dar sempre o mesmo resultado — dado travado fingindo ser sorteio. O Studio também mandava `42` fixo em toda partida, o que reforçava o problema.
+
+Quem começa é **sempre dado do motor** (R3). A tela nunca assume que o primeiro é o jogador: ela honra `current_player` e conduz o turno do rival com os sistemas reais quando é a vez dele (D42).
+
 ## 13.5 Vitória / derrota V1
 
 - FIXO: `LP<=0 perde; tentar comprar com deck vazio perde (deck out)`.
