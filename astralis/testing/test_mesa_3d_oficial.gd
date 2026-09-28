@@ -19,6 +19,12 @@ const NOS_PROIBIDOS := ["Mesa", "Tampo", "MolduraN", "MolduraS", "MolduraL",
 ## dentro de um SubViewport com a região do campo, mostrado por baixo do HUD
 ## 2D. Os nós 3D mantiveram os MESMOS nomes; só ganharam o prefixo da janela.
 const JANELA := "Camada3D/JanelaCampo/Viewport3D"
+## Consts do desenho 3D que o GUT espelha (D3 mudou a mão do rival para
+## trás do campo). A trava é o valor da const do runtime: se alguém mexer
+## na const sem atualizar o desenho, o teste acusa.
+const ALT_CARTA_TESTE := 86.0 / 59.0
+const MAO_P1_YZ_TESTE := Vector2(-0.35, -6.45)
+const MAO_P1_PASSO_TESTE := 0.86
 
 
 ## Procura um nó do MUNDO 3D (dentro da janela do campo).
@@ -429,13 +435,31 @@ func test_maos_centralizadas_no_x_do_campo() -> void:
 	var p1_m: Vector3 = mesa.call("_pos_mao_arco", _meio_do_arco(n1), n1, 1)
 	var p1_f: Vector3 = mesa.call("_pos_mao_arco", n1 - 1, n1, 1)
 	assert_almost_eq(p1_m.x - p1_1.x, p1_f.x - p1_m.x, 0.001, "Arco da mão do rival simétrico em torno do centro.")
-	assert_almost_eq(p1_m.y, 0.31, 0.0001, "Altura da mão do rival medida na referência (11%..24% da tela).")
-	assert_almost_eq(p1_m.z, -5.18, 0.0001, "Profundidade da mão do rival medida na referência.")
+	# D3: o Y/Z da mão do RIVAL mudou de propósito, e a trava nova é mais
+	# forte que o número solto. Medido: a fileira de magia do rival fica em
+	# z = -4,42 e o ladrilho dela avança até z = -5,36 — com a mão em
+	# z = -5,18 ela ficava DENTRO desse ladrilho e o vidro escuro dele
+	# (alpha 0,72) pintava a metade de baixo das cartas viradas, que na ref
+	# não existe. A trava agora é GEOMÉTRICA: a mão inteira atrás da
+	# pegada do campo, e continua em cima na tela (11%..26% da altura).
+	var peca: float = float(mesa.call("_peca_prof_carta"))
+	var z_dos_slots := 0
+	for zona_nome in ["monster", "spell"]:
+		for i in range(5):
+			var ps: Vector3 = mesa.call("_pos_slot", 1, ("monstro" if zona_nome == "monster" else "magia"), i)
+			z_dos_slots += 1
+			# Cada ladrilho do rival, com a METADE que avança para a câmera:
+			# nenhum deles pode ficar na frente da carta da mão.
+			assert_true(p1_m.z < ps.z - peca * 0.5,
+				"Mão do rival atrás do ladrilho %s%d (mao %.2f < vidro %.2f) — nada de vidro na frente." % [
+					("p1_m" if zona_nome == "monster" else "p1_s"), i, p1_m.z, ps.z - peca * 0.5])
+	assert_eq(z_dos_slots, 10, "Os 10 ladrilhos do rival conferidos contra a mão.")
+	assert_almost_eq(p1_m.y, MAO_P1_YZ_TESTE.x, 0.0001, "Altura da mão do rival = MAO_P1_YZ medido na referência.")
 	# Espalhamento preservado: passo por carta.
 	var passo0 := (p0_m.x - p0_1.x) / float(maxi(_meio_do_arco(n0), 1))
 	var passo1 := (p1_m.x - p1_1.x) / float(maxi(_meio_do_arco(n1), 1))
 	assert_almost_eq(passo0, 1.06, 0.001, "Passo por carta da sua mão = MAO_P0_PASSO da fase 2 (1.06).")
-	assert_almost_eq(passo1, 0.7, 0.001, "Passo por carta da mão do rival preservado (0.7).")
+	assert_almost_eq(passo1, MAO_P1_PASSO_TESTE, 0.001, "Passo por carta da mão do rival = MAO_P1_PASSO (acompanhado a nova profundidade).")
 	# A carta DESENHADA tem que estar no ponto que a função devolveu.
 	var vistas := 0
 	for f in (_n3d(mesa, "Cartas") as Node3D).get_children():
@@ -543,6 +567,10 @@ func test_painel_esquerdo_carta_focada() -> void:
 	assert_eq(fundo.color, Color(0.106, 0.137, 0.251, 1.0), "Fundo do painel no azul-marinho da ref (#1b2340).")
 	assert_eq(fundo.size.x, 562, "Fundo do painel na faixa x 0..562 da ref.")
 	assert_eq(fundo.size.y, 1080, "Fundo do painel com altura toda.")
+	# D5: a linha de atributo em texto ("LUZ") foi REMOVIDA — na ref, depois
+	# do [TIPO] vem direto a descrição. O atributo continua visível como
+	# ORBE (asset real) na faixa de ATK/DEF e no canto da carta; o que
+	# muda aqui é só o texto que não pode mais existir.
 	for caminho in ["HUD/PainelCarta/CartaMolde", "HUD/PainelCarta/CartaMolde/Moldura",
 			"HUD/PainelCarta/CartaMolde/FocoArte", "HUD/PainelCarta/CartaMolde/FocoCor",
 			"HUD/PainelCarta/CartaMolde/FocoNomeMolde", "HUD/PainelCarta/CartaMolde/FocoOrbe",
@@ -551,9 +579,11 @@ func test_painel_esquerdo_carta_focada() -> void:
 			"HUD/PainelCarta/FocoFaixa/FocoOrbeFaixa", "HUD/PainelCarta/FocoFaixa/FocoOrbeTipo",
 			"HUD/PainelCarta/FocoFaixa/FocoCopias", "HUD/PainelCarta/FocoNome",
 			"HUD/PainelCarta/FocoTipo", "HUD/PainelCarta/BlocoDesc",
-			"HUD/PainelCarta/BlocoDesc/FocoAttr", "HUD/PainelCarta/BlocoDesc/FocoDesc",
+			"HUD/PainelCarta/BlocoDesc/FocoDesc",
 			"HUD/PainelCarta/BlocoDesc/BarraVermelha"]:
 		assert_true(mesa.get_node_or_null(NodePath(caminho)) != null, "Painel tem: " + caminho)
+	assert_true(mesa.get_node_or_null(NodePath("HUD/PainelCarta/BlocoDesc/FocoAttr")) == null,
+		"D5: sem linha de atributo em texto (só o orbe real).")
 	# As faixas da ref: a carta preserva a proporção da moldura real
 	# (832x1248 = 0,667) e fica entre y 16 e 562.
 	var molde := mesa.get_node("HUD/PainelCarta/CartaMolde") as Control
@@ -586,8 +616,6 @@ func test_painel_esquerdo_carta_focada() -> void:
 	assert_false(nome.is_empty() or nome == "—", "Painel mostra o nome real da carta focada: " + nome)
 	var stats := str((mesa.get_node("HUD/PainelCarta/FocoFaixa/FocoStats") as Label).text)
 	assert_true(stats.contains("ATK/") and stats.contains("DEF/"), "Faixa ATK/DEF do dado real: " + stats)
-	var attr := str((mesa.get_node("HUD/PainelCarta/BlocoDesc/FocoAttr") as Label).text)
-	assert_false(attr.is_empty(), "Painel mostra o atributo: " + attr)
 	var tipo := str(l_tipo.text)
 	assert_true(tipo.begins_with("["), "TIPO entre colchetes como na ref: " + tipo)
 	var desc := str((mesa.get_node("HUD/PainelCarta/BlocoDesc/FocoDesc") as Label).text)
@@ -595,8 +623,12 @@ func test_painel_esquerdo_carta_focada() -> void:
 	# Orbes: o 1º é o ATRIBUTO (vem do asset real). O 2º (tipo) só aparece
 	# se o dado for magia/armadilha — carta sem esse atributo não ganha
 	# orbe inventado.
+	# D5: o atributo continua aparecendo — como ORBE do asset real (o
+	# quadradinho colorido da faixa é a cor do atributo do dado).
 	var orbe_attr := mesa.get_node("HUD/PainelCarta/FocoFaixa/FocoOrbeFaixa") as TextureRect
 	assert_true(orbe_attr.visible and orbe_attr.texture != null, "Orbe do atributo visível com o asset real.")
+	var cor_attr: Color = (mesa.get_node("HUD/PainelCarta/FocoFaixa/FocoAttrIcon") as ColorRect).color
+	assert_true(cor_attr.r + cor_attr.g + cor_attr.b > 0.05, "Quadradinho da faixa com a cor real do atributo.")
 	var foco: Dictionary = mesa.call("_carta_focada") as Dictionary
 	var dado_foco: Dictionary = foco.get("dado", {}) as Dictionary
 	var ctipo := str(dado_foco.get("card_type", "monster"))

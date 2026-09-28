@@ -110,7 +110,7 @@ const PECA_EM_CARTAS := 1.40
 ## Lado do ladrilho de CIMA (só o ladrilho, não o cursor): um pouco maior
 ## que a carta DEITADA (ALT_CARTA = 1,4576 larguras), para a carta de DEF
 ## caber dentro da peça em vez de encostar/cortar na borda.
-const PECA_PROF_CARTAS := 1.52
+const PECA_PROF_CARTAS := 1.58
 ## X (em unidades de `_ponto_lateral`, ou seja já passando por
 ## ESCALA_CAMPO) da faixa onde ficam baralho e cemitério. Medido: a última
 ## coluna do campo acaba em mundo x 5,44 e a janela do campo CORTA em
@@ -120,6 +120,9 @@ const PECA_PROF_CARTAS := 1.52
 ## profundidades sem sair da janela.
 const PILHA_X := 4.28
 const PILHA_L := 0.45
+## Comprimento da pilha (no sentido Z): curto, como uma pilha de cartas no
+## canto da ref, e não uma tira atravessando a fileira (D4).
+const PILHA_C := 0.72
 ## Janela de arte da MOLDURA REAL (medida no JPG do usuário, D38 — o JPG
 ## é 832x1248 e a janela fica em x 11,90%..89,18% e y 18,27%..70,99%).
 ## Usada no 3D e no painel 2D: a arte preenche a janela sem sobra, seja a
@@ -202,9 +205,15 @@ const TILT_MAO_LIVRE := -35.0
 ## Fase 2: a mão p0 desceu e encolheu (ref: cartas de ~190 px no rodapé,
 ## cortadas embaixo) — ver a medida no print de calibração.
 const MAO_P0_PASSO := 1.06
-const MAO_P1_PASSO := 0.7
+const MAO_P1_PASSO := 0.86
 const MAO_P0_YZ := Vector2(4.63, 10.0)   # Vector2(y, z): sua mão (perto, embaixo)
-const MAO_P1_YZ := Vector2(0.31, -5.18)  # Vector2(y, z): mão do rival (longe)
+## Mão do RIVAL (longe, ATRÁS do campo). Medido: a fileira de magia do
+## rival (p1_s) fica em z = -4,42 e o ladrilho dela avança até z = -5,36;
+## com a mão em z = -5,18 ela ficava DENTRO desse ladrilho e o vidro
+## escuro dele (alpha 0,72) cobria a metade de baixo das cartas viradas
+## (D3). A mão agora é jogada para trás de toda a pegada do campo
+## (z = -6,45) e desce um pouco para não sumir atrás da barra superior.
+const MAO_P1_YZ := Vector2(-0.35, -6.45)
 ## X de mundo do centro do arco SEM câmera (fallback: só não quebra o desenho).
 const MAO_P0_X_SEM_CAM := 0.3
 const MAO_P1_X_SEM_CAM := -2.8
@@ -253,6 +262,11 @@ var _vp: SubViewport = null
 var _no_cartas: Node3D = null
 var _no_slots: Node3D = null
 var _cursor3d: Node3D = null
+## Grupo que gira com a coisa focada (a moldura e a mão são filhas dele).
+var _cursor_grupo: Node3D = null
+## Moldura do foco (4 barras) e a mão branca, no plano da focada.
+var _cursor_moldura: Node3D = null
+var _cursor_mao: Node3D = null
 ## Escala do cursor = do que ele marca (peça de vidro no campo, carta na
 ## mão). O pulso do `_process` multiplica por cima.
 var _cursor_escala := 1.0
@@ -300,7 +314,7 @@ var _cache_tex: Dictionary = {}
 var _lbl_foco_nome: Label = null
 var _lbl_foco_estrelas: Label = null
 var _lbl_foco_stats: Label = null
-var _lbl_foco_attr: Label = null
+
 var _cor_foco_attr: ColorRect = null
 var _lbl_foco_tipo: Label = null
 var _lbl_foco_desc: Label = null
@@ -671,76 +685,100 @@ func _construir_campo() -> void:
 	# cemitérios à esquerda, com o número em cima. `_ponto_lateral` aplica
 	# a mesma escala do campo, então elas ficam do lado do vidro, nunca
 	# em cima dele, quando o campo cresce (ESCALA_CAMPO).
-	var tam_pilha := Vector3(PILHA_L * ESCALA_CAMPO, 0.35, 1.46 * ESCALA_CAMPO)
-	# Baralho e cemitério são FITAS estreitas na borda da última coluna
-	# (doc 15 §15.3): a coluna do campo enche a janela até a borda, então um
-	# bloco largo saía cortado. Assim as duas pilhas ficam inteiras, nas
-	# duas profundidades, com o contador em cima.
-	laterais.add_child(_caixa("DeckRival", tam_pilha, _ponto_lateral(PILHA_X, TOPO + 0.17, -2.2), _mat(Color(0.42, 0.24, 0.10))))
-	laterais.add_child(_caixa("DeckVoce", tam_pilha, _ponto_lateral(PILHA_X, TOPO + 0.17, 1.6), _mat(Color(0.45, 0.26, 0.11))))
-	var tam_cem := Vector3(PILHA_L * ESCALA_CAMPO, 0.22, 1.46 * ESCALA_CAMPO)
-	laterais.add_child(_caixa("CemRival", tam_cem, _ponto_lateral(-PILHA_X, TOPO + 0.11, -2.2), _mat(Color(0.30, 0.16, 0.20), 0.25)))
-	laterais.add_child(_caixa("CemVoce", tam_cem, _ponto_lateral(-PILHA_X, TOPO + 0.11, 1.6), _mat(Color(0.16, 0.24, 0.30), 0.25)))
+	var tam_pilha := Vector3(PILHA_L * ESCALA_CAMPO, 0.22, PILHA_C * ESCALA_CAMPO)
+	# Baralho e cemitério são PILHAS COMPACTAS na borda da última coluna
+	# (doc 15 §15.3): na ref são umas cartas empilhadas pequenas no canto,
+	# com o número em cima — não um bloco comprido. Antes eram fitas de
+	# 1,46 de comprimento, que liam como retângulos escuros grandes (D4).
+	laterais.add_child(_caixa("DeckRival", tam_pilha, _ponto_lateral(PILHA_X, TOPO + 0.11, -2.2), _mat(Color(0.42, 0.24, 0.10))))
+	laterais.add_child(_caixa("DeckVoce", tam_pilha, _ponto_lateral(PILHA_X, TOPO + 0.11, 1.6), _mat(Color(0.45, 0.26, 0.11))))
+	var tam_cem := Vector3(PILHA_L * ESCALA_CAMPO, 0.14, PILHA_C * ESCALA_CAMPO)
+	laterais.add_child(_caixa("CemRival", tam_cem, _ponto_lateral(-PILHA_X, TOPO + 0.07, -2.2), _mat(Color(0.30, 0.16, 0.20), 0.25)))
+	laterais.add_child(_caixa("CemVoce", tam_cem, _ponto_lateral(-PILHA_X, TOPO + 0.07, 1.6), _mat(Color(0.16, 0.24, 0.30), 0.25)))
 	# CONTADORES em cima das pilhas, dentro da janela 3D (doc 15 §15.3: o
 	# número fica SOBRE a pilha, não nas laterais da tela). Placa azul-clara
 	# com o número branco. Baralho à DIREITA, cemitério à ESQUERDA, e as
 	# posições batem com as pilhas acima — nada aqui é inventado, o número
 	# sempre vem do estado real em `_atualizar_contadores`.
-	_lbl_conta_deck_rival = _placa_contador(laterais, "ContaDeckRival", _ponto_lateral(PILHA_X, TOPO + 0.42, -2.2), 0.52, 0.34)
-	_lbl_conta_cem_rival = _placa_contador(laterais, "ContaCemRival", _ponto_lateral(-PILHA_X, TOPO + 0.30, -2.2), 0.52, 0.34)
-	_lbl_conta_deck_voce = _placa_contador(laterais, "ContaDeckVoce", _ponto_lateral(PILHA_X, TOPO + 0.42, 1.6), 0.52, 0.34)
-	_lbl_conta_cem_voce = _placa_contador(laterais, "ContaCemVoce", _ponto_lateral(-PILHA_X, TOPO + 0.30, 1.6), 0.52, 0.34)
+	_lbl_conta_deck_rival = _placa_contador(laterais, "ContaDeckRival", _ponto_lateral(PILHA_X, TOPO + 0.30, -2.2), 0.40, 0.26)
+	_lbl_conta_cem_rival = _placa_contador(laterais, "ContaCemRival", _ponto_lateral(-PILHA_X, TOPO + 0.21, -2.2), 0.40, 0.26)
+	_lbl_conta_deck_voce = _placa_contador(laterais, "ContaDeckVoce", _ponto_lateral(PILHA_X, TOPO + 0.30, 1.6), 0.40, 0.26)
+	_lbl_conta_cem_voce = _placa_contador(laterais, "ContaCemVoce", _ponto_lateral(-PILHA_X, TOPO + 0.21, 1.6), 0.40, 0.26)
 	# Cartas na mão do RIVAL (dado real): a contagem fica ao lado do leque de
 	# cartas, não num ponto solto no canto da tela.
-	_lbl_conta_mao_rival = _placa_contador(campo, "ContaMaoRival", _ponto_lateral(1.6, TOPO + 0.30, -6.10), 0.46, 0.30)
+	_lbl_conta_mao_rival = _placa_contador(campo, "ContaMaoRival", _ponto_lateral(1.7, TOPO + 0.30, -7.30), 0.36, 0.24)
 	_construir_tokens(campo)
 	_no_cartas = Node3D.new()
 	_no_cartas.name = "Cartas"
 	_vp.add_child(_no_cartas)
-	# Cursor = retângulo AZUL BRILHANTE, grosso, do tamanho da peça de vidro
-	# (cresce com o campo) + a MÃO BRANCA no centro (doc 15 §15.3).
+	# Cursor = retângulo AZUL BRILHANTE que ABRAÇA a coisa focada (doc 15
+	# §15.3) + a MÃO BRANCA no centro dela. `_cursor_grupo` gira junto com a
+	# focada, então a moldura é desenhada no PLANO DA CARTA (XY local) e
+	# sai colada nela — na mão E no ladrilho. Antes a moldura era um
+	# quadrado chapado no chão, maior que a carta, e aparecia só como dois
+	# trilhos azuis nas laterais.
 	_cursor3d = Node3D.new()
 	_cursor3d.name = "Cursor3D"
 	_cursor3d.position = Vector3(0, TOPO, _ponto_lateral(0.0, 0.0, 4.15).z)
 	_vp.add_child(_cursor3d)
-	var mat_cur := _mat(COR_FOCO_AZUL, 0.85)
-	var bw := _peca_lado() * 1.24
-	var bh := _peca_lado() * 1.24
-	var t := 0.15 * ESCALA_CAMPO
-	_cursor3d.add_child(_caixa("Aba", Vector3(bw, 0.06, t), Vector3(0, 0, bh / 2.0), mat_cur))
-	_cursor3d.add_child(_caixa("Abaixo", Vector3(bw, 0.06, t), Vector3(0, 0, -bh / 2.0), mat_cur))
-	_cursor3d.add_child(_caixa("Esq", Vector3(t, 0.06, bh), Vector3(-bw / 2.0, 0, 0), mat_cur))
-	_cursor3d.add_child(_caixa("Dir", Vector3(t, 0.06, bh), Vector3(bw / 2.0, 0, 0), mat_cur))
+	_cursor_grupo = Node3D.new()
+	_cursor_grupo.name = "Grupo"
+	_cursor3d.add_child(_cursor_grupo)
+	_cursor_moldura = Node3D.new()
+	_cursor_moldura.name = "Moldura"
+	_cursor_grupo.add_child(_cursor_moldura)
 	_construir_mao_cursor()
 	print("[MESA3D] Campo: 20 painéis + decks/cemitérios + tokens + Cursor3D.")
 
 
+## Redesenha a moldura do foco com o tamanho e a inclinação da focada.
+## `larg`/`alt` são as medidas da COISA focada (a carta da mão ou o
+## ladrilho) e `rot` a rotação dela; a moldura sai 6% maior, no plano da
+## carta, com a grossura proporcional (nada de moldura fininha num lado e
+## grossa no outro).
+func _moldar_foco(larg: float, alt: float, rot: Vector3, escala_mao: float) -> void:
+	_cursor_grupo.rotation_degrees = rot
+	for f in _cursor_moldura.get_children():
+		(f as Node).queue_free()
+	var w := larg * 1.06
+	var h := alt * 1.06
+	var t := maxf(larg, alt) * 0.055
+	var z := GROSS_CARTA / 2.0 + 0.012
+	var mat := _mat(COR_FOCO_AZUL, 0.85)
+	_cursor_moldura.add_child(_caixa("Aba", Vector3(w, t, 0.03), Vector3(0, h / 2.0, z), mat))
+	_cursor_moldura.add_child(_caixa("Abaixo", Vector3(w, t, 0.03), Vector3(0, -h / 2.0, z), mat))
+	_cursor_moldura.add_child(_caixa("Esq", Vector3(t, h, 0.03), Vector3(-w / 2.0, 0, z), mat))
+	_cursor_moldura.add_child(_caixa("Dir", Vector3(t, h, 0.03), Vector3(w / 2.0, 0, z), mat))
+	if _cursor_mao != null:
+		_cursor_mao.scale = Vector3.ONE * escala_mao
+		_cursor_mao.position = Vector3(0, 0, z)
+
+
 ## MÃO BRANCA no centro do cursor (ref): palma + 4 dedos + polegar, feita
-## de caixas brancas deitadas no ladrilho. É só desenho (zero regra), usa
-## a largura da peça (então encolhe junto com o campo) e é PEQUENA de
-## propósito: é um ponteiro, não um ladrilho — ocupava a carta inteira.
+## de caixas brancas. É só desenho (zero regra) e é montada na escala de
+## UMA carta (largura 1,0) — quem chama é que escala pelo tamanho da coisa
+## focada, então ela é a mesma na mão e no ladrilho.
 func _construir_mao_cursor() -> void:
 	var mao := Node3D.new()
 	mao.name = "Mao"
 	var mat := _mat(Color(1.0, 1.0, 1.0), 0.55)
-	var p := _peca_lado()
-	# ÍCONE pequeno de propósito: a mão inteira ocupa ~1/6 da peça (na mão
-	# do jogador, ~1/6 da carta). Antes os dedos eram 0,3..0,4 da peça e
-	# viravam um borrão branco no meio da carta.
-	var w := p * 0.038
+	var w := 0.048
 	# palma
-	mao.add_child(_caixa("Palma", Vector3(w * 2.2, w * 1.5, 0.07), Vector3(0, 0, 0.16), mat))
+	mao.add_child(_caixa("Palma", Vector3(w * 2.2, w * 1.5, 0.02), Vector3.ZERO, mat))
 	# dedos: 4 barras curtas em cima da palma, do maior pro menor
 	var alturas := [0.100, 0.130, 0.125, 0.095]
 	for i in range(4):
-		var alt: float = float(alturas[i]) * p
+		var alt: float = float(alturas[i])
 		var x := (-1.5 + float(i)) * w * 1.05
-		mao.add_child(_caixa("Dedo%d" % i, Vector3(w * 0.80, alt, 0.07), Vector3(x, alt * 0.5 + w * 0.75, 0.16), mat))
+		mao.add_child(_caixa("Dedo%d" % i, Vector3(w * 0.80, alt, 0.02), Vector3(x, alt * 0.5 + w * 0.75, 0), mat))
 	# polegar: barra curta diagonal à esquerda da palma
-	var pol := _caixa("Polegar", Vector3(w * 0.80, w * 1.3, 0.07), Vector3(-w * 1.9, w * 0.1, 0.16), mat)
+	var pol := _caixa("Polegar", Vector3(w * 0.80, w * 1.3, 0.02), Vector3(-w * 1.9, w * 0.1, 0), mat)
 	pol.rotation_degrees = Vector3(0, 0, 40)
 	mao.add_child(pol)
-	_cursor3d.add_child(mao)
+	_cursor_mao = mao
+	_cursor_grupo.add_child(mao)
+
+
 
 
 ## Tokens decorativos da ref (só desenho, zero regra): círculo com X à
@@ -789,10 +827,12 @@ func _peca_lado() -> float:
 	return PECA_EM_CARTAS * ESCALA_CAMPO
 
 
-## Lado do LADRIHO (vidro) que recebe a carta DEITADA: precisa ser um pouco
-## maior que a carta deitada (LARG_CARTA x ALT_CARTA = 0,667), senão a
-## DEF encostava na borda e ficava cortada (o Lead pediu "carta DEF
-## dentro do ladrilho"). Só apresentação; a composição do dado não muda.
+## Lado do LADRIHO (vidro) que recebe a carta DEITADA: precisa caber na
+## carta em ATAQUE (1,0 de largura) E na carta em DEFESA, que é a MESMA
+## carta girada um quarto de volta — ou seja, tem de ser maior que o lado
+## LONGO dela (ALT_CARTA = 1,4576). Com 1,52 a carta de DEF terminava em
+## cima da borda do vidro e invadia o vizinho; 1,58 deixa ~0,12 de carta de
+## folga dos dois lados. Só apresentação; a composição do dado não muda.
 func _peca_prof_carta() -> float:
 	return PECA_PROF_CARTAS * ESCALA_CAMPO
 
@@ -985,7 +1025,10 @@ func _montar_retrato(foto: TextureRect, silhueta: Label, caminho: String, nome: 
 		silhueta.visible = true
 
 
-## Código curto do atributo p/ a faixa do painel (ícone = cor + sigla).
+## Código curto do atributo. Sobrou do painel antigo, que printava "LUZ" e
+## companhia numa linha de texto entre o [TIPO] e a descrição (D5: a ref não
+## tem essa linha — o atributo aparece como orbe, não como palavra). Ajudar
+## a chamar é `_cor_atributo` e o asset `assets/attributes/<attr>.png`.
 func _rotulo_attr_curto(attr: String) -> String:
 	match attr:
 		"light":
@@ -1410,19 +1453,49 @@ func _redesenhar(com_efeito: bool) -> void:
 		var v := _fazer_carta({}, true, 1, false)
 		v.position = _pos_mao_arco(j, mao1.size(), 1)
 		_no_cartas.add_child(v)
+		# D3: a mão do RIVAL é uma camada de MÃO — sempre desenhada por
+		# cima do campo. Sem isso, o ladrilho de magia do rival (o vidro
+		# escuro, alpha 0,72) ficava NA FRENTE dela na tela e pintava a
+		# metade de baixo das cartas viradas, que na ref não tem nada
+		# atrás. A mão não é mais profunda que o campo, então a correção é
+		# de DESENHO (ordem de pintura), não de posição.
+		_sempre_na_frente(v)
 		v.rotation_degrees = Vector3(180.0 + TILT_MAO_LIVRE, 0, 0)
 	_atualizar_hud()
 	_posicionar_cursor()
 
 
+## Pinta a carta SEM teste de profundidade, como camada de mão (D3): a
+## carta do rival é mais distante que o campo, e o vidro escuro do ladrilho
+## apareceria na frente dela. É SÓ ordem de desenho — não muda posição,
+## tamanho, cor nem dado.
+func _sempre_na_frente(no: Node) -> void:
+	for f in no.get_children():
+		if f is GeometryInstance3D:
+			var gi := f as GeometryInstance3D
+			gi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			var m := gi.material_override
+			if m is BaseMaterial3D:
+				(m as BaseMaterial3D).no_depth_test = true
+				(m as BaseMaterial3D).render_priority = 4
+		elif f is Label3D:
+			var l := f as Label3D
+			l.no_depth_test = true
+			l.render_priority = 4
+		elif f is Node3D:
+			_sempre_na_frente(f)
+
+
 func _posicionar_cursor() -> void:
-	if _cursor3d == null or _st == null:
+	if _cursor3d == null or _cursor_grupo == null or _st == null:
 		return
 	var alvo := Vector3(0, TOPO, _ponto_lateral(0.0, 0.0, 4.15).z)
-	# O cursor é do tamanho do que ele marca: a peça de vidro no campo, a
-	# carta na mão (a moldura nasce do tamanho da peça, então a escala
-	# converte). Sem isso, na mão ele virava um moldura gigante solta.
-	_cursor_escala = 1.15
+	# A moldura é do tamanho e da INCLINAÇÃO da coisa focada (doc 15 §15.3):
+	# na mão é a CARTA (com a inclinação da mão), no campo é o LADRILHO
+	# (deitado, girando junto se a carta estiver em DEFESA). Sem isso a
+	# moldura era um quadrado chapado no chão, maior que a carta, e a mão
+	# ficava fora dela.
+	_cursor_escala = 1.0
 	match _fileira:
 		FILEIRA_MAO:
 			var n: int = ((_st.players[0] as Dictionary)["hand"] as Array).size()
@@ -1431,17 +1504,48 @@ func _posicionar_cursor() -> void:
 				# de baixo; abaixo dela a moldura saía da tela virando um
 				# traço branco solto no canto).
 				alvo = _pos_mao_arco(clampi(_col, 0, n - 1), n, 0)
-				_cursor_escala = 1.15 * LARG_CARTA / _peca_lado()
+				_moldar_foco(LARG_CARTA, ALT_CARTA, Vector3(TILT_MAO_LIVRE, 0, 0), LARG_CARTA)
 		FILEIRA_MEU_M:
-			alvo = _pos_slot(0, "monstro", clampi(_col, 0, 4)) + Vector3(0, -0.12 * ESCALA_CAMPO, 0)
+			alvo = _pos_slot(0, "monstro", clampi(_col, 0, 4))
+			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, 0, 0), _peca_prof_carta())
 		FILEIRA_MEU_S:
-			alvo = _pos_slot(0, "magia", clampi(_col, 0, 4)) + Vector3(0, -0.12 * ESCALA_CAMPO, 0)
+			alvo = _pos_slot(0, "magia", clampi(_col, 0, 4))
+			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, 0, 0), _peca_prof_carta())
 		FILEIRA_RIVAL_M:
-			alvo = _pos_slot(1, "monstro", clampi(_col, 0, 4)) + Vector3(0, -0.12 * ESCALA_CAMPO, 0)
+			alvo = _pos_slot(1, "monstro", clampi(_col, 0, 4))
+			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, 1, _em_defesa(1, "monstro", clampi(_col, 0, 4))), _peca_prof_carta())
 		FILEIRA_RIVAL_S:
-			alvo = _pos_slot(1, "magia", clampi(_col, 0, 4)) + Vector3(0, -0.12 * ESCALA_CAMPO, 0)
+			alvo = _pos_slot(1, "magia", clampi(_col, 0, 4))
+			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, 1, _em_defesa(1, "magia", clampi(_col, 0, 4))), _peca_prof_carta())
+		_:
+			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, 0, 0), _peca_prof_carta())
 	_foco = alvo
 	_cursor3d.position = alvo
+
+
+## Rotação de uma carta DEITADA no ladrilho — a mesma que `_deitar_carta`
+## aplica na carta, para a moldura do foco sair girada junto (quem está em
+## DEFESA tem a moldura atravessada como a carta).
+func _rot_deitada(face_down: bool, lado: int, em_defesa: bool) -> Vector3:
+	if face_down:
+		return Vector3(90.0, 0.0, 0.0)
+	var giro := 0.0
+	if lado == 1:
+		giro = 180.0
+	if em_defesa:
+		giro = fmod(giro + 90.0, 360.0)
+	return Vector3(-90.0, giro, 0.0)
+
+
+## O slot REAL está em DEFESA? (só leitura do estado, para a moldura do
+## foco ficar na mesma pose da carta).
+func _em_defesa(lado: int, zona_nome: String, slot: int) -> bool:
+	if _st == null:
+		return false
+	var zona: Array = (_st.players[lado] as Dictionary)[zona_nome]
+	if slot < 0 or slot >= zona.size() or zona[slot] == null:
+		return false
+	return str((zona[slot] as Dictionary).get("position", "ATK")) == "DEF"
 
 
 # ---- HUD (só mostra: LP, fase, turno, log, dica) ----
@@ -1507,18 +1611,36 @@ func _rotulo_placa_clara(nome: String, texto: String, tam: int) -> Label:
 ## escuro e a INICIAL do nome (o pack NÃO tem retrato de duelista — os 39
 ## duelistas do FM vêm com `portrait` vazio, então nunca há foto; se um dia
 ## vier, a foto real aparece no lugar do placeholder).
+## Moldura do retrato no estilo da ref (D6): metal claro com BISEL de
+## verdade — aro externo grosso e claro, um fio escuro por dentro (o
+## degrau do bisel) e o miolo escuro onde entra a foto/placeholder. Antes
+## era um quadrado chapado com um traço branco de 3 px, que lia como
+## "quadrado com letra".
 func _estilo_retrato() -> StyleBoxFlat:
-	# Moldura clara do retrato (ref: aro claro fino).
 	var est := StyleBoxFlat.new()
 	est.bg_color = Color(0.03, 0.03, 0.07, 0.95)
-	est.border_color = Color(0.85, 0.90, 1.0)
-	est.set_border_width_all(3)
-	est.set_corner_radius_all(6)
-	est.content_margin_left = 4
-	est.content_margin_right = 4
-	est.content_margin_top = 4
-	est.content_margin_bottom = 4
+	est.border_color = Color(0.86, 0.91, 1.0)
+	est.set_border_width_all(6)
+	est.set_corner_radius_all(8)
+	est.content_margin_left = 8
+	est.content_margin_right = 8
+	est.content_margin_top = 8
+	est.content_margin_bottom = 8
 	return est
+
+
+## Aro de metal do retrato, desenhado ATRÁS do miolo: um retângulo claro
+## maior que o miolo, para o miolo "entrar" nele com sombra de um lado só —
+## é o que dá a leitura de bisel da ref.
+func _aro_retrato() -> TextureRect:
+	var tr := _fundo_retrato(Color(0.88, 0.93, 1.0))
+	tr.name = "Aro"
+	tr.set_anchors_preset(Control.PRESET_FULL_RECT)
+	tr.offset_left = -7.0
+	tr.offset_top = -7.0
+	tr.offset_right = 7.0
+	tr.offset_bottom = 7.0
+	return tr
 
 
 ## Gradiente do placeholder do retrato (mesma linguagem do metal do HUD).
@@ -1549,6 +1671,7 @@ func _construir_retratos(hud: Control) -> void:
 	ret_rival.size = Vector2(RETRATO_L, RETRATO_L)
 	ret_rival.custom_minimum_size = Vector2(RETRATO_L, RETRATO_L)
 	ret_rival.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ret_rival.add_child(_aro_retrato())
 	var fundo_r := _fundo_retrato(Color(0.96, 0.56, 0.30))
 	fundo_r.name = "Fundo"
 	ret_rival.add_child(fundo_r)
@@ -1560,7 +1683,7 @@ func _construir_retratos(hud: Control) -> void:
 	_retrato_rival_foto.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_retrato_rival_foto.visible = false
 	ret_rival.add_child(_retrato_rival_foto)
-	_retrato_rival_silhueta = _rotulo_hud("Silhueta", "?", Vector2.ZERO, 72, Color(0.96, 0.56, 0.30))
+	_retrato_rival_silhueta = _rotulo_hud("Silhueta", "?", Vector2.ZERO, 52, Color(0.96, 0.62, 0.38))
 	_retrato_rival_silhueta.custom_minimum_size = Vector2(120, 120)
 	_retrato_rival_silhueta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_retrato_rival_silhueta.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -1574,6 +1697,7 @@ func _construir_retratos(hud: Control) -> void:
 	ret_voce.size = Vector2(RETRATO_L, RETRATO_L)
 	ret_voce.custom_minimum_size = Vector2(RETRATO_L, RETRATO_L)
 	ret_voce.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ret_voce.add_child(_aro_retrato())
 	var fundo_v := _fundo_retrato(Color(0.55, 0.85, 1.0))
 	fundo_v.name = "Fundo"
 	ret_voce.add_child(fundo_v)
@@ -1585,7 +1709,7 @@ func _construir_retratos(hud: Control) -> void:
 	_retrato_voce_foto.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_retrato_voce_foto.visible = false
 	ret_voce.add_child(_retrato_voce_foto)
-	_retrato_voce_silhueta = _rotulo_hud("Silhueta", "?", Vector2.ZERO, 72, Color(0.55, 0.85, 1.0))
+	_retrato_voce_silhueta = _rotulo_hud("Silhueta", "?", Vector2.ZERO, 52, Color(0.60, 0.88, 1.0))
 	_retrato_voce_silhueta.custom_minimum_size = Vector2(120, 120)
 	_retrato_voce_silhueta.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_retrato_voce_silhueta.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -1974,12 +2098,13 @@ func _construir_painel_foco(hud: Control) -> void:
 	bloco.custom_minimum_size = bloco.size
 	bloco.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_painel_foco.add_child(bloco)
-	_lbl_foco_attr = _rotulo_hud("FocoAttr", "", Vector2.ZERO, 18, Color(0.62, 0.68, 0.90))
-	bloco.add_child(_lbl_foco_attr)
+	# SEM linha de atributo aqui (D5): na ref, depois do [TIPO] vem direto a
+	# descrição. O atributo já aparece como ORBE na faixa de ATK/DEF e no
+	# canto da carta — repetir o nome em texto era só ruído.
 	_lbl_foco_desc = _rotulo_hud("FocoDesc", "", Vector2.ZERO, 21, COR_DESCRICAO)
-	_lbl_foco_desc.position = Vector2(0, 28)
-	_lbl_foco_desc.size = Vector2(bloco.size.x - 22, bloco.size.y - 28)
-	_lbl_foco_desc.custom_minimum_size = Vector2(bloco.size.x - 22, bloco.size.y - 28)
+	_lbl_foco_desc.position = Vector2(0, 4)
+	_lbl_foco_desc.size = Vector2(bloco.size.x - 22, bloco.size.y - 4)
+	_lbl_foco_desc.custom_minimum_size = Vector2(bloco.size.x - 22, bloco.size.y - 4)
 	_lbl_foco_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	_lbl_foco_desc.clip_text = true
 	_lbl_foco_desc.vertical_alignment = VERTICAL_ALIGNMENT_TOP
@@ -2189,7 +2314,6 @@ func _atualizar_painel_foco() -> void:
 		if _lbl_foco_estrelas != null:
 			_lbl_foco_estrelas.text = ""
 		_lbl_foco_stats.text = ""
-		_lbl_foco_attr.text = ""
 		_cor_foco_attr.color = Color(0.2, 0.2, 0.25)
 		_lbl_foco_tipo.text = ""
 		_lbl_foco_desc.text = "Mire numa carta."
@@ -2238,9 +2362,8 @@ func _atualizar_painel_foco() -> void:
 	_lbl_foco_stats.text = "ATK/%d DEF/%d" % [int(real.get("attack", dado.get("attack", 0))), int(real.get("defense", dado.get("defense", 0)))]
 	var tipo := str(real.get("monster_type", dado.get("monster_type", "")))
 	var attr := str(real.get("attribute", dado.get("attribute", "")))
-	_lbl_foco_attr.text = _rotulo_attr_curto(attr)
-	if _lbl_foco_attr.text.strip_edges() == "—":
-		_lbl_foco_attr.text = ""
+	# O atributo NÃO vira texto no painel (D5): fica no orbe da faixa e no
+	# canto da carta. O quadradinho da faixa usa a cor do atributo real.
 	_cor_foco_attr.color = _cor_atributo(attr)
 	var ctipo := str(real.get("card_type", dado.get("card_type", "monster")))
 	if ctipo == "monster":
