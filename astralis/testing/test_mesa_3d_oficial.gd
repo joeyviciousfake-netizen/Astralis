@@ -29,6 +29,12 @@ func _coletar(n: Node, out: Array) -> void:
 		_coletar(f, out)
 
 
+## Índice do MEIO do arco de uma mão de n cartas (com n par o meio do arco
+## cai entre 2 cartas — é o que a mesa usa na calibração).
+func _meio_do_arco(n: int) -> int:
+	return int(ceil(float(maxi(n - 1, 0)) / 2.0))
+
+
 func test_cena_3d_carrega_com_duelo_real() -> void:
 	var mesa: Node = await _mesa3d_nova()
 	assert_true(is_instance_valid(mesa), "Cena mesa_3d.tscn instancia.")
@@ -269,6 +275,65 @@ func test_camera_fixa_sem_orbita() -> void:
 	assert_eq(cam.fov, 50.0, "FOV fixo com profundidade da ref.")
 	await wait_process_frames(10)
 	assert_eq((mesa.get_node("Camera3D") as Camera3D).position, Vector3(0, 9, 8), "Câmera não deriva (sem órbita).")
+
+
+func test_maos_centralizadas_no_x_do_campo() -> void:
+	# Bug do usuário (2026-09-28): as duas mãos saíam tortas na tela porque o
+	# X do centro do arco era chutado "no olho" (0.3 e -2.8). Agora é
+	# CALCULADO da câmera real: o centro do arco de p0 E de p1 tem que cair no
+	# mesmo X de tela do centro do campo. Medido em PIXELS, como o usuário vê.
+	var mesa: Node = await _mesa3d_nova()
+	var st = mesa.get("_st")
+	var cam := mesa.get_node("Camera3D") as Camera3D
+	var n0: int = ((st.players[0] as Dictionary)["hand"] as Array).size()
+	var n1: int = ((st.players[1] as Dictionary)["hand"] as Array).size()
+	var alvo: float = cam.unproject_position(Vector3(0.0, 0.35, 0.0)).x
+	var x_p0 := 0.0
+	var x_p1 := 0.0
+	for lado in [0, 1]:
+		var q: int = n0 if lado == 0 else n1
+		var centro: Vector3 = mesa.call("_pos_mao_arco", _meio_do_arco(q), q, lado)
+		var sx: float = cam.unproject_position(centro).x
+		assert_almost_eq(sx, alvo, 0.5, "Centro do arco de p%d no X de tela do centro do campo (%.2f vs %.2f)." % [lado, sx, alvo])
+		if lado == 0:
+			x_p0 = sx
+		else:
+			x_p1 = sx
+	assert_almost_eq(x_p0, x_p1, 0.5, "As DUAS mãos centralizadas no mesmo X de tela.")
+	# Arco SIMÉTRICO (1ª e última equidistantes do centro) e Y/Z preservados.
+	var p0_1: Vector3 = mesa.call("_pos_mao_arco", 0, n0, 0)
+	var p0_m: Vector3 = mesa.call("_pos_mao_arco", _meio_do_arco(n0), n0, 0)
+	var p0_f: Vector3 = mesa.call("_pos_mao_arco", n0 - 1, n0, 0)
+	assert_almost_eq(p0_m.x - p0_1.x, p0_f.x - p0_m.x, 0.001, "Arco da sua mão simétrico em torno do centro.")
+	assert_almost_eq(p0_m.y, 4.35, 0.0001, "Altura da sua mão preservada (ordem do usuário).")
+	assert_almost_eq(p0_m.z, 6.1, 0.0001, "Profundidade da sua mão preservada (ordem do usuário).")
+	var p1_1: Vector3 = mesa.call("_pos_mao_arco", 0, n1, 1)
+	var p1_m: Vector3 = mesa.call("_pos_mao_arco", _meio_do_arco(n1), n1, 1)
+	var p1_f: Vector3 = mesa.call("_pos_mao_arco", n1 - 1, n1, 1)
+	assert_almost_eq(p1_m.x - p1_1.x, p1_f.x - p1_m.x, 0.001, "Arco da mão do rival simétrico em torno do centro.")
+	assert_almost_eq(p1_m.y, 1.4, 0.0001, "Altura da mão do rival preservada.")
+	assert_almost_eq(p1_m.z, -4.75, 0.0001, "Profundidade da mão do rival preservada.")
+	# Espalhamento preservado: passo por carta (o usuário não pediu mudar).
+	var passo0 := (p0_m.x - p0_1.x) / float(maxi(_meio_do_arco(n0), 1))
+	var passo1 := (p1_m.x - p1_1.x) / float(maxi(_meio_do_arco(n1), 1))
+	assert_almost_eq(passo0, 1.12, 0.001, "Passo por carta da sua mão preservado (1.12).")
+	assert_almost_eq(passo1, 0.7, 0.001, "Passo por carta da mão do rival preservado (0.7).")
+	# A carta DESENHADA tem que estar no ponto que a função devolveu.
+	var vistas := 0
+	for f in (mesa.get_node("Cartas") as Node3D).get_children():
+		if not (f as Node).has_meta("mao_idx"):
+			continue
+		vistas += 1
+		var i: int = int((f as Node).get_meta("mao_idx"))
+		var esperado: Vector3 = mesa.call("_pos_mao_arco", i, n0, 0)
+		assert_almost_eq((f as Node3D).position.x, esperado.x, 0.0001, "Carta desenhada %d no X do arco." % i)
+	assert_eq(vistas, n0, "As %d cartas da sua mão desenhadas seguem o arco centralizado." % n0)
+	# O cursor da fileira da mão usa a MESMA função: centraliza junto.
+	mesa.set("_fileira", 0)
+	mesa.set("_col", _meio_do_arco(n0))
+	mesa.call("_posicionar_cursor")
+	var cur: Vector3 = (mesa.get_node("Cursor3D") as Node3D).position
+	assert_almost_eq(cur.x, p0_m.x, 0.001, "Cursor da mão bate com a carta centralizada.")
 
 
 func test_placas_topo_com_dado_real_sem_marca() -> void:
