@@ -27,7 +27,8 @@ docs/
   11_ROADMAP_AGENTES.md        <- MVP, roadmap, agentes, workflow
    12_DISTRIBUICAO_EXPORTACAO.md <- fita .astralis + cadeado + bundles win/linux/android [NOVO v1.3]
    13_TABULEIRO_DUELO.md <- zonas[5+5], fases DRAW/MAIN/BATTLE/END, mão 5/refill, LP dado, win LP+deckout [NOVO v1.4]
-   14_EXPERIENCIA_USUARIO.md <- Simples/Avançado em tudo, galeria, erro PT-BR, Play verde, guia 5min [NOVO v1.5]
+    14_EXPERIENCIA_USUARIO.md <- Simples/Avançado em tudo, galeria, erro PT-BR, Play verde, guia 5min [NOVO v1.5]
+    15_VISUAL_DUELO.md       <- contrato VISUAL da mesa: medida da referência, SubViewport (campo à direita SEM perspectiva torta), de onde vem cada imagem [NOVO v1.8]
   AI_MANIFEST.json          <- mapa máquina (owner, depends, read_order)
   SESSAO_ATUAL.md           <- OPS mutável: onde paramos + próximo passo (ler sempre)
   DECISOES.md               <- OPS append-only: travas D01-D13, não reabrir
