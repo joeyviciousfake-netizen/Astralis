@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "3D oficial D40 (2026-09-27): duel3d/ promovido, 2D em duel_legacy2d, boot 3D + --cenario3d, Studio passa flag em tudo. GUT 123/123, cargo 104, check 0. Falta teste com joypad."
+onde_estamos: "Mesa 3D estilo referencia (2026-09-27): camera fixa com profundidade, HUD LP/TURN, painel carta focada a esquerda, fases DP/MP1/BP/EP. Prova MCP zero erro, GUT 127/127. Commit e86e417. Falta teste com joypad."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
