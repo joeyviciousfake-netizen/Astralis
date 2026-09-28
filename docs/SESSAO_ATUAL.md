@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Cena GX feita pelo Lead (2026-09-27, modo build): ceu azul + pilares + vidro, placas azul/vermelha + Single, painel carta bege, START Help, textos inventados purgados. MCP limpo, GUT 130/130. Commit c2adb68."
+onde_estamos: "Filtro azul fora (2026-09-27): ambient neutro baixo + fog 0.004, ceu so de fundo. MCP limpo, GUT 14/14. Commit 01b3f98."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
