@@ -73,18 +73,40 @@ const JANELA_CAMPO_A := TELA_A                   # altura toda
 ## Cor de fundo da faixa que sobrou à esquerda (na ref, o painel 2D é
 ## escuro). Só apresentação, zero regra.
 const FUNDO_3D := Color(0.04, 0.05, 0.10)
+## Os 17 assets da CARTA que o JOGO tem EMBUTIDOS (doc 15 §15.2: moram em
+## `astralis/assets/`, cópia byte-idêntica da do Studio, com teste de
+## compatibilidade travando as duas — astralis/testing/test_assets_embutidos).
+## O jogo tenta o PROJETO primeiro e cai no embutido — nunca o contrário.
+const ASSETS_EMBUTIDOS := [
+	"assets/frames/normal.jpg", "assets/frames/effect.jpg", "assets/frames/spell.jpg",
+	"assets/frames/trap.jpg", "assets/frames/ritual.jpg", "assets/frames/fusion.jpg",
+	"assets/attributes/earth.png", "assets/attributes/water.png", "assets/attributes/fire.png",
+	"assets/attributes/wind.png", "assets/attributes/light.png", "assets/attributes/dark.png",
+	"assets/attributes/divine.png", "assets/attributes/spell.png", "assets/attributes/trap.png",
+	"assets/estrelas/estrela.png", "assets/backs/verso_padrao.png",
+]
 
 const LARG_CARTA := 1.0
+## Lado da PEÇA DE VIDRO do campo (doc 15 §15.3: ladrilhos soltos com
+## fresta). O espaçamento dos slots vem do dado (arena); 1,40 deixa a
+## fresta de ~0,3 que a referência tem entre as peças.
+const LADO_PAINEL := 1.40
 ## Inclinação da mão em graus no eixo X (LIVRE, ordem do usuário):
 ## mude à vontade, nada recalcula pela câmera. Rival usa 180 + este.
-const TILT_MAO_LIVRE := -54.0
+## Fase 2 (doc 15 §15.3): a mão é PEQUENA, no rodapé, DE PÉ (quase a prumo,
+## não deitada) e cortada pela borda de baixo. -35° é o que deixa a carta
+## "de pé" E legível com a câmera fixa de cima (a -12° a carta aparece
+## achatada em 57% da altura e não dá pra ler).
+const TILT_MAO_LIVRE := -35.0
 ## Arco da MÃO (só desenho). Passo = distância entre cartas; Y/Z = altura e
 ## profundidade: TROCAR AQUI à vontade (ordem do usuário: nada disso muda).
 ## O X do CENTRO do arco NÃO mora aqui — ele é CALCULADO da câmera real em
 ## `_x_centro_da_mao`, senão a mão fica torta na tela (ver `_pos_mao_arco`).
-const MAO_P0_PASSO := 1.12
+## Fase 2: a mão p0 desceu e encolheu (ref: cartas de ~190 px no rodapé,
+## cortadas embaixo) — ver a medida no print de calibração.
+const MAO_P0_PASSO := 1.06
 const MAO_P1_PASSO := 0.7
-const MAO_P0_YZ := Vector2(4.35, 6.1)   # Vector2(y, z): sua mão (perto, embaixo)
+const MAO_P0_YZ := Vector2(2.73, 5.88)   # Vector2(y, z): sua mão (perto, embaixo)
 const MAO_P1_YZ := Vector2(1.4, -4.75)  # Vector2(y, z): mão do rival (longe)
 ## X de mundo do centro do arco SEM câmera (fallback: só não quebra o desenho).
 const MAO_P0_X_SEM_CAM := 0.3
@@ -264,9 +286,10 @@ func _ready() -> void:
 	_slot_alvo = -1
 	_redesenhar(false)
 	_atualizar_hud()
-	print("[MESA3D] Pronta: mão p0=%d p1=%d, artes carregadas=%d." % [
+	print("[MESA3D] Pronta: mão p0=%d p1=%d, artes carregadas=%d, assets embutidos=%d/17." % [
 		((_st.players[0] as Dictionary)["hand"] as Array).size(),
-		((_st.players[1] as Dictionary)["hand"] as Array).size(), _artes_ok])
+		((_st.players[1] as Dictionary)["hand"] as Array).size(), _artes_ok,
+		_conta_assets_embutidos()])
 	if _cam != null:
 		print("[MESA3D] Cam: pos=%s fov=%s alvo=%s." % [str(_cam.global_position), str(_cam.fov), str(CAM_ALVO)])
 		var px := _cam.unproject_position(_pos_slot(0, "monstro", 2))
@@ -384,13 +407,16 @@ func _construir_ambiente() -> void:
 	we.name = "WorldEnvironment"
 	var env := Environment.new()
 	# Ref nova = céu azul claro GX (SEM MESA, SEM vazio estrelado): céu
-	# procedural azul + neblina azul-clara p/ profundidade + sol branco.
+	# procedural azul com GRADIENTE VERTICAL (mais escuro em cima, mais
+	# claro no horizonte — doc 15 §15.3) + neblina azul-clara p/ profundidade
+	# + sol branco. Sem imagem externa, sem arquivo do usuário.
 	var ceu := Sky.new()
 	var mat_ceu := ProceduralSkyMaterial.new()
-	mat_ceu.sky_top_color = Color(0.20, 0.48, 0.90)
-	mat_ceu.sky_horizon_color = Color(0.55, 0.78, 0.98)
-	mat_ceu.ground_bottom_color = Color(0.22, 0.40, 0.68)
-	mat_ceu.ground_horizon_color = Color(0.52, 0.70, 0.92)
+	mat_ceu.sky_top_color = Color(0.10, 0.30, 0.72)
+	mat_ceu.sky_horizon_color = Color(0.62, 0.82, 0.99)
+	mat_ceu.sky_curve = 0.18
+	mat_ceu.ground_bottom_color = Color(0.16, 0.30, 0.56)
+	mat_ceu.ground_horizon_color = Color(0.46, 0.64, 0.88)
 	mat_ceu.sun_angle_max = 30.0
 	mat_ceu.energy_multiplier = 0.85
 	ceu.sky_material = mat_ceu
@@ -613,24 +639,31 @@ func _construir_tokens(campo: Node3D) -> void:
 	tokens.add_child(norte)
 
 
-## Painel de slot vazio (só desenho): QUADRADO 1,46 OPACO (ordem do
-## usuário) + contorno claro fino — sem alfa, sem surpresa de ordem.
-## A carta (1,0x1,46) cabe dentro na vertical e na horizontal.
+## Painel de slot = PEÇA DE VIDRO da referência (doc 15 §15.3): vidro azul
+## ESCURO translúcido (dá pra ver o céu/frente através), com aro fino mais
+## claro em volta e ESPAÇO entre as peças (na ref são ladrilhos soltos, não
+## um wireframe colado). Medidas em unidades de mundo: a peça é 1,40 (o
+## espaçamento dos slots é ~1,75 em X e ~1,97 em Z, então sobra uma fresta
+## de ~0,3 = o vão da referência). A carta real (1,0 x 1,46) cabe dentro.
 func _painel_slot(lado: int, tipo: String, indice: int) -> Node3D:
 	var p := _pos_slot(lado, tipo, indice)
 	var no := Node3D.new()
 	no.name = "Painel_p%d_%s%d" % [lado, ("m" if tipo == "monstro" else "s"), indice]
 	no.position = Vector3(p.x, 0.0, p.z)
-	var mat_borda := _mat(Color(0.62, 0.78, 1.0), 0.5)
-	var mat_base := _mat(Color(0.10, 0.28, 0.62))
-	var base := _caixa("Base", Vector3(1.46, 0.05, 1.46), Vector3(0, TOPO - 0.03, 0), mat_base)
+	# Vidro: peça ESCURA e translúcida (dá pra ver o céu por baixo, como na
+	# ref) + aro fininho de luz (na ref é um fio, não um wireframe).
+	var mat_borda := _vidro(Color(0.40, 0.58, 0.88), 0.42, 0.05)
+	var mat_base := _vidro(Color(0.035, 0.08, 0.20), 0.72, 0.05)
+	var base := _caixa("Base", Vector3(LADO_PAINEL, 0.05, LADO_PAINEL), Vector3(0, TOPO - 0.03, 0), mat_base)
 	no.add_child(base)
-	var t := 0.08
+	var t := 0.05
+	var meio := LADO_PAINEL / 2.0
 	var y := TOPO + 0.005
-	no.add_child(_caixa("Borda", Vector3(1.62, 0.02, t), Vector3(0, y, 0.77), mat_borda))
-	no.add_child(_caixa("Borda2", Vector3(1.62, 0.02, t), Vector3(0, y, -0.77), mat_borda))
-	no.add_child(_caixa("Borda3", Vector3(t, 0.02, 1.62), Vector3(-0.77, y, 0), mat_borda))
-	no.add_child(_caixa("Borda4", Vector3(t, 0.02, 1.62), Vector3(0.77, y, 0), mat_borda))
+	var fora := meio + t / 2.0
+	no.add_child(_caixa("Borda", Vector3(LADO_PAINEL + t, 0.02, t), Vector3(0, y, fora), mat_borda))
+	no.add_child(_caixa("Borda2", Vector3(LADO_PAINEL + t, 0.02, t), Vector3(0, y, -fora), mat_borda))
+	no.add_child(_caixa("Borda3", Vector3(t, 0.02, LADO_PAINEL + t), Vector3(-fora, y, 0), mat_borda))
+	no.add_child(_caixa("Borda4", Vector3(t, 0.02, LADO_PAINEL + t), Vector3(fora, y, 0), mat_borda))
 	return no
 
 
@@ -908,27 +941,41 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 				for s in range(n):
 					var px := 0.42 - float(n - 1 - s) * (0.0457 + 0.008) - 0.0228
 					no.add_child(_quad_textura("Estrela%d" % s, 0.0457, 0.0444, Vector3(px, 0.5174, zf + 0.002), tex_est, true))
-	var nome := _rotulo3d(str(dado.get("name", "?")), 34, Color(0.12, 0.07, 0.03))
+	# NOME impresso na faixa da moldura (doc 15 §15.3: na referência o nome
+	# é impresso na própria carta). Medidas em % da moldura real, iguais às
+	# do painel 2D: faixa x 5,4%..67,4% e y 2,7%..7,8% (de cima p/ baixo).
+	# `width` do Label3D é em PIXELS do texto (não em unidades de mundo):
+	# 160 px = a largura da faixa (0,61 de mundo / 0,0038 de pixel_size).
+	# Fonte do texto = DADO real; carta virada não mostra nada.
+	var nome := _rotulo3d(str(dado.get("name", "?")), 11, Color(0.12, 0.07, 0.03))
 	nome.name = "Nome"
 	nome.outline_size = 0
-	nome.position = Vector3(-0.0645, 0.6523, zf + 0.003)
-	nome.visible = false
+	nome.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	nome.width = 160.0
+	nome.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	nome.position = Vector3(-0.43, 0.6434, zf + 0.003)
+	nome.visible = not face_down
 	no.add_child(nome)
+	# ATK/DEF impresso na faixa de baixo da moldura (só monstro, dado real).
 	var stats_txt := ""
 	if eh_monstro:
 		stats_txt = "ATK/%d DEF/%d" % [int(dado.get("attack", 0)), int(dado.get("defense", 0))]
-	var stats := _rotulo3d(stats_txt, 32, Color(0.12, 0.07, 0.03))
+	var stats := _rotulo3d(stats_txt, 14, Color(0.12, 0.07, 0.03))
 	stats.name = "Stats"
 	stats.outline_size = 0
-	stats.position = Vector3(0.05, -0.5991, zf + 0.003)
-	stats.visible = false
+	stats.position = Vector3(0.0, -0.6100, zf + 0.003)
+	stats.visible = not face_down
 	no.add_child(stats)
 	# Indicador ATK/DEF + face (só desenho, igual ao 2D que mostra a posição).
+	# ESCONDIDO por padrão: o ATK/DEF já sai impresso na carta e uma etiqueta
+	# flutuando no meio da tela era lixo visual (ordem do usuário 2026-09-28).
+	# Quem liga de novo: o selo de fusão na mão (`_redesenhar`).
 	var tag_txt := "VIRADA" if face_down else ("DEF" if em_defesa else "ATK")
 	var tag_cor := Color(0.7, 0.7, 0.8) if face_down else (Color(0.5, 0.8, 1.0) if em_defesa else Color(1.0, 0.75, 0.35))
 	var tag := _rotulo3d(tag_txt, 40, tag_cor)
 	tag.name = "TagPos"
 	tag.position = Vector3(0, ALT_CARTA / 2.0 + 0.14, 0)
+	tag.visible = false
 	no.add_child(tag)
 	# Verso: imagem do projeto (card_back da carta ou verso padrão).
 	# Sem nada = marrom com espiral (comportamento antigo).
@@ -966,17 +1013,12 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 		anel.mesh = toro
 		anel.material_override = _mat(Color(0.92, 0.82, 0.62), 0.5)
 		espiral.add_child(anel)
-	# Posição: DEF deita NO PLANO (gira Z 90°, horizontal como na ref e
-	# no 2D); virada mostra o verso (gira Y 180°).
-	var giro_y := 0.0
+	# Pose padrão: só a VIRADA (gira Y 180° = mostra o verso). A pose no
+	# mundo (deitada no painel / de pé na mão) é de quem placementa a carta:
+	# `_deitar_carta` no campo, `_redesenhar` na mão. Um dono só, sem
+	# rotação se contradizendo em dois lugares.
 	if face_down:
-		giro_y += PI
-	no.rotation.y = giro_y
-	# Rival de cabeça p/ baixo (homenagem ao 2D) só no ATK aberto.
-	if lado == 1 and not face_down and not em_defesa:
-		no.rotation.z = PI
-	elif em_defesa and not face_down:
-		no.rotation.z = PI / 2.0
+		no.rotation_degrees = Vector3(0.0, 180.0, 0.0)
 	return no
 
 
@@ -1078,11 +1120,60 @@ func _calibrar_mao() -> void:
 			absf(_cam.unproject_position(centro + Vector3(1, 0, 0)).x - sx),
 			_cam.unproject_position(_pos_mao_arco(0, q, lado)).x,
 			_cam.unproject_position(_pos_mao_arco(maxi(q - 1, 0), q, lado)).x])
+		var cx := _cam.unproject_position(centro).x
+		var dx_ := absf(_cam.unproject_position(centro + Vector3(LARG_CARTA, 0, 0)).x - cx)
+		var caixa := _caixa_carta_tela(centro, TILT_MAO_LIVRE if lado == 0 else 180.0 + TILT_MAO_LIVRE)
+		print("[MESA3D] Calib:   p%d carta_na_tela: x=[%.0f..%.0f] y=[%.0f..%.0f] px | largura=%.0fpx (%.1f%% da tela) | em%% da altura: %.1f..%.1f" % [
+			lado, caixa.x + JANELA_CAMPO_X, caixa.z + JANELA_CAMPO_X,
+			caixa.y, caixa.w, dx_, dx_ / float(TELA_L) * 100.0,
+			caixa.y / float(TELA_A) * 100.0, caixa.w / float(TELA_A) * 100.0])
+
+
+## Caixa de uma carta DE PÉ na TELA (px): x = esq..dir, y = cima..baixo.
+## Ferramenta de ajuste da mão (doc 15 §15.3: mão pequena no rodapé, de pé,
+## cortada embaixo) — matemática pura, roda headless.
+func _caixa_carta_tela(centro: Vector3, tilt_graus: float) -> Vector4:
+	var t := deg_to_rad(tilt_graus)
+	var eixo_y := Vector3(0.0, cos(t), sin(t))
+	var e := _cam.unproject_position(centro)
+	var d := _cam.unproject_position(centro + Vector3(LARG_CARTA, 0, 0))
+	var c := _cam.unproject_position(centro + eixo_y * (ALT_CARTA / 2.0))
+	var b := _cam.unproject_position(centro - eixo_y * (ALT_CARTA / 2.0))
+	return Vector4(minf(e.x, d.x), minf(c.y, b.y), maxf(e.x, d.x), maxf(c.y, b.y))
+
+
+## Quantos assets embutidos o jogo achou de verdade agora (a cascata de
+## `_textura_arquivo`: projeto -> embutido -> nada). Prova de que o jogo
+## mostra a carta real SOZINHO, sem `--project`. Só leitura, zero regra.
+func _conta_assets_embutidos() -> int:
+	var n := 0
+	for rel in ASSETS_EMBUTIDOS:
+		if _tex_cache(str(rel)) != null:
+			n += 1
+	return n
 
 
 func _limpar_cartas() -> void:
 	for f in _no_cartas.get_children():
 		(f as Node).queue_free()
+
+
+## Pose da carta DEITADA no painel de vidro (doc 15 §15.3: na referência as
+## cartas do campo estão deitadas na peça, não em pé). Só DESENHO:
+##   virada  -> só o verso pra cima (a carta some, não vaza nome);
+##   aberta  -> topo da carta virado pro DONO do slot (o rival é espelho,
+##              D18) e a de DEFESA gira um quarto de volta no lugar, que é
+##              como o jogo mostra Ataque x Defesa (D24) sem texto flutuando.
+func _deitar_carta(carta: Node3D, face_down: bool, em_defesa: bool, lado: int) -> void:
+	if face_down:
+		carta.rotation_degrees = Vector3(90.0, 0.0, 0.0)
+		return
+	var giro := 0.0
+	if lado == 1:
+		giro = 180.0
+	if em_defesa:
+		giro = fmod(giro + 90.0, 360.0)
+	carta.rotation_degrees = Vector3(-90.0, giro, 0.0)
 
 
 func _redesenhar(com_efeito: bool) -> void:
@@ -1099,8 +1190,11 @@ func _redesenhar(com_efeito: bool) -> void:
 					continue
 				var m := zona[i] as Dictionary
 				var tipo := "monstro" if zona_nome == "monster" else "magia"
-				var carta := _fazer_carta(_fantasia(m), bool(m.get("face_down", false)), lado, str(m.get("position", "ATK")) == "DEF")
-				carta.position = _pos_slot(lado, tipo, i) + Vector3(0, ALT_CARTA / 2.0 + 0.02, 0)
+				var virada := bool(m.get("face_down", false))
+				var em_defesa := str(m.get("position", "ATK")) == "DEF"
+				var carta := _fazer_carta(_fantasia(m), virada, lado, em_defesa)
+				carta.position = _pos_slot(lado, tipo, i) + Vector3(0, 0.015, 0)
+				_deitar_carta(carta, virada, em_defesa, lado)
 				carta.set_meta("slot_id", "p%d_%s%d" % [lado, ("m" if zona_nome == "monster" else "s"), i])
 				carta.set_meta("card_id", str(m.get("card_id", "")))
 				_no_cartas.add_child(carta)
@@ -1110,13 +1204,18 @@ func _redesenhar(com_efeito: bool) -> void:
 	var mao0: Array = (_st.players[0] as Dictionary)["hand"]
 	for i in range(mao0.size()):
 		var c := _fazer_carta(mao0[i] as Dictionary, false, 0, false)
-		# Mão centrada no campo (que foi p/ a direita) e perto da câmera
-		# (maior): x acompanha o campo, z encosta, y na borda inferior.
+		# Mão PEQUENA no rodapé (fase 2/doc 15 §15.3): o X acompanha o
+		# centro do campo (calculado da câmera) e o Y/Z é o da const
+		# MAO_P0_YZ — a carta nasce cortada pela borda de baixo.
 		c.position = _pos_mao_arco(i, mao0.size(), 0)
-		# Levantada p/ fusão: só o selo na etiqueta (posição não muda).
+		# Levantada p/ fusão: só o selo na etiqueta (posição não muda). A
+		# etiqueta nasce escondida (o ATK/DEF já é impresso na carta): o
+		# selo é a única coisa que precisa aparecer flutuando.
 		var selo := _levantadas.find(i) + 1
 		if selo > 0:
-			(c.get_node("TagPos") as Label3D).text = "SELO %d" % selo
+			var tag := c.get_node("TagPos") as Label3D
+			tag.text = "SELO %d" % selo
+			tag.visible = true
 		c.set_meta("mao_idx", i)
 		_no_cartas.add_child(c)
 		c.rotation_degrees = Vector3(TILT_MAO_LIVRE, 0, 0)

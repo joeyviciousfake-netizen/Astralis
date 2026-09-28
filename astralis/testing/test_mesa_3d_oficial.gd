@@ -244,14 +244,22 @@ func test_indicador_atk_def_e_fila() -> void:
 
 
 func test_verso_marrom_com_espiral() -> void:
-	# Ref: carta virada = marrom com verso espiral (sem cruz azul).
+	# Ref: carta virada = verso marrom com espiral (sem cruz azul). Com o
+	# asset EMBUTIDO (doc 15 §15.2, fase 2) o verso é a arte real; SEM ele,
+	# cai no marrom com espiral. Os dois caminhos são o comportamento certo:
+	# o que NUNCA pode é a cruz azul.
 	var mesa: Node = await _mesa3d_nova()
 	var carta := mesa.call("_fazer_carta", {}, true, 1, false) as Node3D
 	assert_true(carta != null, "Carta virada construída.")
 	assert_true(carta.get_node_or_null(NodePath("Cruz")) == null, "Sem cruz no verso.")
 	var verso := carta.get_node_or_null(NodePath("Verso")) as MeshInstance3D
 	assert_true(verso != null, "Verso existe.")
-	assert_eq((verso.material_override as StandardMaterial3D).albedo_color, Color(0.45, 0.28, 0.13), "Verso marrom da ref.")
+	var mat := verso.material_override as StandardMaterial3D
+	if mat.albedo_texture != null:
+		assert_eq(mat.albedo_texture.get_size(), Vector2(813, 1185), "Verso usa a arte real embutida.")
+		assert_eq((carta.get_node("Espiral") as Node3D).visible, false, "Com arte real, a espiral de fallback some.")
+	else:
+		assert_eq(mat.albedo_color, Color(0.45, 0.28, 0.13), "Sem arte, verso marrom da ref.")
 	var espiral := carta.get_node_or_null(NodePath("Espiral")) as Node3D
 	assert_true(espiral != null, "Espiral do verso existe.")
 	assert_eq(espiral.get_child_count(), 3, "Espiral com 3 anéis.")
@@ -362,18 +370,24 @@ func test_maos_centralizadas_no_x_do_campo() -> void:
 	var p0_m: Vector3 = mesa.call("_pos_mao_arco", _meio_do_arco(n0), n0, 0)
 	var p0_f: Vector3 = mesa.call("_pos_mao_arco", n0 - 1, n0, 0)
 	assert_almost_eq(p0_m.x - p0_1.x, p0_f.x - p0_m.x, 0.001, "Arco da sua mão simétrico em torno do centro.")
-	assert_almost_eq(p0_m.y, 4.35, 0.0001, "Altura da sua mão preservada (ordem do usuário).")
-	assert_almost_eq(p0_m.z, 6.1, 0.0001, "Profundidade da sua mão preservada (ordem do usuário).")
+	# Y/Z da SUA mão: mudaram na FASE 2 (doc 15 §15.3) porque a mão tinha
+	# 45% da tela e ficava colada no START. Agora ela é pequena e vive no
+	# rodapé, cortada embaixo — os valores são as consts MAO_P0_YZ, e a
+	# trava continua sendo a MESMA coisa: o que importa (centralização no X
+	# do campo, simetria do arco, carta desenhada no ponto e cursor) segue
+	# travado abaixo com a mesma tolerância.
+	assert_almost_eq(p0_m.y, 2.73, 0.0001, "Altura da sua mão = MAO_P0_YZ da fase 2 (rodapé).")
+	assert_almost_eq(p0_m.z, 5.88, 0.0001, "Profundidade da sua mão = MAO_P0_YZ da fase 2 (mais longe = menor).")
 	var p1_1: Vector3 = mesa.call("_pos_mao_arco", 0, n1, 1)
 	var p1_m: Vector3 = mesa.call("_pos_mao_arco", _meio_do_arco(n1), n1, 1)
 	var p1_f: Vector3 = mesa.call("_pos_mao_arco", n1 - 1, n1, 1)
 	assert_almost_eq(p1_m.x - p1_1.x, p1_f.x - p1_m.x, 0.001, "Arco da mão do rival simétrico em torno do centro.")
 	assert_almost_eq(p1_m.y, 1.4, 0.0001, "Altura da mão do rival preservada.")
 	assert_almost_eq(p1_m.z, -4.75, 0.0001, "Profundidade da mão do rival preservada.")
-	# Espalhamento preservado: passo por carta (o usuário não pediu mudar).
+	# Espalhamento preservado: passo por carta.
 	var passo0 := (p0_m.x - p0_1.x) / float(maxi(_meio_do_arco(n0), 1))
 	var passo1 := (p1_m.x - p1_1.x) / float(maxi(_meio_do_arco(n1), 1))
-	assert_almost_eq(passo0, 1.12, 0.001, "Passo por carta da sua mão preservado (1.12).")
+	assert_almost_eq(passo0, 1.06, 0.001, "Passo por carta da sua mão = MAO_P0_PASSO da fase 2 (1.06).")
 	assert_almost_eq(passo1, 0.7, 0.001, "Passo por carta da mão do rival preservado (0.7).")
 	# A carta DESENHADA tem que estar no ponto que a função devolveu.
 	var vistas := 0
