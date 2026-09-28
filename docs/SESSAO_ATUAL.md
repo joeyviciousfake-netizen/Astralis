@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Artes vivas via foto (2026-09-27): quads unshaded, sem neblina, vidro saturado. Foto a foto com meus olhos. GUT 130/130. Commit ff5a443."
+onde_estamos: "Alfa nos icones (2026-09-27): orbe/estrela com transparencia, arte opaca. Foto conferida. GUT 14/14. Commit b9a2501."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
