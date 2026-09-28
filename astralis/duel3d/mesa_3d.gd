@@ -50,7 +50,8 @@ const FASES_TAG := ["DP", "SP", "MP1", "BP", "MP2", "EP"]
 
 const LARG_CARTA := 1.0
 const ALT_CARTA := 1.43
-const GROSS_CARTA := 0.06
+## Finura real de carta (0,3mm numa carta 59mm = 0,005 da largura).
+const GROSS_CARTA := 0.005
 
 const FILEIRA_MAO := 0
 const FILEIRA_MEU_M := 1
@@ -110,6 +111,11 @@ var _lbl_retrato_voce_nome: Label = null
 var _painel_foco: PanelContainer = null
 var _tex_foco_arte: TextureRect = null
 var _cor_foco_arte: ColorRect = null
+var _tex_foco_moldura: TextureRect = null
+var _tex_foco_orbe: TextureRect = null
+var _caixa_foco_estrelas: HBoxContainer = null
+var _lbl_foco_nome_molde: Label = null
+var _cache_tex: Dictionary = {}
 var _lbl_foco_nome: Label = null
 var _lbl_foco_estrelas: Label = null
 var _lbl_foco_stats: Label = null
@@ -631,6 +637,19 @@ func _cor_atributo(attr: String) -> Color:
 	return Color(0.50, 0.50, 0.60)
 
 
+## Textura do projeto com cache de sessão (moldura/orbe/estrela se
+## repetem; lê do disco 1x). Sem nada no projeto = nulo (fallback de cor).
+func _tex_cache(rel: String) -> Texture2D:
+	var chave := rel.strip_edges().to_lower()
+	if chave.is_empty():
+		return null
+	if _cache_tex.has(chave):
+		return _cache_tex[chave] as Texture2D
+	var tex := _textura_arquivo(chave)
+	_cache_tex[chave] = tex
+	return tex
+
+
 func _textura_arquivo(rel: String) -> Texture2D:
 	# Foto REAL do projeto (caminho do dado, relativo à base).
 	# Inexistente (dívida conhecida: FM sem assets) = volta nulo.
@@ -815,7 +834,7 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 	var qf := QuadMesh.new()
 	qf.size = Vector2(LARG_CARTA - 0.02, ALT_CARTA - 0.02)
 	frente.mesh = qf
-	frente.position = Vector3(0, 0, zf + 0.002)
+	frente.position = Vector3(0, 0, zf + 0.001)
 	var mat_f := StandardMaterial3D.new()
 	if tex_moldura != null:
 		mat_f.albedo_texture = tex_moldura
@@ -829,12 +848,12 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 		# Arte na janela da moldura (medidas da moldura real, em %).
 		var tex := _textura_arte(dado)
 		if tex != null:
-			no.add_child(_quad_textura("Arte", 0.764, 0.745, Vector3(0.005, 0.0765, zf + 0.004), tex))
+			no.add_child(_quad_textura("Arte", 0.764, 0.745, Vector3(0.005, 0.0765, zf + 0.002), tex))
 		# Orbe do atributo no canto da placa.
 		var attr := str(dado.get("attribute", ""))
 		var tex_orbe := _textura_arquivo("assets/attributes/%s.png" % attr.to_lower())
 		if tex_orbe != null:
-			no.add_child(_quad_textura("Orbe", 0.095, 0.093, Vector3(0.3805, 0.6055, zf + 0.004), tex_orbe))
+			no.add_child(_quad_textura("Orbe", 0.095, 0.093, Vector3(0.3805, 0.6055, zf + 0.002), tex_orbe))
 		# Estrelas = level (só monstro), à direita como na moldura.
 		if eh_monstro:
 			var tex_est := _textura_arquivo("assets/estrelas/estrela.png")
@@ -842,11 +861,11 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 				var n := clampi(int(dado.get("level", 0)), 0, 12)
 				for s in range(n):
 					var px := 0.42 - float(n - 1 - s) * (0.0457 + 0.008) - 0.0228
-					no.add_child(_quad_textura("Estrela%d" % s, 0.0457, 0.0459, Vector3(px, 0.5076, zf + 0.004), tex_est))
+					no.add_child(_quad_textura("Estrela%d" % s, 0.0457, 0.0459, Vector3(px, 0.5076, zf + 0.002), tex_est))
 	var nome := _rotulo3d(str(dado.get("name", "?")), 34, Color(0.12, 0.07, 0.03))
 	nome.name = "Nome"
 	nome.outline_size = 0
-	nome.position = Vector3(-0.0645, 0.621, zf + 0.006)
+	nome.position = Vector3(-0.0645, 0.621, zf + 0.003)
 	no.add_child(nome)
 	var stats_txt := ""
 	if eh_monstro:
@@ -854,7 +873,7 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 	var stats := _rotulo3d(stats_txt, 32, Color(0.12, 0.07, 0.03))
 	stats.name = "Stats"
 	stats.outline_size = 0
-	stats.position = Vector3(0.05, -0.588, zf + 0.006)
+	stats.position = Vector3(0.05, -0.588, zf + 0.003)
 	no.add_child(stats)
 	# Indicador ATK/DEF + face (só desenho, igual ao 2D que mostra a posição).
 	var tag_txt := "VIRADA" if face_down else ("DEF" if em_defesa else "ATK")
@@ -870,7 +889,7 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 	var qv := QuadMesh.new()
 	qv.size = Vector2(LARG_CARTA - 0.02, ALT_CARTA - 0.02)
 	verso.mesh = qv
-	verso.position = Vector3(0, 0, -GROSS_CARTA / 2.0 - 0.002)
+	verso.position = Vector3(0, 0, -GROSS_CARTA / 2.0 - 0.001)
 	verso.rotation_degrees = Vector3(0, 180, 0)
 	var dorso := str(dado.get("card_back", "")).strip_edges()
 	if dorso.is_empty():
@@ -886,7 +905,7 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 	no.add_child(verso)
 	var espiral := Node3D.new()
 	espiral.name = "Espiral"
-	espiral.position = Vector3(0, 0, -GROSS_CARTA / 2.0 - 0.012)
+	espiral.position = Vector3(0, 0, -GROSS_CARTA / 2.0 - 0.002)
 	espiral.rotation_degrees = Vector3(0, 180, 0)
 	espiral.visible = tex_dorso == null
 	no.add_child(espiral)
@@ -1259,21 +1278,56 @@ func _construir_painel_foco(hud: Control) -> void:
 	_lbl_foco_nome = _rotulo_hud("FocoNome", "—", Vector2.ZERO, 26, Color(0.10, 0.35, 0.12))
 	_lbl_foco_nome.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	caixa.add_child(_lbl_foco_nome)
-	_lbl_foco_estrelas = _rotulo_hud("FocoEstrelas", "", Vector2.ZERO, 22, Color(0.85, 0.45, 0.10))
-	caixa.add_child(_lbl_foco_estrelas)
+	# Carta inteira como na ref: moldura JPG do projeto + arte + nome +
+	# orbe + estrelas posicionados na moldura (igual ao editor).
+	var molde := Control.new()
+	molde.name = "CartaMolde"
+	molde.custom_minimum_size = Vector2(300, 434)
+	molde.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	caixa.add_child(molde)
+	_tex_foco_moldura = TextureRect.new()
+	_tex_foco_moldura.name = "Moldura"
+	_tex_foco_moldura.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_tex_foco_moldura.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_tex_foco_moldura.stretch_mode = TextureRect.STRETCH_SCALE
+	_tex_foco_moldura.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	molde.add_child(_tex_foco_moldura)
+	# Posições em % da moldura real (iguais às do 3D e do editor).
 	_tex_foco_arte = TextureRect.new()
 	_tex_foco_arte.name = "FocoArte"
-	_tex_foco_arte.custom_minimum_size = Vector2(300, 290)
+	_tex_foco_arte.position = Vector2(300 * 0.123, 434 * 0.186)
+	_tex_foco_arte.size = Vector2(300 * 0.764, 434 * 0.521)
 	_tex_foco_arte.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_tex_foco_arte.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_tex_foco_arte.stretch_mode = TextureRect.STRETCH_SCALE
 	_tex_foco_arte.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_tex_foco_arte.visible = false
-	caixa.add_child(_tex_foco_arte)
+	molde.add_child(_tex_foco_arte)
 	_cor_foco_arte = ColorRect.new()
 	_cor_foco_arte.name = "FocoCor"
-	_cor_foco_arte.custom_minimum_size = Vector2(300, 290)
+	_cor_foco_arte.position = Vector2(300 * 0.123, 434 * 0.186)
+	_cor_foco_arte.size = Vector2(300 * 0.764, 434 * 0.521)
 	_cor_foco_arte.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	caixa.add_child(_cor_foco_arte)
+	molde.add_child(_cor_foco_arte)
+	_lbl_foco_nome_molde = _rotulo_hud("FocoNomeMolde", "", Vector2.ZERO, 15, Color(0.12, 0.07, 0.03))
+	_lbl_foco_nome_molde.position = Vector2(300 * 0.054, 434 * 0.027)
+	_lbl_foco_nome_molde.size = Vector2(300 * 0.62, 434 * 0.051)
+	_lbl_foco_nome_molde.clip_text = true
+	molde.add_child(_lbl_foco_nome_molde)
+	_tex_foco_orbe = TextureRect.new()
+	_tex_foco_orbe.name = "FocoOrbe"
+	_tex_foco_orbe.position = Vector2(300 * 0.833, 434 * 0.044)
+	_tex_foco_orbe.size = Vector2(300 * 0.095, 434 * 0.065)
+	_tex_foco_orbe.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_tex_foco_orbe.stretch_mode = TextureRect.STRETCH_SCALE
+	_tex_foco_orbe.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	molde.add_child(_tex_foco_orbe)
+	_caixa_foco_estrelas = HBoxContainer.new()
+	_caixa_foco_estrelas.name = "FocoEstrelasBox"
+	_caixa_foco_estrelas.position = Vector2(300 * 0.40, 434 * 0.118)
+	_caixa_foco_estrelas.size = Vector2(300 * 0.52, 434 * 0.054)
+	_caixa_foco_estrelas.alignment = BoxContainer.ALIGNMENT_END
+	_caixa_foco_estrelas.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_caixa_foco_estrelas.add_theme_constant_override("separation", 1)
+	molde.add_child(_caixa_foco_estrelas)
 	var faixa := HBoxContainer.new()
 	faixa.name = "FocoFaixa"
 	faixa.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1468,7 +1522,8 @@ func _atualizar_painel_foco() -> void:
 	var dado: Dictionary = foco.get("dado", {}) as Dictionary
 	if dado.is_empty():
 		_lbl_foco_nome.text = "—"
-		_lbl_foco_estrelas.text = ""
+		if _lbl_foco_estrelas != null:
+			_lbl_foco_estrelas.text = ""
 		_lbl_foco_stats.text = ""
 		_lbl_foco_attr.text = ""
 		_cor_foco_attr.color = Color(0.2, 0.2, 0.25)
@@ -1476,6 +1531,11 @@ func _atualizar_painel_foco() -> void:
 		_lbl_foco_desc.text = "Mire numa carta."
 		_tex_foco_arte.visible = false
 		_cor_foco_arte.color = Color(0.08, 0.08, 0.12)
+		_tex_foco_moldura.texture = null
+		_tex_foco_orbe.texture = null
+		_lbl_foco_nome_molde.text = ""
+		for f in _caixa_foco_estrelas.get_children():
+			(f as Node).queue_free()
 		return
 	# Completa pelo DADO real quando a instância só tem o básico.
 	var cid := str(dado.get("id", dado.get("card_id", "")))
@@ -1485,13 +1545,27 @@ func _atualizar_painel_foco() -> void:
 	var nome := str(real.get("name", dado.get("name", "?")))
 	_lbl_foco_nome.text = nome
 	var nivel := int(real.get("level", dado.get("level", 0)))
-	if nivel > 0:
-		var estrelas := ""
-		for s in range(clampi(nivel, 0, 12)):
-			estrelas += "★"
-		_lbl_foco_estrelas.text = estrelas
-	else:
+	if _lbl_foco_estrelas != null:
 		_lbl_foco_estrelas.text = ""
+	# Carta inteira na moldura (igual ao editor): moldura + arte + nome +
+	# orbe + fileira de estrelas-imagem, tudo do projeto (com cache).
+	_tex_foco_moldura.texture = _tex_cache(_moldura_da_carta(real))
+	_lbl_foco_nome_molde.text = nome.to_upper()
+	var attr_cedo := str(real.get("attribute", dado.get("attribute", "")))
+	var tex_o := _tex_cache("assets/attributes/%s.png" % attr_cedo.to_lower())
+	_tex_foco_orbe.texture = tex_o
+	for f in _caixa_foco_estrelas.get_children():
+		(f as Node).queue_free()
+	var tex_e := _tex_cache("assets/estrelas/estrela.png")
+	if tex_e != null and str(real.get("card_type", dado.get("card_type", "monster"))) == "monster":
+		for s in range(clampi(nivel, 0, 12)):
+			var im := TextureRect.new()
+			im.custom_minimum_size = Vector2(20, 20)
+			im.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			im.stretch_mode = TextureRect.STRETCH_SCALE
+			im.texture = tex_e
+			im.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			_caixa_foco_estrelas.add_child(im)
 	_lbl_foco_stats.text = "ATK/%d DEF/%d" % [int(real.get("attack", dado.get("attack", 0))), int(real.get("defense", dado.get("defense", 0)))]
 	var tipo := str(real.get("monster_type", dado.get("monster_type", "")))
 	var attr := str(real.get("attribute", dado.get("attribute", "")))

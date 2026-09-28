@@ -334,8 +334,10 @@ func test_painel_esquerdo_carta_focada() -> void:
 	assert_true(mesa.get_node_or_null(NodePath("HUD/PainelCarta")) != null, "Painel esquerdo existe.")
 	var est := (mesa.get_node("HUD/PainelCarta") as PanelContainer).get_theme_stylebox("panel") as StyleBoxFlat
 	assert_eq(est.border_color, Color(0.45, 0.28, 0.12), "Painel com moldura marrom estilo carta.")
-	for caminho in ["HUD/PainelCarta/Linha/Caixa/FocoNome", "HUD/PainelCarta/Linha/Caixa/FocoEstrelas",
-			"HUD/PainelCarta/Linha/Caixa/FocoArte", "HUD/PainelCarta/Linha/Caixa/FocoCor",
+	for caminho in ["HUD/PainelCarta/Linha/Caixa/FocoNome", "HUD/PainelCarta/Linha/Caixa/CartaMolde/Moldura",
+			"HUD/PainelCarta/Linha/Caixa/CartaMolde/FocoArte", "HUD/PainelCarta/Linha/Caixa/CartaMolde/FocoCor",
+			"HUD/PainelCarta/Linha/Caixa/CartaMolde/FocoNomeMolde", "HUD/PainelCarta/Linha/Caixa/CartaMolde/FocoOrbe",
+			"HUD/PainelCarta/Linha/Caixa/CartaMolde/FocoEstrelasBox",
 			"HUD/PainelCarta/Linha/Caixa/FocoFaixa/FocoAttrIcon", "HUD/PainelCarta/Linha/Caixa/FocoFaixa/FocoAttr",
 			"HUD/PainelCarta/Linha/Caixa/FocoFaixa/FocoStats",
 			"HUD/PainelCarta/Linha/Caixa/FocoTipo", "HUD/PainelCarta/Linha/Caixa/FocoDesc",
