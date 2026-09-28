@@ -86,7 +86,7 @@ var _artes_ok := 0
 var _cam: Camera3D = null
 var _no_cartas: Node3D = null
 var _no_slots: Node3D = null
-var _cursor3d: MeshInstance3D = null
+var _cursor3d: Node3D = null
 var _flash_tela: ColorRect = null
 var _deck_pos := [Vector3(3.6, 0.6, 0.4), Vector3(-3.6, 0.6, -0.4)]
 
@@ -174,6 +174,8 @@ var _pad_dir := Vector2i.ZERO
 var _pad_tempo := 0.0
 var _foco := Vector3.ZERO
 var _pulso := 0.0
+var _foto_destino := ""
+var _foto_frames := -1
 
 
 func _ready() -> void:
@@ -255,8 +257,13 @@ func _avisar_arena() -> void:
 
 func _ver_autoquit() -> void:
 	# Só p/ validação headless (`-- --mesa3d-sair=5`). Sem o argumento, nada muda.
+	# Foto DEV (`-- --mesa3d-foto=<caminho>`): salva o viewport e sai.
+	# Só p/ conferir visual sem abrir o editor (some no final).
 	for a in OS.get_cmdline_user_args():
 		var s := str(a)
+		if s.begins_with("--mesa3d-foto="):
+			_foto_destino = s.trim_prefix("--mesa3d-foto=").strip_edges()
+			_foto_frames = 0
 		if s.begins_with("--mesa3d-sair="):
 			var n := float(s.trim_prefix("--mesa3d-sair="))
 			if n > 0.0:
@@ -281,10 +288,10 @@ func _construir_ambiente() -> void:
 	# procedural azul + neblina azul-clara p/ profundidade + sol branco.
 	var ceu := Sky.new()
 	var mat_ceu := ProceduralSkyMaterial.new()
-	mat_ceu.sky_top_color = Color(0.25, 0.55, 0.95)
-	mat_ceu.sky_horizon_color = Color(0.65, 0.85, 1.0)
-	mat_ceu.ground_bottom_color = Color(0.35, 0.55, 0.85)
-	mat_ceu.ground_horizon_color = Color(0.65, 0.85, 1.0)
+	mat_ceu.sky_top_color = Color(0.20, 0.48, 0.90)
+	mat_ceu.sky_horizon_color = Color(0.55, 0.78, 0.98)
+	mat_ceu.ground_bottom_color = Color(0.22, 0.40, 0.68)
+	mat_ceu.ground_horizon_color = Color(0.52, 0.70, 0.92)
 	mat_ceu.sun_angle_max = 30.0
 	mat_ceu.energy_multiplier = 0.85
 	ceu.sky_material = mat_ceu
@@ -297,9 +304,7 @@ func _construir_ambiente() -> void:
 	env.ambient_light_energy = 0.30
 	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
 	env.tonemap_exposure = 1.0
-	env.fog_enabled = true
-	env.fog_light_color = Color(0.65, 0.82, 1.0)
-	env.fog_density = 0.004
+	env.fog_enabled = false
 	we.environment = env
 	add_child(we)
 	_construir_cenario_ceu()
@@ -328,7 +333,7 @@ func _construir_cenario_ceu() -> void:
 	rng.seed = 20260707
 	# Pilares de vidro ao longe (ref tem torres translúcidas no horizonte).
 	var mat_vidro_fundo := StandardMaterial3D.new()
-	mat_vidro_fundo.albedo_color = Color(0.55, 0.75, 0.95, 0.45)
+	mat_vidro_fundo.albedo_color = Color(0.35, 0.55, 0.85, 0.7)
 	mat_vidro_fundo.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	mat_vidro_fundo.roughness = 0.15
 	mat_vidro_fundo.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -451,8 +456,19 @@ func _construir_campo() -> void:
 	_no_cartas = Node3D.new()
 	_no_cartas.name = "Cartas"
 	add_child(_no_cartas)
-	_cursor3d = _caixa("Cursor3D", Vector3(1.18, 0.06, 1.72), Vector3(0, TOPO, 4.15), _mat(Color(0.85, 0.93, 1.0), 1.1))
+	# Cursor = MOLDURA vazada branca (ref: borda de seleção, não tijolo).
+	_cursor3d = Node3D.new()
+	_cursor3d.name = "Cursor3D"
+	_cursor3d.position = Vector3(0, TOPO, 4.15)
 	add_child(_cursor3d)
+	var mat_cur := _mat(Color(0.90, 0.95, 1.0), 1.0)
+	var bw := 1.24
+	var bh := 1.78
+	var t := 0.09
+	_cursor3d.add_child(_caixa("Aba", Vector3(bw, 0.06, t), Vector3(0, 0, bh / 2.0), mat_cur))
+	_cursor3d.add_child(_caixa("Abaixo", Vector3(bw, 0.06, t), Vector3(0, 0, -bh / 2.0), mat_cur))
+	_cursor3d.add_child(_caixa("Esq", Vector3(t, 0.06, bh), Vector3(-bw / 2.0, 0, 0), mat_cur))
+	_cursor3d.add_child(_caixa("Dir", Vector3(t, 0.06, bh), Vector3(bw / 2.0, 0, 0), mat_cur))
 	print("[MESA3D] Campo: 20 painéis de vidro + decks/cemitérios + 6 fases + tokens + Cursor3D.")
 
 
@@ -556,9 +572,9 @@ func _painel_slot(lado: int, tipo: String, indice: int) -> Node3D:
 	var no := Node3D.new()
 	no.name = "Painel_p%d_%s%d" % [lado, ("m" if tipo == "monstro" else "s"), indice]
 	no.position = Vector3(p.x, 0.0, p.z)
-	var borda := _caixa("Borda", Vector3(1.16, 0.03, 1.69), Vector3(0, TOPO - 0.055, 0), _vidro(Color(0.75, 0.90, 1.0), 0.85, 0.6))
+	var borda := _caixa("Borda", Vector3(1.16, 0.03, 1.69), Vector3(0, TOPO - 0.055, 0), _vidro(Color(0.55, 0.75, 1.0), 0.9, 0.5))
 	no.add_child(borda)
-	var base := _caixa("Base", Vector3(1.06, 0.05, 1.545), Vector3(0, TOPO - 0.03, 0), _vidro(Color(0.35, 0.60, 0.95), 0.42, 0.18))
+	var base := _caixa("Base", Vector3(1.06, 0.05, 1.545), Vector3(0, TOPO - 0.03, 0), _vidro(Color(0.16, 0.38, 0.78), 0.78, 0.12))
 	no.add_child(base)
 	return no
 
@@ -779,8 +795,8 @@ func _quad_textura(nome: String, larg: float, alt: float, pos: Vector3, tex: Tex
 	mi.mesh = q
 	mi.position = pos
 	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.albedo_texture = tex
-	m.roughness = 0.4
 	mi.material_override = m
 	return mi
 
@@ -821,7 +837,7 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 		# x 12,0%..88,9% e y 18,9%..70,9%).
 		var tex := _textura_arte(dado)
 		if tex != null:
-			no.add_child(_quad_textura("Arte", 0.769, 0.758, Vector3(0.0045, 0.0743, zf + 0.002), tex))
+			no.add_child(_quad_textura("Arte", 0.775, 0.758, Vector3(0.0015, 0.0743, zf + 0.002), tex))
 		# Orbe do atributo no canto da placa.
 		var attr := str(dado.get("attribute", ""))
 		var tex_orbe := _textura_arquivo("assets/attributes/%s.png" % attr.to_lower())
@@ -839,6 +855,7 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 	nome.name = "Nome"
 	nome.outline_size = 0
 	nome.position = Vector3(-0.0645, 0.6523, zf + 0.003)
+	nome.visible = false
 	no.add_child(nome)
 	var stats_txt := ""
 	if eh_monstro:
@@ -847,6 +864,7 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 	stats.name = "Stats"
 	stats.outline_size = 0
 	stats.position = Vector3(0.05, -0.5991, zf + 0.003)
+	stats.visible = false
 	no.add_child(stats)
 	# Indicador ATK/DEF + face (só desenho, igual ao 2D que mostra a posição).
 	var tag_txt := "VIRADA" if face_down else ("DEF" if em_defesa else "ATK")
@@ -1140,7 +1158,7 @@ func _construir_placas(hud: Control) -> void:
 	_lbl_lp_voce = _rotulo_placa_clara("LpVoce", "LP 8000", 34)
 	placa_voce.add_child(_lbl_lp_voce)
 	hud.add_child(placa_voce)
-	var tag_voce := _rotulo_hud("TagVoce", "Single", Vector2(16, 66), 20, Color(1.0, 0.65, 0.2))
+	var tag_voce := _rotulo_hud("TagVoce", "Single", Vector2(436, 66), 20, Color(1.0, 0.65, 0.2))
 	hud.add_child(tag_voce)
 	var placa_turno := PanelContainer.new()
 	placa_turno.name = "PlacaTurno"
@@ -1173,9 +1191,9 @@ func _construir_placas(hud: Control) -> void:
 	_lbl_lp_rival.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	placa_rival.add_child(_lbl_lp_rival)
 	hud.add_child(placa_rival)
-	var tag_rival := _rotulo_hud("TagRival", "Single", Vector2(1820, 66), 20, Color(1.0, 0.65, 0.2))
-	tag_rival.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	tag_rival.size = Vector2(84, 28)
+	var tag_rival := _rotulo_hud("TagRival", "Single", Vector2(1640, 66), 20, Color(1.0, 0.65, 0.2))
+	tag_rival.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	tag_rival.size = Vector2(100, 28)
 	hud.add_child(tag_rival)
 
 
@@ -1279,16 +1297,16 @@ func _construir_painel_foco(hud: Control) -> void:
 	# Posições em % da moldura real (iguais às do 3D e do editor).
 	_tex_foco_arte = TextureRect.new()
 	_tex_foco_arte.name = "FocoArte"
-	_tex_foco_arte.position = Vector2(300 * 0.123, 434 * 0.186)
-	_tex_foco_arte.size = Vector2(300 * 0.764, 434 * 0.521)
+	_tex_foco_arte.position = Vector2(300 * 0.117, 434 * 0.186)
+	_tex_foco_arte.size = Vector2(300 * 0.775, 434 * 0.521)
 	_tex_foco_arte.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_tex_foco_arte.stretch_mode = TextureRect.STRETCH_SCALE
 	_tex_foco_arte.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	molde.add_child(_tex_foco_arte)
 	_cor_foco_arte = ColorRect.new()
 	_cor_foco_arte.name = "FocoCor"
-	_cor_foco_arte.position = Vector2(300 * 0.123, 434 * 0.186)
-	_cor_foco_arte.size = Vector2(300 * 0.764, 434 * 0.521)
+	_cor_foco_arte.position = Vector2(300 * 0.117, 434 * 0.186)
+	_cor_foco_arte.size = Vector2(300 * 0.775, 434 * 0.521)
 	_cor_foco_arte.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	molde.add_child(_cor_foco_arte)
 	_lbl_foco_nome_molde = _rotulo_hud("FocoNomeMolde", "", Vector2.ZERO, 15, Color(0.12, 0.07, 0.03))
@@ -1582,6 +1600,8 @@ func _atualizar_painel_foco() -> void:
 	var tipo := str(real.get("monster_type", dado.get("monster_type", "")))
 	var attr := str(real.get("attribute", dado.get("attribute", "")))
 	_lbl_foco_attr.text = _rotulo_attr_curto(attr)
+	if _lbl_foco_attr.text.strip_edges() == "—":
+		_lbl_foco_attr.text = ""
 	_cor_foco_attr.color = _cor_atributo(attr)
 	var ctipo := str(real.get("card_type", dado.get("card_type", "monster")))
 	if ctipo == "monster":
@@ -2839,6 +2859,13 @@ func _detalhes() -> void:
 func _process(delta: float) -> void:
 	# CÂMERA FIXA (ref): nunca mexe — só o cursor pulsa. Sem órbita/balanço.
 	_pulso += delta * 4.0
+	if not _foto_destino.is_empty():
+		_foto_frames += 1
+		if _foto_frames >= 90:
+			var img := get_viewport().get_texture().get_image()
+			img.save_png(_foto_destino)
+			print("[MESA3D] Foto salva: " + _foto_destino)
+			get_tree().quit()
 	if _cam != null:
 		if _cam.position != CAM_POS:
 			_cam.position = CAM_POS
