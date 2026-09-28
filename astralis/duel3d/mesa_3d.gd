@@ -44,9 +44,8 @@ const TOPO := 0.35
 const CAM_POS := Vector3(0, 7.4, 9.6)
 const CAM_ALVO := Vector3(0, -0.3, -1.4)
 const CAM_FOV := 50.0
-## Fases estilo Tag Force no meio do campo (só desenho; o motor real só tem
-## DRAW/MAIN/BATTLE/END — SP e MP2 ficam apagadas, ver _fase_tag_atual).
-const FASES_TAG := ["DP", "SP", "MP1", "BP", "MP2", "EP"]
+## Fases estilo Tag Force REMOVIDAS (ordem do usuário, 2026-09-28): o
+## duelo segue o Forbidden Memories, sem DP/SP/MP1/BP/MP2/EP.
 
 const LARG_CARTA := 1.0
 ## Proporção exata da carta real 59x86mm (0,6860). Tudo que é carta, slot
@@ -132,9 +131,7 @@ var _nome_voce := "VOCÊ"
 var _nome_rival := "RIVAL"
 var _retrato_voce := ""
 var _retrato_rival := ""
-## Fases no meio (só desenho) + contadores de deck/cemitério.
-var _no_fases: Node3D = null
-var _fase_marcas: Dictionary = {}
+## Contadores de deck/cemitério (só leitura do estado real).
 var _lbl_conta_deck_rival: Label3D = null
 var _lbl_conta_cem_rival: Label3D = null
 var _lbl_conta_deck_voce: Label3D = null
@@ -453,7 +450,6 @@ func _construir_campo() -> void:
 	_lbl_conta_mao_rival.name = "ContaMaoRival"
 	_lbl_conta_mao_rival.position = Vector3(2.4, 1.9, -4.2)
 	campo.add_child(_lbl_conta_mao_rival)
-	_construir_fases(campo)
 	_construir_tokens(campo)
 	_no_cartas = Node3D.new()
 	_no_cartas.name = "Cartas"
@@ -471,65 +467,11 @@ func _construir_campo() -> void:
 	_cursor3d.add_child(_caixa("Abaixo", Vector3(bw, 0.06, t), Vector3(0, 0, -bh / 2.0), mat_cur))
 	_cursor3d.add_child(_caixa("Esq", Vector3(t, 0.06, bh), Vector3(-bw / 2.0, 0, 0), mat_cur))
 	_cursor3d.add_child(_caixa("Dir", Vector3(t, 0.06, bh), Vector3(bw / 2.0, 0, 0), mat_cur))
-	print("[MESA3D] Campo: 20 painéis de vidro + decks/cemitérios + 6 fases + tokens + Cursor3D.")
+	print("[MESA3D] Campo: 20 painéis + decks/cemitérios + tokens + Cursor3D.")
 
 
 ## Fileira de fases no MEIO do campo (só desenho, ref DP/SP/MP1/BP/MP2/EP).
 ## A fase atual acende (dourado); SP/MP2 nunca acendem (motor sem elas).
-func _construir_fases(campo: Node3D) -> void:
-	_no_fases = Node3D.new()
-	_no_fases.name = "Fases"
-	campo.add_child(_no_fases)
-	_fase_marcas = {}
-	for i in range(FASES_TAG.size()):
-		var tag := String(FASES_TAG[i])
-		var x := (float(i) - 2.5) * 1.05
-		var base := _caixa("Fase_%s" % tag, Vector3(0.92, 0.05, 0.5), Vector3(x, 0.19, -0.3), _mat(Color(0.30, 0.42, 0.62), 0.5, 0.6))
-		base.set_meta("fase_tag", tag)
-		_no_fases.add_child(base)
-		var rot := _rotulo3d(tag, 52, Color(0.85, 0.90, 1.0))
-		rot.name = "FaseRot_%s" % tag
-		rot.position = Vector3(x, 0.32, -0.3)
-		_no_fases.add_child(rot)
-		_fase_marcas[tag] = {"base": base, "rot": rot}
-
-
-## Motor real -> tag da ref: DRAW=DP, MAIN=MP1, BATTLE=BP, END=EP.
-func _fase_tag_atual() -> String:
-	if _st == null:
-		return ""
-	match String(_st.phase):
-		"DRAW":
-			return "DP"
-		"MAIN":
-			return "MP1"
-		"BATTLE":
-			return "BP"
-		"END":
-			return "EP"
-	return ""
-
-
-func _atualizar_fases() -> void:
-	if _fase_marcas.is_empty():
-		return
-	var atual := _fase_tag_atual()
-	for tag in _fase_marcas.keys():
-		var par: Dictionary = _fase_marcas[tag]
-		var base := par["base"] as MeshInstance3D
-		var rot := par["rot"] as Label3D
-		if base == null:
-			continue
-		if str(tag) == atual:
-			base.material_override = _mat(Color(1.0, 0.85, 0.20), 1.0)
-			if rot != null:
-				rot.modulate = Color(0.15, 0.10, 0.02)
-		else:
-			base.material_override = _mat(Color(0.30, 0.42, 0.62), 0.5, 0.6)
-			if rot != null:
-				rot.modulate = Color(0.85, 0.90, 1.0)
-
-
 ## Tokens decorativos da ref nova (só desenho, zero regra): círculo com
 ## X à esquerda do meio + bússola à direita do meio, discos azul-escuros
 ## flutuando com símbolo branco.
@@ -1490,7 +1432,6 @@ func _atualizar_hud() -> void:
 		else:
 			_lbl_turno.text = "%d" % int(_st.turn_number)
 	_atualizar_painel_foco()
-	_atualizar_fases()
 	_atualizar_contadores()
 
 

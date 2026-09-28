@@ -63,7 +63,7 @@ func test_nos_chave_3d_existem() -> void:
 	var mesa: Node = await _mesa3d_nova()
 	for caminho in ["Camera3D", "WorldEnvironment",
 			"Campo", "Campo/Slots", "Campo/Laterais", "Campo/Tokens",
-			"Campo/Fases", "Cartas", "Cursor3D", "HUD", "Ceu", "HUD/FlashTela"]:
+			"Cartas", "Cursor3D", "HUD", "Ceu", "HUD/FlashTela"]:
 		assert_true(mesa.get_node_or_null(NodePath(caminho)) != null, "Nó-chave existe: " + caminho)
 	assert_true((mesa.get_node("Camera3D") as Camera3D).current, "Camera3D é a atual.")
 	# 20 painéis flutuantes (5+5 por lado), cada um com base escura + borda.
@@ -366,17 +366,13 @@ func test_painel_esquerdo_carta_focada() -> void:
 
 
 func test_fases_no_meio_laterais_e_tokens() -> void:
-	# Ref: fases DP/SP/MP1/BP/MP2/EP no meio (só DP/MP1/BP/EP acendem, motor
-	# real); decks/cemitérios laterais + contadores; tokens decorativos.
+	# SEM fases Tag Force (ordem do usuário, duelo segue o FM):
+	# nenhum nó de fase existe; laterais + tokens continuam.
 	var mesa: Node = await _mesa3d_nova()
 	var st = mesa.get("_st")
-	assert_true(mesa.get_node_or_null(NodePath("Campo/Fases")) != null, "Fileira de fases existe no meio.")
-	assert_eq((mesa.get_node("Campo/Fases") as Node3D).get_child_count(), 12, "6 fases x (base + rótulo).")
+	assert_true(mesa.get_node_or_null(NodePath("Campo/Fases")) == null, "Sem fileira de fases.")
 	for tag in ["DP", "SP", "MP1", "BP", "MP2", "EP"]:
-		assert_true(mesa.get_node_or_null(NodePath("Campo/Fases/Fase_" + tag)) != null, "Fase existe: " + tag)
-		assert_eq(str((mesa.get_node("Campo/Fases/FaseRot_" + tag) as Label3D).text), tag, "Rótulo exato da fase: " + tag)
-	var atual := str(mesa.call("_fase_tag_atual"))
-	assert_true(atual in ["DP", "MP1", "BP", "EP"], "Fase atual vem do motor real (nunca SP/MP2): " + atual)
+		assert_true(mesa.get_node_or_null(NodePath("Campo/Fases/Fase_" + tag)) == null, "Sem fase: " + tag)
 	for caminho in ["Campo/Laterais/DeckRival", "Campo/Laterais/DeckVoce", "Campo/Laterais/CemRival", "Campo/Laterais/CemVoce"]:
 		assert_true(mesa.get_node_or_null(NodePath(caminho)) != null, "Lateral existe: " + caminho)
 	# Contadores = números puros do estado real (ref: 33/32/6).
