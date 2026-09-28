@@ -281,12 +281,15 @@ func _construir_ambiente() -> void:
 	ceu.sky_material = mat_ceu
 	env.background_mode = Environment.BG_SKY
 	env.sky = ceu
-	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
-	env.ambient_light_energy = 0.9
+	# Ambient NEUTRO e baixo (o céu azul ficava como filtro azul sobre
+	# campo e cartas): o céu é só FUNDO, a luz do campo é branca.
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env.ambient_light_color = Color(0.62, 0.62, 0.66)
+	env.ambient_light_energy = 0.45
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
 	env.fog_enabled = true
 	env.fog_light_color = Color(0.65, 0.82, 1.0)
-	env.fog_density = 0.015
+	env.fog_density = 0.004
 	we.environment = env
 	add_child(we)
 	_construir_cenario_ceu()
