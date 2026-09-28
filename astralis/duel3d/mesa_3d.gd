@@ -758,7 +758,46 @@ func _rotulo3d(texto: String, tamanho: int, cor: Color) -> Label3D:
 	return l
 
 
+## Moldura pelo DADO (espelho do editor, só leitura): spell/equip →
+## magia; trap → armadilha; ritual → ritual; fusão → fusão; com efeito
+## → efeito; resto → normal. Caminho no PROJETO (o jogo lê, não copia).
+func _moldura_da_carta(dado: Dictionary) -> String:
+	var t := str(dado.get("card_type", "monster"))
+	if t == "spell" or t == "equip":
+		return "assets/frames/spell.jpg"
+	if t == "trap":
+		return "assets/frames/trap.jpg"
+	if t == "ritual":
+		return "assets/frames/ritual.jpg"
+	var tags := ""
+	for g in (dado.get("tags", []) as Array):
+		tags += " " + str(g)
+	if tags.match("*fusao*") or tags.match("*fusão*") or tags.match("*fusion*"):
+		return "assets/frames/fusion.jpg"
+	if not (dado.get("effects", []) as Array).is_empty():
+		return "assets/frames/effect.jpg"
+	return "assets/frames/normal.jpg"
+
+
+## Quad com textura do projeto (só leitura). Sem textura = nulo.
+func _quad_textura(nome: String, larg: float, alt: float, pos: Vector3, tex: Texture2D) -> MeshInstance3D:
+	var mi := MeshInstance3D.new()
+	mi.name = nome
+	var q := QuadMesh.new()
+	q.size = Vector2(larg, alt)
+	mi.mesh = q
+	mi.position = pos
+	var m := StandardMaterial3D.new()
+	m.albedo_texture = tex
+	m.roughness = 0.4
+	mi.material_override = m
+	return mi
+
+
 func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool) -> Node3D:
+	# Carta INTEIRA igual ao editor (só leitura do projeto): moldura JPG
+	# por tipo + arte na janela + orbe + estrelas + nome/ATK na placa.
+	# Sem nada no projeto = cai na cor (comportamento antigo).
 	var no := Node3D.new()
 	no.name = "Carta3D"
 	var corpo := MeshInstance3D.new()
@@ -766,39 +805,56 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 	var malha := BoxMesh.new()
 	malha.size = Vector3(LARG_CARTA, ALT_CARTA, GROSS_CARTA)
 	corpo.mesh = malha
-	corpo.material_override = _mat(Color(0.55, 0.38, 0.16))
+	corpo.material_override = _mat(Color(0.45, 0.30, 0.13))
 	no.add_child(corpo)
-	# Frente: arte real (ou cor do atributo) + nome + ATK/DEF.
+	var zf := GROSS_CARTA / 2.0
+	var tex_moldura := _textura_arquivo(_moldura_da_carta(dado))
+	# Frente: moldura inteira (ou cor do atributo quando sem moldura).
 	var frente := MeshInstance3D.new()
 	frente.name = "Frente"
 	var qf := QuadMesh.new()
-	qf.size = Vector2(LARG_CARTA - 0.08, ALT_CARTA - 0.08)
+	qf.size = Vector2(LARG_CARTA - 0.02, ALT_CARTA - 0.02)
 	frente.mesh = qf
-	frente.position = Vector3(0, 0, GROSS_CARTA / 2.0 + 0.002)
+	frente.position = Vector3(0, 0, zf + 0.002)
 	var mat_f := StandardMaterial3D.new()
-	var tex := _textura_arte(dado)
-	if tex != null:
-		mat_f.albedo_texture = tex
+	if tex_moldura != null:
+		mat_f.albedo_texture = tex_moldura
 	else:
 		mat_f.albedo_color = _cor_atributo(str(dado.get("attribute", ""))).darkened(0.25)
 	mat_f.roughness = 0.4
 	frente.material_override = mat_f
 	no.add_child(frente)
-	var faixa := MeshInstance3D.new()
-	faixa.name = "FaixaNome"
-	var qx := QuadMesh.new()
-	qx.size = Vector2(LARG_CARTA - 0.08, 0.30)
-	faixa.mesh = qx
-	faixa.position = Vector3(0, ALT_CARTA / 2.0 - 0.24, GROSS_CARTA / 2.0 + 0.004)
-	faixa.material_override = _mat(Color(0.05, 0.05, 0.10))
-	no.add_child(faixa)
-	var nome := _rotulo3d(str(dado.get("name", "?")), 42, Color(1, 0.95, 0.8))
+	var eh_monstro := str(dado.get("card_type", "monster")) == "monster"
+	if tex_moldura != null:
+		# Arte na janela da moldura (medidas da moldura real, em %).
+		var tex := _textura_arte(dado)
+		if tex != null:
+			no.add_child(_quad_textura("Arte", 0.764, 0.745, Vector3(0.005, 0.0765, zf + 0.004), tex))
+		# Orbe do atributo no canto da placa.
+		var attr := str(dado.get("attribute", ""))
+		var tex_orbe := _textura_arquivo("assets/attributes/%s.png" % attr.to_lower())
+		if tex_orbe != null:
+			no.add_child(_quad_textura("Orbe", 0.095, 0.093, Vector3(0.3805, 0.6055, zf + 0.004), tex_orbe))
+		# Estrelas = level (só monstro), à direita como na moldura.
+		if eh_monstro:
+			var tex_est := _textura_arquivo("assets/estrelas/estrela.png")
+			if tex_est != null:
+				var n := clampi(int(dado.get("level", 0)), 0, 12)
+				for s in range(n):
+					var px := 0.42 - float(n - 1 - s) * (0.0457 + 0.008) - 0.0228
+					no.add_child(_quad_textura("Estrela%d" % s, 0.0457, 0.0459, Vector3(px, 0.5076, zf + 0.004), tex_est))
+	var nome := _rotulo3d(str(dado.get("name", "?")), 34, Color(0.12, 0.07, 0.03))
 	nome.name = "Nome"
-	nome.position = Vector3(0, ALT_CARTA / 2.0 - 0.24, GROSS_CARTA / 2.0 + 0.01)
+	nome.outline_size = 0
+	nome.position = Vector3(-0.0645, 0.621, zf + 0.006)
 	no.add_child(nome)
-	var stats := _rotulo3d("A%d/D%d" % [int(dado.get("attack", 0)), int(dado.get("defense", 0))], 44, Color(1, 1, 1))
+	var stats_txt := ""
+	if eh_monstro:
+		stats_txt = "ATK/%d DEF/%d" % [int(dado.get("attack", 0)), int(dado.get("defense", 0))]
+	var stats := _rotulo3d(stats_txt, 32, Color(0.12, 0.07, 0.03))
 	stats.name = "Stats"
-	stats.position = Vector3(0, -ALT_CARTA / 2.0 + 0.22, GROSS_CARTA / 2.0 + 0.01)
+	stats.outline_size = 0
+	stats.position = Vector3(0.05, -0.588, zf + 0.006)
 	no.add_child(stats)
 	# Indicador ATK/DEF + face (só desenho, igual ao 2D que mostra a posição).
 	var tag_txt := "VIRADA" if face_down else ("DEF" if em_defesa else "ATK")
@@ -807,20 +863,32 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 	tag.name = "TagPos"
 	tag.position = Vector3(0, ALT_CARTA / 2.0 + 0.14, 0)
 	no.add_child(tag)
-	# Verso marrom com espiral clara (ref): carta virada é marrom.
+	# Verso: imagem do projeto (card_back da carta ou verso padrão).
+	# Sem nada = marrom com espiral (comportamento antigo).
 	var verso := MeshInstance3D.new()
 	verso.name = "Verso"
 	var qv := QuadMesh.new()
-	qv.size = Vector2(LARG_CARTA - 0.08, ALT_CARTA - 0.08)
+	qv.size = Vector2(LARG_CARTA - 0.02, ALT_CARTA - 0.02)
 	verso.mesh = qv
 	verso.position = Vector3(0, 0, -GROSS_CARTA / 2.0 - 0.002)
 	verso.rotation_degrees = Vector3(0, 180, 0)
-	verso.material_override = _mat(Color(0.45, 0.28, 0.13))
+	var dorso := str(dado.get("card_back", "")).strip_edges()
+	if dorso.is_empty():
+		dorso = "assets/backs/verso_padrao.png"
+	var tex_dorso := _textura_arquivo(dorso)
+	var mat_v := StandardMaterial3D.new()
+	if tex_dorso != null:
+		mat_v.albedo_texture = tex_dorso
+	else:
+		mat_v.albedo_color = Color(0.45, 0.28, 0.13)
+	mat_v.roughness = 0.4
+	verso.material_override = mat_v
 	no.add_child(verso)
 	var espiral := Node3D.new()
 	espiral.name = "Espiral"
 	espiral.position = Vector3(0, 0, -GROSS_CARTA / 2.0 - 0.012)
 	espiral.rotation_degrees = Vector3(0, 180, 0)
+	espiral.visible = tex_dorso == null
 	no.add_child(espiral)
 	for r in [0.10, 0.19, 0.28]:
 		var anel := MeshInstance3D.new()
