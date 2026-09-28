@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Pausado (2026-09-28): campo voltou ao centro ao endireitar perspectiva; maos precisam recentralizar. WIP commit fbc805e. Proximo: campo a direita primeiro, depois maos."
+onde_estamos: "2026-09-28: as DUAS maos foram centralizadas na tela (p0 e p1 medindo 960,00 px = centro do campo, erro 0,00 px) — commits 170dcc0/9975bce/a30cba2 em main. Composicao da mesa 3D agora esta no olho do usuario. Pendente ABERTO que o runtime levantou: a mao p0 ficou larga (412..1508 px de 1920) e as cartas cortam embaixo; e o numero '5' da mao do rival nao acompanhou o arco. Proximo: usuario abre o jogo e ve as maos."
 
 f_mao_centralizada: "RUNTIME (2026-09-28, so DESENHO, R1/R5 nao tocadas): o usuario pediu centralizar na tela as duas maos (a sua embaixo e a do rival em cima), que estavam tortas. CAUSA (confirmada): o X de mundo do centro do arco era chutado no olho (0.3 e -2.8) e a mao p0 vive numa profundidade totalmente diferente do campo (y=4,35 z=6,1 bem perto da camera x y~0,35 z=0), entao a perspectiva jogava o centro pra lado. CORRIGIDO em duel3d/mesa_3d.gd: o X do centro do arco agora e CALCULADO da camera real (unproject_position = matematica pura, roda headless; secante de 2 passos), mirando o X de tela do centro do campo. Resultado medido: p0 e p1 batem em 960,00 px = o centro do campo = o centro da tela, erro 0,00 px nas DUAS (antes: p0 1033,3 = +73 px e p1 730,9 = -229 px). Passo (1,12 / 0,7), Y/Z (4,35/6,1 e 1,4/-4,75), TILT_MAO_LIVRE, rotacao do rival, ordem das cartas e o selo de fusao NAO mudaram; o cursor da fileira da mao usa a mesma funcao, entao centralizou junto. O calculo e memorizado por instance_id da camera (a camera e FIXA): no redesenho vira 2 floats, sem custo. Print de calibracao novo mostra o ERRO EM PIXELS de p0 e p1 + a escala px/unidade + a largura do arco (ferramenta de ajuste futuro; so-ASCII porque a saida do jogo lido como processo filho vem no code page do Windows). FOTO conferida (--mesa3d-foto): as duas mao centralizadas. QA: teste PERMANENTE test_maos_centralizadas_no_x_do_campo em test_mesa_3d_oficial.gd (18 asserts, trava 0,5 px, simetria do arco, Y/Z/passo preservados, carta desenhada no ponto da funcao e cursor batendo) — sabotado de proposito para provar que pega a regressao (falhou com 1033,33) e depois revertido. GUT 131/131 2879 asserts 0 SCRIPT ERROR 0 orphans. Zero gameplay tocado: nenhum arquivo de duel/core/ui alterado."
 
@@ -63,13 +63,13 @@ f_qa: "QA: (a) CRIOU astralis/testing/astralis_test_base.gd — base unica, 34 h
 
 verificado_agora: "GUT 94/94 passed, 1412 asserts, ~43s, 0 SCRIPT ERROR, 0 orphans (rodado pelo Lead, nao por agente). Jogo headless sem --project: [BOARD] 20 slots / [TABLE] Arena 20 slots + mao p0(1240,980,95) p1(1240,20,60) / [TABLE] 25081 receitas / Duelo comecou. cargo test 55 passed 0 failed 0 warnings. npm run build ok. svelte-check 0 errors 0 warnings. python tools/fm_import.py --check OK. Os 7 schemas validam como JSON."
 
-estado_gut: "116 testes / 1877 asserts em 13 arquivos + base (+4 compat molde Rust x jogo). R2 cumprido (zero fake). Aviso conhecido: 2 testes esperam 5s a IA real — flakiness em maquina lenta."
+estado_gut: "131 testes / 2879 asserts em 14 arquivos + base (rodado pelo runtime em 2026-09-28; o 116 do registro de 2026-09-25 era velho, ja corrigido aqui). R2 cumprido (zero fake). Aviso conhecido: 2 testes esperam 5s a IA real — flakiness em maquina lenta."
 
 estado_cargo: "101 testes Rust (88 + 13 molde/id). ZERO teste de frontend ainda."
 
 estado_dados: "schemas/examples = 722 fm_* / 39 duelistas / 39 decks (40 cada) / 25081 receitas / 0 regras / arena_starter / duel_fm_abertura 8000LP. pack = 25131 receitas (25081 + 50 A+A que nunca disparam). starter_backup = 40 cartas custom SO de teste. PROJETO DO EDITOR = astralis-studio/projects/default/ (sempre vazio no boot, so via Importar)."
 
-proximo_passo: "Testar o duelo 3D com joypad (invocar, fundir, atacar)."
+proximo_passo: "Usuario abre o jogo e olha as DUAS maos centralizadas. Se a mao p0 estiver larga demais/cortada embaixo (o runtime mediu 412..1508 px de 1920), ajustar MAO_P0_PASSO (hoje 1,12) e MAO_P0_YZ (hoje 4,35/6,1) em astralis/duel3d/mesa_3d.gd — sao consts feitas para isso, e a calibracao imprime a escala px/unidade."
 
 # ---------- TRAVAS (regras, nao dividas) ----------
 
@@ -123,7 +123,7 @@ dividas_pendentes:
 
   - "QA: 'cancelar no meio da fila de fusao' e o caminho feliz do --project dentro do processo (so cobertos pelo jogo filho) foram provados por teste DESCARTAVEL e nao viraram teste permanente. Falta o QA transformar em teste fixo (o cenario da fusao cabe em test_fusao_fiel.gd)."
 
-data_utc: "2026-09-27"
+data_utc: "2026-09-28"
 
 versão_docs: "1.8"
 
