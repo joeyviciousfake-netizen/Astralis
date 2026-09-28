@@ -295,8 +295,8 @@ func _construir_ambiente() -> void:
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
 	env.ambient_light_color = Color(0.50, 0.52, 0.58)
 	env.ambient_light_energy = 0.30
-	env.tonemap_mode = Environment.TONE_MAPPER_ACES
-	env.tonemap_exposure = 0.95
+	env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
+	env.tonemap_exposure = 1.0
 	env.fog_enabled = true
 	env.fog_light_color = Color(0.65, 0.82, 1.0)
 	env.fog_density = 0.004
