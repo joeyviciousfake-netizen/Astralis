@@ -941,9 +941,10 @@ func _pos_mao_arco(i: int, n: int, lado: int) -> Vector3:
 	# pequeno (ref): arco abre em leque, pontas sobem e avançam.
 	var t := float(i) - float(maxi(n - 1, 0)) / 2.0
 	if lado == 0:
-		# Todas na MESMA altura da do meio (ordem do usuário): sem arco
-		# vertical. Sobe só a selecionada/levantada (feedback de seleção).
-		return Vector3(t * 1.12, -0.60 + (0.35 if _fileira == FILEIRA_MAO and i == _col else 0.0), 4.15 + 0.16 * absf(t))
+		# TODAS idênticas à do meio (ordem do usuário): mesma altura,
+		# giro e posição — só o x separa. Seleção aparece no cursor e
+		# fusão no selo, sem mexer na carta.
+		return Vector3(t * 1.12, -0.60, 4.15)
 	return Vector3(t * 0.7, 1.5 + 0.08 * absf(t), -4.15 - 0.10 * absf(t))
 
 
@@ -983,13 +984,10 @@ func _redesenhar(com_efeito: bool) -> void:
 	for i in range(mao0.size()):
 		var c := _fazer_carta(mao0[i] as Dictionary, false, 0, false)
 		c.position = _pos_mao_arco(i, mao0.size(), 0)
-		# Levantada p/ fusão sobe + selo na etiqueta (igual ao 2D: selo 1-2-3).
+		# Levantada p/ fusão: só o selo na etiqueta (posição não muda).
 		var selo := _levantadas.find(i) + 1
 		if selo > 0:
-			c.position += Vector3(0, 0.35, 0)
 			(c.get_node("TagPos") as Label3D).text = "SELO %d" % selo
-		if i == _mao_idx and _sub_mao != SUB_MAO_ESCOLHA:
-			c.position += Vector3(0, 0.55, -0.4)
 		c.set_meta("mao_idx", i)
 		_no_cartas.add_child(c)
 		c.rotation_degrees = Vector3(-tilt_mao, 0, 0)
