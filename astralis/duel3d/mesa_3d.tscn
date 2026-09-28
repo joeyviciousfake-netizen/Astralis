@@ -1,6 +1,6 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://cr7e22la6kfo"]
 
-[ext_resource type="Script" path="res://duel3d/mesa_3d.gd" id="1"]
+[ext_resource type="Script" uid="uid://dq84h3opvu63x" path="res://duel3d/mesa_3d.gd" id="1"]
 
-[node name="Mesa3D" type="Node3D"]
+[node name="Mesa3D" type="Node3D" unique_id=1488679693]
 script = ExtResource("1")

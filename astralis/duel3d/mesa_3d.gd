@@ -41,13 +41,16 @@ const CENTRO_Y := 540.0
 const TOPO := 0.35
 ## Câmera FIXA (ordem do usuário): deslocada p/ a esquerda olhando p/
 ## a direita — o campo fica colado à direita da tela. Sem órbita/balanço.
-const CAM_POS := Vector3(-2.2, 7.4, 10.2)
-const CAM_ALVO := Vector3(-2.2, -0.4, -1.4)
+const CAM_POS := Vector3(-2.2, 9, 8)
+const CAM_ALVO := Vector3(-2.2, 0, 0.0)
 const CAM_FOV := 50.0
 ## Fases estilo Tag Force REMOVIDAS (ordem do usuário, 2026-09-28): o
 ## duelo segue o Forbidden Memories, sem DP/SP/MP1/BP/MP2/EP.
 
 const LARG_CARTA := 1.0
+## Inclinação da mão em graus no eixo X (LIVRE, ordem do usuário):
+## mude à vontade, nada recalcula pela câmera. Rival usa 180 + este.
+const TILT_MAO_LIVRE := -54.0
 ## Proporção exata da carta real 59x86mm (0,6860). Tudo que é carta, slot
 ## ou pilha usa essa proporção — nenhuma carta fica de tamanho diferente.
 const ALT_CARTA := 86.0 / 59.0
@@ -217,6 +220,9 @@ func _ready() -> void:
 	print("[MESA3D] Pronta: mão p0=%d p1=%d, artes carregadas=%d." % [
 		((_st.players[0] as Dictionary)["hand"] as Array).size(),
 		((_st.players[1] as Dictionary)["hand"] as Array).size(), _artes_ok])
+	if _cam != null:
+		print("[MESA3D] Cam: pos=%s fov=%s alvo=%s." % [str(_cam.global_position), str(_cam.fov), str(CAM_ALVO)])
+		print("[MESA3D] Slot p0_m2 na tela: %s." % str(_cam.unproject_position(_pos_slot(0, "monstro", 2))))
 	_ver_autoquit()
 
 
@@ -894,9 +900,9 @@ func _pos_mao_arco(i: int, n: int, lado: int) -> Vector3:
 		# TODAS idênticas à do meio (ordem do usuário): mesma altura,
 		# giro e posição — só o x separa, centrado no campo (a câmera
 		# já joga tudo p/ a direita, então centro x=0 alinha).
-		return Vector3(t * 1.12, 0.55, 5.0)
+		return Vector3(t * 1.12, 4, 6.1)
 	# Rival no alto (ordem do usuário), centrado no campo.
-	return Vector3(t * 0.7, 2.1, -4.75)
+	return Vector3(t * 0.7, 1.4, -4.75)
 
 
 func _limpar_cartas() -> void:
@@ -924,13 +930,8 @@ func _redesenhar(com_efeito: bool) -> void:
 				carta.set_meta("card_id", str(m.get("card_id", "")))
 				_no_cartas.add_child(carta)
 	# Mãos em arco: p0 aberta, p1 de costas (só contagem, sem vazar dado).
-	# TODAS paralelas e retas p/ a sua visão (ref): mesmo tilt calculado
-	# da câmera p/ o meio da mão (look_at deixava cada uma p/ um lado).
-	# tilt = atan2(cam.y - mao.y, cam.z - mao.z); frente +Z => gira X -tilt.
-	var tilt_mao := 54.3
-	if _cam != null:
-		var d := _cam.global_position - Vector3(0, 0.55, 5.0)
-		tilt_mao = rad_to_deg(atan2(d.y, d.z))
+	# Rotação LIVRE (ordem do usuário): valor fixo editável, sem nenhum
+	# cálculo da câmera. Mude TILT_MAO_LIVRE à vontade (graus no eixo X).
 	var mao0: Array = (_st.players[0] as Dictionary)["hand"]
 	for i in range(mao0.size()):
 		var c := _fazer_carta(mao0[i] as Dictionary, false, 0, false)
@@ -943,7 +944,7 @@ func _redesenhar(com_efeito: bool) -> void:
 			(c.get_node("TagPos") as Label3D).text = "SELO %d" % selo
 		c.set_meta("mao_idx", i)
 		_no_cartas.add_child(c)
-		c.rotation_degrees = Vector3(-tilt_mao, 0, 0)
+		c.rotation_degrees = Vector3(TILT_MAO_LIVRE, 0, 0)
 		if com_efeito and not _sem_render():
 			var alvo: Vector3 = c.position
 			c.position = _deck_pos[0]
@@ -954,7 +955,7 @@ func _redesenhar(com_efeito: bool) -> void:
 		var v := _fazer_carta({}, true, 1, false)
 		v.position = _pos_mao_arco(j, mao1.size(), 1)
 		_no_cartas.add_child(v)
-		v.rotation_degrees = Vector3(180.0 - tilt_mao, 0, 0)
+		v.rotation_degrees = Vector3(180.0 + TILT_MAO_LIVRE, 0, 0)
 	_atualizar_hud()
 	_posicionar_cursor()
 
