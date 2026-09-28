@@ -153,16 +153,11 @@ func test_first_p2_rival_comeca_compra_joga_e_devolve_a_vez() -> void:
 	assert_true(int(fim["mao1"]) <= 5, "Mão do rival não estourou o limite de 5: %d." % int(fim["mao1"]))
 	assert_eq(int(fim["mao0"]), 5, "Sua mão foi completada até 5 na sua DRAW (refill do motor): %d." % int(fim["mao0"]))
 	assert_true(mao_rival_antes >= 5, "Preparo: o rival começou com a mão de abertura do motor (%d)." % mao_rival_antes)
-	# A barra de fases e o HUD refletem a fase REAL (nada de fase inventada).
-	var txt := str((mesa.get_node("HUD/PlacaTurno/CaixaTurno/Turno") as Label).text)
-	assert_eq(txt, str(int(fim["turno"])), "HUD com o turno real do motor (%s)." % txt)
-	var fase_acesa := 0
-	for fase in ["DRAW", "MAIN", "BATTLE", "END"]:
-		var p := mesa.get_node_or_null(NodePath("HUD/BarraFases/Fase_" + fase)) as PanelContainer
-		if p != null and (p.get_theme_stylebox("panel") as StyleBoxFlat).bg_color == Color(1.0, 0.83, 0.0, 1.0):
-			fase_acesa += 1
-			assert_eq(fase, String(st.phase), "A barra de fases acendeu a fase REAL: %s." % String(st.phase))
-	assert_eq(fase_acesa, 1, "Exatamente uma fase acesa na barra.")
+	# D44 (item 6): a barra de fases SAIU da tela por ordem do usuário, e o
+	# turno agora é lido na FAIXA DO MEIO (3D), com o valor real do motor.
+	var txt := str((_n3d(mesa, "Campo/Faixa/Turno/Numero") as Label3D).text)
+	assert_eq(txt, str(int(fim["turno"])), "Faixa do meio com o turno real do motor (%s)." % txt)
+	assert_true(mesa.get_node_or_null(NodePath("HUD/BarraFases")) == null, "Sem barra de fases na tela (D44).")
 
 
 # ---------- (2) first_p1: VOCÊ COMEÇA (não regrediu) ----------

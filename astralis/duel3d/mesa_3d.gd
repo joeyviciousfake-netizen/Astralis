@@ -143,6 +143,54 @@ const JANELA_ART_X1 := 0.8918
 const JANELA_ART_Y0 := 0.1827
 const JANELA_ART_Y1 := 0.7099
 
+## ---- D44: A FAIXA DO MEIO (itens 3, 4 e 6) ------------------------------
+## As pilhas de baralho/cemitério e as placas de LP/turno SAÍM DOS CANTOS e
+## passam a viver no vão entre a fileira de monstro do RIVAL e a SUA, na
+## ordem que o usuário ditou: baralho meu, cemitério meu, meu LP, turno,
+## LP do rival, cemitério do rival, baralho do rival. As fileiras de
+## ladrilho NÃO se mexem (D44 travou monstros e o ajuste de magia).
+## O Z da faixa é o ponto médio do z das DUAS fileiras de monstro, lido do
+## dado real em `_z_da_faixa()` — não é um número chutado.
+## O X de cada item é a posição na ordem (item 4 = turno, no centro exato da
+## janela 3D), com o passo medido para caber 7 itens sem se tocar.
+## Passo entre os 7 itens, em unidades de mundo. Medido na tela: com 1,50 os
+## 7 itens ocupam x 692..1790 px, ou seja a largura TODA da janela 3D menos
+## 130 px de folga de cada lado (a janela vai de 562 a 1920) — a faixa
+## aproveita o vão inteiro sem encostar no painel esquerdo nem na borda.
+const FAIXA_PASSO := 1.50
+## Puxão de Z do meio do vão para o lado do jogador, para a faixa ficar
+## CENTRADA na tela (a câmera olha de cima e o meio geométrico sai ~30 px
+## alto). Medido na foto: o vão é y 455..568 e a faixa precisa sair em
+## 475..545, então 0,56 de Z (uns 10 px).
+const FAIXA_PUXA_Z := 0.56
+## A pilha é PEQUENA de propósito (o usuário: "continuem pequenos assim"):
+## 45% do tamanho de uma carta deitada, o que cabe na altura do vão.
+const PILHA_ESCALA := 0.45
+## A ALTURA da pilha (eixo Y, o "volume de cartas" que o usuário pediu) é
+## proporcional à quantidade REAL de cartas do estado: um baralho quase
+## vazio fica com a pilha fininha e um baralho cheio fica com a pilha grossa.
+## Estes dois números vieram da MEDIDA na tela (jogo de verdade, 1920x1080):
+## com o baralho cheio (35 cartas) a pilha precisa de ~0,20 de altura para
+## a diferença aparecer, e o teto evita que a pilha saia do vão das fileiras.
+const PILHA_POR_CARTA := 0.008
+const PILHA_ESPESSURA_MIN := 0.014
+const PILHA_ESPESSURA_MAX := 0.24
+## Quantas cartas do CEMITÉRIO aparecem desenhadas no topo da pilha (as reais
+## do dado, da mais antiga para a mais nova, com a MAIS RECENTE no topo).
+const PILHA_CARTAS_NO_TOPO := 3
+## A PLACA de LP/turno é maior que a pilha (o número tem que ser legível de
+## longe). Medido na tela: a pilha ocupa 50 px de largura e a placa 116 px,
+## e as duas cabem na faixa sem se encostar (passo de 1,32 = 148 px).
+const FAIXA_PLACA_L := 1.04
+const FAIXA_PLACA_C := 0.62
+## Mundo por pixel da fonte do número da placa (fonte 64): 0,0062 * 64 = 0,40
+## de altura, que é o que cabe na placa de 1,04 sem encostar na borda.
+const FAIXA_NUMERO_PIXEL := 0.0062
+## Cor da lateral (a "borda" de papel) de cada pilha, por lado: a sua é
+## azul-esverdeada e a do rival vermelha, como o LP de cada um.
+const COR_PILHA_VOCE := Color(0.16, 0.30, 0.42)
+const COR_PILHA_RIVAL := Color(0.42, 0.16, 0.18)
+
 ## ---- HUD 2D (doc 15 §15.3 — TUDO medido na referência, em px do canvas
 ## 1920x1080; a referência é 1024x583 e o §15.3 traz os %) ----------------
 ## PAINEL ESQUERDO: a faixa inteira x 0..562, altura toda.
@@ -184,6 +232,17 @@ const RETRATO_RIVAL_X := 1770
 const RETRATO_RIVAL_Y := 96
 const RETRATO_VOCE_X := 578
 const RETRATO_VOCE_Y := 96
+## D44 (item 8): a placa de NOME do duelista fica AO LADO do retrato (para
+## dentro, para os dois lados ficarem espelhados) e nunca invade o painel
+## esquerdo, que termina em x 562. As medidas saem da foto de 136 px: a placa
+## tem 300x44, centralizada na altura do retrato (y 96..232 -> 142..186) e
+## encosta na foto sem cobrir nada.
+const RETRATO_NOME_L := 300
+const RETRATO_NOME_A := 44
+const RETRATO_NOME_VOCE_X := 726
+const RETRATO_NOME_VOCE_Y := 142
+const RETRATO_NOME_RIVAL_X := 1458
+const RETRATO_NOME_RIVAL_Y := 142
 ## START / Help: canto inferior direito (x 84%..98%, y 96%..100% na ref).
 const START_X := 1680
 const START_Y := 1020
@@ -299,12 +358,17 @@ var _cursor_escala := 1.0
 var _flash_tela: ColorRect = null
 var _deck_pos := [Vector3(4.9, 0.6, 1.6), Vector3(-4.9, 0.6, -2.2)]
 
-var _lbl_lp_rival: Label = null
-## Nomes nas placas do topo (dado real do duelista, nunca inventado).
+## D44: o LP e o turno passaram a viver na FAIXA DO MEIO (3D), não mais nas
+## placas do topo (que o usuário mandou remover). São Label3D deitado no
+## campo, e o VALOR sempre vem do GameState real.
+var _lbl_lp_rival: Label3D = null
+## D44 (item 8): o topo ficou SÓ com foto + nome de cada duelista. Estas são
+## as etiquetas de nome ao lado de cada retrato (dado real do duelista).
 var _lbl_placa_nome_voce: Label = null
 var _lbl_placa_nome_rival: Label = null
-## Barra de FASES REAIS (DRAW/MAIN/BATTLE/END): fase -> caixinha. Só desenho;
-## o texto vem de `GameState.phase` (doc 15 §15.3).
+## D44 (item 6): a barra de FASES (DRAW/MAIN/BATTLE/END) foi REMOVIDA da tela
+## por ordem do usuário. O dicionário fica vazio de propósito — nenhuma
+## fase é desenhada em lugar nenhum agora.
 var _caixas_fase: Dictionary = {}
 ## Orbes e contador da carta focada (painel esquerdo, estilo da ref).
 var _orbe_foco: TextureRect = null
@@ -313,16 +377,25 @@ var _lbl_copia_foco: Label = null
 var _lbl_mao_rival: Label = null
 var _lbl_fase: Label = null
 var _lbl_log: Label = null
-var _lbl_lp_voce: Label = null
+var _lbl_lp_voce: Label3D = null
 var _lbl_dica: Label = null
 var _lbl_slot: Label = null
 var _lbl_fila: Label = null
-## HUD estilo Tag Force SEM MESA (só desenho): placas metálicas no topo
-## (seu LP esq / TURN centro / rival+LP dir, nomes reais do dado) +
-## retratos (foto real ou silhueta com a inicial) + painel esquerdo da
-## carta focada (moldura laranja, arte real ou cor do atributo + dados).
-var _lbl_turno: Label = null
-var _lbl_turno_num: Label = null
+## D44 (itens 3, 4 e 6): a FAIXA DO MEIO, com os 7 itens na ordem do
+## usuário. O guarda-chuva é `Faixa`; cada peça tem seu nó com o nome do
+## lugar dela na ordem (o teste lê a ordem direto na cena).
+var _faixa: Node3D = null
+var _no_pilha_deck_voce: Node3D = null
+var _no_pilha_cem_voce: Node3D = null
+var _no_placa_lp_voce: Node3D = null
+var _no_placa_turno: Node3D = null
+var _no_placa_lp_rival: Node3D = null
+var _no_pilha_cem_rival: Node3D = null
+var _no_pilha_deck_rival: Node3D = null
+## D44 (item 8): o topo ficou SÓ com foto + nome. O resto da informação
+## (LP/turno) foi para a faixa do meio.
+var _lbl_turno: Label3D = null
+var _lbl_turno_num: Label3D = null
 var _retrato_rival_foto: TextureRect = null
 var _retrato_rival_silhueta: Label = null
 var _retrato_voce_foto: TextureRect = null
@@ -743,33 +816,13 @@ func _construir_campo() -> void:
 	var laterais := Node3D.new()
 	laterais.name = "Laterais"
 	campo.add_child(laterais)
-	# Pilhas nas laterais FORA do campo (ref nova): decks marrons à direita,
-	# cemitérios à esquerda, com o número em cima. `_ponto_lateral` aplica
-	# a mesma escala do campo, então elas ficam do lado do vidro, nunca
-	# em cima dele, quando o campo cresce (ESCALA_CAMPO).
-	var tam_pilha := Vector3(PILHA_L * ESCALA_CAMPO, 0.22, PILHA_C * ESCALA_CAMPO)
-	# Baralho e cemitério são PILHAS COMPACTAS na borda da última coluna
-	# (doc 15 §15.3): na ref são umas cartas empilhadas pequenas no canto,
-	# com o número em cima — não um bloco comprido. Antes eram fitas de
-	# 1,46 de comprimento, que liam como retângulos escuros grandes (D4).
-	laterais.add_child(_caixa("DeckRival", tam_pilha, _ponto_lateral(PILHA_X, TOPO + 0.11, -2.2), _mat(Color(0.42, 0.24, 0.10))))
-	laterais.add_child(_caixa("DeckVoce", tam_pilha, _ponto_lateral(PILHA_X, TOPO + 0.11, 1.6), _mat(Color(0.45, 0.26, 0.11))))
-	var tam_cem := Vector3(PILHA_L * ESCALA_CAMPO, 0.14, PILHA_C * ESCALA_CAMPO)
-	laterais.add_child(_caixa("CemRival", tam_cem, _ponto_lateral(-PILHA_X, TOPO + 0.07, -2.2), _mat(Color(0.30, 0.16, 0.20), 0.25)))
-	laterais.add_child(_caixa("CemVoce", tam_cem, _ponto_lateral(-PILHA_X, TOPO + 0.07, 1.6), _mat(Color(0.16, 0.24, 0.30), 0.25)))
-	# CONTADORES em cima das pilhas, dentro da janela 3D (doc 15 §15.3: o
-	# número fica SOBRE a pilha, não nas laterais da tela). Placa azul-clara
-	# com o número branco. Baralho à DIREITA, cemitério à ESQUERDA, e as
-	# posições batem com as pilhas acima — nada aqui é inventado, o número
-	# sempre vem do estado real em `_atualizar_contadores`.
-	_lbl_conta_deck_rival = _placa_contador(laterais, "ContaDeckRival", _ponto_lateral(PILHA_X, TOPO + 0.30, -2.2), 0.40, 0.26)
-	_lbl_conta_cem_rival = _placa_contador(laterais, "ContaCemRival", _ponto_lateral(-PILHA_X, TOPO + 0.21, -2.2), 0.40, 0.26)
-	_lbl_conta_deck_voce = _placa_contador(laterais, "ContaDeckVoce", _ponto_lateral(PILHA_X, TOPO + 0.30, 1.6), 0.40, 0.26)
-	_lbl_conta_cem_voce = _placa_contador(laterais, "ContaCemVoce", _ponto_lateral(-PILHA_X, TOPO + 0.21, 1.6), 0.40, 0.26)
-	# Cartas na mão do RIVAL (dado real): a contagem fica ao lado do leque de
-	# cartas, não num ponto solto no canto da tela.
-	_lbl_conta_mao_rival = _placa_contador(campo, "ContaMaoRival", _ponto_lateral(1.7, TOPO + 0.30, -7.30), 0.36, 0.24)
-	_construir_tokens(campo)
+	# D44 (itens 3, 4, 6 e 11): as pilhas de baralho/cemitério e os
+	# contadores SAÍRAM dos cantos (o usuário: "estão muito no canto e está
+	# ruim de visualizar"). Agora eles vivem na FAIXA DO MEIO, no vão entre as
+	# duas fileiras de monstro, com a espessura proporcional à quantidade real
+	# de cartas. `Laterais` fica vazio de propósito: é o guarda-chuva que o
+	# resto da cena já usava, e some qualquer desenho solto do canto.
+	_construir_faixa(campo)
 	_no_cartas = Node3D.new()
 	_no_cartas.name = "Cartas"
 	_vp.add_child(_no_cartas)
@@ -790,7 +843,245 @@ func _construir_campo() -> void:
 	_cursor_moldura.name = "Moldura"
 	_cursor_grupo.add_child(_cursor_moldura)
 	_construir_mao_cursor()
-	print("[MESA3D] Campo: 20 painéis + decks/cemitérios + tokens + Cursor3D.")
+	print("[MESA3D] Campo: 20 painéis + faixa do meio (7 itens) + Cursor3D.")
+
+
+## ---- D44: A FAIXA DO MEIO (itens 3, 4 e 6) ------------------------------
+## Os 7 itens, NA ORDEM que o usuário ditou, dentro da janela 3D, no vão entre
+## a fileira de monstro do rival e a sua:
+##   1 MeuDeck (pilha virada para baixo)   2 MeuCemiterio (pilha virada para
+##   cima, mais recente no topo)   3 LpVoce   4 Turno   5 LpRival
+##   6 CemRival   7 DeckRival
+## Cada item é um Node3D com o nome do seu lugar na ordem, filho de `Faixa`,
+## para a trava do teste ler a ordem direto na cena. O X de cada um é
+## `FAIXA_PASSO * (i - 3)`: o TURNO fica no centro exato da janela 3D e o
+## resto se espelha em torno dele (espelho VISUAL — a lógica de espelho do
+## campo é a do D18 e não muda).
+func _construir_faixa(campo: Node3D) -> void:
+	var faixa := Node3D.new()
+	faixa.name = "Faixa"
+	campo.add_child(faixa)
+	_faixa = faixa
+	var z := _z_da_faixa()
+	# 1 e 7: baralho (SEMPRE virado para baixo, com o verso real do jogo).
+	_no_pilha_deck_voce = _criar_pilha(faixa, "MeuDeck", 0, z, COR_PILHA_VOCE)
+	_no_pilha_cem_voce = _criar_pilha(faixa, "MeuCemiterio", 1, z, COR_PILHA_VOCE)
+	# 3, 4 e 5: LP dos dois lados e o turno (sempre do GameState real).
+	_no_placa_lp_voce = _criar_placa_faixa(faixa, "LpVoce", 2, z,
+		Color(0.13, 0.28, 0.70, 0.94), COR_METAL_TOPO)
+	_no_placa_turno = _criar_placa_faixa(faixa, "Turno", 3, z,
+		Color(0.07, 0.12, 0.38, 0.96), COR_FASE_ATIVA)
+	_no_placa_lp_rival = _criar_placa_faixa(faixa, "LpRival", 4, z,
+		Color(0.72, 0.13, 0.18, 0.94), Color(0.95, 0.55, 0.45))
+	# 6: cemitério do rival (virado para cima, mais recente no topo).
+	_no_pilha_cem_rival = _criar_pilha(faixa, "CemRival", 5, z, COR_PILHA_RIVAL)
+	_no_pilha_deck_rival = _criar_pilha(faixa, "DeckRival", 6, z, COR_PILHA_RIVAL)
+	_lbl_lp_voce = _no_placa_lp_voce.get_node("Numero") as Label3D
+	_lbl_turno = _no_placa_turno.get_node("Numero") as Label3D
+	_lbl_turno_num = _lbl_turno
+	_lbl_lp_rival = _no_placa_lp_rival.get_node("Numero") as Label3D
+	# As contas do canto saíram de vez (D44): quem mostra a quantidade agora
+	# é a ALTURA da pilha, que é lida do mesmo estado real.
+	_lbl_conta_deck_voce = null
+	_lbl_conta_cem_voce = null
+	_lbl_conta_deck_rival = null
+	_lbl_conta_cem_rival = null
+	_lbl_conta_mao_rival = null
+	print("[MESA3D] Faixa do meio: 7 itens em z=%.2f (passo %.2f)." % [z, FAIXA_PASSO])
+
+
+## Z da FAIXA: o ponto médio entre as DUAS fileiras de monstro, lido do
+## dado real (a arena manda na composição), mais um puxão para o JOGADOR.
+## O puxão não é chute: a câmera olha de cima, então o meio geométrico do
+## vão (z = -0,40) sai 31 px ACIMA do meio do vão na tela. 0,42 de Z valem
+## ~30 px aí, e é o que deixa a faixa centrada entre as fileiras (medido na
+## foto: vão y 467..555, faixa y 476..549).
+func _z_da_faixa() -> float:
+	var a := _pos_slot(1, "monstro", 0).z
+	var b := _pos_slot(0, "monstro", 0).z
+	return (a + b) * 0.5 + FAIXA_PUXA_Z
+
+
+## X de um item da faixa pelo LUGAR dele na ordem (0..6). O item 4 (turno)
+## fica no centro: é o espelho visual dos dois lados em torno do meio.
+func _x_da_faixa(indice: int) -> float:
+	return (float(indice) - 3.0) * FAIXA_PASSO
+
+
+## PILHA da faixa: uma pilha de cartas DEITADAS, pequena (PILHA_ESCALA do
+## tamanho de uma carta), com a ALTURA proporcional à quantidade real
+## (`_espessura_pilha`). O topo mostra a face de verdade: o VERSO do jogo
+## no baralho (sempre virado para baixo) e a carta REAL mais recente do
+## cemitério (sempre virado para cima).
+func _criar_pilha(pai: Node3D, nome: String, indice: int, z: float, cor_lado: Color) -> Node3D:
+	var no := Node3D.new()
+	no.name = nome
+	no.position = Vector3(_x_da_faixa(indice), TOPO, z)
+	pai.add_child(no)
+	# Corpo da pilha: a "altura" é a caixa que cresce com as cartas. A carta
+	# deitada tem a largura no X e o comprimento no Z, como no ladrilho.
+	no.add_child(_caixa("Corpo", Vector3(LARG_CARTA * PILHA_ESCALA, 1.0, ALT_CARTA * PILHA_ESCALA),
+		Vector3.ZERO, _mat(cor_lado, 0.30)))
+	# Borda de papel clara: dá a leitura de "carta" em vez de "blocinho de
+	# plástico" (era o que o usuário reclamou do canto).
+	var moldura := _caixa("Moldura", Vector3(LARG_CARTA * PILHA_ESCALA, 1.0, ALT_CARTA * PILHA_ESCALA),
+		Vector3(0, 0.5, 0), _mat(Color(0.88, 0.84, 0.72), 0.5))
+	moldura.scale = Vector3(1.04, 1.0, 1.03)
+	no.add_child(moldura)
+	# A face de cima (a do baralho ou a carta mais recente do cemitério) é
+	# criada por `_atualizar_faixa`, conforme o estado real.
+	return no
+
+
+## PLACA da faixa (LP/turno): vidro escuro com aro metálico e o número por
+## cima, DEITADA no campo (mesma pose das antigas placas de contador, que o
+## usuário lia bem). O número é Label3D e o chamador escreve o valor real.
+func _criar_placa_faixa(pai: Node3D, nome: String, indice: int, z: float, vidro: Color, aro: Color) -> Node3D:
+	var no := Node3D.new()
+	no.name = nome
+	no.position = Vector3(_x_da_faixa(indice), TOPO, z)
+	pai.add_child(no)
+	no.add_child(_caixa("Aro", Vector3(FAIXA_PLACA_L, 0.05, FAIXA_PLACA_C), Vector3(0, -0.012, 0), _mat(aro, 0.45, 0.0, 1.0)))
+	no.add_child(_caixa("Vidro", Vector3(FAIXA_PLACA_L * 0.94, 0.05, FAIXA_PLACA_C * 0.86), Vector3(0, 0.006, 0), _mat(vidro, 0.15, 0.0, 1.0)))
+	var l := _rotulo3d("0", 64, Color(1, 1, 1))
+	l.name = "Numero"
+	l.rotation_degrees = Vector3(-90, 0, 0)
+	l.position = Vector3(0, 0.05, 0)
+	# `pixel_size` de um Label3D é o mundo por pixel da fonte: com fonte 64,
+	# 0,0038 (o padrão do jogo) daria um número de 0,24 de altura. Aqui o
+	# número tem que caber NA PLACA (1,04 de largura), então 0,0062 dá
+	# 0,40 de altura — medido na foto, o número ocupa ~40% da placa.
+	l.pixel_size = FAIXA_NUMERO_PIXEL
+	no.add_child(l)
+	return no
+
+
+## ALTURA (eixo Y) da pilha para uma quantidade REAL de cartas: cresce com o
+## número de cartas e tem teto, para a pilha não sair do vão das fileiras.
+func _espessura_pilha(quantidade: int) -> float:
+	return clampf(PILHA_ESPESSURA_MIN + float(maxi(quantidade, 0)) * PILHA_POR_CARTA,
+		PILHA_ESPESSURA_MIN, PILHA_ESPESSURA_MAX)
+
+
+## Preenche a face de cima de uma pilha: `textura` é o que se vê de cima
+## (o verso do baralho, ou a carta real mais recente do cemitério).
+## A face é REUSADA (mesmo nó, mesma malha): só o material muda. Assim não
+## enche a pilha de quadradinhos a cada redesenho (o `queue_free` é adiado e
+## o nó novo herdava o nome automático).
+func _pintar_topo_pilha(no: Node3D, textura: Texture2D, cor: Color) -> void:
+	var m := no.get_node_or_null(NodePath("Topo")) as MeshInstance3D
+	if m == null:
+		var q := QuadMesh.new()
+		q.size = Vector2(LARG_CARTA * PILHA_ESCALA * 0.94, ALT_CARTA * PILHA_ESCALA * 0.94)
+		m = MeshInstance3D.new()
+		m.name = "Topo"
+		m.mesh = q
+		m.rotation_degrees = Vector3(-90, 0, 0)
+		no.add_child(m)
+	var mat := StandardMaterial3D.new()
+	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	if textura != null:
+		mat.albedo_texture = textura
+	else:
+		mat.albedo_color = cor
+	m.material_override = mat
+	# A face fica EM CIMA da pilha (a espessura é a altura do corpo), senão
+	# o baralho cheio esconderia o próprio verso dentro do bloco.
+	m.position = Vector3(0, _espessura_da_pilha(no) + 0.004, 0)
+
+
+## Altura (eixo Y) com que a pilha está desenhada agora — o topo acompanha.
+func _espessura_da_pilha(no: Node3D) -> float:
+	var corpo := no.get_node_or_null(NodePath("Corpo")) as MeshInstance3D
+	if corpo == null or corpo.mesh == null:
+		return PILHA_ESPESSURA_MIN
+	var mb := corpo.mesh as BoxMesh
+	return PILHA_ESPESSURA_MIN if mb == null else mb.size.y
+
+
+## Cartas REAIS do topo do cemitério (da mais antiga para a mais nova, então
+## a ÚLTIMA da lista é a mais recente e é a que fica no topo da pilha).
+## Devolve [] quando o cemitério está vazio.
+func _cartas_do_cemiterio(lado: int) -> Array:
+	var saida: Array = []
+	if _st == null:
+		return saida
+	var cem: Array = (_st.players[lado] as Dictionary).get("graveyard", []) as Array
+	var ini := maxi(cem.size() - PILHA_CARTAS_NO_TOPO, 0)
+	for i in range(ini, cem.size()):
+		var cid := str(cem[i])
+		if cid.is_empty():
+			continue
+		var base: Dictionary = {}
+		if _cartas.has(cid):
+			base = (_cartas[cid] as Dictionary).duplicate(true)
+		else:
+			base = {"id": cid, "name": cid, "card_type": "monster", "attribute": "earth"}
+		saida.append(base)
+	return saida
+
+
+## Textura da face da carta na pilha: a arte de verdade quando existe, senão
+## a moldura do tipo (mesma regra da carta 3D).
+func _textura_da_carta_para_pilha(carta: Dictionary) -> Texture2D:
+	var tex := _textura_arte(carta)
+	if tex != null:
+		return tex
+	return _textura_arquivo(_moldura_da_carta(carta))
+
+
+## D44: escreve na faixa o que o estado real manda — a ALTURA de cada pilha
+## (baralho e cemitério dos dois lados), a carta do topo de cada cemitério,
+## o verso no baralho e o LP/turno nas 3 placas. Só leitura, zero regra.
+func _atualizar_faixa() -> void:
+	if _st == null or _faixa == null:
+		return
+	var verso := _textura_arquivo("assets/backs/verso_padrao.png")
+	for par in [[0, _no_pilha_deck_voce, true], [0, _no_pilha_cem_voce, false],
+			[1, _no_pilha_cem_rival, false], [1, _no_pilha_deck_rival, true]]:
+		var lado := int(par[0])
+		var no := par[1] as Node3D
+		if no == null:
+			continue
+		var eh_deck := bool(par[2])
+		var p: Dictionary = _st.players[lado] as Dictionary
+		var lista: Array = (p["deck"] if eh_deck else p.get("graveyard", [])) as Array
+		var grossura := _espessura_pilha(lista.size())
+		# O corpo da pilha cresce pela quantidade REAL de cartas.
+		for parte in ["Corpo", "Moldura"]:
+			var caixa := no.get_node_or_null(NodePath(parte)) as MeshInstance3D
+			if caixa == null:
+				continue
+			var mb := caixa.mesh as BoxMesh
+			if mb == null:
+				continue
+			var tam := mb.size
+			tam.y = grossura
+			mb.size = tam
+			caixa.position.y = grossura * 0.5
+		if eh_deck:
+			# DECK: SEMPRE virado para baixo, com o verso real do jogo.
+			_pintar_topo_pilha(no, verso, Color(0.45, 0.28, 0.13))
+		else:
+			# CEMITÉRIO: SEMPRE virado para cima, com a carta MAIS RECENTE
+			# (a última do dado) no topo. Vazio = um colchão neutro, sem carta
+			# nenhuma inventada.
+			var cartas := _cartas_do_cemiterio(lado)
+			if cartas.is_empty():
+				_pintar_topo_pilha(no, null, Color(0.24, 0.30, 0.42))
+			else:
+				_pintar_topo_pilha(no,
+					_textura_da_carta_para_pilha(cartas[cartas.size() - 1] as Dictionary),
+					Color(0.20, 0.24, 0.36))
+	if _lbl_lp_voce != null:
+		_lbl_lp_voce.text = "%d" % int((_st.players[0] as Dictionary)["lp"])
+	if _lbl_lp_rival != null:
+		_lbl_lp_rival.text = "%d" % int((_st.players[1] as Dictionary)["lp"])
+	if _lbl_turno != null:
+		if bool(_st.over):
+			_lbl_turno.text = "VITÓRIA!" if int(_st.winner) == 0 else "DERROTA"
+		else:
+			_lbl_turno.text = "%d" % int(_st.turn_number)
 
 
 ## Redesenha a moldura do foco com o tamanho e a inclinação da focada.
@@ -843,44 +1134,11 @@ func _construir_mao_cursor() -> void:
 
 
 
-## Tokens decorativos da ref (só desenho, zero regra): círculo com X à
-## esquerda do meio + bússola à direita do meio. As FASES NÃO são 3D —
-## a fase real do motor aparece na barra 2D do HUD (`_construir_fases`).
-func _construir_tokens(campo: Node3D) -> void:
-	var tokens := Node3D.new()
-	tokens.name = "Tokens"
-	campo.add_child(tokens)
-	var anel := MeshInstance3D.new()
-	anel.name = "TokenX"
-	var toro_x := TorusMesh.new()
-	toro_x.inner_radius = 0.14
-	toro_x.outer_radius = 0.22
-	anel.mesh = toro_x
-	anel.position = _ponto_lateral(-4.9, 0.5, -0.3)
-	anel.rotation_degrees = Vector3(90, 0, 0)
-	anel.scale = Vector3.ONE * ESCALA_CAMPO
-	anel.material_override = _mat(Color(0.12, 0.20, 0.38), 0.5, 0.4)
-	tokens.add_child(anel)
-	var xis := _rotulo3d("X", 72, Color(1, 1, 1))
-	xis.name = "TokenXLetra"
-	xis.position = _ponto_lateral(-4.9, 0.62, -0.3)
-	tokens.add_child(xis)
-	var bussola := MeshInstance3D.new()
-	bussola.name = "TokenBussola"
-	var disco := CylinderMesh.new()
-	disco.top_radius = 0.2
-	disco.bottom_radius = 0.2
-	disco.height = 0.06
-	bussola.mesh = disco
-	bussola.position = _ponto_lateral(4.9, 0.44, -0.3)
-	bussola.scale = Vector3.ONE * ESCALA_CAMPO
-	bussola.material_override = _mat(Color(0.12, 0.22, 0.40), 0.5, 0.4)
-	tokens.add_child(bussola)
-	var norte := _rotulo3d("N", 72, Color(1, 1, 1))
-	norte.name = "TokenBussolaLetra"
-	norte.position = _ponto_lateral(4.9, 0.62, -0.3)
-	tokens.add_child(norte)
-
+## D44 (item 11): os tokens decorativos (o círculo com "X" e a bússola com
+## "N") foram REMOVIDOS do campo por ordem do usuário: "tem uns desenhos lá
+## ou ícones que eu não sei direito o que é mas está atrapalhando a visão".
+## A função e as chamadas saíram de vez, então a cena não desenha mais nada
+## solto no campo além das 4 fileiras, a faixa do meio e a mão.
 
 ## Lado da PEÇA DE VIDRO em unidades de mundo (a peça é PECA_EM_CARTAS
 ## larguras de carta e cresce com o campo, então a carta continua com a
@@ -1792,7 +2050,16 @@ func _fundo_retrato(tom: Color) -> TextureRect:
 	return tr
 
 
+## D44 (item 8): o topo da tela ficou SÓ com a foto de cada duelista + o nome
+## dele, o seu à ESQUERDA e o do rival à DIREITA, como o usuário pediu
+## ("deixe só a foto minha com meu nome à esquerda, e na direita a foto do
+## inimigo com o nome dele"). Tudo o que era informação (LP, TURN, fases) foi
+## para a faixa do meio. O pack não tem foto de duelista, então continua o
+## placeholder elegante com a inicial do nome dentro da moldura (nada de rosto
+## inventado) e o nome real do dado ao lado.
 func _construir_retratos(hud: Control) -> void:
+	# RIVAL: foto na direita (x 1770) e nome à ESQUERDA dela, alinhado à
+	# direita, para os dois lados ficarem espelhados.
 	var ret_rival := PanelContainer.new()
 	ret_rival.name = "RetratoRival"
 	ret_rival.add_theme_stylebox_override("panel", _estilo_retrato())
@@ -1818,7 +2085,10 @@ func _construir_retratos(hud: Control) -> void:
 	_retrato_rival_silhueta.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	ret_rival.add_child(_retrato_rival_silhueta)
 	hud.add_child(ret_rival)
-	_lbl_retrato_rival_nome = null
+	_lbl_placa_nome_rival = _placa_nome_retrato(hud, "NomeRival", RETRATO_NOME_RIVAL_X, RETRATO_NOME_RIVAL_Y,
+		RETRATO_NOME_L, RETRATO_NOME_A, HORIZONTAL_ALIGNMENT_RIGHT, Color(1.0, 0.72, 0.62))
+	# VOCÊ: foto na esquerda (x 578) e nome à DIREITA dela, alinhado à
+	# esquerda (espelho do rival).
 	var ret_voce := PanelContainer.new()
 	ret_voce.name = "RetratoVoce"
 	ret_voce.add_theme_stylebox_override("panel", _estilo_retrato())
@@ -1844,8 +2114,27 @@ func _construir_retratos(hud: Control) -> void:
 	_retrato_voce_silhueta.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	ret_voce.add_child(_retrato_voce_silhueta)
 	hud.add_child(ret_voce)
-	_lbl_retrato_voce_nome = null
+	_lbl_placa_nome_voce = _placa_nome_retrato(hud, "NomeVoce", RETRATO_NOME_VOCE_X, RETRATO_NOME_VOCE_Y,
+		RETRATO_NOME_L, RETRATO_NOME_A, HORIZONTAL_ALIGNMENT_LEFT, Color(0.70, 0.92, 1.0))
 
+
+## Placa de NOME ao lado do retrato (D44, item 8): fundo escuro com borda na
+## cor do lado, e o nome do duelista REAL do dado por dentro. Só desenho.
+func _placa_nome_retrato(hud: Control, nome: String, x: float, y: float, larg: float, alt: float,
+		align: int, cor: Color) -> Label:
+	var p := PanelContainer.new()
+	p.name = nome
+	p.add_theme_stylebox_override("panel", _estilo_placa(Color(0.05, 0.07, 0.16, 0.88), cor))
+	p.position = Vector2(x, y)
+	p.size = Vector2(larg, alt)
+	p.custom_minimum_size = Vector2(larg, alt)
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var l := _rotulo_placa_clara("Texto", "", 24)
+	l.horizontal_alignment = align
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	p.add_child(l)
+	hud.add_child(p)
+	return l
 
 ## Gradiente metálico (a barra da ref é metal com bisel, não chapa): uma
 ## textura de gradiente vertical gerada em código — sem arquivo externo.
@@ -1863,22 +2152,21 @@ func _tex_metal(topo: Color, base: Color) -> GradientTexture2D:
 
 
 func _construir_hud() -> void:
-	# HUD 2D no estilo da REFERÊNCIA (doc 15 §15.3): painel esquerdo
-	# azul-marinho com a carta focada + ATK/DEF + nome + tipo + descrição,
-	# barra superior metálica (LP/TURN) só na faixa do campo, barra de
-	# FASES REAIS no meio, retratos e START. Tudo IGNORE (D19).
+	# HUD 2D na referência (doc 15 §15.3): painel esquerdo azul-marinho com a
+	# carta focada, os retratos com foto + nome (D44, item 8) e START. Tudo
+	# IGNORE (D19). D44: a barra superior com LP/TURN e a barra de fases
+	# DRAW/MAIN/BATTLE/END saíram de vez — essa informação foi para a faixa
+	# do meio, no 3D (`_construir_faixa`).
 	var hud := Control.new()
 	hud.name = "HUD"
 	hud.set_anchors_preset(Control.PRESET_FULL_RECT)
 	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(hud)
 	_construir_fundo_painel(hud)
-	_construir_placas(hud)
-	_construir_fases(hud)
 	_construir_retratos(hud)
 	# Textos inventados REMOVIDOS (ordem do usuário, ref não tem): MaoRival,
-	# Fase, Log, InfoSlot, FilaFusao, Dica. A FASE agora aparece na barra
-	# de fases, lendo o estado real.
+	# Fase, Log, InfoSlot, FilaFusao, Dica. D44: a fase do motor não é mais
+	# desenhada em lugar nenhum.
 	_lbl_mao_rival = null
 	_lbl_fase = null
 	_lbl_log = null
@@ -1935,161 +2223,18 @@ func _construir_fundo_painel(hud: Control) -> void:
 ## (você) à esquerda, caixa TURN ao centro, placa vermelha (rival) à
 ## direita. Valores de LP e turno SEMPRE do estado real. A aba "Single"
 ## foi REMOVIDA: era texto inventado (nossa contrato não tem modo de duelo).
-func _construir_placas(hud: Control) -> void:
-	var barra := TextureRect.new()
-	barra.name = "BarraTopo"
-	barra.texture = _tex_metal(COR_METAL_TOPO, COR_METAL_BASE)
-	barra.position = Vector2(BARRA_TOPO_X0, 0)
-	barra.size = Vector2(TELA_L - BARRA_TOPO_X0, BARRA_TOPO_Y1)
-	barra.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	barra.stretch_mode = TextureRect.STRETCH_SCALE
-	barra.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hud.add_child(barra)
-	var bisel := ColorRect.new()
-	bisel.name = "BiselTopo"
-	bisel.color = Color(0.75, 0.85, 1.0, 0.55)
-	bisel.position = Vector2(BARRA_TOPO_X0, BARRA_TOPO_Y1 - 3)
-	bisel.size = Vector2(TELA_L - BARRA_TOPO_X0, 3)
-	bisel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hud.add_child(bisel)
-	# Placa azul: "LP" + VALOR em amarelo + nome do duelista (dado real).
-	var placa_voce := PanelContainer.new()
-	placa_voce.name = "PlacaVoce"
-	placa_voce.add_theme_stylebox_override("panel", _estilo_placa(Color(0.13, 0.28, 0.70, 0.92), COR_METAL_TOPO))
-	placa_voce.position = Vector2(PLACA_VOCE_X0, 6)
-	placa_voce.size = Vector2(PLACA_VOCE_X1 - PLACA_VOCE_X0, 64)
-	placa_voce.custom_minimum_size = Vector2(PLACA_VOCE_X1 - PLACA_VOCE_X0, 64)
-	placa_voce.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var linha_voce := HBoxContainer.new()
-	linha_voce.name = "Linha"
-	linha_voce.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	linha_voce.add_theme_constant_override("separation", 10)
-	linha_voce.alignment = BoxContainer.ALIGNMENT_CENTER
-	placa_voce.add_child(linha_voce)
-	linha_voce.add_child(_rotulo_placa_clara("LpRotulo", "LP", 22))
-	_lbl_lp_voce = _rotulo_placa_clara("LpVoce", "0", 30)
-	_lbl_lp_voce.add_theme_color_override("font_color", COR_LP_VALOR)
-	_lbl_lp_voce.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
-	linha_voce.add_child(_lbl_lp_voce)
-	_lbl_placa_nome_voce = _rotulo_placa_clara("NomeVoce", "", 22)
-	linha_voce.add_child(_lbl_placa_nome_voce)
-	hud.add_child(placa_voce)
-	# Caixa central TURN: rótulo pequeno em cima + número do turno.
-	var placa_turno := PanelContainer.new()
-	placa_turno.name = "PlacaTurno"
-	placa_turno.add_theme_stylebox_override("panel", _estilo_placa(Color(0.07, 0.12, 0.38, 0.94), COR_METAL_TOPO))
-	placa_turno.position = Vector2(CAIXA_TURNO_X0, 6)
-	placa_turno.size = Vector2(CAIXA_TURNO_X1 - CAIXA_TURNO_X0, 80)
-	placa_turno.custom_minimum_size = Vector2(CAIXA_TURNO_X1 - CAIXA_TURNO_X0, 80)
-	placa_turno.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var caixa_turno := VBoxContainer.new()
-	caixa_turno.name = "CaixaTurno"
-	caixa_turno.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	caixa_turno.add_theme_constant_override("separation", 0)
-	placa_turno.add_child(caixa_turno)
-	var titulo := _rotulo_placa_clara("TurnoTitulo", "TURN", 20)
-	titulo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	caixa_turno.add_child(titulo)
-	_lbl_turno = _rotulo_placa_clara("Turno", "1", 32)
-	_lbl_turno.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	caixa_turno.add_child(_lbl_turno)
-	_lbl_turno_num = _lbl_turno
-	hud.add_child(placa_turno)
-	# Placa vermelha: nome + "LP" + VALOR (espelhada, como na ref).
-	var placa_rival := PanelContainer.new()
-	placa_rival.name = "PlacaRival"
-	placa_rival.add_theme_stylebox_override("panel", _estilo_placa(Color(0.72, 0.13, 0.18, 0.92), Color(0.95, 0.55, 0.45)))
-	placa_rival.position = Vector2(PLACA_RIVAL_X0, 6)
-	placa_rival.size = Vector2(PLACA_RIVAL_X1 - PLACA_RIVAL_X0, 64)
-	placa_rival.custom_minimum_size = Vector2(PLACA_RIVAL_X1 - PLACA_RIVAL_X0, 64)
-	placa_rival.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var linha_rival := HBoxContainer.new()
-	linha_rival.name = "Linha"
-	linha_rival.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	linha_rival.add_theme_constant_override("separation", 10)
-	linha_rival.alignment = BoxContainer.ALIGNMENT_CENTER
-	placa_rival.add_child(linha_rival)
-	_lbl_placa_nome_rival = _rotulo_placa_clara("NomeRival", "", 22)
-	linha_rival.add_child(_lbl_placa_nome_rival)
-	linha_rival.add_child(_rotulo_placa_clara("LpRotulo", "LP", 22))
-	_lbl_lp_rival = _rotulo_placa_clara("LpRival", "0", 30)
-	_lbl_lp_rival.add_theme_color_override("font_color", COR_LP_VALOR)
-	_lbl_lp_rival.add_theme_color_override("font_shadow_color", Color(0, 0, 0, 0.9))
-	linha_rival.add_child(_lbl_lp_rival)
-	hud.add_child(placa_rival)
+## D44 (item 8): as placas do topo (a azul com seu LP, a caixa TURN e a
+## vermelha com o LP do rival) foram REMOVIDAS da tela por ordem do usuário:
+## "na parte de cima da tela remova todas as informações pois troquei elas de
+## lugar". O LP e o turno agora vivem na FAIXA DO MEIO (3D, `_construir_faixa`)
+## e no topo ficou só a foto + o nome de cada duelista (`_construir_retratos`).
 
+## D44 (item 6): a BARRA DE FASES (DRAW/MAIN/BATTLE/END) saiu da tela inteira
+## por ordem do usuário: "atualmente existe DRAW, MAIN, BATTLE e END, eu quero
+## que remova isso e coloque no lugar os pontos de vida meu, do oponente e o
+## turno atual". A fase real do motor NÃO é mais desenhada em lugar nenhum da
+## tela (ela continua existindo no GameState, que ninguém mexeu).
 
-## BARRA DE FASES no meio do campo (doc 15 §15.3): as caixinhas metálicas
-## com a fase REAL do motor em amarelo. Nosso duelo é Forbidden Memories e
-## NÃO tem DP/SP/MP1/BP/MP2/EP (§15.1) — mostrar essas seria inventar
-## mecânica, então aqui vão exatamente as 4 fases de `GameState.phase`.
-func _construir_fases(hud: Control) -> void:
-	var barra := HBoxContainer.new()
-	barra.name = "BarraFases"
-	var total := FASES_REAIS.size() * BARRA_FASES_L + (FASES_REAIS.size() - 1) * BARRA_FASES_GAP
-	barra.position = Vector2(1241.0 - float(total) * 0.5, BARRA_FASES_Y0)
-	barra.size = Vector2(total, BARRA_FASES_Y1 - BARRA_FASES_Y0)
-	barra.add_theme_constant_override("separation", BARRA_FASES_GAP)
-	barra.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hud.add_child(barra)
-	_caixas_fase = {}
-	for fase in FASES_REAIS:
-		var p := PanelContainer.new()
-		p.name = "Fase_" + str(fase)
-		p.add_theme_stylebox_override("panel", _estilo_fase(false))
-		p.custom_minimum_size = Vector2(BARRA_FASES_L, BARRA_FASES_Y1 - BARRA_FASES_Y0)
-		p.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var l := _rotulo_placa_clara("Txt", str(fase), 22)
-		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		p.add_child(l)
-		barra.add_child(p)
-		_caixas_fase[str(fase)] = p
-
-
-func _estilo_fase(ativa: bool) -> StyleBoxFlat:
-	var est := StyleBoxFlat.new()
-	if ativa:
-		est.bg_color = COR_FASE_ATIVA
-		est.border_color = Color(1.0, 0.95, 0.7)
-	else:
-		est.bg_color = Color(0.10, 0.16, 0.40, 0.92)
-		est.border_color = Color(0.35, 0.45, 0.75)
-	est.set_border_width_all(2)
-	est.set_corner_radius_all(4)
-	est.content_margin_left = 6
-	est.content_margin_right = 6
-	est.content_margin_top = 4
-	est.content_margin_bottom = 4
-	return est
-
-
-## Acende a fase REAL (estado do motor) e apaga as outras. Rótulo de fase
-## é conceito, o VALOR vem sempre do `GameState.phase`.
-func _atualizar_fases() -> void:
-	if _caixas_fase.is_empty() or _st == null:
-		return
-	var atual := String(_st.phase).to_upper()
-	for fase in FASES_REAIS:
-		var p: PanelContainer = _caixas_fase[str(fase)] as PanelContainer
-		if p == null:
-			continue
-		var ativa := str(fase) == atual
-		p.add_theme_stylebox_override("panel", _estilo_fase(ativa))
-		var l := p.get_node("Txt") as Label
-		l.add_theme_color_override("font_color", Color(0.10, 0.10, 0.14) if ativa else COR_FASE_TXT)
-
-
-
-
-## Painel esquerdo 2D fixo estilo CARTA (ref nova): fundo bege como a
-## moldura da carta + carta GRANDE (arte real de assets/fm/ via --project
-## quando existir, senão cor do atributo; fileira de estrelas; faixa
-## ATK/DEF) + NOME verde + [TIPO] verde + DESCRIÇÃO branca + barra
-## vermelha decorativa à direita. Só leitura, sem regra.
-## Ancora um Control numa FRAÇÃO da moldura (0..1 dos 4 lados). A peça
-## passa a acompanhar o tamanho real do molde em vez de depender de px
-## fixos — é o que faz a arte preencher a janela em qualquer largura.
 func _ancorar_moldura(c: Control, x0: float, y0: float, x1: float, y1: float) -> void:
 	c.anchor_left = x0
 	c.anchor_top = y0
@@ -2328,77 +2473,24 @@ func _fala(texto: String) -> void:
 
 
 func _atualizar_hud() -> void:
-	if _st == null or _lbl_lp_voce == null:
+	if _st == null:
 		return
-	# Placas do topo com o DADO real: LP dos dois lados, turno e fase. O
-	# NOME fica em rótulo próprio (vem de `_nome_voce`/`_nome_rival`, que já
-	# são o dado do duelista) e o VALOR em amarelo, como na ref.
-	_lbl_lp_rival.text = "%d" % int((_st.players[1] as Dictionary)["lp"])
-	_lbl_lp_voce.text = "%d" % int((_st.players[0] as Dictionary)["lp"])
+	# D44: quem escreve o dado real na tela agora são a FAIXA DO MEIO (LP dos
+	# dois lados, turno e a espessura/carta do topo de cada pilha) e os NOMES
+	# ao lado dos retratos. A barra de fases e as placas do topo saíram.
 	if _lbl_placa_nome_voce != null:
 		_lbl_placa_nome_voce.text = _nome_voce.to_upper()
 	if _lbl_placa_nome_rival != null:
 		_lbl_placa_nome_rival.text = _nome_rival.to_upper()
-	if _lbl_turno != null:
-		if bool(_st.over):
-			_lbl_turno.text = "VITÓRIA!" if int(_st.winner) == 0 else "DERROTA"
-		else:
-			_lbl_turno.text = "%d" % int(_st.turn_number)
-	_atualizar_fases()
+	_atualizar_faixa()
 	_atualizar_painel_foco()
-	_atualizar_contadores()
 
 
-## Placa de CONTADOR: vidro escuro inclinado com o número branco em cima,
-## dentro do campo (doc 15 §15.3). O número vem do estado; aqui é só o
-## desenho da peça. Devolve o rótulo (o chamador escreve o valor real).
-func _placa_contador(pai: Node, nome: String, pos: Vector3, larg: float, alt: float) -> Label3D:
-	var placa := Node3D.new()
-	placa.name = nome
-	placa.position = pos
-	# Vidro AZUL-CLARO com aro quase branco: no campo escuro a placa tem que
-	# aparecer, senão o número fica solto no chão (era o que acontecia).
-	placa.add_child(_caixa("Aro", Vector3(larg * 1.20, alt * 1.42, 0.05), Vector3(0, 0, -0.02), _mat(Color(0.55, 0.68, 0.95), 0.35, 0.0, 1.0)))
-	placa.add_child(_caixa("Vidro", Vector3(larg, alt, 0.06), Vector3.ZERO, _mat(Color(0.20, 0.32, 0.60), 0.15, 0.0, 1.0)))
-	var l := _rotulo3d("0", 64, Color(1, 1, 1))
-	l.name = "Numero"
-	# Deitada (o vidro é um ladrilho no chão) e o número um pouco acima dele,
-	# como as pilhas da ref.
-	l.rotation_degrees = Vector3(-90, 0, 0)
-	l.position = Vector3(0, 0, 0.14)
-	placa.add_child(l)
-	pai.add_child(placa)
-	return l
-
-
-## Contadores dos 2 lados (só leitura do estado real): número no deck,
-## no cemitério e na mão do rival (a ref mostra 33/32/6 sobre as pilhas).
-func _atualizar_contadores() -> void:
-	if _st == null:
-		return
-	var d0 := 0
-	var c0 := 0
-	var d1 := 0
-	var c1 := 0
-	if (_st.players[0] as Dictionary).has("deck"):
-		d0 = ((_st.players[0] as Dictionary)["deck"] as Array).size()
-	if (_st.players[0] as Dictionary).has("graveyard"):
-		c0 = ((_st.players[0] as Dictionary)["graveyard"] as Array).size()
-	if (_st.players[1] as Dictionary).has("deck"):
-		d1 = ((_st.players[1] as Dictionary)["deck"] as Array).size()
-	if (_st.players[1] as Dictionary).has("graveyard"):
-		c1 = ((_st.players[1] as Dictionary)["graveyard"] as Array).size()
-	if _lbl_conta_deck_voce != null:
-		_lbl_conta_deck_voce.text = "%d" % d0
-	if _lbl_conta_cem_voce != null:
-		_lbl_conta_cem_voce.text = "%d" % c0
-	if _lbl_conta_deck_rival != null:
-		_lbl_conta_deck_rival.text = "%d" % d1
-	if _lbl_conta_cem_rival != null:
-		_lbl_conta_cem_rival.text = "%d" % c1
-	if _lbl_conta_mao_rival != null:
-		_lbl_conta_mao_rival.text = "%d" % ((_st.players[1] as Dictionary)["hand"] as Array).size()
-
+## D44 (itens 3, 4 e 11): as PLACAS DE CONTADOR dos cantos saíram de cena. O
+## número de cartas do baralho/cemiterio nao e mais um numero solto: quem
+## mostra a quantidade real e a ALTURA da pilha, na faixa do meio
+## (`_atualizar_faixa`). A mao do rival tambem perdeu a placa de contagem --
+## o usuario nao pediu contagem de mao em lugar nenhum.
 
 ## Carta focada pelo cursor (só leitura): mão, campo próprio ou rival.
 ## Rival de costas / virada = dado oculto (mostra "?" sem vazar).
