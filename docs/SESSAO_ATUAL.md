@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Slots quadrados separados (2026-09-27): 1.46 opacos + grade larga + campo nasce na arena real (bug-mae do dessinc). Foto com 4 fileiras. GUT 130/130. Commit 7616f3f."
+onde_estamos: "Sem fases Tag Force (2026-09-27, ordem do usuario): DP/SP/MP1/BP/MP2/EP apagados, duelo segue o FM. GUT 130/130. Commit e8649f3."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
