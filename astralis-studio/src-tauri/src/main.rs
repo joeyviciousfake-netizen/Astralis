@@ -2212,11 +2212,45 @@ fn test_state_vazio(ts: Option<&serde_json::Value>) -> bool {
     true
 }
 
+/// Contrato do sorteio (decisão do Lead, 2026-09-28): em `duel_setup`, seed 0
+/// (ou ausente) = SEM semente — o Astralis sorteia de verdade (quem começa e o
+/// embaralho). Valor ≠ 0 = semente fixa = determinismo (é o que o Campo de
+/// Testes e a reprodutibilidade usam). O Studio só escreve o NÚMERO: quem
+/// começa é o jogo que sorteia (R1/R2 — nenhum sorteio aqui).
+const SEED_SEM_SEMENTE: i64 = 0;
+
+/// Seed que viaja no duel_setup: a que o usuário informou na tela ou 0
+/// (sem semente = aleatório de verdade). Antes o Studio punha 42 em TODO
+/// duelo, então o sorteio de quem começa dava sempre o mesmo resultado.
+fn semente_do_duelo(seed: Option<i64>) -> i64 {
+    seed.unwrap_or(SEED_SEM_SEMENTE)
+}
+
+/// Ordem de quem começa (contrato `duel_setup.turn_order` = first_p1 |
+/// first_p2 | random):
+/// - Campo de Testes (`test_state` presente, D33): SEMPRE first_p1 — o teste
+///   começa na SUA fase da mão (doc 04.6 / D24). O que veio no pedido é
+///   ignorado de propósito (trava do D33, não pode cair).
+/// - Duelo normal: `random` (sorteio) é o PADRÃO — é o que o usuário pediu
+///   (quem começa tem que ser sorteado). Vazio = sorteio; valor fora da lista
+///   = erro em PT-BR.
+fn ordem_do_duelo(ordem: &str, tem_teste: bool) -> Result<String, String> {
+    if tem_teste {
+        return Ok("first_p1".to_string());
+    }
+    let o = if ordem.trim().is_empty() { "random".to_string() } else { ordem.trim().to_string() };
+    if !["first_p1", "first_p2", "random"].contains(&o.as_str()) {
+        return Err("Ordem de turno inválida. Escolha quem começa na lista.".to_string());
+    }
+    Ok(o)
+}
+
 /// Monta o duel_setup do duelo rápido/teste (o MESMO JSON que viaja no
 /// --setup temporário por cima do --project). Com teste preenchido, o
 /// turn_order é sempre first_p1 (doc 04.6: o teste começa na sua fase da mão,
 /// D24) e o test_state viaja dentro; sem teste, idêntico ao setup do Duelo
-/// rápido (sem a chave test_state).
+/// rápido (sem a chave test_state). A seed é a que a tela mandou; sem ela
+/// vai 0 = sem semente, o jogo sorteia (ver `semente_do_duelo`).
 fn montar_setup_duelo(
     duelista1: &str,
     deck1: &str,
@@ -2224,7 +2258,7 @@ fn montar_setup_duelo(
     deck2: &str,
     vida: i64,
     ordem: &str,
-    seed: i64,
+    seed: Option<i64>,
     arena: &str,
     test_state: Option<&serde_json::Value>,
 ) -> serde_json::Value {
@@ -2236,7 +2270,7 @@ fn montar_setup_duelo(
         "duelist2": { "duelist_id": duelista2, "deck_id": deck2 },
         "starting_lp": vida,
         "turn_order": if tem_teste { "first_p1".to_string() } else { ordem.to_string() },
-        "seed": seed,
+        "seed": semente_do_duelo(seed),
         "arena_id": arena,
         "win": { "on_lp_zero": true, "on_deckout": true }
     });
@@ -2270,17 +2304,9 @@ fn jogar_duelo(pedido: PedidoDuelo) -> Result<ResultadoOk, String> {
     }
     // Campo de Testes: com teste preenchido a ordem é SEMPRE first_p1 (sua
     // fase da mão, doc 04.6/D24) — o que veio no pedido é ignorado. Sem
-    // teste, vale a ordem pedida (Duelo rápido normal).
+    // teste, vale a ordem pedida; vazio = sorteio (ordem_do_duelo).
     let tem_teste = !test_state_vazio(pedido.test_state.as_ref());
-    let ordem = if tem_teste {
-        "first_p1".to_string()
-    } else {
-        let o = if pedido.ordem.trim().is_empty() { "first_p1".to_string() } else { pedido.ordem.trim().to_string() };
-        if !["first_p1", "first_p2", "random"].contains(&o.as_str()) {
-            return Err("Ordem de turno inválida. Escolha quem começa na lista.".to_string());
-        }
-        o
-    };
+    let ordem = ordem_do_duelo(&pedido.ordem, tem_teste)?;
     // Validação do teste ANTES de ler os decks do disco (mesmo gate da
     // validação viva): mão/campo/ordem quebrados barram aqui com a msg PT-BR
     // de onde clicar, sem depender de mais nada.
@@ -2330,7 +2356,7 @@ fn jogar_duelo(pedido: PedidoDuelo) -> Result<ResultadoOk, String> {
         &deck2,
         pedido.vida,
         &ordem,
-        pedido.seed.unwrap_or(42),
+        pedido.seed,
         &arena,
         pedido.test_state.as_ref(),
     );
@@ -4576,7 +4602,7 @@ mod testes {
             "p1_monster": [null, null, null, null, null],
             "p1_spell": [null, null, null, null, null]
         });
-        let s = montar_setup_duelo("duelist_a", "deck_a", "duelist_b", "deck_b", 4000, "random", 42, "arena_starter", Some(&ts));
+        let s = montar_setup_duelo("duelist_a", "deck_a", "duelist_b", "deck_b", 4000, "random", Some(42), "arena_starter", Some(&ts));
         assert_eq!(s["turn_order"], serde_json::json!("first_p1"));
         assert_eq!(s["test_state"], ts);
         assert_eq!(s["duel_id"], serde_json::json!("duel_studio_rapido"));
@@ -4584,13 +4610,71 @@ mod testes {
 
     #[test]
     fn setup_sem_teste_mantem_ordem_e_sem_chave() {
-        let s = montar_setup_duelo("duelist_a", "deck_a", "duelist_b", "deck_b", 4000, "random", 42, "arena_starter", None);
+        let s = montar_setup_duelo("duelist_a", "deck_a", "duelist_b", "deck_b", 4000, "random", Some(42), "arena_starter", None);
         assert_eq!(s["turn_order"], serde_json::json!("random"));
         assert!(s.get("test_state").is_none());
         let vazio = serde_json::json!({ "my_hand": [] });
-        let s2 = montar_setup_duelo("duelist_a", "deck_a", "duelist_b", "deck_b", 4000, "random", 42, "arena_starter", Some(&vazio));
+        let s2 = montar_setup_duelo("duelist_a", "deck_a", "duelist_b", "deck_b", 4000, "random", Some(42), "arena_starter", Some(&vazio));
         assert_eq!(s2["turn_order"], serde_json::json!("random"));
         assert!(s2.get("test_state").is_none());
+    }
+
+    // ---- SORTEIO DE QUEM COMEÇA (decisão do Lead 2026-09-28) ----
+    // Trava da semente: sem número na tela o duel_setup vai com seed 0 (sem
+    // semente = o jogo sorteia de verdade). Antes o Studio punha 42 fixo,
+    // então o sorteio dava SEMPRE o mesmo resultado — o "aleatório" não era
+    // aleatório. Com número na tela, vai o número dela (nada de 42 fixo).
+    #[test]
+    fn semente_sem_numero_sai_zero_para_o_jogo_sortear() {
+        assert_eq!(SEED_SEM_SEMENTE, 0);
+        assert_eq!(semente_do_duelo(None), 0);
+        // O caminho que a tela usa quando o campo está VAZIO (Svelte manda
+        // null): mesmo contrato, mesmo 0.
+        assert_eq!(semente_do_duelo(Some(0)), 0);
+        let s = montar_setup_duelo("duelist_a", "deck_a", "duelist_b", "deck_b", 4000, "random", None, "arena_starter", None);
+        assert_eq!(s["seed"], serde_json::json!(0));
+        assert_ne!(s["seed"], serde_json::json!(42), "42 fixo era o bug do sorteio sempre igual");
+    }
+
+    #[test]
+    fn semente_preenchida_vai_como_o_usuario_mandou() {
+        // Determinismo (o que o Campo de Testes e a reprodutibilidade usam):
+        // o número da tela viaja igual, 42 entra como 42 e não como o antigo
+        // padrão fixo.
+        assert_eq!(semente_do_duelo(Some(1234)), 1234);
+        assert_eq!(semente_do_duelo(Some(42)), 42);
+        assert_eq!(semente_do_duelo(Some(-7)), -7);
+        let s = montar_setup_duelo("duelist_a", "deck_a", "duelist_b", "deck_b", 4000, "random", Some(1234), "arena_starter", None);
+        assert_eq!(s["seed"], serde_json::json!(1234));
+    }
+
+    // Trava da ordem: no DUELO NORMAL o padrão é o sorteio (o usuário pediu
+    // que quem comece seja sorteado), e a tela manda "random". Valor fora da
+    // lista do contrato continua barrando com msg PT-BR.
+    #[test]
+    fn ordem_do_duelo_normal_padrao_e_sorteio() {
+        assert_eq!(ordem_do_duelo("", false).unwrap(), "random");
+        assert_eq!(ordem_do_duelo("   ", false).unwrap(), "random");
+        assert_eq!(ordem_do_duelo("random", false).unwrap(), "random");
+        assert_eq!(ordem_do_duelo("first_p1", false).unwrap(), "first_p1");
+        assert_eq!(ordem_do_duelo("first_p2", false).unwrap(), "first_p2");
+        let fora = ordem_do_duelo("primeiro", false).unwrap_err();
+        assert!(fora.contains("Ordem de turno inválida"), "{fora}");
+    }
+
+    // Trava do D33: com test_state presente a ordem é SEMPRE first_p1 (a
+    // fase da mão do usuário), qualquer coisa que venha no pedido, e a
+    // semente ausente continua 0.
+    #[test]
+    fn campo_de_testes_mantem_first_p1_e_semente_zero() {
+        assert_eq!(ordem_do_duelo("", true).unwrap(), "first_p1");
+        assert_eq!(ordem_do_duelo("random", true).unwrap(), "first_p1");
+        assert_eq!(ordem_do_duelo("first_p2", true).unwrap(), "first_p1");
+        let ts = serde_json::json!({ "my_hand": ["card_a"] });
+        let s = montar_setup_duelo("duelist_a", "deck_a", "duelist_b", "deck_b", 4000, "random", None, "arena_starter", Some(&ts));
+        assert_eq!(s["turn_order"], serde_json::json!("first_p1"));
+        assert_eq!(s["seed"], serde_json::json!(0));
+        assert_eq!(s["test_state"], ts);
     }
 
     #[test]

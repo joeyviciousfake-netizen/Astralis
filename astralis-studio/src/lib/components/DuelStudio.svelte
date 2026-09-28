@@ -4,6 +4,10 @@
   // num temporário e lança o Godot com --setup <temp> — comando jogar_duelo). AVANÇADO:
   // seed, arena, ordem de turno. O editor nunca simula duelo (R1): só monta
   // o dado e abre o Astralis de verdade (preview unificado, doc 10).
+  // QUEM COMEÇA é sorteado pelo jogo: o padrão aqui é "random" e a semente
+  // fica VAZIA (seed 0 = sem semente, o Astralis sorteia de verdade — o
+  // número 42 fixo antigo fazia o sorteio dar sempre o mesmo resultado).
+  // Quem preencher um número continua levando um duelo reproduzível.
   import { useDuelists } from "$lib/stores/duelists.svelte";
   import { useDecks } from "$lib/stores/decks.svelte";
   import { useQuickDuel } from "$lib/stores/duelQuick.svelte";
@@ -27,9 +31,9 @@
   let vida = $state(4000);
   let vidaSugerida = $state(false);
   let avancado = $state(false);
-  let seed = $state(42);
+  let seed = $state<number | null>(null);
   let arena = $state("arena_starter");
-  let ordem = $state("first_p1");
+  let ordem = $state("random");
   let arenas = $state<string[]>(["arena_starter"]);
 
   let msg = $state("");
@@ -82,6 +86,20 @@
     return dk ? `${dk.name} (${dk.cards.length})` : d.deck_id;
   }
 
+  // Semente que viaja no pedido: vazio (ou 0) = sem semente, o Astralis
+  // sorteia de verdade; preenchido = o mesmo duelo se repete. O editor só
+  // escreve o número — o sorteio é do jogo (R1/R2).
+  function sementeParaEnvio(): number | null {
+    if (seed === null || seed === undefined) return null;
+    const n = Math.floor(Number(seed));
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function sementeTexto(): string {
+    const s = sementeParaEnvio();
+    return s === null || s === 0 ? "aleatória" : String(s);
+  }
+
   async function jogar() {
     msg = "";
     if (!d1 || !d2) {
@@ -93,7 +111,7 @@
     try {
       const res: { mensagem?: unknown } = await invokeSave(
         "jogar_duelo",
-        { pedido: { duelista1: d1, duelista2: d2, vida: Math.floor(Number(vida) || 0), seed: Math.floor(Number(seed) || 0), arena, ordem } },
+        { pedido: { duelista1: d1, duelista2: d2, vida: Math.floor(Number(vida) || 0), seed: sementeParaEnvio(), arena, ordem } },
         120000
       );
       ok = true;
@@ -107,7 +125,7 @@
   }
 
   function ordemNome(v: string): string {
-    return v === "first_p1" ? "Jogador 1 começa" : v === "first_p2" ? "Jogador 2 começa" : "Sorteio";
+    return v === "first_p1" ? "Jogador 1 começa" : v === "first_p2" ? "Jogador 2 começa" : "Sorteio (aleatório)";
   }
 </script>
 
@@ -159,8 +177,9 @@
       </label>
       {#if avancado}
         <label class="block rounded-xl border border-violet-600/30 bg-violet-950/10 p-3">
-          <span class="text-[10px] tracking-widest text-violet-300 font-semibold">SEED (mesmo número = mesmo embaralho)</span>
-          <input type="number" class="mt-1 w-full px-2.5 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-sm" bind:value={seed} />
+          <span class="text-[10px] tracking-widest text-violet-300 font-semibold">SEMENTE</span>
+          <input type="number" placeholder="vazio = aleatório" class="mt-1 w-full px-2.5 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-sm" bind:value={seed} title="Deixe vazio para o jogo sortear de verdade; se preencher um número, o mesmo duelo se repete." />
+          <span class="block mt-1 text-[10px] text-zinc-500">Deixe vazio para o jogo sortear de verdade; se preencher um número, o mesmo duelo se repete.</span>
         </label>
         <label class="block rounded-xl border border-violet-600/30 bg-violet-950/10 p-3">
           <span class="text-[10px] tracking-widest text-violet-300 font-semibold">ARENA</span>
@@ -171,9 +190,9 @@
         <label class="block rounded-xl border border-violet-600/30 bg-violet-950/10 p-3">
           <span class="text-[10px] tracking-widest text-violet-300 font-semibold">QUEM COMEÇA</span>
           <select class="mt-1 w-full px-2.5 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-sm" bind:value={ordem}>
+            <option value="random">Sorteio (aleatório)</option>
             <option value="first_p1">Jogador 1 começa</option>
             <option value="first_p2">Jogador 2 começa</option>
-            <option value="random">Sorteio</option>
           </select>
         </label>
       {/if}
@@ -185,6 +204,6 @@
       onclick={jogar}
     >{jogando ? "Abrindo o Astralis…" : "▶ Jogar agora"}</button>
     {#if msg}<p class="mt-2 text-xs rounded-lg px-3 py-2 border whitespace-pre-line {ok ? 'text-emerald-300 bg-emerald-950/30 border-emerald-900/50' : 'text-amber-300 bg-amber-950/30 border-amber-900/50'}">{msg}</p>{/if}
-    <p class="mt-2 text-[11px] text-zinc-600">O Play escreve o setup rápido num arquivo temporário e abre o Astralis com ele por cima do projeto (projects/default via --project). {avancado ? `Seed ${seed} • ${arena} • ${ordemNome(ordem)}.` : ""}</p>
+    <p class="mt-2 text-[11px] text-zinc-600">O Play escreve o setup rápido num arquivo temporário e abre o Astralis com ele por cima do projeto (projects/default via --project). Este duelo vai com: quem começa <span class="text-zinc-400">{ordemNome(ordem)}</span> • semente <span class="text-zinc-400">{sementeTexto()}</span>{avancado ? ` • arena ${arena}` : ""}.</p>
   </div>
 </div>
