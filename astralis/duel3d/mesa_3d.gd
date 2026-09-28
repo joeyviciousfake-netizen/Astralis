@@ -39,10 +39,10 @@ const DIV := 150.0
 const CENTRO_X := 1158.0
 const CENTRO_Y := 540.0
 const TOPO := 0.35
-## Câmera FIXA (sem órbita/balanço): atrás do jogador, tilt p/ dar a
-## profundidade da ref (rival longe em cima, você grande embaixo).
-const CAM_POS := Vector3(0, 7.4, 9.6)
-const CAM_ALVO := Vector3(0, -0.3, -1.4)
+## Câmera FIXA (ordem do usuário): deslocada p/ a esquerda olhando p/
+## a direita — o campo fica colado à direita da tela. Sem órbita/balanço.
+const CAM_POS := Vector3(-2.2, 7.4, 10.2)
+const CAM_ALVO := Vector3(-2.2, -0.4, -1.4)
 const CAM_FOV := 50.0
 ## Fases estilo Tag Force REMOVIDAS (ordem do usuário, 2026-09-28): o
 ## duelo segue o Forbidden Memories, sem DP/SP/MP1/BP/MP2/EP.
@@ -87,7 +87,7 @@ var _no_cartas: Node3D = null
 var _no_slots: Node3D = null
 var _cursor3d: Node3D = null
 var _flash_tela: ColorRect = null
-var _deck_pos := [Vector3(3.6, 0.6, 0.4), Vector3(-3.6, 0.6, -0.4)]
+var _deck_pos := [Vector3(4.9, 0.6, 1.6), Vector3(-4.9, 0.6, -2.2)]
 
 var _lbl_lp_rival: Label = null
 var _lbl_mao_rival: Label = null
@@ -448,7 +448,7 @@ func _construir_campo() -> void:
 	# Número de cartas na mão do rival (a ref mostra o 6 ao lado da mão dele).
 	_lbl_conta_mao_rival = _rotulo3d("0", 60, Color(0.8, 0.8, 0.9))
 	_lbl_conta_mao_rival.name = "ContaMaoRival"
-	_lbl_conta_mao_rival.position = Vector3(2.4, 1.9, -4.2)
+	_lbl_conta_mao_rival.position = Vector3(2.7, 2.7, -4.75)
 	campo.add_child(_lbl_conta_mao_rival)
 	_construir_tokens(campo)
 	_no_cartas = Node3D.new()
@@ -888,15 +888,15 @@ func _fantasia(inst: Dictionary) -> Dictionary:
 # ---- DESENHO A PARTIR DO ESTADO REAL (só leitura, sem regra) ----
 
 func _pos_mao_arco(i: int, n: int, lado: int) -> Vector3:
-	# Mão em ARCO embaixo (você, grande/perto da câmera) e rival longe/cima
-	# pequeno (ref): arco abre em leque, pontas sobem e avançam.
+	# Mão embaixo...
 	var t := float(i) - float(maxi(n - 1, 0)) / 2.0
 	if lado == 0:
 		# TODAS idênticas à do meio (ordem do usuário): mesma altura,
-		# giro e posição — só o x separa. Seleção aparece no cursor e
-		# fusão no selo, sem mexer na carta.
-		return Vector3(t * 1.12, -0.60, 4.15)
-	return Vector3(t * 0.7, 1.5 + 0.08 * absf(t), -4.15 - 0.10 * absf(t))
+		# giro e posição — só o x separa, centrado no campo (a câmera
+		# já joga tudo p/ a direita, então centro x=0 alinha).
+		return Vector3(t * 1.12, 0.55, 5.0)
+	# Rival no alto (ordem do usuário), centrado no campo.
+	return Vector3(t * 0.7, 2.1, -4.75)
 
 
 func _limpar_cartas() -> void:
@@ -927,13 +927,15 @@ func _redesenhar(com_efeito: bool) -> void:
 	# TODAS paralelas e retas p/ a sua visão (ref): mesmo tilt calculado
 	# da câmera p/ o meio da mão (look_at deixava cada uma p/ um lado).
 	# tilt = atan2(cam.y - mao.y, cam.z - mao.z); frente +Z => gira X -tilt.
-	var tilt_mao := 48.9
+	var tilt_mao := 54.3
 	if _cam != null:
-		var d := _cam.global_position - Vector3(0, 1.15, 4.15)
+		var d := _cam.global_position - Vector3(0, 0.55, 5.0)
 		tilt_mao = rad_to_deg(atan2(d.y, d.z))
 	var mao0: Array = (_st.players[0] as Dictionary)["hand"]
 	for i in range(mao0.size()):
 		var c := _fazer_carta(mao0[i] as Dictionary, false, 0, false)
+		# Mão centrada no campo (que foi p/ a direita) e perto da câmera
+		# (maior): x acompanha o campo, z encosta, y na borda inferior.
 		c.position = _pos_mao_arco(i, mao0.size(), 0)
 		# Levantada p/ fusão: só o selo na etiqueta (posição não muda).
 		var selo := _levantadas.find(i) + 1

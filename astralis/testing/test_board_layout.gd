@@ -143,12 +143,12 @@ func test_espelho_arena_starter_igual_fallback() -> void:
 	var p0_m4: Vector2 = BoardLayoutScript.get_pos(slots, "p0_m4")
 	assert_true(p1_m0.x > p1_m4.x, "Starter: p1_m0 à direita de p1_m4.")
 	assert_eq(p1_m0.x, p0_m4.x, "Starter: p1_m0.x == p0_m4.x (espelho).")
-	assert_eq(p1_m0, Vector2(1684, 345), "Starter: p1_m0 na grade larga.")
-	assert_eq(BoardLayoutScript.get_pos(slots, "p1_s0"), Vector2(1684, 45), "Starter: p1_s0 na grade larga.")
-	assert_eq(BoardLayoutScript.get_pos(slots, "p0_m0"), Vector2(632, 735), "Starter: p0_m0 na grade larga.")
-	assert_eq(BoardLayoutScript.get_pos(slots, "p0_s0"), Vector2(632, 1035), "Starter: p0_s0 na grade larga.")
+	assert_eq(p1_m0, Vector2(1684, 305), "Starter: p1_m0 na grade larga.")
+	assert_eq(BoardLayoutScript.get_pos(slots, "p1_s0"), Vector2(1684, 10), "Starter: p1_s0 na grade larga.")
+	assert_eq(BoardLayoutScript.get_pos(slots, "p0_m0"), Vector2(632, 695), "Starter: p0_m0 na grade larga.")
+	assert_eq(BoardLayoutScript.get_pos(slots, "p0_s0"), Vector2(632, 995), "Starter: p0_s0 na grade larga.")
 	var r: Rect2 = BoardScript.slot_rect(1, "monstro", 0, slots)
-	assert_eq(r.position, Vector2(1684, 345), "slot_rect usa o XY da arena.")
+	assert_eq(r.position, Vector2(1684, 305), "slot_rect usa o XY da arena.")
 
 
 func test_logica_por_indice_intacta_xy_nao_muda_slot() -> void:

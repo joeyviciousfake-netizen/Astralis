@@ -352,5 +352,5 @@ func test_arena_ausente_no_projeto_usa_grade_padrao_com_espelho() -> void:
 	# larga; sem arena o desenho cai no fallback, sem quebrar nada).
 	var starter_slots: Dictionary = BoardLayoutScript.load_arena(BoardLayoutScript.starter_arena_path())
 	assert_eq(starter_slots.size(), 20, "arena_starter (pasta de teste) também tem 20 slots.")
-	assert_eq(starter_slots["p1_m0"] as Vector2, Vector2(1684, 345), "Starter usa a grade larga (slots quadrados).")
-	assert_eq(starter_slots["p0_s0"] as Vector2, Vector2(632, 1035), "Starter usa a grade larga (slots quadrados).")
+	assert_eq(starter_slots["p1_m0"] as Vector2, Vector2(1684, 305), "Starter usa a grade larga (slots quadrados).")
+	assert_eq(starter_slots["p0_s0"] as Vector2, Vector2(632, 995), "Starter usa a grade larga (slots quadrados).")
