@@ -82,6 +82,8 @@ travas:
 
   - "D15-D36 travadas. Nao reabrir sem permissao. Ferramentas oficiais (D14/D18/D19): godot-mcp + GUT 9.7.1. Godot 4.7.2 em Godot/ (ignorado no git)."
 
+  - "MCP+GUT (2026-09-27, ordem do usuario): MCP godot so existe na sessao do Lead (subagentes Task nao herdam MCP, ferramenta fixa da plataforma). Subagentes validam via Godot headless + GUT (equivale); Lead verifica via MCP toda entrega runtime."
+
   - "ANTIVIRUS (2026-09-25): o Windows Defender acusa src-tauri/target/debug/deps/astralis_studio-<hash>.exe de trojan. investigated: e FALSO POSITIVO. O arquivo e binario de TESTE gerado pelo proprio Cargo quando roda cargo test (nao e codigo escrito por agente, nao esta no git, target/ e ignorado, SHA256 50D4B22E...); o main.rs nao tem rede, registro, persistencia, injecao nem ofuscacao, e as unicas crates sao tauri/tauri-build/tauri-plugin-shell/serde/serde_json. Motivo do falso positivo: binario Rust debug sem assinatura + Tauri (embute WebView2, abre processo com cmd /C start, escreve em %TEMP%) = assinatura classica de heuristica. O aviso VOLTA toda vez que rodar cargo test/cargo build — apagar o arquivo nao resolve. O usuario DEIXOU COMO ESTA de proposito (nao quer mexer em antivirus). Se aparecer de novo, NAO investigar de novo: e o mesmo aviso. src-tauri/target/ tem 3,74 GB de cache puro, apagavel quando quiser."
 
   - "POLITICA DE REFERENCIAS: o Studio nao inventa uma barreira adicional contra personagens, franquias ou designs conhecidos apenas por serem protegidos por copyright. Nao substituir silenciosamente o alvo por um personagem generico ou original."
