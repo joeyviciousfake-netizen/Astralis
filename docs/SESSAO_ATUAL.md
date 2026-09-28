@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Painel em blocos fixos (2026-09-27): imagem separada do bloco descricao (clip, tamanho constante). MCP limpo, GUT 130/130. Commit b6c7121."
+onde_estamos: "Mao pra camera (2026-09-27): cartas da mao com look_at na Camera3D (retas p/ sua visao). MCP limpo, GUT 14/14. Commit ab6a68d."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
