@@ -941,7 +941,9 @@ func _pos_mao_arco(i: int, n: int, lado: int) -> Vector3:
 	# pequeno (ref): arco abre em leque, pontas sobem e avançam.
 	var t := float(i) - float(maxi(n - 1, 0)) / 2.0
 	if lado == 0:
-		return Vector3(t * 1.12, 1.15 + (0.13 * absf(t)) + (0.35 if _fileira == FILEIRA_MAO and i == _col else 0.0), 4.15 + 0.16 * absf(t))
+		# Mão encostando embaixo da tela (cálculo da câmera fixa FOV 50:
+		# a borda de baixo da carta cai no raio inferior do frustum).
+		return Vector3(t * 1.12, -0.60 + (0.13 * absf(t)) + (0.35 if _fileira == FILEIRA_MAO and i == _col else 0.0), 4.15 + 0.16 * absf(t))
 	return Vector3(t * 0.7, 1.5 + 0.08 * absf(t), -4.15 - 0.10 * absf(t))
 
 
