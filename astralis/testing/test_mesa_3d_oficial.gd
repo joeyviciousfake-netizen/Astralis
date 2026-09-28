@@ -265,10 +265,10 @@ func test_camera_fixa_sem_orbita() -> void:
 	var mesa: Node = await _mesa3d_nova()
 	var cam := mesa.get_node("Camera3D") as Camera3D
 	assert_true(cam != null, "Camera3D existe.")
-	assert_eq(cam.position, Vector3(-2.2, 7.4, 10.2), "Câmera fixa deslocada (campo à direita).")
+	assert_eq(cam.position, Vector3(-2.2, 9, 8), "Câmera fixa (posição do usuário).")
 	assert_eq(cam.fov, 50.0, "FOV fixo com profundidade da ref.")
 	await wait_process_frames(10)
-	assert_eq((mesa.get_node("Camera3D") as Camera3D).position, Vector3(-2.2, 7.4, 10.2), "Câmera não deriva (sem órbita).")
+	assert_eq((mesa.get_node("Camera3D") as Camera3D).position, Vector3(-2.2, 9, 8), "Câmera não deriva (sem órbita).")
 
 
 func test_placas_topo_com_dado_real_sem_marca() -> void:
