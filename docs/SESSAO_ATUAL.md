@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "MCP certo ativo (2026-09-27, D39): asset-5470 removido por completo, só Coding-Solo godot-mcp. Git limpo."
+onde_estamos: "Ponte MCP pronta e provada (2026-09-27): Temp/opencode/mcp_call.py da as 14 ferramentas aos subagentes; mesa 3D rodada por ela (duelo real, zero erro). Git limpo."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
@@ -82,7 +82,7 @@ travas:
 
   - "D15-D36 travadas. Nao reabrir sem permissao. Ferramentas oficiais (D14/D18/D19): godot-mcp + GUT 9.7.1. Godot 4.7.2 em Godot/ (ignorado no git)."
 
-  - "MCP+GUT (2026-09-27, D39): oficial é Coding-Solo godot-mcp (ponte godot na sessão); asset-5470 removido (link errado). Subagentes Task seguem sem MCP direto (plataforma); Lead verifica via MCP toda entrega runtime."
+  - "MCP+GUT (2026-09-27, D39): oficial Coding-Solo; subagentes usam a PONTE Temp/opencode/mcp_call.py (mesmas 14 ferramentas via bash, sessoes run-debug-stop provadas na mesa 3D); Lead verifica via MCP direto toda entrega runtime."
 
   - "ANTIVIRUS (2026-09-25): o Windows Defender acusa src-tauri/target/debug/deps/astralis_studio-<hash>.exe de trojan. investigated: e FALSO POSITIVO. O arquivo e binario de TESTE gerado pelo proprio Cargo quando roda cargo test (nao e codigo escrito por agente, nao esta no git, target/ e ignorado, SHA256 50D4B22E...); o main.rs nao tem rede, registro, persistencia, injecao nem ofuscacao, e as unicas crates sao tauri/tauri-build/tauri-plugin-shell/serde/serde_json. Motivo do falso positivo: binario Rust debug sem assinatura + Tauri (embute WebView2, abre processo com cmd /C start, escreve em %TEMP%) = assinatura classica de heuristica. O aviso VOLTA toda vez que rodar cargo test/cargo build — apagar o arquivo nao resolve. O usuario DEIXOU COMO ESTA de proposito (nao quer mexer em antivirus). Se aparecer de novo, NAO investigar de novo: e o mesmo aviso. src-tauri/target/ tem 3,74 GB de cache puro, apagavel quando quiser."
 
