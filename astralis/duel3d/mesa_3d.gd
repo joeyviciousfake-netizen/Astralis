@@ -286,15 +286,17 @@ func _construir_ambiente() -> void:
 	mat_ceu.ground_bottom_color = Color(0.35, 0.55, 0.85)
 	mat_ceu.ground_horizon_color = Color(0.65, 0.85, 1.0)
 	mat_ceu.sun_angle_max = 30.0
+	mat_ceu.energy_multiplier = 0.85
 	ceu.sky_material = mat_ceu
 	env.background_mode = Environment.BG_SKY
 	env.sky = ceu
-	# Ambient NEUTRO e baixo (o céu azul ficava como filtro azul sobre
-	# campo e cartas): o céu é só FUNDO, a luz do campo é branca.
+	# Luz PROFISSIONAL (ref tem volume, não clarão): ambient baixo e
+	# neutro, sol modelando com sombra suave, Healing por zona.
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color = Color(0.62, 0.62, 0.66)
-	env.ambient_light_energy = 0.45
+	env.ambient_light_color = Color(0.50, 0.52, 0.58)
+	env.ambient_light_energy = 0.30
 	env.tonemap_mode = Environment.TONE_MAPPER_ACES
+	env.tonemap_exposure = 0.95
 	env.fog_enabled = true
 	env.fog_light_color = Color(0.65, 0.82, 1.0)
 	env.fog_density = 0.004
@@ -304,29 +306,29 @@ func _construir_ambiente() -> void:
 	var sol := DirectionalLight3D.new()
 	sol.name = "SolDirecional"
 	sol.rotation_degrees = Vector3(-52, 28, 0)
-	sol.light_energy = 1.3
-	sol.light_color = Color(1.0, 0.98, 0.94)
-	sol.shadow_enabled = false
+	sol.light_energy = 1.1
+	sol.light_color = Color(1.0, 0.96, 0.90)
+	sol.shadow_enabled = true
 	add_child(sol)
 	var mesa_luz := OmniLight3D.new()
 	mesa_luz.name = "LuzCampo"
 	mesa_luz.position = Vector3(0, 5.5, 0.5)
-	mesa_luz.light_color = Color(1.0, 0.97, 0.9)
-	mesa_luz.light_energy = 0.8
+	mesa_luz.light_color = Color(1.0, 0.97, 0.92)
+	mesa_luz.light_energy = 0.5
 	mesa_luz.omni_range = 14.0
 	add_child(mesa_luz)
 	var luz_rival := OmniLight3D.new()
 	luz_rival.name = "LuzRival"
 	luz_rival.position = Vector3(0, 3.0, -3.4)
-	luz_rival.light_color = Color(0.65, 0.75, 1.0)
-	luz_rival.light_energy = 0.6
+	luz_rival.light_color = Color(0.55, 0.68, 1.0)
+	luz_rival.light_energy = 0.4
 	luz_rival.omni_range = 8.0
 	add_child(luz_rival)
 	var luz_voce := OmniLight3D.new()
 	luz_voce.name = "LuzVoce"
 	luz_voce.position = Vector3(0, 3.0, 3.4)
-	luz_voce.light_color = Color(1.0, 0.9, 0.7)
-	luz_voce.light_energy = 0.6
+	luz_voce.light_color = Color(1.0, 0.85, 0.62)
+	luz_voce.light_energy = 0.45
 	luz_voce.omni_range = 8.0
 	add_child(luz_voce)
 	_flash = OmniLight3D.new()
@@ -481,7 +483,7 @@ func _construir_campo() -> void:
 	_no_cartas = Node3D.new()
 	_no_cartas.name = "Cartas"
 	add_child(_no_cartas)
-	_cursor3d = _caixa("Cursor3D", Vector3(1.18, 0.06, 1.72), Vector3(0, TOPO, 4.15), _mat(Color(0.85, 0.93, 1.0), 1.6))
+	_cursor3d = _caixa("Cursor3D", Vector3(1.18, 0.06, 1.72), Vector3(0, TOPO, 4.15), _mat(Color(0.85, 0.93, 1.0), 1.1))
 	add_child(_cursor3d)
 	print("[MESA3D] Campo: 20 painéis de vidro + decks/cemitérios + 6 fases + tokens + Cursor3D.")
 
@@ -533,7 +535,7 @@ func _atualizar_fases() -> void:
 		if base == null:
 			continue
 		if str(tag) == atual:
-			base.material_override = _mat(Color(1.0, 0.85, 0.20), 1.2)
+			base.material_override = _mat(Color(1.0, 0.85, 0.20), 1.0)
 			if rot != null:
 				rot.modulate = Color(0.15, 0.10, 0.02)
 		else:
@@ -586,9 +588,9 @@ func _painel_slot(lado: int, tipo: String, indice: int) -> Node3D:
 	var no := Node3D.new()
 	no.name = "Painel_p%d_%s%d" % [lado, ("m" if tipo == "monstro" else "s"), indice]
 	no.position = Vector3(p.x, 0.0, p.z)
-	var borda := _caixa("Borda", Vector3(1.16, 0.03, 1.69), Vector3(0, TOPO - 0.055, 0), _vidro(Color(0.75, 0.90, 1.0), 0.85, 0.9))
+	var borda := _caixa("Borda", Vector3(1.16, 0.03, 1.69), Vector3(0, TOPO - 0.055, 0), _vidro(Color(0.75, 0.90, 1.0), 0.85, 0.6))
 	no.add_child(borda)
-	var base := _caixa("Base", Vector3(1.06, 0.05, 1.545), Vector3(0, TOPO - 0.03, 0), _vidro(Color(0.35, 0.60, 0.95), 0.42, 0.35))
+	var base := _caixa("Base", Vector3(1.06, 0.05, 1.545), Vector3(0, TOPO - 0.03, 0), _vidro(Color(0.35, 0.60, 0.95), 0.42, 0.18))
 	no.add_child(base)
 	return no
 
