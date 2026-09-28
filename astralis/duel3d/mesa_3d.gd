@@ -223,6 +223,11 @@ func _ready() -> void:
 	if _cam != null:
 		print("[MESA3D] Cam: pos=%s fov=%s alvo=%s." % [str(_cam.global_position), str(_cam.fov), str(CAM_ALVO)])
 		print("[MESA3D] Slot p0_m2 na tela: %s." % str(_cam.unproject_position(_pos_slot(0, "monstro", 2))))
+		print("[MESA3D] Calib: centro campo=%s mao0=%s mao0+1x=%s rival=%s." % [
+			str(_cam.unproject_position(Vector3(0, 0.35, 0.0))),
+			str(_cam.unproject_position(Vector3(0, 4.0, 6.1))),
+			str(_cam.unproject_position(Vector3(1.0, 4.0, 6.1))),
+			str(_cam.unproject_position(Vector3(0, 1.4, -4.75)))])
 	_ver_autoquit()
 
 
@@ -897,12 +902,11 @@ func _pos_mao_arco(i: int, n: int, lado: int) -> Vector3:
 	# Mão embaixo...
 	var t := float(i) - float(maxi(n - 1, 0)) / 2.0
 	if lado == 0:
-		# TODAS idênticas à do meio (ordem do usuário): mesma altura,
-		# giro e posição — só o x separa, centrado no campo (a câmera
-		# já joga tudo p/ a direita, então centro x=0 alinha).
-		return Vector3(t * 1.12, 4, 6.1)
-	# Rival no alto (ordem do usuário), centrado no campo.
-	return Vector3(t * 0.7, 1.4, -4.75)
+		# Mão centrada no CENTRO VISUAL do campo (ordem do usuário): por
+		# perspectiva, o centro da mão fica à esquerda do centro do mundo.
+		return Vector3(-1.3 + t * 1.12, 4, 6.1)
+	# Rival idem (mais longe = desloca p/ a direita).
+	return Vector3(0.45 + t * 0.7, 1.4, -4.75)
 
 
 func _limpar_cartas() -> void:
