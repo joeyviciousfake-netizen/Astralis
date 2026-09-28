@@ -267,6 +267,9 @@ var _cursor_grupo: Node3D = null
 ## Moldura do foco (4 barras) e a mão branca, no plano da focada.
 var _cursor_moldura: Node3D = null
 var _cursor_mao: Node3D = null
+## O turno do rival está sendo conduzido agora (trava de reentrada): sem isto
+## duas chamadas simultâneas fariam o turno dele rodar em paralelo.
+var _rival_rodando := false
 ## Escala do cursor = do que ele marca (peça de vidro no campo, carta na
 ## mão). O pulso do `_process` multiplica por cima.
 var _cursor_escala := 1.0
@@ -402,18 +405,12 @@ func _ready() -> void:
 	_construir_campo()
 	_fusions_data = _fusoes_do_data(data)
 	_fala("Mesa 3D: duelo real carregado.")
-	_duel.advance_phase() # DRAW inicial -> MAIN (mão 5/5 sem extra, D26).
-	_fala("Duelo começou! Sua vez.")
-	_fileira = FILEIRA_MAO
-	_col = 0
-	_sel_atk = -1
-	_fase_jogador = FASE_MAO
-	_sub_mao = SUB_MAO_ESCOLHA
-	_mao_idx = -1
-	_face_baixo = false
-	_slot_alvo = -1
 	_redesenhar(false)
 	_atualizar_hud()
+	_iniciar_turno_do_duelo()
+	if int(_st.current_player) == 0:
+		_redesenhar(false)
+		_atualizar_hud()
 	print("[MESA3D] Pronta: mão p0=%d p1=%d, artes carregadas=%d, assets embutidos=%d/17." % [
 		((_st.players[0] as Dictionary)["hand"] as Array).size(),
 		((_st.players[1] as Dictionary)["hand"] as Array).size(), _artes_ok,
@@ -458,6 +455,48 @@ func _avisar_arena() -> void:
 		var h0: Dictionary = BoardLayoutScript.get_hand(_arena_data, 0)
 		var h1: Dictionary = BoardLayoutScript.get_hand(_arena_data, 1)
 		print("[MESA3D] Arena carregada: %d slots + mão p0(%d,%d,%d) p1(%d,%d,%d)." % [_arena_layout.size(), int(h0["x"]), int(h0["y"]), int(h0["step"]), int(h1["x"]), int(h1["y"]), int(h1["step"])])
+
+
+## ---------- QUEM JOGA PRIMEIRO (bug do "Aguarde o rival") ----------
+##
+## QUEM COMEÇA É DADO DO MOTOR (R3): a tela não sorteia nem fixa nada. O
+## `GameState.current_player` já saiu do sorteio do `DuelManager`
+## (first_p1 / first_p2 / random) e é o único que esta função lê.
+##
+## O BUG: esta tela assumia que o primeiro era sempre o jogador. Ela entrava
+## direto no fluxo da fase da mão (`_fase_jogador = FASE_MAO`) e TODAS as
+## travas do jogador caem em "current_player != 0" — então, quando o motor
+## dizia que o rival começava, NINGUÉM conduzia o turno dele e o duelo
+## ficava parado para sempre em "Aguarde o rival." (o START nunca abre mão
+## por si, e a IA só era chamada quando o jogador passava o turno).
+##
+## A CORREÇÃO é de ORQUESTRAÇÃO DA TELA (R1), não de regra: se a vez é do
+## rival, a tela conduz o turno dele pelo MESMO caminho real da IA que já
+## existia (`_rival_auto`: DuelManager/TurnManager + SummonSystem +
+## BattleSystem) e só então abre o fluxo normal da fase da mão para você.
+func _iniciar_turno_do_duelo() -> void:
+	# Estado neutro do fluxo do jogador (vale para os dois caminhos).
+	_fileira = FILEIRA_MAO
+	_col = 0
+	_sel_atk = -1
+	_fase_jogador = FASE_MAO
+	_sub_mao = SUB_MAO_ESCOLHA
+	_mao_idx = -1
+	_face_baixo = false
+	_slot_alvo = -1
+	if bool(_st.over):
+		_fala("Duelo já acabou.")
+		return
+	if int(_st.current_player) != 0:
+		# O RIVAL COMEÇOU (o motor sorteou ele). A tela conduz o turno dele
+		# e devolve a vez — nada de esperar o jogador apertar START, porque
+		# o START é dele e ninguém ia apertar.
+		_fala("O rival começou o duelo. Ele vai comprar e jogar o turno dele.")
+		_rival_auto()
+		return
+	# A vez é sua: DRAW -> MAIN pelo motor (mão 5/5 sem carta extra, D26).
+	_duel.advance_phase()
+	_fala("Duelo começou! Sua vez.")
 
 
 func _ver_autoquit() -> void:
@@ -3092,13 +3131,26 @@ func _atacar3d(alvo_slot: int) -> void:
 func _rival_auto() -> void:
 	# Rival automático simples (padrão do main.gd: invoca + ataca com o
 	# núcleo real). A escolha fina da IA mora no 2D; aqui é só p/ testar.
-	if not is_inside_tree():
+	# É o MESMO caminho tanto quando o jogador aperta START e passa o turno
+	# quanto quando o RIVAL COMEÇOU o duelo: em ambos os casos aqui o turno
+	# do rival entra em DRAW, e este é quem o conduz até a vez voltar a ser
+	# do jogador. Regra nenhuma mora aqui — quem decide fase, compra, turno
+	# e vencedor é o motor (DuelManager/TurnManager/Summon/Battle/Damage).
+	if not is_inside_tree() or _st == null:
 		return
+	# Trava de reentrada: o turno do rival é conduzido UMA vez por vez. Sem
+	# isto, duas chamadas (início do duelo + START) fariam o turno dele
+	# rodar duas vezes em paralelo.
+	if _rival_rodando:
+		return
+	_rival_rodando = true
 	await get_tree().create_timer(0.7).timeout
 	if not is_inside_tree() or bool(_st.over):
+		_rival_rodando = false
 		_redesenhar(false)
 		return
 	_duel.advance_phase() # -> MAIN do rival
+	_redesenhar(false) # a barra de fases mostra a fase REAL (não a anterior)
 	var mao: Array = (_st.players[1] as Dictionary)["hand"]
 	var idx := -1
 	for i in range(mao.size()):
@@ -3109,13 +3161,20 @@ func _rival_auto() -> void:
 	if idx >= 0 and slot >= 0:
 		var r: Dictionary = SummonSystem.normal_summon(_st, 1, idx, slot, false, "ATK")
 		if bool(r.get("ok", false)):
-			_fala("Rival invocou em Ataque.")
+			_fala("Rival invocou %s em Ataque." % str((r.get("nome", (mao[idx] as Dictionary).get("name", "um monstro")) as String)))
+	elif mao.is_empty():
+		_fala("Rival está com a mão vazia neste turno.")
+	else:
+		_fala("Rival não tem monstro na mão para invocar.")
 	_redesenhar(true)
 	await get_tree().create_timer(0.7).timeout
 	if not is_inside_tree() or bool(_st.over):
+		_rival_rodando = false
 		_redesenhar(false)
 		return
 	_duel.advance_phase() # MAIN -> BATTLE
+	_redesenhar(false)
+	var atacou := false
 	var zona: Array = (_st.players[1] as Dictionary)["monster"]
 	for s in range(zona.size()):
 		if bool(_st.over):
@@ -3126,6 +3185,7 @@ func _rival_auto() -> void:
 		var ra: Dictionary = BattleSystem.attack(_st, 1, s, 0, alvo)
 		if not bool(ra.get("ok", false)):
 			continue
+		atacou = true
 		if bool(ra.get("direto", false)):
 			_fala("Rival direto: %d em você!" % int(ra.get("dano", 0)))
 		elif bool(ra.get("destruiu_alvo", false)):
@@ -3137,14 +3197,46 @@ func _rival_auto() -> void:
 		_redesenhar(false)
 		await get_tree().create_timer(0.5).timeout
 		if not is_inside_tree():
+			_rival_rodando = false
 			return
+	if not atacou:
+		_fala("Rival não atacou neste turno.")
 	if bool(_st.over):
+		_rival_rodando = false
+		_fala("Duelo acabou!")
 		_redesenhar(false)
 		return
 	_duel.advance_phase() # BATTLE -> END
-	_duel.advance_phase() # END -> sua DRAW (refill até 5, regra real)
-	_duel.advance_phase() # DRAW -> sua MAIN
-	_fala("Seu turno. Mão com %d cartas." % (((_st.players[0] as Dictionary)["hand"] as Array).size()))
+	_redesenhar(false)
+	_levar_vez_para_o_jogador()
+	_rival_rodando = false
+
+
+## ENTREGA DE VEZ: leva a máquina de fases até a MAIN do JOGADOR e só aí
+## abre o fluxo dele (carta ao centro -> face -> slot -> estrela, D24).
+## É a trava de progresso do bug reportado: o turno do rival SEMPRE volta
+## para `current_player == 0`. Avança pelo `advance_phase` do motor (nada de
+## fase forçada aqui) e com teto de passos, para nunca travar a tela.
+func _levar_vez_para_o_jogador() -> void:
+	# Entrega de vez: avança a máquina de fases pelo `advance_phase` do MOTOR
+	# até a MAIN do JOGADOR e só aí abre o fluxo dele. Parar só em
+	# "current_player == 0" não bastava: o END entrega a vez já no DRAW (com o
+	# refill até 5 do TurnManager, D26), e o jogador tem de receber na MAIN
+	# para poder jogar. Teto de passos, para nunca travar a tela.
+	var guarda := 0
+	while not bool(_st.over) and guarda < 12:
+		if int(_st.current_player) == 0 and String(_st.phase) == "MAIN":
+			break
+		_duel.advance_phase()
+		guarda += 1
+	if bool(_st.over):
+		_fala("Duelo acabou!")
+		_redesenhar(false)
+		return
+	# Fala a FASE REAL em que o jogador entrou (doc 13: a fase é do motor).
+	_fala("Sua vez! %s, turno %d. Mão com %d carta(s)." % [
+		_rotulo_fase_pt(String(_st.phase)), int(_st.turn_number),
+		((_st.players[0] as Dictionary)["hand"] as Array).size()])
 	_sel_atk = -1
 	_fase_jogador = FASE_MAO
 	_sub_mao = SUB_MAO_ESCOLHA
@@ -3157,6 +3249,22 @@ func _rival_auto() -> void:
 	_fileira = FILEIRA_MAO
 	_col = 0
 	_redesenhar(true)
+	_atualizar_hud()
+
+
+## Nome da fase em PT-BR para a fala (o valor vem do motor, isto é só o
+## rótulo em português — não inventa fase, não inventa dado).
+func _rotulo_fase_pt(fase: String) -> String:
+	match fase:
+		"DRAW":
+			return "Sorteio/compra"
+		"MAIN":
+			return "Principal"
+		"BATTLE":
+			return "Batalha"
+		"END":
+			return "Final"
+	return fase
 
 
 func _passar_turno() -> void:
