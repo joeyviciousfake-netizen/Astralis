@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Mesa 3D demolida e refeita (2026-09-27): SEM mesa, vazio estrelado, paineis flutuantes, placas LP/TURN, retratos, painel carta, fases e contadores iguais a ref. Lead rodou via MCP e viu invocar com flash. GUT 130/130. Commit d766462."
+onde_estamos: "Cena GX feita pelo Lead (2026-09-27, modo build): ceu azul + pilares + vidro, placas azul/vermelha + Single, painel carta bege, START Help, textos inventados purgados. MCP limpo, GUT 130/130. Commit c2adb68."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
