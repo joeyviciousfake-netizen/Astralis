@@ -39,12 +39,27 @@ const DIV := 150.0
 const CENTRO_X := 1158.0
 const CENTRO_Y := 540.0
 const TOPO := 0.35
-## Câmera FIXA (ordem do usuário): atrás/acima do seu campo olhando p/ a
-## direita. Sem órbita/balanço. POSIÇÃO, ALVO e FOV NÃO mudaram na fase 1
-## do doc 15 (só a janela do campo mudou de lugar).
-const CAM_POS := Vector3(0, 9, 8)
+## ---- TRANSFORM DE APRESENTAÇÃO DO CAMPO (doc 15 §15.5) ----
+## A ARENA (dado) continua mandando na COMPOSIÇÃO: qual slot fica onde em
+## relação aos outros e o espelho do rival (D17/D18). O que é apresentação
+## é só ESCALA (uniforme nos 2 eixos) + DESLOC (do conjunto), nunca uma
+## posição nova por slot:
+##   mundo_x = (arena_x - CENTRO_X) / DIV * ESCALA + DESLOC.x
+##   mundo_z = (arena_y - CENTRO_Y) / DIV * ESCALA + DESLOC.z
+## ESCALA/DESLOC medidos contra a REFERÊNCIA (doc 15 §15.3): com eles o
+## campo ocupa x 29,3%..99,9% da tela (encosta na direita), as fileiras
+## caem em 17/30/49/67% de cima p/ baixo e o vão do meio (onde entra a
+## barra de fases da ref) fica em ~10% da altura.
+const ESCALA_CAMPO := 1.23
+const DESLOC_CAMPO := Vector2(0.0, -0.07)
+## Câmera FIXA (ordem do usuário), sem órbita/balanço. Subir/afastar o FOV é
+## alavanca de DESENHO autorizada (doc 15 §15.5): os valores abaixo são os
+## que medem as fileiras da referência. A tríade que garante a perspectiva
+## simétrica (doc 15 §15.4) continua: X = 0 (sem deslocamento), ALVO no
+## centro e `frustum_offset` ZERO (abaixo).
+const CAM_POS := Vector3(0, 16.8, 20.9)
 const CAM_ALVO := Vector3(0, 0, 0.0)
-const CAM_FOV := 50.0
+const CAM_FOV := 20.0
 ## A LENTE NUNCA é deslocada (doc 15 §15.4): `frustum_offset` fica em 0 e a
 ## projeção fica SIMÉTRICA (mesma compressão à esquerda e à direita),
 ## idêntica à de quando o campo estava no meio da tela. O que joga o campo
@@ -87,10 +102,19 @@ const ASSETS_EMBUTIDOS := [
 ]
 
 const LARG_CARTA := 1.0
-## Lado da PEÇA DE VIDRO do campo (doc 15 §15.3: ladrilhos soltos com
-## fresta). O espaçamento dos slots vem do dado (arena); 1,40 deixa a
-## fresta de ~0,3 que a referência tem entre as peças.
-const LADO_PAINEL := 1.40
+## A PEÇA DE VIDRO em larguras de carta: 1,40 = a peça é 1,40x a carta,
+## com a fresta que a referência tem entre as peças (o espaçamento vem do
+## dado). Ela CRESCE junto com o campo (ESCALA_CAMPO), então a proporção
+## peça/carta é a mesma em qualquer enquadramento.
+const PECA_EM_CARTAS := 1.40
+## Janela de arte da MOLDURA REAL (medida no JPG do usuário, D38 — o JPG
+## é 832x1248 e a janela fica em x 11,90%..89,18% e y 18,27%..70,99%).
+## Usada no 3D e no painel 2D: a arte preenche a janela sem sobra, seja a
+## arte 408x384 (paisagem) ou outra.
+const JANELA_ART_X0 := 0.1190
+const JANELA_ART_X1 := 0.8918
+const JANELA_ART_Y0 := 0.1827
+const JANELA_ART_Y1 := 0.7099
 ## Inclinação da mão em graus no eixo X (LIVRE, ordem do usuário):
 ## mude à vontade, nada recalcula pela câmera. Rival usa 180 + este.
 ## Fase 2 (doc 15 §15.3): a mão é PEQUENA, no rodapé, DE PÉ (quase a prumo,
@@ -106,8 +130,8 @@ const TILT_MAO_LIVRE := -35.0
 ## cortadas embaixo) — ver a medida no print de calibração.
 const MAO_P0_PASSO := 1.06
 const MAO_P1_PASSO := 0.7
-const MAO_P0_YZ := Vector2(2.73, 5.88)   # Vector2(y, z): sua mão (perto, embaixo)
-const MAO_P1_YZ := Vector2(1.4, -4.75)  # Vector2(y, z): mão do rival (longe)
+const MAO_P0_YZ := Vector2(4.63, 10.0)   # Vector2(y, z): sua mão (perto, embaixo)
+const MAO_P1_YZ := Vector2(0.31, -5.18)  # Vector2(y, z): mão do rival (longe)
 ## X de mundo do centro do arco SEM câmera (fallback: só não quebra o desenho).
 const MAO_P0_X_SEM_CAM := 0.3
 const MAO_P1_X_SEM_CAM := -2.8
@@ -152,6 +176,9 @@ var _vp: SubViewport = null
 var _no_cartas: Node3D = null
 var _no_slots: Node3D = null
 var _cursor3d: Node3D = null
+## Escala do cursor = do que ele marca (peça de vidro no campo, carta na
+## mão). O pulso do `_process` multiplica por cima.
+var _cursor_escala := 1.0
 var _flash_tela: ColorRect = null
 var _deck_pos := [Vector3(4.9, 0.6, 1.6), Vector3(-4.9, 0.6, -2.2)]
 
@@ -553,46 +580,51 @@ func _construir_campo() -> void:
 	var laterais := Node3D.new()
 	laterais.name = "Laterais"
 	campo.add_child(laterais)
-	# Pilhas nas laterais FORA do campo quadrado (ref nova): decks
-	# marrons à direita, cemitérios à esquerda, com o número em cima.
-	laterais.add_child(_caixa("DeckRival", Vector3(1.0, 0.35, 1.46), Vector3(4.9, TOPO + 0.17, -2.2), _mat(Color(0.42, 0.24, 0.10))))
-	laterais.add_child(_caixa("DeckVoce", Vector3(1.0, 0.35, 1.46), Vector3(4.9, TOPO + 0.17, 1.6), _mat(Color(0.45, 0.26, 0.11))))
-	laterais.add_child(_caixa("CemRival", Vector3(1.0, 0.22, 1.46), Vector3(-4.9, TOPO + 0.11, -2.2), _mat(Color(0.30, 0.16, 0.20), 0.25)))
-	laterais.add_child(_caixa("CemVoce", Vector3(1.0, 0.22, 1.46), Vector3(-4.9, TOPO + 0.11, 1.6), _mat(Color(0.16, 0.24, 0.30), 0.25)))
+	# Pilhas nas laterais FORA do campo (ref nova): decks marrons à direita,
+	# cemitérios à esquerda, com o número em cima. `_ponto_lateral` aplica
+	# a mesma escala do campo, então elas ficam do lado do vidro, nunca
+	# em cima dele, quando o campo cresce (ESCALA_CAMPO).
+	var tam_pilha := Vector3(1.0 * ESCALA_CAMPO, 0.35, 1.46 * ESCALA_CAMPO)
+	laterais.add_child(_caixa("DeckRival", tam_pilha, _ponto_lateral(4.9, TOPO + 0.17, -2.2), _mat(Color(0.42, 0.24, 0.10))))
+	laterais.add_child(_caixa("DeckVoce", tam_pilha, _ponto_lateral(4.9, TOPO + 0.17, 1.6), _mat(Color(0.45, 0.26, 0.11))))
+	var tam_cem := Vector3(1.0 * ESCALA_CAMPO, 0.22, 1.46 * ESCALA_CAMPO)
+	laterais.add_child(_caixa("CemRival", tam_cem, _ponto_lateral(-4.9, TOPO + 0.11, -2.2), _mat(Color(0.30, 0.16, 0.20), 0.25)))
+	laterais.add_child(_caixa("CemVoce", tam_cem, _ponto_lateral(-4.9, TOPO + 0.11, 1.6), _mat(Color(0.16, 0.24, 0.30), 0.25)))
 	_lbl_conta_deck_rival = _rotulo3d("0", 60, Color(0.9, 0.85, 1.0))
 	_lbl_conta_deck_rival.name = "ContaDeckRival"
-	_lbl_conta_deck_rival.position = Vector3(4.9, 1.15, -2.2)
+	_lbl_conta_deck_rival.position = _ponto_lateral(4.9, 1.15, -2.2)
 	laterais.add_child(_lbl_conta_deck_rival)
 	_lbl_conta_cem_rival = _rotulo3d("0", 60, Color(1.0, 0.75, 0.75))
 	_lbl_conta_cem_rival.name = "ContaCemRival"
-	_lbl_conta_cem_rival.position = Vector3(-4.9, 1.0, -2.2)
+	_lbl_conta_cem_rival.position = _ponto_lateral(-4.9, 1.0, -2.2)
 	laterais.add_child(_lbl_conta_cem_rival)
 	_lbl_conta_deck_voce = _rotulo3d("0", 60, Color(1.0, 0.95, 0.7))
 	_lbl_conta_deck_voce.name = "ContaDeckVoce"
-	_lbl_conta_deck_voce.position = Vector3(4.9, 1.15, 1.6)
+	_lbl_conta_deck_voce.position = _ponto_lateral(4.9, 1.15, 1.6)
 	laterais.add_child(_lbl_conta_deck_voce)
 	_lbl_conta_cem_voce = _rotulo3d("0", 60, Color(0.75, 1.0, 1.0))
 	_lbl_conta_cem_voce.name = "ContaCemVoce"
-	_lbl_conta_cem_voce.position = Vector3(-4.9, 1.0, 1.6)
+	_lbl_conta_cem_voce.position = _ponto_lateral(-4.9, 1.0, 1.6)
 	laterais.add_child(_lbl_conta_cem_voce)
 	# Número de cartas na mão do rival (a ref mostra o 6 ao lado da mão dele).
 	_lbl_conta_mao_rival = _rotulo3d("0", 60, Color(0.8, 0.8, 0.9))
 	_lbl_conta_mao_rival.name = "ContaMaoRival"
-	_lbl_conta_mao_rival.position = Vector3(2.7, 2.7, -4.75)
+	_lbl_conta_mao_rival.position = _ponto_lateral(2.7, 2.7, -4.75)
 	campo.add_child(_lbl_conta_mao_rival)
 	_construir_tokens(campo)
 	_no_cartas = Node3D.new()
 	_no_cartas.name = "Cartas"
 	_vp.add_child(_no_cartas)
-	# Cursor = MOLDURA vazada branca (ref: borda de seleção, não tijolo).
+	# Cursor = MOLDURA vazada branca (ref: borda de seleção, não tijolo),
+	# do tamanho da peça de vidro (cresce com o campo).
 	_cursor3d = Node3D.new()
 	_cursor3d.name = "Cursor3D"
-	_cursor3d.position = Vector3(0, TOPO, 4.15)
+	_cursor3d.position = Vector3(0, TOPO, _ponto_lateral(0.0, 0.0, 4.15).z)
 	_vp.add_child(_cursor3d)
 	var mat_cur := _mat(Color(0.90, 0.95, 1.0), 1.0)
-	var bw := 1.72
-	var bh := 1.72
-	var t := 0.09
+	var bw := _peca_lado() * 1.24
+	var bh := _peca_lado() * 1.24
+	var t := 0.09 * ESCALA_CAMPO
 	_cursor3d.add_child(_caixa("Aba", Vector3(bw, 0.06, t), Vector3(0, 0, bh / 2.0), mat_cur))
 	_cursor3d.add_child(_caixa("Abaixo", Vector3(bw, 0.06, t), Vector3(0, 0, -bh / 2.0), mat_cur))
 	_cursor3d.add_child(_caixa("Esq", Vector3(t, 0.06, bh), Vector3(-bw / 2.0, 0, 0), mat_cur))
@@ -615,13 +647,14 @@ func _construir_tokens(campo: Node3D) -> void:
 	toro_x.inner_radius = 0.14
 	toro_x.outer_radius = 0.22
 	anel.mesh = toro_x
-	anel.position = Vector3(-4.9, 0.5, -0.3)
+	anel.position = _ponto_lateral(-4.9, 0.5, -0.3)
 	anel.rotation_degrees = Vector3(90, 0, 0)
+	anel.scale = Vector3.ONE * ESCALA_CAMPO
 	anel.material_override = _mat(Color(0.12, 0.20, 0.38), 0.5, 0.4)
 	tokens.add_child(anel)
 	var xis := _rotulo3d("X", 72, Color(1, 1, 1))
 	xis.name = "TokenXLetra"
-	xis.position = Vector3(-4.9, 0.62, -0.3)
+	xis.position = _ponto_lateral(-4.9, 0.62, -0.3)
 	tokens.add_child(xis)
 	var bussola := MeshInstance3D.new()
 	bussola.name = "TokenBussola"
@@ -630,21 +663,28 @@ func _construir_tokens(campo: Node3D) -> void:
 	disco.bottom_radius = 0.2
 	disco.height = 0.06
 	bussola.mesh = disco
-	bussola.position = Vector3(4.9, 0.44, -0.3)
+	bussola.position = _ponto_lateral(4.9, 0.44, -0.3)
+	bussola.scale = Vector3.ONE * ESCALA_CAMPO
 	bussola.material_override = _mat(Color(0.12, 0.22, 0.40), 0.5, 0.4)
 	tokens.add_child(bussola)
 	var norte := _rotulo3d("N", 72, Color(1, 1, 1))
 	norte.name = "TokenBussolaLetra"
-	norte.position = Vector3(4.9, 0.62, -0.3)
+	norte.position = _ponto_lateral(4.9, 0.62, -0.3)
 	tokens.add_child(norte)
+
+
+## Lado da PEÇA DE VIDRO em unidades de mundo (a peça é PECA_EM_CARTAS
+## larguras de carta e cresce com o campo, então a carta continua com a
+## mesma proporção dentro do vidro).
+func _peca_lado() -> float:
+	return PECA_EM_CARTAS * ESCALA_CAMPO
 
 
 ## Painel de slot = PEÇA DE VIDRO da referência (doc 15 §15.3): vidro azul
 ## ESCURO translúcido (dá pra ver o céu/frente através), com aro fino mais
 ## claro em volta e ESPAÇO entre as peças (na ref são ladrilhos soltos, não
-## um wireframe colado). Medidas em unidades de mundo: a peça é 1,40 (o
-## espaçamento dos slots é ~1,75 em X e ~1,97 em Z, então sobra uma fresta
-## de ~0,3 = o vão da referência). A carta real (1,0 x 1,46) cabe dentro.
+## um wireframe colado). O lado acompanha o campo (`_peca_lado`), então a
+## fresta entre as peças continua a mesma em qualquer escala.
 func _painel_slot(lado: int, tipo: String, indice: int) -> Node3D:
 	var p := _pos_slot(lado, tipo, indice)
 	var no := Node3D.new()
@@ -654,16 +694,17 @@ func _painel_slot(lado: int, tipo: String, indice: int) -> Node3D:
 	# ref) + aro fininho de luz (na ref é um fio, não um wireframe).
 	var mat_borda := _vidro(Color(0.40, 0.58, 0.88), 0.42, 0.05)
 	var mat_base := _vidro(Color(0.035, 0.08, 0.20), 0.72, 0.05)
-	var base := _caixa("Base", Vector3(LADO_PAINEL, 0.05, LADO_PAINEL), Vector3(0, TOPO - 0.03, 0), mat_base)
+	var lado_pec := _peca_lado()
+	var base := _caixa("Base", Vector3(lado_pec, 0.05, lado_pec), Vector3(0, TOPO - 0.03, 0), mat_base)
 	no.add_child(base)
-	var t := 0.05
-	var meio := LADO_PAINEL / 2.0
+	var t := 0.05 * ESCALA_CAMPO
+	var meio := lado_pec / 2.0
 	var y := TOPO + 0.005
 	var fora := meio + t / 2.0
-	no.add_child(_caixa("Borda", Vector3(LADO_PAINEL + t, 0.02, t), Vector3(0, y, fora), mat_borda))
-	no.add_child(_caixa("Borda2", Vector3(LADO_PAINEL + t, 0.02, t), Vector3(0, y, -fora), mat_borda))
-	no.add_child(_caixa("Borda3", Vector3(t, 0.02, LADO_PAINEL + t), Vector3(-fora, y, 0), mat_borda))
-	no.add_child(_caixa("Borda4", Vector3(t, 0.02, LADO_PAINEL + t), Vector3(fora, y, 0), mat_borda))
+	no.add_child(_caixa("Borda", Vector3(lado_pec + t, 0.02, t), Vector3(0, y, fora), mat_borda))
+	no.add_child(_caixa("Borda2", Vector3(lado_pec + t, 0.02, t), Vector3(0, y, -fora), mat_borda))
+	no.add_child(_caixa("Borda3", Vector3(t, 0.02, lado_pec + t), Vector3(-fora, y, 0), mat_borda))
+	no.add_child(_caixa("Borda4", Vector3(t, 0.02, lado_pec + t), Vector3(fora, y, 0), mat_borda))
 	return no
 
 
@@ -671,10 +712,23 @@ func _pos_slot(lado: int, tipo: String, indice: int) -> Vector3:
 	# Lê o XY oficial (BoardLayout real + layout da arena, com espelho do
 	# rival) e converte p/ XZ. Marca E carta usam este ponto: a carta fica
 	# EXATAMENTE na marca (mesmo XZ, só o Y muda).
+	# A conversão passa pelo TRANSFORM DE APRESENTAÇÃO (escala uniforme +
+	# deslocamento do conjunto): a composição e o espelho do DADO ficam
+	# intactos, só o tamanho/posição do campo na tela mudam.
 	var sid := BoardLayoutScript.slot_id(lado, tipo, indice)
 	var padrao := BoardLayoutScript.default_pos(sid)
 	var p2 := BoardLayoutScript.get_pos(_arena_layout, sid, padrao)
-	return Vector3((p2.x - CENTRO_X) / DIV, TOPO, (p2.y - CENTRO_Y) / DIV)
+	return Vector3(
+		(p2.x - CENTRO_X) / DIV * ESCALA_CAMPO + DESLOC_CAMPO.x,
+		TOPO,
+		(p2.y - CENTRO_Y) / DIV * ESCALA_CAMPO + DESLOC_CAMPO.y)
+
+
+## Ponto LATERAL ao campo (decks, cemitérios, fichas X/N): a mesma escala
+## do campo, para essas peças ficarem AO LADO do vidro e nunca em cima dele
+## quando o campo cresce. Só apresentação.
+func _ponto_lateral(x: float, y: float, z: float) -> Vector3:
+	return Vector3(x * ESCALA_CAMPO, y, z * ESCALA_CAMPO)
 
 
 func _fusoes_do_data(data: Dictionary) -> Dictionary:
@@ -922,12 +976,17 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 	frente.material_override = mat_f
 	no.add_child(frente)
 	var eh_monstro := str(dado.get("card_type", "monster")) == "monster"
+	# Retângulo da janela de arte dentro da moldura (medido no JPG real):
+	# preenche a janela INTEIRA, então a arte 408x384 (ou qualquer outra)
+	# cobre o quadro sem sobra nem faixa (era o que aparecia antes).
+	var larg_art := (JANELA_ART_X1 - JANELA_ART_X0) * (LARG_CARTA - 0.02)
+	var alt_art := (JANELA_ART_Y1 - JANELA_ART_Y0) * (ALT_CARTA - 0.02)
+	var x_art := ((JANELA_ART_X0 + JANELA_ART_X1) * 0.5 - 0.5) * (LARG_CARTA - 0.02)
+	var y_art := (0.5 - (JANELA_ART_Y0 + JANELA_ART_Y1) * 0.5) * (ALT_CARTA - 0.02)
 	if tex_moldura != null:
-		# Arte na janela da moldura (medida a pixel na moldura real:
-		# x 12,0%..88,9% e y 18,9%..70,9%).
 		var tex := _textura_arte(dado)
 		if tex != null:
-			no.add_child(_quad_textura("Arte", 0.775, 0.758, Vector3(0.0015, 0.0743, zf + 0.002), tex))
+			no.add_child(_quad_textura("Arte", larg_art, alt_art, Vector3(x_art, y_art, zf + 0.002), tex))
 		# Orbe do atributo no canto da placa.
 		var attr := str(dado.get("attribute", ""))
 		var tex_orbe := _textura_arquivo("assets/attributes/%s.png" % attr.to_lower())
@@ -956,14 +1015,16 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 	nome.position = Vector3(-0.43, 0.6434, zf + 0.003)
 	nome.visible = not face_down
 	no.add_child(nome)
-	# ATK/DEF impresso na faixa de baixo da moldura (só monstro, dado real).
+	# ATK/DEF impresso na caixa de baixo da moldura (só monstro, dado real).
+	# Medida no JPG real: a caixa bege vai de y 75,3% a 91,4% -> o texto
+	# fica no meio dela (abaixo da caixa ele caía em cima da borda).
 	var stats_txt := ""
 	if eh_monstro:
 		stats_txt = "ATK/%d DEF/%d" % [int(dado.get("attack", 0)), int(dado.get("defense", 0))]
 	var stats := _rotulo3d(stats_txt, 14, Color(0.12, 0.07, 0.03))
 	stats.name = "Stats"
 	stats.outline_size = 0
-	stats.position = Vector3(0.0, -0.6100, zf + 0.003)
+	stats.position = Vector3(0.0, -0.4800, zf + 0.003)
 	stats.visible = not face_down
 	no.add_child(stats)
 	# Indicador ATK/DEF + face (só desenho, igual ao 2D que mostra a posição).
@@ -1193,7 +1254,10 @@ func _redesenhar(com_efeito: bool) -> void:
 				var virada := bool(m.get("face_down", false))
 				var em_defesa := str(m.get("position", "ATK")) == "DEF"
 				var carta := _fazer_carta(_fantasia(m), virada, lado, em_defesa)
-				carta.position = _pos_slot(lado, tipo, i) + Vector3(0, 0.015, 0)
+				# A carta do campo cresce com o campo (mesma proporção dentro
+				# do vidro) e fica apoiada na peça, não flutuando.
+				carta.scale = Vector3.ONE * ESCALA_CAMPO
+				carta.position = _pos_slot(lado, tipo, i) + Vector3(0, 0.015 * ESCALA_CAMPO, 0)
 				_deitar_carta(carta, virada, em_defesa, lado)
 				carta.set_meta("slot_id", "p%d_%s%d" % [lado, ("m" if zona_nome == "monster" else "s"), i])
 				carta.set_meta("card_id", str(m.get("card_id", "")))
@@ -1237,20 +1301,28 @@ func _redesenhar(com_efeito: bool) -> void:
 func _posicionar_cursor() -> void:
 	if _cursor3d == null or _st == null:
 		return
-	var alvo := Vector3(0, TOPO, 4.15)
+	var alvo := Vector3(0, TOPO, _ponto_lateral(0.0, 0.0, 4.15).z)
+	# O cursor é do tamanho do que ele marca: a peça de vidro no campo, a
+	# carta na mão (a moldura nasce do tamanho da peça, então a escala
+	# converte). Sem isso, na mão ele virava um moldura gigante solta.
+	_cursor_escala = 1.15
 	match _fileira:
 		FILEIRA_MAO:
 			var n: int = ((_st.players[0] as Dictionary)["hand"] as Array).size()
 			if n > 0:
-				alvo = _pos_mao_arco(clampi(_col, 0, n - 1), n, 0) + Vector3(0, -ALT_CARTA / 2.0 - 0.05, 0)
+				# A moldura de foco fica NA CARTA (a mão é cortada pela borda
+				# de baixo; abaixo dela a moldura saía da tela virando um
+				# traço branco solto no canto).
+				alvo = _pos_mao_arco(clampi(_col, 0, n - 1), n, 0)
+				_cursor_escala = 1.15 * LARG_CARTA / _peca_lado()
 		FILEIRA_MEU_M:
-			alvo = _pos_slot(0, "monstro", clampi(_col, 0, 4)) + Vector3(0, -0.12, 0)
+			alvo = _pos_slot(0, "monstro", clampi(_col, 0, 4)) + Vector3(0, -0.12 * ESCALA_CAMPO, 0)
 		FILEIRA_MEU_S:
-			alvo = _pos_slot(0, "magia", clampi(_col, 0, 4)) + Vector3(0, -0.12, 0)
+			alvo = _pos_slot(0, "magia", clampi(_col, 0, 4)) + Vector3(0, -0.12 * ESCALA_CAMPO, 0)
 		FILEIRA_RIVAL_M:
-			alvo = _pos_slot(1, "monstro", clampi(_col, 0, 4)) + Vector3(0, -0.12, 0)
+			alvo = _pos_slot(1, "monstro", clampi(_col, 0, 4)) + Vector3(0, -0.12 * ESCALA_CAMPO, 0)
 		FILEIRA_RIVAL_S:
-			alvo = _pos_slot(1, "magia", clampi(_col, 0, 4)) + Vector3(0, -0.12, 0)
+			alvo = _pos_slot(1, "magia", clampi(_col, 0, 4)) + Vector3(0, -0.12 * ESCALA_CAMPO, 0)
 	_foco = alvo
 	_cursor3d.position = alvo
 
@@ -1481,6 +1553,20 @@ func _construir_retratos(hud: Control) -> void:
 ## quando existir, senão cor do atributo; fileira de estrelas; faixa
 ## ATK/DEF) + NOME verde + [TIPO] verde + DESCRIÇÃO branca + barra
 ## vermelha decorativa à direita. Só leitura, sem regra.
+## Ancora um Control numa FRAÇÃO da moldura (0..1 dos 4 lados). A peça
+## passa a acompanhar o tamanho real do molde em vez de depender de px
+## fixos — é o que faz a arte preencher a janela em qualquer largura.
+func _ancorar_moldura(c: Control, x0: float, y0: float, x1: float, y1: float) -> void:
+	c.anchor_left = x0
+	c.anchor_top = y0
+	c.anchor_right = x1
+	c.anchor_bottom = y1
+	c.offset_left = 0.0
+	c.offset_top = 0.0
+	c.offset_right = 0.0
+	c.offset_bottom = 0.0
+
+
 func _construir_painel_foco(hud: Control) -> void:
 	_painel_foco = PanelContainer.new()
 	_painel_foco.name = "PainelCarta"
@@ -1524,38 +1610,36 @@ func _construir_painel_foco(hud: Control) -> void:
 	_tex_foco_moldura.stretch_mode = TextureRect.STRETCH_SCALE
 	_tex_foco_moldura.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	molde.add_child(_tex_foco_moldura)
-	# Posições em % da moldura real (iguais às do 3D e do editor).
+	# Peças posicionadas em % da MOLDURA REAL (JANELA_ART_* e as medidas do
+	# editor), com ÂNCORAS: assim elas acompanham o tamanho do molde
+	# (que estica com o painel) e a arte preenche a janela sem sobra — antes
+	# a posição era em px de um molde de 300 px e sobrava uma faixa.
 	_tex_foco_arte = TextureRect.new()
 	_tex_foco_arte.name = "FocoArte"
-	_tex_foco_arte.position = Vector2(300 * 0.117, 434 * 0.186)
-	_tex_foco_arte.size = Vector2(300 * 0.775, 434 * 0.521)
+	_ancorar_moldura(_tex_foco_arte, JANELA_ART_X0, JANELA_ART_Y0, JANELA_ART_X1, JANELA_ART_Y1)
 	_tex_foco_arte.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_tex_foco_arte.stretch_mode = TextureRect.STRETCH_SCALE
 	_tex_foco_arte.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	molde.add_child(_tex_foco_arte)
 	_cor_foco_arte = ColorRect.new()
 	_cor_foco_arte.name = "FocoCor"
-	_cor_foco_arte.position = Vector2(300 * 0.117, 434 * 0.186)
-	_cor_foco_arte.size = Vector2(300 * 0.775, 434 * 0.521)
+	_ancorar_moldura(_cor_foco_arte, JANELA_ART_X0, JANELA_ART_Y0, JANELA_ART_X1, JANELA_ART_Y1)
 	_cor_foco_arte.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	molde.add_child(_cor_foco_arte)
 	_lbl_foco_nome_molde = _rotulo_hud("FocoNomeMolde", "", Vector2.ZERO, 15, Color(0.12, 0.07, 0.03))
-	_lbl_foco_nome_molde.position = Vector2(300 * 0.054, 434 * 0.027)
-	_lbl_foco_nome_molde.size = Vector2(300 * 0.62, 434 * 0.051)
+	_ancorar_moldura(_lbl_foco_nome_molde, 0.054, 0.027, 0.674, 0.078)
 	_lbl_foco_nome_molde.clip_text = true
 	molde.add_child(_lbl_foco_nome_molde)
 	_tex_foco_orbe = TextureRect.new()
 	_tex_foco_orbe.name = "FocoOrbe"
-	_tex_foco_orbe.position = Vector2(300 * 0.833, 434 * 0.044)
-	_tex_foco_orbe.size = Vector2(300 * 0.095, 434 * 0.065)
+	_ancorar_moldura(_tex_foco_orbe, 0.833, 0.044, 0.928, 0.109)
 	_tex_foco_orbe.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_tex_foco_orbe.stretch_mode = TextureRect.STRETCH_SCALE
 	_tex_foco_orbe.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	molde.add_child(_tex_foco_orbe)
 	_caixa_foco_estrelas = HBoxContainer.new()
 	_caixa_foco_estrelas.name = "FocoEstrelasBox"
-	_caixa_foco_estrelas.position = Vector2(300 * 0.40, 434 * 0.118)
-	_caixa_foco_estrelas.size = Vector2(300 * 0.52, 434 * 0.054)
+	_ancorar_moldura(_caixa_foco_estrelas, 0.40, 0.118, 0.92, 0.172)
 	_caixa_foco_estrelas.alignment = BoxContainer.ALIGNMENT_END
 	_caixa_foco_estrelas.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_caixa_foco_estrelas.add_theme_constant_override("separation", 1)
@@ -3101,7 +3185,7 @@ func _process(delta: float) -> void:
 		# look_at todo frame é barato e garante o tilt fixo da ref.
 		_cam.look_at(CAM_ALVO)
 	if _cursor3d != null:
-		var s := 1.0 + 0.04 * sin(_pulso)
+		var s := (1.0 + 0.04 * sin(_pulso)) * _cursor_escala
 		_cursor3d.scale = Vector3(s, 1.0, s)
 	if _st == null:
 		return

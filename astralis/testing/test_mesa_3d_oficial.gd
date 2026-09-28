@@ -163,12 +163,47 @@ func test_posicao_carta_exatamente_no_painel() -> void:
 				continue
 			assert_almost_eq(carta.position.x, painel.position.x, 0.001, "Carta XZ no painel %s (x)." % sid)
 			assert_almost_eq(carta.position.z, painel.position.z, 0.001, "Carta XZ no painel %s (z)." % sid)
-			# Confere contra o BoardLayout real (espelho do rival incluso).
+			# O 3D tem de ser a ARENA (dado) transformada por ESCALA uniforme +
+			# DESLOC (doc 15 §15.5) — o assert prova o TRANSFORM, não a
+			# identidade: a composição e o espelho do rival (D17/D18) vêm do
+			# dado, e escala/deslocamento são apresentação.
 			var p2: Vector2 = BoardLayout.get_pos(mesa.get("_arena_layout"), BoardLayout.slot_id(lado, "monstro", i), BoardLayout.default_pos(BoardLayout.slot_id(lado, "monstro", i)))
-			var esp_x := (p2.x - 1158.0) / 150.0
-			var esp_z := (p2.y - 540.0) / 150.0
-			assert_almost_eq(painel.position.x, esp_x, 0.001, "Painel %s no X do BoardLayout." % sid)
-			assert_almost_eq(painel.position.z, esp_z, 0.001, "Painel %s no Z do BoardLayout." % sid)
+			var esc: float = mesa.get("ESCALA_CAMPO")
+			var desl: Vector2 = mesa.get("DESLOC_CAMPO")
+			assert_true(esc > 0.0, "Escala de apresentação positiva.")
+			var esp_x := (p2.x - 1158.0) / 150.0 * esc + desl.x
+			var esp_z := (p2.y - 540.0) / 150.0 * esc + desl.y
+			assert_almost_eq(painel.position.x, esp_x, 0.001, "Painel %s no X do BoardLayout transformado." % sid)
+			assert_almost_eq(painel.position.z, esp_z, 0.001, "Painel %s no Z do BoardLayout transformado." % sid)
+	# O transform é o MESMO nos 2 lados (escala uniforme = o espelho do rival
+	# continua valendo) e é o mesmo em X e Y da arena.
+	var mundo0: Vector3 = mesa.call("_pos_slot", 0, "monstro", 0)
+	var mundo1: Vector3 = mesa.call("_pos_slot", 1, "monstro", 0)
+	var a0: Vector2 = BoardLayout.get_pos(mesa.get("_arena_layout"), BoardLayout.slot_id(0, "monstro", 0), Vector2(632, 695))
+	var a1: Vector2 = BoardLayout.get_pos(mesa.get("_arena_layout"), BoardLayout.slot_id(1, "monstro", 0), Vector2(632, 305))
+	var esc: float = mesa.get("ESCALA_CAMPO")
+	var desl: Vector2 = mesa.get("DESLOC_CAMPO")
+	assert_almost_eq(mundo0.x, (a0.x - 1158.0) / 150.0 * esc + desl.x, 0.001, "p0 segue a arena transformada (x).")
+	assert_almost_eq(mundo0.z, (a0.y - 540.0) / 150.0 * esc + desl.y, 0.001, "p0 segue a arena transformada (z).")
+	assert_almost_eq(mundo1.x, (a1.x - 1158.0) / 150.0 * esc + desl.x, 0.001, "p1 segue a arena transformada (x).")
+	assert_almost_eq(mundo1.z, (a1.y - 540.0) / 150.0 * esc + desl.y, 0.001, "p1 segue a arena transformada (z).")
+	# Espelho do rival: p1_m0 fica no X OPOSTO do p0_m0 (D18) e a distância
+	# entre os dois é a MESMA que entre os extremos do próprio lado.
+	var p0_0: Vector3 = mesa.call("_pos_slot", 0, "monstro", 0)
+	var p0_4: Vector3 = mesa.call("_pos_slot", 0, "monstro", 4)
+	var p1_0: Vector3 = mesa.call("_pos_slot", 1, "monstro", 0)
+	var p1_4: Vector3 = mesa.call("_pos_slot", 1, "monstro", 4)
+	assert_almost_eq(p0_0.x, -p1_0.x, 0.001, "Espelho do rival: p1_m0 é o oposto de p0_m0 (x).")
+	assert_almost_eq(absf(p0_4.x - p0_0.x), absf(p1_0.x - p1_4.x), 0.001, "Distância do espelho é a mesma dos 2 lados.")
+	# A ESCALA é uniforme: a mesma escala vale no eixo X e no Z do dado.
+	var x0: Vector3 = mesa.call("_pos_slot", 0, "monstro", 0)
+	var x1: Vector3 = mesa.call("_pos_slot", 0, "monstro", 1)
+	var z0: Vector3 = mesa.call("_pos_slot", 0, "monstro", 0)
+	var z1: Vector3 = mesa.call("_pos_slot", 0, "magia", 0)
+	var px_arena: float = BoardLayout.get_pos(mesa.get("_arena_layout"), BoardLayout.slot_id(0, "monstro", 1), Vector2(0, 0)).x - BoardLayout.get_pos(mesa.get("_arena_layout"), BoardLayout.slot_id(0, "monstro", 0), Vector2(0, 0)).x
+	var pz_arena: float = BoardLayout.get_pos(mesa.get("_arena_layout"), BoardLayout.slot_id(0, "magia", 0), Vector2(0, 0)).y - BoardLayout.get_pos(mesa.get("_arena_layout"), BoardLayout.slot_id(0, "monstro", 0), Vector2(0, 0)).y
+	assert_almost_eq(absf(x1.x - x0.x) / px_arena, absf(z1.z - z0.z) / pz_arena, 0.0001,
+		"A escala é a mesma nos 2 eixos (uniforme).")
 
 
 func test_menu_estrela_lista_guardians_reais() -> void:
@@ -287,14 +322,15 @@ func test_mesa_3d_so_joypad_sem_clique() -> void:
 
 
 func test_camera_fixa_sem_orbita() -> void:
-	# Ref GX: câmera FIXA deslocada (campo colado à direita), sem órbita.
+	# Ref GX: câmera FIXA (posição/FOV medidos contra a referência, doc 15
+	# §15.5), sem órbita e sem deslocamento em X.
 	var mesa: Node = await _mesa3d_nova()
 	var cam := _n3d(mesa, "Camera3D") as Camera3D
 	assert_true(cam != null, "Camera3D existe.")
-	assert_eq(cam.position, Vector3(0, 9, 8), "Câmera fixa (posição do usuário).")
-	assert_eq(cam.fov, 50.0, "FOV fixo com profundidade da ref.")
+	assert_eq(cam.position, Vector3(0, 16.8, 20.9), "Câmera fixa (posição medida).")
+	assert_eq(cam.fov, 20.0, "FOV fixo medido contra a referência.")
 	await wait_process_frames(10)
-	assert_eq((_n3d(mesa, "Camera3D") as Camera3D).position, Vector3(0, 9, 8), "Câmera não deriva (sem órbita).")
+	assert_eq((_n3d(mesa, "Camera3D") as Camera3D).position, Vector3(0, 16.8, 20.9), "Câmera não deriva (sem órbita).")
 
 
 func test_campo_a_direita_sem_perspectiva_torta() -> void:
@@ -320,10 +356,15 @@ func test_campo_a_direita_sem_perspectiva_torta() -> void:
 	# O HUD 2D continua em tela cheia, filho da cena (nada dele entrou no 3D).
 	assert_true(mesa.get_node_or_null(NodePath("HUD")) != null, "HUD 2D segue filho da cena.")
 	assert_true(mesa.get_node_or_null(NodePath(JANELA + "/HUD")) == null, "Nenhum HUD dentro da janela 3D.")
-	# A LENTE: mesma posição/alvo/FOV de sempre e SEM deslocamento.
+	# A LENTE: no EIXO (X = 0, sem frustum_offset) e apontada para o centro.
+	# A altura/Z/FOV podem mudar (doc 15 §15.5, alavanca de desenho), mas a
+	# tríade que garante a perspectiva simétrica é intocável.
 	var cam := _n3d(mesa, "Camera3D") as Camera3D
 	assert_eq(cam.frustum_offset, Vector2.ZERO, "Lente no eixo: frustum_offset = 0 (nada de torto).")
-	assert_eq(cam.position, Vector3(0, 9, 8), "Câmera exatamente onde estava antes da janela.")
+	assert_eq(cam.position.x, 0.0, "Câmera sem deslocamento em X (a lente fica no eixo).")
+	assert_eq(cam.position, Vector3(0, 16.8, 20.9), "Câmera na altura/Z medidos contra a referência.")
+	assert_eq(cam.fov, 20.0, "FOV medido contra a referência.")
+	assert_eq(cam.global_position, Vector3(0, 16.8, 20.9), "Câmera dentro da janela 3D (transform da janela não move a lente).")
 	# O CENTRO DO CAMPO no meio da janela = 562 + 1358/2 = 1241 px = 64,6%.
 	var centro_campo: float = cam.unproject_position(Vector3(0.0, 0.35, 0.0)).x + 562.0
 	assert_almost_eq(centro_campo, 1241.0, 1.0, "Centro do campo em 1241 px (64,6%% da tela): %.1f." % centro_campo)
@@ -375,15 +416,17 @@ func test_maos_centralizadas_no_x_do_campo() -> void:
 	# rodapé, cortada embaixo — os valores são as consts MAO_P0_YZ, e a
 	# trava continua sendo a MESMA coisa: o que importa (centralização no X
 	# do campo, simetria do arco, carta desenhada no ponto e cursor) segue
-	# travado abaixo com a mesma tolerância.
-	assert_almost_eq(p0_m.y, 2.73, 0.0001, "Altura da sua mão = MAO_P0_YZ da fase 2 (rodapé).")
-	assert_almost_eq(p0_m.z, 5.88, 0.0001, "Profundidade da sua mão = MAO_P0_YZ da fase 2 (mais longe = menor).")
+	# travado abaixo com a mesma tolerância. O Y/Z mudou de novo porque a
+	# CÂMERA mudou (doc 15 §15.5): a mão é medida contra a referência
+	# (cartas de ~190 px no rodapé, cortadas embaixo) com a câmera nova.
+	assert_almost_eq(p0_m.y, 4.63, 0.0001, "Altura da sua mão = MAO_P0_YZ medida na referência.")
+	assert_almost_eq(p0_m.z, 10.0, 0.0001, "Profundidade da sua mão = MAO_P0_YZ medida na referência.")
 	var p1_1: Vector3 = mesa.call("_pos_mao_arco", 0, n1, 1)
 	var p1_m: Vector3 = mesa.call("_pos_mao_arco", _meio_do_arco(n1), n1, 1)
 	var p1_f: Vector3 = mesa.call("_pos_mao_arco", n1 - 1, n1, 1)
 	assert_almost_eq(p1_m.x - p1_1.x, p1_f.x - p1_m.x, 0.001, "Arco da mão do rival simétrico em torno do centro.")
-	assert_almost_eq(p1_m.y, 1.4, 0.0001, "Altura da mão do rival preservada.")
-	assert_almost_eq(p1_m.z, -4.75, 0.0001, "Profundidade da mão do rival preservada.")
+	assert_almost_eq(p1_m.y, 0.31, 0.0001, "Altura da mão do rival medida na referência (11%..24% da tela).")
+	assert_almost_eq(p1_m.z, -5.18, 0.0001, "Profundidade da mão do rival medida na referência.")
 	# Espalhamento preservado: passo por carta.
 	var passo0 := (p0_m.x - p0_1.x) / float(maxi(_meio_do_arco(n0), 1))
 	var passo1 := (p1_m.x - p1_1.x) / float(maxi(_meio_do_arco(n1), 1))
