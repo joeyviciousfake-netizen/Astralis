@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Sem fases Tag Force (2026-09-27, ordem do usuario): DP/SP/MP1/BP/MP2/EP apagados, duelo segue o FM. GUT 130/130. Commit e8649f3."
+onde_estamos: "Composicao ref (2026-09-27): campo a direita, rival alto, mao perto e grande. Foto conferida. GUT 130/130. Commit 002f427."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
