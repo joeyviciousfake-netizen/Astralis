@@ -49,7 +49,9 @@ const CAM_FOV := 50.0
 const FASES_TAG := ["DP", "SP", "MP1", "BP", "MP2", "EP"]
 
 const LARG_CARTA := 1.0
-const ALT_CARTA := 1.43
+## Proporção exata da carta real 59x86mm (0,6860). Tudo que é carta, slot
+## ou pilha usa essa proporção — nenhuma carta fica de tamanho diferente.
+const ALT_CARTA := 86.0 / 59.0
 ## Finura real de carta (0,3mm numa carta 59mm = 0,005 da largura).
 const GROSS_CARTA := 0.005
 
@@ -449,8 +451,8 @@ func _construir_campo() -> void:
 	campo.add_child(laterais)
 	# Pilhas nas laterais (ref nova): decks marrons flutuantes com o
 	# número de cartas em cima, cemitérios mais escuros.
-	laterais.add_child(_caixa("DeckRival", Vector3(1.0, 0.35, 1.43), Vector3(3.3, TOPO + 0.17, -2.2), _mat(Color(0.42, 0.24, 0.10))))
-	laterais.add_child(_caixa("DeckVoce", Vector3(1.0, 0.35, 1.43), Vector3(3.3, TOPO + 0.17, 1.6), _mat(Color(0.45, 0.26, 0.11))))
+	laterais.add_child(_caixa("DeckRival", Vector3(1.0, 0.35, 1.46), Vector3(3.3, TOPO + 0.17, -2.2), _mat(Color(0.42, 0.24, 0.10))))
+	laterais.add_child(_caixa("DeckVoce", Vector3(1.0, 0.35, 1.46), Vector3(3.3, TOPO + 0.17, 1.6), _mat(Color(0.45, 0.26, 0.11))))
 	laterais.add_child(_caixa("CemRival", Vector3(1.0, 0.22, 1.43), Vector3(-3.3, TOPO + 0.11, -2.2), _mat(Color(0.30, 0.16, 0.20), 0.25)))
 	laterais.add_child(_caixa("CemVoce", Vector3(1.0, 0.22, 1.43), Vector3(-3.3, TOPO + 0.11, 1.6), _mat(Color(0.16, 0.24, 0.30), 0.25)))
 	_lbl_conta_deck_rival = _rotulo3d("0", 60, Color(0.9, 0.85, 1.0))
@@ -479,7 +481,7 @@ func _construir_campo() -> void:
 	_no_cartas = Node3D.new()
 	_no_cartas.name = "Cartas"
 	add_child(_no_cartas)
-	_cursor3d = _caixa("Cursor3D", Vector3(1.18, 0.06, 1.62), Vector3(0, TOPO, 4.15), _mat(Color(0.85, 0.93, 1.0), 1.6))
+	_cursor3d = _caixa("Cursor3D", Vector3(1.18, 0.06, 1.72), Vector3(0, TOPO, 4.15), _mat(Color(0.85, 0.93, 1.0), 1.6))
 	add_child(_cursor3d)
 	print("[MESA3D] Campo: 20 painéis de vidro + decks/cemitérios + 6 fases + tokens + Cursor3D.")
 
@@ -584,9 +586,9 @@ func _painel_slot(lado: int, tipo: String, indice: int) -> Node3D:
 	var no := Node3D.new()
 	no.name = "Painel_p%d_%s%d" % [lado, ("m" if tipo == "monstro" else "s"), indice]
 	no.position = Vector3(p.x, 0.0, p.z)
-	var borda := _caixa("Borda", Vector3(1.16, 0.03, 1.6), Vector3(0, TOPO - 0.055, 0), _vidro(Color(0.75, 0.90, 1.0), 0.85, 0.9))
+	var borda := _caixa("Borda", Vector3(1.16, 0.03, 1.69), Vector3(0, TOPO - 0.055, 0), _vidro(Color(0.75, 0.90, 1.0), 0.85, 0.9))
 	no.add_child(borda)
-	var base := _caixa("Base", Vector3(1.06, 0.05, 1.5), Vector3(0, TOPO - 0.03, 0), _vidro(Color(0.35, 0.60, 0.95), 0.42, 0.35))
+	var base := _caixa("Base", Vector3(1.06, 0.05, 1.545), Vector3(0, TOPO - 0.03, 0), _vidro(Color(0.35, 0.60, 0.95), 0.42, 0.35))
 	no.add_child(base)
 	return no
 
@@ -845,15 +847,16 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 	no.add_child(frente)
 	var eh_monstro := str(dado.get("card_type", "monster")) == "monster"
 	if tex_moldura != null:
-		# Arte na janela da moldura (medidas da moldura real, em %).
+		# Arte na janela da moldura (medida a pixel na moldura real:
+		# x 12,0%..88,9% e y 18,9%..70,9%).
 		var tex := _textura_arte(dado)
 		if tex != null:
-			no.add_child(_quad_textura("Arte", 0.764, 0.745, Vector3(0.005, 0.0765, zf + 0.002), tex))
+			no.add_child(_quad_textura("Arte", 0.769, 0.758, Vector3(0.0045, 0.0743, zf + 0.002), tex))
 		# Orbe do atributo no canto da placa.
 		var attr := str(dado.get("attribute", ""))
 		var tex_orbe := _textura_arquivo("assets/attributes/%s.png" % attr.to_lower())
 		if tex_orbe != null:
-			no.add_child(_quad_textura("Orbe", 0.095, 0.093, Vector3(0.3805, 0.6055, zf + 0.002), tex_orbe))
+			no.add_child(_quad_textura("Orbe", 0.095, 0.0947, Vector3(0.3805, 0.6173, zf + 0.002), tex_orbe))
 		# Estrelas = level (só monstro), à direita como na moldura.
 		if eh_monstro:
 			var tex_est := _textura_arquivo("assets/estrelas/estrela.png")
@@ -861,11 +864,11 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 				var n := clampi(int(dado.get("level", 0)), 0, 12)
 				for s in range(n):
 					var px := 0.42 - float(n - 1 - s) * (0.0457 + 0.008) - 0.0228
-					no.add_child(_quad_textura("Estrela%d" % s, 0.0457, 0.0459, Vector3(px, 0.5076, zf + 0.002), tex_est))
+					no.add_child(_quad_textura("Estrela%d" % s, 0.0457, 0.0444, Vector3(px, 0.5174, zf + 0.002), tex_est))
 	var nome := _rotulo3d(str(dado.get("name", "?")), 34, Color(0.12, 0.07, 0.03))
 	nome.name = "Nome"
 	nome.outline_size = 0
-	nome.position = Vector3(-0.0645, 0.621, zf + 0.003)
+	nome.position = Vector3(-0.0645, 0.6523, zf + 0.003)
 	no.add_child(nome)
 	var stats_txt := ""
 	if eh_monstro:
@@ -873,7 +876,7 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 	var stats := _rotulo3d(stats_txt, 32, Color(0.12, 0.07, 0.03))
 	stats.name = "Stats"
 	stats.outline_size = 0
-	stats.position = Vector3(0.05, -0.588, zf + 0.003)
+	stats.position = Vector3(0.05, -0.5991, zf + 0.003)
 	no.add_child(stats)
 	# Indicador ATK/DEF + face (só desenho, igual ao 2D que mostra a posição).
 	var tag_txt := "VIRADA" if face_down else ("DEF" if em_defesa else "ATK")
@@ -918,17 +921,17 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 		anel.mesh = toro
 		anel.material_override = _mat(Color(0.92, 0.82, 0.62), 0.5)
 		espiral.add_child(anel)
-	# Posição: DEF deita (gira Y 90°); virada mostra o verso (gira Y 180°).
+	# Posição: DEF deita NO PLANO (gira Z 90°, horizontal como na ref e
+	# no 2D); virada mostra o verso (gira Y 180°).
 	var giro_y := 0.0
-	if em_defesa:
-		giro_y += PI / 2.0
 	if face_down:
 		giro_y += PI
 	no.rotation.y = giro_y
-	# Rival de cabeça p/ baixo (homenagem ao 2D) só no ATK aberto — eixos
-	# combinados em DEF ficam estranhos, então DEF do rival fica normal.
+	# Rival de cabeça p/ baixo (homenagem ao 2D) só no ATK aberto.
 	if lado == 1 and not face_down and not em_defesa:
 		no.rotation.z = PI
+	elif em_defesa and not face_down:
+		no.rotation.z = PI / 2.0
 	return no
 
 
