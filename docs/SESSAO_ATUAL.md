@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Carta 59x86 + arte no lugar (2026-09-27): proporcao exata em carta/slot/cursor/deck, janela medida a pixel na moldura, DEF deitada no plano. MCP limpo, GUT 130/130. Commit ea0456d."
+onde_estamos: "Painel em blocos fixos (2026-09-27): imagem separada do bloco descricao (clip, tamanho constante). MCP limpo, GUT 130/130. Commit b6c7121."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
