@@ -111,6 +111,17 @@ const PECA_EM_CARTAS := 1.40
 ## que a carta DEITADA (ALT_CARTA = 1,4576 larguras), para a carta de DEF
 ## caber dentro da peça em vez de encostar/cortar na borda.
 const PECA_PROF_CARTAS := 1.58
+## D44 (item 5 do usuário): quanto a fileira de MAGIA avança no Z em direção
+## à fileira de MONSTRO, para o vão VERTICAL entre as duas ficar igual ao vão
+## HORIZONTAL entre dois slots vizinhos. Só a linha de magia usa isto — a de
+## monstro fica exatamente onde está (nem X nem Z).
+## Números medidos NA TELA (canvas 1920x1080, jogo de verdade), antes do
+## ajuste: vão horizontal entre slots vizinhos = 25,2 px; vão vertical
+## monstro->magia = 28,5 px no RIVAL e 42,8 px no JOGADOR. Fechar essa
+## diferença é o que estes dois números resolvem (calibrados por iteração:
+## cada 0,01 de Z ≈ 1,3 px no seu lado e ≈ 0,7 px no lado do rival).
+const APROXIMA_MAGIA_VOCE := 0.22
+const APROXIMA_MAGIA_RIVAL := 0.05
 ## X (em unidades de `_ponto_lateral`, ou seja já passando por
 ## ESCALA_CAMPO) da faixa onde ficam baralho e cemitério. Medido: a última
 ## coluna do campo acaba em mundo x 5,44 e a janela do campo CORTA em
@@ -202,11 +213,23 @@ const TILT_MAO_LIVRE := -35.0
 ## profundidade: TROCAR AQUI à vontade (ordem do usuário: nada disso muda).
 ## O X do CENTRO do arco NÃO mora aqui — ele é CALCULADO da câmera real em
 ## `_x_centro_da_mao`, senão a mão fica torta na tela (ver `_pos_mao_arco`).
-## Fase 2: a mão p0 desceu e encolheu (ref: cartas de ~190 px no rodapé,
-## cortadas embaixo) — ver a medida no print de calibração.
-const MAO_P0_PASSO := 1.06
+## D44 (item 10 do usuário): a carta NÃO cresceu — LARG_CARTA/ALT_CARTA
+## continuam 1,0 x 86/59, a proporção real 59x86 de todo o jogo. O que mudou
+## foi a DISTÂNCIA da sua mão até a câmera: a mão veio mais para a frente
+## (z de 10,0 para 13,0) e subiu em y (4,63 -> 7,6) para continuar no rodapé,
+## de pé, em arco leve e cortada pela borda de baixo. Medido na tela, com o
+## jogo de verdade: a carta vai de 189 px para 257 px de largura (13,4% da
+## tela) com o tamanho no MUNDO igual (1,000 x 1,458) — cresce a impressão,
+## não a carta. O topo da mão fica em y=925 px, abaixo da base da fileira de
+## magia do jogador (900 px): a mão não cobre a fileira.
+## D44: o PASSO caiu junto (1,06 -> 0,84) porque a escala da mão subiu 36% e o
+## passo é em unidades de mundo. Com 0,84 o arco da mão mede na tela
+## [247..1111] px — exatamente os mesmos 864 px de antes do D44, então a mão
+## não invadiu nada e a de 10 cartas não passa a vazar mais do que já vazava.
+## Se um dia a mão apertar, o que se diminui é ESTE passo, nunca a carta.
+const MAO_P0_PASSO := 0.84
 const MAO_P1_PASSO := 0.86
-const MAO_P0_YZ := Vector2(4.63, 10.0)   # Vector2(y, z): sua mão (perto, embaixo)
+const MAO_P0_YZ := Vector2(7.6, 13.0)   # Vector2(y, z): sua mão (perto, embaixo)
 ## Mão do RIVAL (longe, ATRÁS do campo). Medido: a fileira de magia do
 ## rival (p1_s) fica em z = -4,42 e o ladrilho dela avança até z = -5,36;
 ## com a mão em z = -5,18 ela ficava DENTRO desse ladrilho e o vidro
@@ -914,10 +937,21 @@ func _pos_slot(lado: int, tipo: String, indice: int) -> Vector3:
 	var sid := BoardLayoutScript.slot_id(lado, tipo, indice)
 	var padrao := BoardLayoutScript.default_pos(sid)
 	var p2 := BoardLayoutScript.get_pos(_arena_layout, sid, padrao)
+	var z := (p2.y - CENTRO_Y) / DIV * ESCALA_CAMPO + DESLOC_CAMPO.y
+	# D44 (item 5 do usuário): a fileira de MAGIA se APROXIMA da de MONSTRO,
+	# porque o vão vertical entre elas estava bem maior que o vão horizontal
+	# entre dois slots vizinhos. A fileira de MONSTRO NÃO se mexe — nem no X
+	# nem no Z — o deslocamento abaixo só entra na linha de magia. É
+	# apresentação pura, aplicada DEPOIS do transform, então a arena (dado)
+	# continua mandando na composição relativa e no espelho do rival.
+	if tipo == "magia":
+		# O sinal é o do lado: a SUA magia sobe (z MENOR = mais longe da
+		# câmera) e a do RIVAL desce (z MAIOR = mais perto). O centro do campo
+		# fica em z = 0, então o sinal do z já diz de que lado é a fileira.
+		z -= (APROXIMA_MAGIA_VOCE if lado == 0 else -APROXIMA_MAGIA_RIVAL)
 	return Vector3(
 		(p2.x - CENTRO_X) / DIV * ESCALA_CAMPO + DESLOC_CAMPO.x,
-		TOPO,
-		(p2.y - CENTRO_Y) / DIV * ESCALA_CAMPO + DESLOC_CAMPO.y)
+		TOPO, z)
 
 
 ## Ponto LATERAL ao campo (decks, cemitérios, fichas X/N): a mesma escala
