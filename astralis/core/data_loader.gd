@@ -56,6 +56,182 @@ static var _base_memo := ""
 static var _base_memo_pronto := false
 
 
+# ============================================================
+# DEV-ONLY (SOME NO FINAL, ordem do usuário): preview no editor
+# (F6/cena aberta sem --project) carrega o pack .apack que está
+# sendo editado + sorteia 2 duelistas aleatórios, p/ visualizar o
+# jogo real com o conteúdo atual. Gate: SÓ roda com
+# OS.has_feature("editor") — no jogo exportado isso é sempre
+# falso, então o final nem tem esse caminho. Não é regra (R1):
+# só desempacota DADO e monta o setup inicial.
+# ============================================================
+const DEV_PACK_FIXO := "C:/Users/Max/Downloads/studio_pack_20260925_180627_COMPLETO.apack"
+
+
+## Chave de teste do bloco DEV (teste descartável liga, usa e desliga).
+static var _dev_forcar := false
+
+
+static func _dev_dir() -> String:
+	return ProjectSettings.globalize_path("user://").path_join("dev_pack")
+
+
+static func _dev_pack_fonte() -> String:
+	if FileAccess.file_exists(DEV_PACK_FIXO):
+		return DEV_PACK_FIXO
+	# Caiu o fixo? Pega o .apack mais novo de Downloads.
+	var dl := "C:/Users/Max/Downloads"
+	if not DirAccess.dir_exists_absolute(dl):
+		return ""
+	var melhor := ""
+	var melhor_t := -1
+	for f in DirAccess.get_files_at(dl):
+		if not f.to_lower().ends_with(".apack"):
+			continue
+		var t: int = int(FileAccess.get_modified_time(dl.path_join(f)))
+		if t > melhor_t:
+			melhor_t = t
+			melhor = dl.path_join(f)
+	return melhor
+
+
+static func _dev_setup_json(duelistas: Array) -> Dictionary:
+	# Sorteia 2 duelistas DISTINTOS + deck de cada um (dado real do pack).
+	randomize()
+	var n := duelistas.size()
+	var i1 := randi_range(0, maxi(n - 1, 0))
+	var i2 := randi_range(0, maxi(n - 1, 0))
+	var guarda := 0
+	while n > 1 and i2 == i1 and guarda < 20:
+		i2 = randi_range(0, n - 1)
+		guarda += 1
+	var d1: Dictionary = duelistas[i1] as Dictionary
+	var d2: Dictionary = duelistas[i2] as Dictionary
+	var ordens := ["first_p1", "first_p2", "random"]
+	return {
+		"schema_version": 1,
+		"duel_id": "duel_dev_random",
+		"duelist1": {"duelist_id": str(d1.get("id", "")), "deck_id": str(d1.get("deck_id", ""))},
+		"duelist2": {"duelist_id": str(d2.get("id", "")), "deck_id": str(d2.get("deck_id", ""))},
+		"starting_lp": 8000,
+		"turn_order": ordens[randi_range(0, 2)],
+		"seed": randi(),
+		"arena_id": "arena_starter",
+		"win": {"on_lp_zero": true, "on_deckout": true},
+	}
+
+
+static func _dev_gravar_json(caminho: String, dado: Variant) -> bool:
+	var f := FileAccess.open(caminho, FileAccess.WRITE)
+	if f == null:
+		return false
+	f.store_string(JSON.stringify(dado))
+	f.close()
+	return true
+
+
+static func _dev_preparar() -> String:
+	# Retorna a pasta DEV pronta ou "". Nunca quebra o boot: qualquer
+	# falha cai no examples/ embutido (comportamento de antes).
+	# Gate duplo: no jogo exportado has_feature é falso; no headless
+	# (GUT/CI/MCP) o DisplayServer é "headless" — DEV só vale no editor
+	# ABERTO (F6/preview com tela), nunca em teste nem no final.
+	if not _dev_forcar and (DisplayServer.get_name() == "headless" or not OS.has_feature("editor")):
+		return ""
+	var pack := _dev_pack_fonte()
+	if pack.is_empty():
+		return ""
+	var dev := _dev_dir()
+	var tam := 0
+	var probe := FileAccess.open(pack, FileAccess.READ)
+	if probe != null:
+		tam = int(probe.get_length())
+		probe.close()
+	var stamp: String = "%d:%d" % [int(FileAccess.get_modified_time(pack)), tam]
+	var carimbo := dev.path_join(".stamp")
+	var pronto := false
+	if FileAccess.file_exists(carimbo):
+		var l := FileAccess.open(carimbo, FileAccess.READ)
+		if l != null and l.get_as_text().strip_edges() == stamp:
+			pronto = DirAccess.dir_exists_absolute(dev.path_join("cards")) and FileAccess.file_exists(dev.path_join("arenas/arena_starter.json"))
+		if l != null:
+			l.close()
+	var dados_pack: Dictionary = {}
+	if pronto:
+		# Pack igual ao da última vez: só o setup é re-sorteado.
+		var z0 := ZIPReader.new()
+		if z0.open(pack) == OK:
+			var raw := z0.read_file("data/pack.json")
+			z0.close()
+			var js := JSON.new()
+			if js.parse(raw.get_string_from_utf8()) == OK and js.data is Dictionary:
+				dados_pack = js.data as Dictionary
+	if dados_pack.is_empty():
+		var z := ZIPReader.new()
+		if z.open(pack) != OK:
+			return ""
+		var nomes := z.get_files()
+		var txt := ""
+		for n in nomes:
+			if str(n) == "data/pack.json":
+				txt = z.read_file(str(n)).get_string_from_utf8()
+		if txt.is_empty():
+			z.close()
+			return ""
+		var js2 := JSON.new()
+		if js2.parse(txt) != OK or not (js2.data is Dictionary):
+			z.close()
+			return ""
+		dados_pack = js2.data as Dictionary
+		for sub in ["cards", "duelists", "decks", "assets/fm"]:
+			DirAccess.make_dir_recursive_absolute(dev.path_join(sub))
+		for c in (dados_pack.get("cartas", []) as Array):
+			if c is Dictionary and not str((c as Dictionary).get("id", "")).is_empty():
+				_dev_gravar_json(dev.path_join("cards/%s.json" % str((c as Dictionary).get("id", ""))), c)
+		for d in (dados_pack.get("duelistas", []) as Array):
+			if d is Dictionary and not str((d as Dictionary).get("id", "")).is_empty():
+				_dev_gravar_json(dev.path_join("duelists/%s.json" % str((d as Dictionary).get("id", ""))), d)
+		for k in (dados_pack.get("decks", []) as Array):
+			if k is Dictionary and not str((k as Dictionary).get("id", "")).is_empty():
+				_dev_gravar_json(dev.path_join("decks/%s.json" % str((k as Dictionary).get("id", ""))), k)
+		_dev_gravar_json(dev.path_join("fusions.json"), dados_pack.get("fusoes", {"schema_version": 1, "recipes": [], "rules": []}))
+		_dev_gravar_json(dev.path_join("effects.json"), {"schema_version": 1, "effects": []})
+		# Arena padrão junto (o pack não traz arenas/): igual ao examples/.
+		var arena_src := starter_kit_dir().path_join("arenas/arena_starter.json")
+		if FileAccess.file_exists(arena_src):
+			DirAccess.make_dir_recursive_absolute(dev.path_join("arenas"))
+			var al := FileAccess.open(arena_src, FileAccess.READ)
+			if al != null:
+				var w0 := FileAccess.open(dev.path_join("arenas/arena_starter.json"), FileAccess.WRITE)
+				if w0 != null:
+					w0.store_string(al.get_as_text())
+					w0.close()
+				al.close()
+		for n in nomes:
+			var s := str(n)
+			if s.begins_with("assets/"):
+				var dest := dev.path_join(s)
+				DirAccess.make_dir_recursive_absolute(dest.get_base_dir())
+				var w := FileAccess.open(dest, FileAccess.WRITE)
+				if w != null:
+					w.store_buffer(z.read_file(s))
+					w.close()
+		z.close()
+		var s2 := FileAccess.open(carimbo, FileAccess.WRITE)
+		if s2 != null:
+			s2.store_string(stamp)
+			s2.close()
+	var lista_duel: Array = dados_pack.get("duelistas", []) as Array
+	if lista_duel.size() >= 2:
+		_dev_gravar_json(dev.path_join("duel_setup.json"), _dev_setup_json(lista_duel))
+	else:
+		return ""
+	if not pasta_projeto_valida(dev):
+		return ""
+	print("[DataLoader] DEV editor: pack do Downloads + duelistas sorteados.")
+	return dev
+
+
 static func setup_override_path() -> String:
 	# Lê --setup <caminho> (ou --setup=<caminho>) dos args de usuário.
 	# Retorna "" se não foi passado. Só leitura de CLI, sem regra nova.
@@ -124,6 +300,11 @@ static func project_base_dir() -> String:
 		return _base_memo
 	var pedido := project_override_path()
 	if pedido.is_empty():
+		var dev := _dev_preparar()
+		if not dev.is_empty():
+			_base_memo = dev
+			_base_memo_pronto = true
+			return _base_memo
 		_base_memo = starter_kit_dir()
 		_base_memo_pronto = true
 		return _base_memo
