@@ -212,3 +212,66 @@ func _coletar(n: Node, out: Array) -> void:
 	out.append(n)
 	for f in n.get_children():
 		_coletar(f, out)
+
+
+func test_camera_fixa_sem_orbita() -> void:
+	# Ref Tag Force: câmera FIXA atrás do jogador (sem órbita/balanço).
+	var mesa: Node = await _mesa3d_nova()
+	var cam := mesa.get_node("Camera3D") as Camera3D
+	assert_true(cam != null, "Camera3D existe.")
+	assert_eq(cam.position, Vector3(0, 7.4, 9.6), "Câmera fixa atrás do jogador.")
+	assert_eq(cam.fov, 50.0, "FOV fixo com profundidade da ref.")
+	await wait_process_frames(10)
+	assert_eq((mesa.get_node("Camera3D") as Camera3D).position, Vector3(0, 7.4, 9.6), "Câmera não deriva (sem órbita).")
+
+
+func test_topo_hud_turno_no_centro() -> void:
+	# Ref: seu LP à esquerda, TURN ao centro, rival + LP à direita.
+	var mesa: Node = await _mesa3d_nova()
+	for caminho in ["HUD/TopoFundo", "HUD/LpVoce", "HUD/Turno", "HUD/LpRival"]:
+		assert_true(mesa.get_node_or_null(NodePath(caminho)) != null, "Topo existe: " + caminho)
+	var voce := (mesa.get_node("HUD/LpVoce") as Label).position
+	var turno := (mesa.get_node("HUD/Turno") as Label).position
+	var rival := (mesa.get_node("HUD/LpRival") as Label).position
+	assert_true(voce.x < turno.x, "Seu LP à esquerda do TURN.")
+	assert_true(turno.x < rival.x, "TURN ao centro, rival à direita.")
+	assert_true(str((mesa.get_node("HUD/Turno") as Label).text).contains("TURN"), "Turno mostra TURN.")
+	assert_true(str((mesa.get_node("HUD/LpVoce") as Label).text).contains("LP"), "Seu LP no topo.")
+	assert_true(str((mesa.get_node("HUD/LpRival") as Label).text).contains("LP"), "LP do rival no topo.")
+
+
+func test_painel_esquerdo_carta_focada() -> void:
+	# Ref: painel 2D fixo à esquerda com a carta focada GRANDE + dados reais.
+	var mesa: Node = await _mesa3d_nova()
+	assert_true(mesa.get_node_or_null(NodePath("HUD/PainelCarta")) != null, "Painel esquerdo existe.")
+	for caminho in ["HUD/PainelCarta/Caixa/FocoNome", "HUD/PainelCarta/Caixa/FocoEstrelas",
+			"HUD/PainelCarta/Caixa/FocoArte", "HUD/PainelCarta/Caixa/FocoStats",
+			"HUD/PainelCarta/Caixa/FocoTipo", "HUD/PainelCarta/Caixa/FocoDesc"]:
+		assert_true(mesa.get_node_or_null(NodePath(caminho)) != null, "Painel tem: " + caminho)
+	var st = mesa.get("_st")
+	var mao: Array = (st.players[0] as Dictionary)["hand"]
+	assert_true(mao.size() > 0, "Preparo: mão p0 tem carta.")
+	mesa.set("_fileira", 0)
+	mesa.set("_col", 0)
+	mesa.call("_atualizar_hud")
+	await wait_process_frames(1)
+	var nome := str((mesa.get_node("HUD/PainelCarta/Caixa/FocoNome") as Label).text)
+	assert_false(nome.is_empty() or nome == "—", "Painel mostra o nome real da carta focada: " + nome)
+	var stats := str((mesa.get_node("HUD/PainelCarta/Caixa/FocoStats") as Label).text)
+	assert_true(stats.contains("ATK/") and stats.contains("DEF/"), "Faixa ATK/DEF do dado real: " + stats)
+
+
+func test_fases_no_meio_e_laterais() -> void:
+	# Ref: fases DP/SP/MP1/BP/MP2/EP no meio; decks/cemitérios laterais + contadores.
+	var mesa: Node = await _mesa3d_nova()
+	assert_true(mesa.get_node_or_null(NodePath("Mesa/Fases")) != null, "Fileira de fases existe no meio.")
+	assert_eq((mesa.get_node("Mesa/Fases") as Node3D).get_child_count(), 12, "6 fases x (base + rótulo).")
+	for tag in ["DP", "SP", "MP1", "BP", "MP2", "EP"]:
+		assert_true(mesa.get_node_or_null(NodePath("Mesa/Fases/Fase_" + tag)) != null, "Fase existe: " + tag)
+	for caminho in ["Mesa/Decks/DeckRival", "Mesa/Decks/DeckVoce", "Mesa/Decks/CemRival", "Mesa/Decks/CemVoce"]:
+		assert_true(mesa.get_node_or_null(NodePath(caminho)) != null, "Lateral existe: " + caminho)
+	for caminho in ["Mesa/Decks/ContaDeckVoce", "Mesa/Decks/ContaCemVoce",
+			"Mesa/Decks/ContaDeckRival", "Mesa/Decks/ContaCemRival"]:
+		assert_true(mesa.get_node_or_null(NodePath(caminho)) != null, "Contador existe: " + caminho)
+	assert_true(mesa.get_node_or_null(NodePath("Estrelas")) != null, "Fundo estrelado existe.")
+	assert_true((mesa.get_node("Estrelas") as Node3D).get_child_count() >= 100, "Céu com 100+ estrelas.")

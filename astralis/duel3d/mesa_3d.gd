@@ -23,10 +23,23 @@ const FusionSystem := preload("res://duel/fusion_system.gd")
 const BoardLayoutScript := preload("res://core/board_layout.gd")
 
 ## Conversão desenho 2D->3D (só desenho): campo 2D centrado em x=1158.
+## Composição Tag Force (ref do usuário): câmera FIXA atrás/acima do seu
+## campo olhando o rival longe (profundidade); rival pequeno em cima, você
+## grande embaixo; fases DP/SP/MP1/BP/MP2/EP no meio; mão em arco embaixo;
+## painel 2D fixo à esquerda com a carta focada; HUD 2D no topo
+## (seu LP esq / TURN centro / rival+LP dir). Zero regra aqui (R1).
 const DIV := 150.0
 const CENTRO_X := 1158.0
 const CENTRO_Y := 540.0
 const TOPO := 0.35
+## Câmera FIXA (sem órbita/balanço): atrás do jogador, tilt p/ dar a
+## profundidade da ref (rival longe em cima, você grande embaixo).
+const CAM_POS := Vector3(0, 7.4, 9.6)
+const CAM_ALVO := Vector3(0, -0.3, -1.4)
+const CAM_FOV := 50.0
+## Fases estilo Tag Force no meio do campo (só desenho; o motor real só tem
+## DRAW/MAIN/BATTLE/END — SP e MP2 ficam apagadas, ver _fase_tag_atual).
+const FASES_TAG := ["DP", "SP", "MP1", "BP", "MP2", "EP"]
 
 const LARG_CARTA := 1.0
 const ALT_CARTA := 1.43
@@ -75,6 +88,24 @@ var _lbl_lp_voce: Label = null
 var _lbl_dica: Label = null
 var _lbl_slot: Label = null
 var _lbl_fila: Label = null
+## HUD estilo Tag Force (só desenho): TURN ao centro do topo + painel
+## esquerdo da carta focada (arte real ou cor do atributo + dados reais).
+var _lbl_turno: Label = null
+var _painel_foco: PanelContainer = null
+var _tex_foco_arte: TextureRect = null
+var _cor_foco_arte: ColorRect = null
+var _lbl_foco_nome: Label = null
+var _lbl_foco_estrelas: Label = null
+var _lbl_foco_stats: Label = null
+var _lbl_foco_tipo: Label = null
+var _lbl_foco_desc: Label = null
+## Fases no meio (só desenho) + contadores de deck/cemitério.
+var _no_fases: Node3D = null
+var _fase_marcas: Dictionary = {}
+var _lbl_conta_deck_rival: Label3D = null
+var _lbl_conta_cem_rival: Label3D = null
+var _lbl_conta_deck_voce: Label3D = null
+var _lbl_conta_cem_voce: Label3D = null
 var _log: Array = []
 var _fusions_data: Dictionary = {"schema_version": 1, "recipes": [], "rules": []}
 var _arena_data: Dictionary = {}
@@ -107,7 +138,6 @@ var _col := 0
 var _sel_atk := -1
 var _pad_dir := Vector2i.ZERO
 var _pad_tempo := 0.0
-var _orb_t := 0.0
 var _foco := Vector3.ZERO
 var _pulso := 0.0
 
@@ -214,10 +244,11 @@ func _construir_ambiente() -> void:
 	env.background_mode = Environment.BG_SKY
 	var ceu := Sky.new()
 	var mat_ceu := ProceduralSkyMaterial.new()
-	mat_ceu.sky_top_color = Color(0.02, 0.03, 0.09)
-	mat_ceu.sky_horizon_color = Color(0.10, 0.12, 0.30)
-	mat_ceu.ground_bottom_color = Color(0.01, 0.01, 0.03)
-	mat_ceu.ground_horizon_color = Color(0.06, 0.05, 0.16)
+	# Fundo escuro estrelado da ref (quase preto arroxeado).
+	mat_ceu.sky_top_color = Color(0.005, 0.006, 0.03)
+	mat_ceu.sky_horizon_color = Color(0.05, 0.05, 0.16)
+	mat_ceu.ground_bottom_color = Color(0.005, 0.005, 0.015)
+	mat_ceu.ground_horizon_color = Color(0.03, 0.02, 0.09)
 	ceu.sky_material = mat_ceu
 	env.sky = ceu
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_SKY
@@ -229,6 +260,7 @@ func _construir_ambiente() -> void:
 	env.fog_depth_end = 34.0
 	we.environment = env
 	add_child(we)
+	_construir_estrelas()
 	var sol := DirectionalLight3D.new()
 	sol.name = "SolDirecional"
 	sol.rotation_degrees = Vector3(-52, 28, 0)
@@ -266,12 +298,43 @@ func _construir_ambiente() -> void:
 	add_child(_flash)
 	_cam = Camera3D.new()
 	_cam.name = "Camera3D"
-	_cam.position = Vector3(0, 6.8, 8.2)
-	_cam.fov = 55.0
+	# CÂMERA FIXA da ref: atrás/acima do seu campo, tilt p/ o rival longe.
+	# Sem órbita/balanço (removido do _process): mesma imagem todo frame.
+	_cam.position = CAM_POS
+	_cam.fov = CAM_FOV
 	_cam.current = true
 	add_child(_cam)
-	_cam.look_at(Vector3(0, 0.4, 0.3))
-	print("[MESA3D] Ambiente: WorldEnvironment + 1 direcional + 3 omni + flash + Camera3D.")
+	_cam.look_at(CAM_ALVO)
+	print("[MESA3D] Ambiente: WorldEnvironment + estrelas + 1 direcional + 3 omni + flash + Camera3D FIXA.")
+
+
+## Fundo escuro estrelado da ref (só desenho): ~160 pontos brancos
+## emissivos espalhados na abóbada, sem textura externa.
+func _construir_estrelas() -> void:
+	var no := Node3D.new()
+	no.name = "Estrelas"
+	add_child(no)
+	var rng := RandomNumberGenerator.new()
+	rng.seed = 20260707
+	var mat_e := StandardMaterial3D.new()
+	mat_e.albedo_color = Color(1, 1, 1)
+	mat_e.emission_enabled = true
+	mat_e.emission = Color(0.9, 0.9, 1.0)
+	mat_e.emission_energy_multiplier = 1.2
+	mat_e.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+	for i in range(160):
+		var mi := MeshInstance3D.new()
+		mi.name = "Estrela%d" % i
+		var malha := SphereMesh.new()
+		var tam := 0.02 + rng.randf() * 0.045
+		malha.radius = tam
+		malha.height = tam * 2.0
+		mi.mesh = malha
+		var ang := rng.randf() * TAU
+		var raio := 14.0 + rng.randf() * 10.0
+		mi.position = Vector3(cos(ang) * raio, 2.0 + rng.randf() * 12.0, sin(ang) * raio - 4.0)
+		mi.material_override = mat_e
+		no.add_child(mi)
 
 
 # ---- MESA (tampo + moldura + emblema + 20 marcas de slot + decks) ----
@@ -330,14 +393,90 @@ func _construir_mesa() -> void:
 	var decks := Node3D.new()
 	decks.name = "Decks"
 	mesa.add_child(decks)
+	# Decks à direita + cemitérios à esquerda (laterais, como na ref).
 	decks.add_child(_caixa("DeckRival", Vector3(1.0, 0.35, 1.43), Vector3(3.3, TOPO + 0.17, -2.2), _mat(Color(0.16, 0.12, 0.26))))
 	decks.add_child(_caixa("DeckVoce", Vector3(1.0, 0.35, 1.43), Vector3(3.3, TOPO + 0.17, 1.6), _mat(Color(0.20, 0.16, 0.05))))
+	decks.add_child(_caixa("CemRival", Vector3(1.0, 0.22, 1.43), Vector3(-3.3, TOPO + 0.11, -2.2), _mat(Color(0.22, 0.10, 0.14), 0.25)))
+	decks.add_child(_caixa("CemVoce", Vector3(1.0, 0.22, 1.43), Vector3(-3.3, TOPO + 0.11, 1.6), _mat(Color(0.10, 0.18, 0.22), 0.25)))
+	_lbl_conta_deck_rival = _rotulo3d("x?", 60, Color(0.9, 0.85, 1.0))
+	_lbl_conta_deck_rival.name = "ContaDeckRival"
+	_lbl_conta_deck_rival.position = Vector3(3.3, 1.15, -2.2)
+	decks.add_child(_lbl_conta_deck_rival)
+	_lbl_conta_cem_rival = _rotulo3d("x?", 60, Color(1.0, 0.75, 0.75))
+	_lbl_conta_cem_rival.name = "ContaCemRival"
+	_lbl_conta_cem_rival.position = Vector3(-3.3, 1.0, -2.2)
+	decks.add_child(_lbl_conta_cem_rival)
+	_lbl_conta_deck_voce = _rotulo3d("x?", 60, Color(1.0, 0.95, 0.7))
+	_lbl_conta_deck_voce.name = "ContaDeckVoce"
+	_lbl_conta_deck_voce.position = Vector3(3.3, 1.15, 1.6)
+	decks.add_child(_lbl_conta_deck_voce)
+	_lbl_conta_cem_voce = _rotulo3d("x?", 60, Color(0.75, 1.0, 1.0))
+	_lbl_conta_cem_voce.name = "ContaCemVoce"
+	_lbl_conta_cem_voce.position = Vector3(-3.3, 1.0, 1.6)
+	decks.add_child(_lbl_conta_cem_voce)
+	_construir_fases(mesa)
 	_no_cartas = Node3D.new()
 	_no_cartas.name = "Cartas"
 	add_child(_no_cartas)
-	_cursor3d = _caixa("Cursor3D", Vector3(1.18, 0.06, 1.62), Vector3(0, TOPO, 3.8), _mat(Color(1.0, 0.9, 0.4), 1.6))
+	_cursor3d = _caixa("Cursor3D", Vector3(1.18, 0.06, 1.62), Vector3(0, TOPO, 4.15), _mat(Color(1.0, 0.9, 0.4), 1.6))
 	add_child(_cursor3d)
-	print("[MESA3D] Mesa: tampo + moldura + emblema + 20 marcas + 2 decks + Cursor3D.")
+	print("[MESA3D] Mesa: tampo + moldura + emblema + 20 marcas + decks/cemitérios + 6 fases + Cursor3D.")
+
+
+## Fileira de fases no MEIO do campo (só desenho, ref DP/SP/MP1/BP/MP2/EP).
+## A fase atual acende (dourado); SP/MP2 nunca acendem (motor sem elas).
+func _construir_fases(mesa: Node3D) -> void:
+	_no_fases = Node3D.new()
+	_no_fases.name = "Fases"
+	mesa.add_child(_no_fases)
+	_fase_marcas = {}
+	for i in range(FASES_TAG.size()):
+		var tag := String(FASES_TAG[i])
+		var x := (float(i) - 2.5) * 1.05
+		var base := _caixa("Fase_%s" % tag, Vector3(0.92, 0.05, 0.5), Vector3(x, 0.19, -0.3), _mat(Color(0.10, 0.10, 0.18), 0.4))
+		base.set_meta("fase_tag", tag)
+		_no_fases.add_child(base)
+		var rot := _rotulo3d(tag, 52, Color(0.75, 0.75, 0.85))
+		rot.name = "FaseRot_%s" % tag
+		rot.position = Vector3(x, 0.32, -0.3)
+		_no_fases.add_child(rot)
+		_fase_marcas[tag] = {"base": base, "rot": rot}
+
+
+## Motor real -> tag da ref: DRAW=DP, MAIN=MP1, BATTLE=BP, END=EP.
+func _fase_tag_atual() -> String:
+	if _st == null:
+		return ""
+	match String(_st.phase):
+		"DRAW":
+			return "DP"
+		"MAIN":
+			return "MP1"
+		"BATTLE":
+			return "BP"
+		"END":
+			return "EP"
+	return ""
+
+
+func _atualizar_fases() -> void:
+	if _fase_marcas.is_empty():
+		return
+	var atual := _fase_tag_atual()
+	for tag in _fase_marcas.keys():
+		var par: Dictionary = _fase_marcas[tag]
+		var base := par["base"] as MeshInstance3D
+		var rot := par["rot"] as Label3D
+		if base == null:
+			continue
+		if str(tag) == atual:
+			base.material_override = _mat(Color(0.95, 0.80, 0.35), 1.0)
+			if rot != null:
+				rot.modulate = Color(1.0, 0.9, 0.4)
+		else:
+			base.material_override = _mat(Color(0.10, 0.10, 0.18), 0.4)
+			if rot != null:
+				rot.modulate = Color(0.75, 0.75, 0.85)
 
 
 func _cor_slot(lado: int, tipo: String) -> Color:
@@ -528,10 +667,12 @@ func _fantasia(inst: Dictionary) -> Dictionary:
 # ---- DESENHO A PARTIR DO ESTADO REAL (só leitura, sem regra) ----
 
 func _pos_mao_arco(i: int, n: int, lado: int) -> Vector3:
+	# Mão em ARCO embaixo (você, grande/perto da câmera) e rival longe/cima
+	# pequeno (ref): arco abre em leque, pontas sobem e avançam.
 	var t := float(i) - float(maxi(n - 1, 0)) / 2.0
 	if lado == 0:
-		return Vector3(t * 1.05, 1.35 + (0.10 * absf(t)) + (0.35 if _fileira == FILEIRA_MAO and i == _col else 0.0), 3.9 + 0.10 * absf(t))
-	return Vector3(t * 0.85, 1.35 + 0.08 * absf(t), -3.9 - 0.10 * absf(t))
+		return Vector3(t * 1.12, 1.15 + (0.13 * absf(t)) + (0.35 if _fileira == FILEIRA_MAO and i == _col else 0.0), 4.15 + 0.16 * absf(t))
+	return Vector3(t * 0.7, 1.5 + 0.08 * absf(t), -4.15 - 0.10 * absf(t))
 
 
 func _limpar_cartas() -> void:
@@ -591,7 +732,7 @@ func _redesenhar(com_efeito: bool) -> void:
 func _posicionar_cursor() -> void:
 	if _cursor3d == null or _st == null:
 		return
-	var alvo := Vector3(0, TOPO, 3.9)
+	var alvo := Vector3(0, TOPO, 4.15)
 	match _fileira:
 		FILEIRA_MAO:
 			var n: int = ((_st.players[0] as Dictionary)["hand"] as Array).size()
@@ -626,32 +767,103 @@ func _rotulo_hud(nome: String, texto: String, pos: Vector2, tam: int, cor: Color
 
 
 func _construir_hud() -> void:
+	# TOPO estilo ref: seu LP à esquerda, TURN ao centro, rival + LP à
+	# direita; painel esquerdo fixo com a carta focada GRANDE; log/dica
+	# deslocados p/ a direita p/ não cobrir o painel. Tudo IGNORE (D19).
 	var hud := Control.new()
 	hud.name = "HUD"
 	hud.set_anchors_preset(Control.PRESET_FULL_RECT)
 	hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(hud)
-	_lbl_lp_rival = _rotulo_hud("LpRival", "RIVAL", Vector2(40, 24), 34, Color(0.75, 0.7, 1.0))
+	# Barra do topo (fundo escuro p/ leitura).
+	var topo := ColorRect.new()
+	topo.name = "TopoFundo"
+	topo.position = Vector2(0, 0)
+	topo.size = Vector2(1920, 64)
+	topo.color = Color(0.01, 0.01, 0.04, 0.85)
+	topo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(topo)
+	_lbl_lp_voce = _rotulo_hud("LpVoce", "VOCÊ", Vector2(380, 10), 36, Color(0.55, 0.85, 1.0))
+	hud.add_child(_lbl_lp_voce)
+	_lbl_turno = _rotulo_hud("Turno", "TURN", Vector2(900, 6), 38, Color(1, 1, 1))
+	_lbl_turno.size = Vector2(160, 52)
+	_lbl_turno.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hud.add_child(_lbl_turno)
+	_lbl_lp_rival = _rotulo_hud("LpRival", "RIVAL", Vector2(1300, 10), 34, Color(1.0, 0.75, 0.45))
 	hud.add_child(_lbl_lp_rival)
-	_lbl_mao_rival = _rotulo_hud("MaoRival", "", Vector2(40, 68), 24, Color(0.7, 0.7, 0.8))
+	_lbl_mao_rival = _rotulo_hud("MaoRival", "", Vector2(1300, 66), 22, Color(0.7, 0.7, 0.8))
 	hud.add_child(_lbl_mao_rival)
-	_lbl_fase = _rotulo_hud("Fase", "", Vector2(40, 110), 28, Color(1, 1, 1))
+	_lbl_fase = _rotulo_hud("Fase", "", Vector2(380, 66), 24, Color(1, 1, 1))
 	hud.add_child(_lbl_fase)
-	_lbl_log = _rotulo_hud("Log", "", Vector2(40, 160), 22, Color(0.85, 0.85, 0.9))
+	_lbl_log = _rotulo_hud("Log", "", Vector2(380, 100), 22, Color(0.85, 0.85, 0.9))
 	_lbl_log.size = Vector2(620, 160)
 	_lbl_log.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hud.add_child(_lbl_log)
-	_lbl_lp_voce = _rotulo_hud("LpVoce", "VOCÊ", Vector2(40, 860), 40, Color(0.95, 0.85, 0.55))
-	hud.add_child(_lbl_lp_voce)
-	_lbl_slot = _rotulo_hud("InfoSlot", "", Vector2(40, 918), 24, Color(0.85, 0.95, 1.0))
-	_lbl_slot.size = Vector2(1840, 36)
+	_lbl_slot = _rotulo_hud("InfoSlot", "", Vector2(380, 918), 24, Color(0.85, 0.95, 1.0))
+	_lbl_slot.size = Vector2(1500, 36)
 	hud.add_child(_lbl_slot)
-	_lbl_fila = _rotulo_hud("FilaFusao", "", Vector2(40, 952), 22, Color(1.0, 0.8, 0.6))
-	_lbl_fila.size = Vector2(1840, 34)
+	_lbl_fila = _rotulo_hud("FilaFusao", "", Vector2(380, 952), 22, Color(1.0, 0.8, 0.6))
+	_lbl_fila.size = Vector2(1500, 34)
 	hud.add_child(_lbl_fila)
-	_lbl_dica = _rotulo_hud("Dica", "", Vector2(40, 990), 24, Color(1.0, 0.9, 0.4))
-	_lbl_dica.size = Vector2(1840, 80)
+	_lbl_dica = _rotulo_hud("Dica", "", Vector2(380, 990), 24, Color(1.0, 0.9, 0.4))
+	_lbl_dica.size = Vector2(1500, 80)
 	hud.add_child(_lbl_dica)
+	_construir_painel_foco(hud)
+
+
+## Painel esquerdo 2D fixo da carta focada (ref): carta GRANDE
+## (arte real de assets/fm/ via --project quando existir, senão cor do
+## atributo; nome/estrelas/ATK/DEF do dado real), abaixo faixa ATK/DEF,
+## abaixo NOME + [TIPO] + DESCRIÇÃO completa. Só leitura, sem regra.
+func _construir_painel_foco(hud: Control) -> void:
+	_painel_foco = PanelContainer.new()
+	_painel_foco.name = "PainelCarta"
+	var est := StyleBoxFlat.new()
+	est.bg_color = Color(0.02, 0.02, 0.06, 0.94)
+	est.border_color = Color(0.78, 0.64, 0.32)
+	est.set_border_width_all(3)
+	est.set_corner_radius_all(8)
+	est.content_margin_left = 12
+	est.content_margin_right = 12
+	est.content_margin_top = 10
+	est.content_margin_bottom = 10
+	_painel_foco.add_theme_stylebox_override("panel", est)
+	_painel_foco.position = Vector2(8, 72)
+	_painel_foco.size = Vector2(356, 1000)
+	_painel_foco.custom_minimum_size = Vector2(356, 1000)
+	_painel_foco.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(_painel_foco)
+	var caixa := VBoxContainer.new()
+	caixa.name = "Caixa"
+	caixa.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	caixa.add_theme_constant_override("separation", 6)
+	_painel_foco.add_child(caixa)
+	_lbl_foco_nome = _rotulo_hud("FocoNome", "—", Vector2.ZERO, 26, Color(1.0, 0.95, 0.8))
+	_lbl_foco_nome.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	caixa.add_child(_lbl_foco_nome)
+	_lbl_foco_estrelas = _rotulo_hud("FocoEstrelas", "", Vector2.ZERO, 22, Color(1.0, 0.85, 0.4))
+	caixa.add_child(_lbl_foco_estrelas)
+	_tex_foco_arte = TextureRect.new()
+	_tex_foco_arte.name = "FocoArte"
+	_tex_foco_arte.custom_minimum_size = Vector2(320, 320)
+	_tex_foco_arte.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_tex_foco_arte.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_tex_foco_arte.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_tex_foco_arte.visible = false
+	caixa.add_child(_tex_foco_arte)
+	_cor_foco_arte = ColorRect.new()
+	_cor_foco_arte.name = "FocoCor"
+	_cor_foco_arte.custom_minimum_size = Vector2(320, 320)
+	_cor_foco_arte.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	caixa.add_child(_cor_foco_arte)
+	_lbl_foco_stats = _rotulo_hud("FocoStats", "", Vector2.ZERO, 24, Color(1, 1, 1))
+	caixa.add_child(_lbl_foco_stats)
+	_lbl_foco_tipo = _rotulo_hud("FocoTipo", "", Vector2.ZERO, 22, Color(0.75, 0.9, 1.0))
+	caixa.add_child(_lbl_foco_tipo)
+	_lbl_foco_desc = _rotulo_hud("FocoDesc", "", Vector2.ZERO, 20, Color(0.88, 0.88, 0.92))
+	_lbl_foco_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_lbl_foco_desc.custom_minimum_size = Vector2(320, 220)
+	caixa.add_child(_lbl_foco_desc)
 
 
 ## Menus 2D sobre a cena 3D (só desenho + controle, D19: tudo IGNORE, sem
@@ -740,14 +952,133 @@ func _atualizar_hud() -> void:
 	_lbl_lp_rival.text = "RIVAL — LP %d" % int((_st.players[1] as Dictionary)["lp"])
 	_lbl_mao_rival.text = "Mão do rival: %d cartas" % (((_st.players[1] as Dictionary)["hand"] as Array).size())
 	_lbl_lp_voce.text = "VOCÊ — LP %d" % int((_st.players[0] as Dictionary)["lp"])
+	if _lbl_turno != null:
+		_lbl_turno.text = "TURN\n%d" % int(_st.turn_number)
 	var vez := "Sua vez" if int(_st.current_player) == 0 else "Vez do rival"
-	_lbl_fase.text = "Turno %d — %s — %s" % [int(_st.turn_number), String(_st.phase), vez]
+	_lbl_fase.text = "Turno %d — %s (%s) — %s" % [int(_st.turn_number), String(_st.phase), _fase_tag_atual(), vez]
 	_lbl_slot.text = _texto_slot_foco()
 	if _lbl_fila != null:
 		_lbl_fila.text = _texto_fila()
 	_lbl_dica.text = _texto_dica()
 	if bool(_st.over):
 		_lbl_fase.text += (" — VITÓRIA!" if int(_st.winner) == 0 else " — DERROTA")
+	_atualizar_painel_foco()
+	_atualizar_fases()
+	_atualizar_contadores()
+
+
+## Contadores deck/cemitério dos 2 lados (só leitura do estado real).
+func _atualizar_contadores() -> void:
+	if _st == null:
+		return
+	var d0 := 0
+	var c0 := 0
+	var d1 := 0
+	var c1 := 0
+	if (_st.players[0] as Dictionary).has("deck"):
+		d0 = ((_st.players[0] as Dictionary)["deck"] as Array).size()
+	if (_st.players[0] as Dictionary).has("graveyard"):
+		c0 = ((_st.players[0] as Dictionary)["graveyard"] as Array).size()
+	if (_st.players[1] as Dictionary).has("deck"):
+		d1 = ((_st.players[1] as Dictionary)["deck"] as Array).size()
+	if (_st.players[1] as Dictionary).has("graveyard"):
+		c1 = ((_st.players[1] as Dictionary)["graveyard"] as Array).size()
+	if _lbl_conta_deck_voce != null:
+		_lbl_conta_deck_voce.text = "x%d" % d0
+	if _lbl_conta_cem_voce != null:
+		_lbl_conta_cem_voce.text = "x%d" % c0
+	if _lbl_conta_deck_rival != null:
+		_lbl_conta_deck_rival.text = "x%d" % d1
+	if _lbl_conta_cem_rival != null:
+		_lbl_conta_cem_rival.text = "x%d" % c1
+
+
+## Carta focada pelo cursor (só leitura): mão, campo próprio ou rival.
+## Rival de costas / virada = dado oculto (mostra "?" sem vazar).
+func _carta_focada() -> Dictionary:
+	if _st == null:
+		return {}
+	if _fase_jogador == FASE_MAO and _sub_mao != SUB_MAO_ESCOLHA and _mao_idx >= 0:
+		var mao_c: Array = (_st.players[0] as Dictionary)["hand"]
+		if _mao_idx >= 0 and _mao_idx < mao_c.size():
+			return {"dado": mao_c[_mao_idx] as Dictionary, "aberta": true, "lado": 0}
+	if _fileira == FILEIRA_MAO:
+		var mao: Array = (_st.players[0] as Dictionary)["hand"]
+		var i := clampi(_col, 0, maxi(int(mao.size()) - 1, 0))
+		if i >= 0 and i < mao.size():
+			return {"dado": mao[i] as Dictionary, "aberta": true, "lado": 0}
+	var lt := _lado_tipo_da_fileira(_fileira)
+	if lt.is_empty():
+		return {}
+	var lado := int(lt[0])
+	# _lado_tipo_da_fileira fala PT ("monstro"/"magia"); o estado real usa EN.
+	var zona_nome := "monster" if str(lt[1]) == "monstro" else "spell"
+	var zona: Array = (_st.players[lado] as Dictionary)[zona_nome]
+	var slot := clampi(_col, 0, 4)
+	if slot < 0 or slot >= zona.size() or zona[slot] == null:
+		return {}
+	var inst := zona[slot] as Dictionary
+	var aberta := not bool(inst.get("face_down", false))
+	if lado == 1 and not aberta:
+		return {"dado": {}, "aberta": false, "lado": lado}
+	return {"dado": _fantasia(inst), "aberta": aberta, "lado": lado, "inst": inst}
+
+
+## Preenche o painel esquerdo com o DADO real (nome/level/ATK/DEF/tipo/
+## descrição) + arte real quando existir, senão cor do atributo.
+func _atualizar_painel_foco() -> void:
+	if _painel_foco == null:
+		return
+	var foco := _carta_focada()
+	var dado: Dictionary = foco.get("dado", {}) as Dictionary
+	if dado.is_empty():
+		_lbl_foco_nome.text = "—"
+		_lbl_foco_estrelas.text = ""
+		_lbl_foco_stats.text = ""
+		_lbl_foco_tipo.text = ""
+		_lbl_foco_desc.text = "Mire numa carta."
+		_tex_foco_arte.visible = false
+		_cor_foco_arte.color = Color(0.08, 0.08, 0.12)
+		return
+	# Completa pelo DADO real quando a instância só tem o básico.
+	var cid := str(dado.get("id", dado.get("card_id", "")))
+	var real: Dictionary = dado
+	if not cid.is_empty() and _cartas.has(cid):
+		real = _cartas[cid] as Dictionary
+	var nome := str(real.get("name", dado.get("name", "?")))
+	_lbl_foco_nome.text = nome
+	var nivel := int(real.get("level", dado.get("level", 0)))
+	if nivel > 0:
+		var estrelas := ""
+		for s in range(clampi(nivel, 0, 12)):
+			estrelas += "★"
+		_lbl_foco_estrelas.text = estrelas
+	else:
+		_lbl_foco_estrelas.text = ""
+	_lbl_foco_stats.text = "ATK/%d DEF/%d" % [int(real.get("attack", dado.get("attack", 0))), int(real.get("defense", dado.get("defense", 0)))]
+	var tipo := str(real.get("monster_type", dado.get("monster_type", "")))
+	var attr := str(real.get("attribute", dado.get("attribute", "")))
+	var ctipo := str(real.get("card_type", dado.get("card_type", "monster")))
+	if ctipo == "monster":
+		_lbl_foco_tipo.text = "[%s]" % tipo.to_upper() if not tipo.is_empty() else "[MONSTRO]"
+	else:
+		_lbl_foco_tipo.text = "[%s]" % ctipo.to_upper()
+	var desc := str(real.get("description", dado.get("description", "")))
+	if desc.strip_edges().is_empty():
+		var ops := _estrelas_da_carta(dado)
+		desc = "Guardiãs %s/%s." % [str(ops[0]), str(ops[1])] if not dado.is_empty() else ""
+		if not attr.is_empty():
+			desc += (" Atributo %s." % attr) if not desc.is_empty() else ("Atributo %s." % attr)
+	_lbl_foco_desc.text = desc
+	var tex := _textura_arte(real)
+	if tex != null:
+		_tex_foco_arte.texture = tex
+		_tex_foco_arte.visible = true
+		_cor_foco_arte.visible = false
+	else:
+		_tex_foco_arte.visible = false
+		_cor_foco_arte.visible = true
+		_cor_foco_arte.color = _cor_atributo(attr)
 
 
 ## Indicador ATK/DEF + face do foco (só leitura, sem regra).
@@ -2046,12 +2377,13 @@ func _detalhes() -> void:
 
 
 func _process(delta: float) -> void:
-	# Órbita suave da câmera (deriva lenta + segue o cursor de leve).
-	_orb_t += delta * 0.12
+	# CÂMERA FIXA (ref): nunca mexe — só o cursor pulsa. Sem órbita/balanço.
 	_pulso += delta * 4.0
 	if _cam != null:
-		_cam.position = Vector3(sin(_orb_t) * 1.4, 6.8 + sin(_orb_t * 0.7) * 0.3, 8.2)
-		_cam.look_at(Vector3(_foco.x * 0.25, 0.4, _foco.z * 0.25 + 0.3))
+		if _cam.position != CAM_POS:
+			_cam.position = CAM_POS
+		# look_at todo frame é barato e garante o tilt fixo da ref.
+		_cam.look_at(CAM_ALVO)
 	if _cursor3d != null:
 		var s := 1.0 + 0.04 * sin(_pulso)
 		_cursor3d.scale = Vector3(s, 1.0, s)
