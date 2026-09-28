@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Luz profissional (2026-09-27): ambient baixo, sol com sombra, quente/frio por lado, emissivos contidos. MCP limpo, GUT 14/14. Commit bb35ad6."
+onde_estamos: "Sem luzes (2026-09-27): tudo unshaded estilo anime, flash virou overlay de tela. GUT 14/14. Commit f5f8ad0."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
