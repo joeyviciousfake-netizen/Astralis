@@ -147,7 +147,7 @@ static func _dev_preparar() -> String:
 	if probe != null:
 		tam = int(probe.get_length())
 		probe.close()
-	var stamp: String = "%d:%d" % [int(FileAccess.get_modified_time(pack)), tam]
+	var stamp: String = "v3:%d:%d" % [int(FileAccess.get_modified_time(pack)), tam]
 	var carimbo := dev.path_join(".stamp")
 	var pronto := false
 	if FileAccess.file_exists(carimbo):

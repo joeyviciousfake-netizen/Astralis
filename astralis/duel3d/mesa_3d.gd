@@ -424,27 +424,27 @@ func _construir_campo() -> void:
 	var laterais := Node3D.new()
 	laterais.name = "Laterais"
 	campo.add_child(laterais)
-	# Pilhas nas laterais (ref nova): decks marrons flutuantes com o
-	# número de cartas em cima, cemitérios mais escuros.
-	laterais.add_child(_caixa("DeckRival", Vector3(1.0, 0.35, 1.46), Vector3(3.3, TOPO + 0.17, -2.2), _mat(Color(0.42, 0.24, 0.10))))
-	laterais.add_child(_caixa("DeckVoce", Vector3(1.0, 0.35, 1.46), Vector3(3.3, TOPO + 0.17, 1.6), _mat(Color(0.45, 0.26, 0.11))))
-	laterais.add_child(_caixa("CemRival", Vector3(1.0, 0.22, 1.43), Vector3(-3.3, TOPO + 0.11, -2.2), _mat(Color(0.30, 0.16, 0.20), 0.25)))
-	laterais.add_child(_caixa("CemVoce", Vector3(1.0, 0.22, 1.43), Vector3(-3.3, TOPO + 0.11, 1.6), _mat(Color(0.16, 0.24, 0.30), 0.25)))
+	# Pilhas nas laterais FORA do campo quadrado (ref nova): decks
+	# marrons à direita, cemitérios à esquerda, com o número em cima.
+	laterais.add_child(_caixa("DeckRival", Vector3(1.0, 0.35, 1.46), Vector3(4.9, TOPO + 0.17, -2.2), _mat(Color(0.42, 0.24, 0.10))))
+	laterais.add_child(_caixa("DeckVoce", Vector3(1.0, 0.35, 1.46), Vector3(4.9, TOPO + 0.17, 1.6), _mat(Color(0.45, 0.26, 0.11))))
+	laterais.add_child(_caixa("CemRival", Vector3(1.0, 0.22, 1.46), Vector3(-4.9, TOPO + 0.11, -2.2), _mat(Color(0.30, 0.16, 0.20), 0.25)))
+	laterais.add_child(_caixa("CemVoce", Vector3(1.0, 0.22, 1.46), Vector3(-4.9, TOPO + 0.11, 1.6), _mat(Color(0.16, 0.24, 0.30), 0.25)))
 	_lbl_conta_deck_rival = _rotulo3d("0", 60, Color(0.9, 0.85, 1.0))
 	_lbl_conta_deck_rival.name = "ContaDeckRival"
-	_lbl_conta_deck_rival.position = Vector3(3.3, 1.15, -2.2)
+	_lbl_conta_deck_rival.position = Vector3(4.9, 1.15, -2.2)
 	laterais.add_child(_lbl_conta_deck_rival)
 	_lbl_conta_cem_rival = _rotulo3d("0", 60, Color(1.0, 0.75, 0.75))
 	_lbl_conta_cem_rival.name = "ContaCemRival"
-	_lbl_conta_cem_rival.position = Vector3(-3.3, 1.0, -2.2)
+	_lbl_conta_cem_rival.position = Vector3(-4.9, 1.0, -2.2)
 	laterais.add_child(_lbl_conta_cem_rival)
 	_lbl_conta_deck_voce = _rotulo3d("0", 60, Color(1.0, 0.95, 0.7))
 	_lbl_conta_deck_voce.name = "ContaDeckVoce"
-	_lbl_conta_deck_voce.position = Vector3(3.3, 1.15, 1.6)
+	_lbl_conta_deck_voce.position = Vector3(4.9, 1.15, 1.6)
 	laterais.add_child(_lbl_conta_deck_voce)
 	_lbl_conta_cem_voce = _rotulo3d("0", 60, Color(0.75, 1.0, 1.0))
 	_lbl_conta_cem_voce.name = "ContaCemVoce"
-	_lbl_conta_cem_voce.position = Vector3(-3.3, 1.0, 1.6)
+	_lbl_conta_cem_voce.position = Vector3(-4.9, 1.0, 1.6)
 	laterais.add_child(_lbl_conta_cem_voce)
 	# Número de cartas na mão do rival (a ref mostra o 6 ao lado da mão dele).
 	_lbl_conta_mao_rival = _rotulo3d("0", 60, Color(0.8, 0.8, 0.9))
@@ -462,8 +462,8 @@ func _construir_campo() -> void:
 	_cursor3d.position = Vector3(0, TOPO, 4.15)
 	add_child(_cursor3d)
 	var mat_cur := _mat(Color(0.90, 0.95, 1.0), 1.0)
-	var bw := 1.24
-	var bh := 1.78
+	var bw := 1.72
+	var bh := 1.72
 	var t := 0.09
 	_cursor3d.add_child(_caixa("Aba", Vector3(bw, 0.06, t), Vector3(0, 0, bh / 2.0), mat_cur))
 	_cursor3d.add_child(_caixa("Abaixo", Vector3(bw, 0.06, t), Vector3(0, 0, -bh / 2.0), mat_cur))
@@ -541,13 +541,13 @@ func _construir_tokens(campo: Node3D) -> void:
 	toro_x.inner_radius = 0.14
 	toro_x.outer_radius = 0.22
 	anel.mesh = toro_x
-	anel.position = Vector3(-3.2, 0.5, -0.3)
+	anel.position = Vector3(-4.9, 0.5, -0.3)
 	anel.rotation_degrees = Vector3(90, 0, 0)
 	anel.material_override = _mat(Color(0.12, 0.20, 0.38), 0.5, 0.4)
 	tokens.add_child(anel)
 	var xis := _rotulo3d("X", 72, Color(1, 1, 1))
 	xis.name = "TokenXLetra"
-	xis.position = Vector3(-3.2, 0.62, -0.3)
+	xis.position = Vector3(-4.9, 0.62, -0.3)
 	tokens.add_child(xis)
 	var bussola := MeshInstance3D.new()
 	bussola.name = "TokenBussola"
@@ -556,26 +556,33 @@ func _construir_tokens(campo: Node3D) -> void:
 	disco.bottom_radius = 0.2
 	disco.height = 0.06
 	bussola.mesh = disco
-	bussola.position = Vector3(3.2, 0.44, -0.3)
+	bussola.position = Vector3(4.9, 0.44, -0.3)
 	bussola.material_override = _mat(Color(0.12, 0.22, 0.40), 0.5, 0.4)
 	tokens.add_child(bussola)
 	var norte := _rotulo3d("N", 72, Color(1, 1, 1))
 	norte.name = "TokenBussolaLetra"
-	norte.position = Vector3(3.2, 0.62, -0.3)
+	norte.position = Vector3(4.9, 0.62, -0.3)
 	tokens.add_child(norte)
 
 
-## Painel de slot vazio (só desenho): VIDRO AZUL flutuante da ref nova
-## (painel claro translúcido + borda brilhante). A carta desce no XZ.
+## Painel de slot vazio (só desenho): QUADRADO 1,46 OPACO (ordem do
+## usuário) + contorno claro fino — sem alfa, sem surpresa de ordem.
+## A carta (1,0x1,46) cabe dentro na vertical e na horizontal.
 func _painel_slot(lado: int, tipo: String, indice: int) -> Node3D:
 	var p := _pos_slot(lado, tipo, indice)
 	var no := Node3D.new()
 	no.name = "Painel_p%d_%s%d" % [lado, ("m" if tipo == "monstro" else "s"), indice]
 	no.position = Vector3(p.x, 0.0, p.z)
-	var borda := _caixa("Borda", Vector3(1.16, 0.03, 1.69), Vector3(0, TOPO - 0.055, 0), _vidro(Color(0.55, 0.75, 1.0), 0.9, 0.5))
-	no.add_child(borda)
-	var base := _caixa("Base", Vector3(1.06, 0.05, 1.545), Vector3(0, TOPO - 0.03, 0), _vidro(Color(0.16, 0.38, 0.78), 0.78, 0.12))
+	var mat_borda := _mat(Color(0.62, 0.78, 1.0), 0.5)
+	var mat_base := _mat(Color(0.10, 0.28, 0.62))
+	var base := _caixa("Base", Vector3(1.46, 0.05, 1.46), Vector3(0, TOPO - 0.03, 0), mat_base)
 	no.add_child(base)
+	var t := 0.08
+	var y := TOPO + 0.005
+	no.add_child(_caixa("Borda", Vector3(1.62, 0.02, t), Vector3(0, y, 0.77), mat_borda))
+	no.add_child(_caixa("Borda2", Vector3(1.62, 0.02, t), Vector3(0, y, -0.77), mat_borda))
+	no.add_child(_caixa("Borda3", Vector3(t, 0.02, 1.62), Vector3(-0.77, y, 0), mat_borda))
+	no.add_child(_caixa("Borda4", Vector3(t, 0.02, 1.62), Vector3(0.77, y, 0), mat_borda))
 	return no
 
 
