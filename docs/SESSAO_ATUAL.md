@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Artes claras (2026-09-27): tonemap LINEAR, cor pura sem ACES. MCP limpo. Commit 637a75e."
+onde_estamos: "Artes vivas via foto (2026-09-27): quads unshaded, sem neblina, vidro saturado. Foto a foto com meus olhos. GUT 130/130. Commit ff5a443."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
