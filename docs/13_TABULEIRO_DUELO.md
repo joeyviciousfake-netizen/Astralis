@@ -35,6 +35,14 @@ DRAW → MAIN → BATTLE → END
 
 `standby / main2` adiados. Ordem e permissões são LOGIC fixa.
 
+**Sem ataque no turno 1 (D43, vale para quem estiver jogando).**
+O contador de turno manda: enquanto for `turn 1` — ou seja, quem começou a
+partida — **ninguém ataca**. Assim que a vez passa, o outro lado já entra no
+`turn 2` e ataca normalmente. A trava **não é por jogador**, é pelo número do
+turno. Antes ela somava "só o lado 0" (D15), e por isso o rival começando
+atacava de cara. Exceção: Campo de Testes com `test_state` (`is_test`, D34)
+libera o ataque no turno 1, como antes.
+
 ## 13.3 Mão V1 (regra universal, fixa)
 
 - Inicial: **5 cartas**, sem carta extra dos dois lados (D26). Ninguém compra no turno 1.
