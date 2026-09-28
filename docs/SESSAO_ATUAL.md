@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Mao mesma altura (2026-09-27): sem arco vertical, foto conferida. GUT 14/14. Commit c5bb6a4."
+onde_estamos: "Mao identica (2026-09-27): altura/giro/pos iguais, so x separa. Foto conferida. GUT 14/14. Commit 92a3b20."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
