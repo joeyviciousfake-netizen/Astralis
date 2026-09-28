@@ -980,11 +980,12 @@ func _redesenhar(com_efeito: bool) -> void:
 				carta.set_meta("card_id", str(m.get("card_id", "")))
 				_no_cartas.add_child(carta)
 	# Mãos em arco: p0 aberta, p1 de costas (só contagem, sem vazar dado).
+	# Cartas de frente P/ A CÂMERA (ref): look_at mira o -Z, a frente é
+	# +Z, então gira Y 180° depois — carta reta p/ a sua visão.
 	var mao0: Array = (_st.players[0] as Dictionary)["hand"]
 	for i in range(mao0.size()):
 		var c := _fazer_carta(mao0[i] as Dictionary, false, 0, false)
 		c.position = _pos_mao_arco(i, mao0.size(), 0)
-		c.rotation_degrees.x = -12.0
 		# Levantada p/ fusão sobe + selo na etiqueta (igual ao 2D: selo 1-2-3).
 		var selo := _levantadas.find(i) + 1
 		if selo > 0:
@@ -994,6 +995,9 @@ func _redesenhar(com_efeito: bool) -> void:
 			c.position += Vector3(0, 0.55, -0.4)
 		c.set_meta("mao_idx", i)
 		_no_cartas.add_child(c)
+		if _cam != null:
+			c.look_at(_cam.global_position)
+			c.rotate_y(PI)
 		if com_efeito and not _sem_render():
 			var alvo: Vector3 = c.position
 			c.position = _deck_pos[0]
@@ -1003,8 +1007,9 @@ func _redesenhar(com_efeito: bool) -> void:
 	for j in range(mao1.size()):
 		var v := _fazer_carta({}, true, 1, false)
 		v.position = _pos_mao_arco(j, mao1.size(), 1)
-		v.rotation_degrees.x = 12.0
 		_no_cartas.add_child(v)
+		if _cam != null:
+			v.look_at(_cam.global_position)
 	_atualizar_hud()
 	_posicionar_cursor()
 
