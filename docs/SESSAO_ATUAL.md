@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Mao identica (2026-09-27): altura/giro/pos iguais, so x separa. Foto conferida. GUT 14/14. Commit 92a3b20."
+onde_estamos: "Slots quadrados separados (2026-09-27): 1.46 opacos + grade larga + campo nasce na arena real (bug-mae do dessinc). Foto com 4 fileiras. GUT 130/130. Commit 7616f3f."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
