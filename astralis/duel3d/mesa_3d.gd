@@ -41,9 +41,14 @@ const CENTRO_Y := 540.0
 const TOPO := 0.35
 ## Câmera FIXA (ordem do usuário): deslocada p/ a esquerda olhando p/
 ## a direita — o campo fica colado à direita da tela. Sem órbita/balanço.
-const CAM_POS := Vector3(-2.2, 9, 8)
-const CAM_ALVO := Vector3(-2.2, 0, 0.0)
+const CAM_POS := Vector3(0, 9, 8)
+const CAM_ALVO := Vector3(0, 0, 0.0)
 const CAM_FOV := 50.0
+## Deslocamento da LENTE (ordem do usuário): câmera centrada no campo
+## (visão simétrica, sem torto de perspectiva) e o frustum deslocado
+## joga a imagem p/ a direita (campo colado à direita, como antes).
+## Ajuste fino aqui (negativo = imagem p/ a direita).
+const CAM_OFFSET_X := 0.16
 ## Fases estilo Tag Force REMOVIDAS (ordem do usuário, 2026-09-28): o
 ## duelo segue o Forbidden Memories, sem DP/SP/MP1/BP/MP2/EP.
 
@@ -223,11 +228,12 @@ func _ready() -> void:
 	if _cam != null:
 		print("[MESA3D] Cam: pos=%s fov=%s alvo=%s." % [str(_cam.global_position), str(_cam.fov), str(CAM_ALVO)])
 		print("[MESA3D] Slot p0_m2 na tela: %s." % str(_cam.unproject_position(_pos_slot(0, "monstro", 2))))
-		print("[MESA3D] Calib: centro campo=%s mao0=%s mao0+1x=%s rival=%s." % [
+		print("[MESA3D] Calib: centro campo=%s mao=%s mao+1x=%s rival=%s base=%s." % [
 			str(_cam.unproject_position(Vector3(0, 0.35, 0.0))),
-			str(_cam.unproject_position(Vector3(0, 4.0, 6.1))),
-			str(_cam.unproject_position(Vector3(1.0, 4.0, 6.1))),
-			str(_cam.unproject_position(Vector3(0, 1.4, -4.75)))])
+			str(_cam.unproject_position(_pos_mao_arco(2, 5, 0))),
+			str(_cam.unproject_position(_pos_mao_arco(2, 5, 0) + Vector3(1, 0, 0))),
+			str(_cam.unproject_position(_pos_mao_arco(2, 5, 1))),
+			str(_cam.unproject_position(_pos_mao_arco(2, 5, 0) + Vector3(0, -0.4286, 0.5896)))])
 	_ver_autoquit()
 
 
@@ -329,6 +335,7 @@ func _construir_ambiente() -> void:
 	_cam.current = true
 	add_child(_cam)
 	_cam.look_at(CAM_ALVO)
+	_cam.frustum_offset = Vector2(CAM_OFFSET_X, 0.0)
 	print("[MESA3D] Ambiente: céu azul + neblina + pilares + Camera3D FIXA (sem luzes: tudo unshaded).")
 
 
@@ -904,9 +911,9 @@ func _pos_mao_arco(i: int, n: int, lado: int) -> Vector3:
 	if lado == 0:
 		# Mão centrada no CENTRO VISUAL do campo (ordem do usuário): por
 		# perspectiva, o centro da mão fica à esquerda do centro do mundo.
-		return Vector3(-1.3 + t * 1.12, 4, 6.1)
-	# Rival idem (mais longe = desloca p/ a direita).
-	return Vector3(0.45 + t * 0.7, 1.4, -4.75)
+		return Vector3(0.3 + t * 1.12, 4.35, 6.1)
+	# Rival idem (mais longe = desloca p/ a esquerda).
+	return Vector3(-2.8 + t * 0.7, 1.4, -4.75)
 
 
 func _limpar_cartas() -> void:
