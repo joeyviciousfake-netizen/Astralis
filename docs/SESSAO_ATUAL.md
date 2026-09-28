@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Alfa nos icones (2026-09-27): orbe/estrela com transparencia, arte opaca. Foto conferida. GUT 14/14. Commit b9a2501."
+onde_estamos: "Mao embaixo (2026-09-27): mao calculada p/ encostar na borda inferior, foto conferida. GUT 14/14. Commit 22bccb9."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
