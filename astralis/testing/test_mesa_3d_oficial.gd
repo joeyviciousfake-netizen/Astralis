@@ -61,9 +61,9 @@ func test_sem_mesa_nenhum_no_de_mesa() -> void:
 
 func test_nos_chave_3d_existem() -> void:
 	var mesa: Node = await _mesa3d_nova()
-	for caminho in ["Camera3D", "WorldEnvironment", "SolDirecional", "LuzCampo",
+	for caminho in ["Camera3D", "WorldEnvironment",
 			"Campo", "Campo/Slots", "Campo/Laterais", "Campo/Tokens",
-			"Campo/Fases", "Cartas", "Cursor3D", "FlashEfeito", "HUD", "Ceu"]:
+			"Campo/Fases", "Cartas", "Cursor3D", "HUD", "Ceu", "HUD/FlashTela"]:
 		assert_true(mesa.get_node_or_null(NodePath(caminho)) != null, "Nó-chave existe: " + caminho)
 	assert_true((mesa.get_node("Camera3D") as Camera3D).current, "Camera3D é a atual.")
 	# 20 painéis flutuantes (5+5 por lado), cada um com base escura + borda.

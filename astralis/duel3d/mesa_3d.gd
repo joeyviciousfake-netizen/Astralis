@@ -87,7 +87,7 @@ var _cam: Camera3D = null
 var _no_cartas: Node3D = null
 var _no_slots: Node3D = null
 var _cursor3d: MeshInstance3D = null
-var _flash: OmniLight3D = null
+var _flash_tela: ColorRect = null
 var _deck_pos := [Vector3(3.6, 0.6, 0.4), Vector3(-3.6, 0.6, -0.4)]
 
 var _lbl_lp_rival: Label = null
@@ -303,41 +303,8 @@ func _construir_ambiente() -> void:
 	we.environment = env
 	add_child(we)
 	_construir_cenario_ceu()
-	var sol := DirectionalLight3D.new()
-	sol.name = "SolDirecional"
-	sol.rotation_degrees = Vector3(-52, 28, 0)
-	sol.light_energy = 1.1
-	sol.light_color = Color(1.0, 0.96, 0.90)
-	sol.shadow_enabled = true
-	add_child(sol)
-	var mesa_luz := OmniLight3D.new()
-	mesa_luz.name = "LuzCampo"
-	mesa_luz.position = Vector3(0, 5.5, 0.5)
-	mesa_luz.light_color = Color(1.0, 0.97, 0.92)
-	mesa_luz.light_energy = 0.5
-	mesa_luz.omni_range = 14.0
-	add_child(mesa_luz)
-	var luz_rival := OmniLight3D.new()
-	luz_rival.name = "LuzRival"
-	luz_rival.position = Vector3(0, 3.0, -3.4)
-	luz_rival.light_color = Color(0.55, 0.68, 1.0)
-	luz_rival.light_energy = 0.4
-	luz_rival.omni_range = 8.0
-	add_child(luz_rival)
-	var luz_voce := OmniLight3D.new()
-	luz_voce.name = "LuzVoce"
-	luz_voce.position = Vector3(0, 3.0, 3.4)
-	luz_voce.light_color = Color(1.0, 0.85, 0.62)
-	luz_voce.light_energy = 0.45
-	luz_voce.omni_range = 8.0
-	add_child(luz_voce)
-	_flash = OmniLight3D.new()
-	_flash.name = "FlashEfeito"
-	_flash.position = Vector3(0, 2.0, 0)
-	_flash.light_color = Color(1, 1, 1)
-	_flash.light_energy = 0.0
-	_flash.omni_range = 10.0
-	add_child(_flash)
+	# SEM LUZES (ordem do usuário): tudo é UNSHADED, luz não faz nada —
+	# nem sol nem omnis. Só o flash de tela (overlay 2D, ver HUD).
 	_cam = Camera3D.new()
 	_cam.name = "Camera3D"
 	# CÂMERA FIXA da ref: atrás/acima do seu campo, tilt p/ o rival longe.
@@ -347,7 +314,7 @@ func _construir_ambiente() -> void:
 	_cam.current = true
 	add_child(_cam)
 	_cam.look_at(CAM_ALVO)
-	print("[MESA3D] Ambiente: céu azul + neblina + pilares + 1 direcional + 3 omni + flash + Camera3D FIXA.")
+	print("[MESA3D] Ambiente: céu azul + neblina + pilares + Camera3D FIXA (sem luzes: tudo unshaded).")
 
 
 ## Cenário do céu da ref (só desenho): pilares altos de vidro azulado ao
@@ -395,11 +362,12 @@ func _construir_cenario_ceu() -> void:
 
 # ---- CAMPO (SEM MESA: 20 painéis escuros flutuantes + laterais + fases) ----
 
-func _mat(cor: Color, emissao: float = 0.0, metal: float = 0.0, alfa: float = 1.0) -> StandardMaterial3D:
+func _mat(cor: Color, emissao: float = 0.0, _metal: float = 0.0, alfa: float = 1.0) -> StandardMaterial3D:
+	# Tudo UNSHADED (ordem do usuário: sem luz): cor pura estilo anime,
+	# zero cálculo de luz — nada escurece, nada estoura.
 	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.albedo_color = Color(cor.r, cor.g, cor.b, alfa)
-	m.metallic = metal
-	m.roughness = 0.55
 	if alfa < 1.0:
 		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	if emissao > 0.0:
@@ -413,13 +381,13 @@ func _mat(cor: Color, emissao: float = 0.0, metal: float = 0.0, alfa: float = 1.
 ## claro com brilho suave. Sem textura externa.
 func _vidro(cor: Color, alfa: float = 0.45, brilho: float = 0.5) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
+	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.albedo_color = Color(cor.r, cor.g, cor.b, alfa)
 	m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	m.metallic = 0.35
-	m.roughness = 0.12
-	m.emission_enabled = true
-	m.emission = cor
-	m.emission_energy_multiplier = brilho
+	if brilho > 0.0:
+		m.emission_enabled = true
+		m.emission = cor
+		m.emission_energy_multiplier = brilho
 	return m
 
 
@@ -840,11 +808,11 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 	frente.mesh = qf
 	frente.position = Vector3(0, 0, zf + 0.001)
 	var mat_f := StandardMaterial3D.new()
+	mat_f.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	if tex_moldura != null:
 		mat_f.albedo_texture = tex_moldura
 	else:
 		mat_f.albedo_color = _cor_atributo(str(dado.get("attribute", ""))).darkened(0.25)
-	mat_f.roughness = 0.4
 	frente.material_override = mat_f
 	no.add_child(frente)
 	var eh_monstro := str(dado.get("card_type", "monster")) == "monster"
@@ -901,11 +869,11 @@ func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool)
 		dorso = "assets/backs/verso_padrao.png"
 	var tex_dorso := _textura_arquivo(dorso)
 	var mat_v := StandardMaterial3D.new()
+	mat_v.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	if tex_dorso != null:
 		mat_v.albedo_texture = tex_dorso
 	else:
 		mat_v.albedo_color = Color(0.45, 0.28, 0.13)
-	mat_v.roughness = 0.4
 	verso.material_override = mat_v
 	no.add_child(verso)
 	var espiral := Node3D.new()
@@ -1148,6 +1116,13 @@ func _construir_hud() -> void:
 	lbl_start.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	barra_start.add_child(lbl_start)
 	hud.add_child(barra_start)
+	_flash_tela = ColorRect.new()
+	_flash_tela.name = "FlashTela"
+	_flash_tela.color = Color(1, 1, 1)
+	_flash_tela.modulate.a = 0.0
+	_flash_tela.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_flash_tela.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(_flash_tela)
 	_construir_painel_foco(hud)
 
 
@@ -1791,11 +1766,11 @@ func _atualizar_menus() -> void:
 
 func _flash_efeito() -> void:
 	print("[SOM] flash 3D.")
-	if _sem_render() or _flash == null:
+	if _sem_render() or _flash_tela == null:
 		return
-	_flash.light_energy = 3.0
-	var tw := _flash.create_tween()
-	tw.tween_property(_flash, "light_energy", 0.0, 0.4)
+	_flash_tela.modulate.a = 0.85
+	var tw := _flash_tela.create_tween()
+	tw.tween_property(_flash_tela, "modulate:a", 0.0, 0.4)
 
 
 func _sacudir(no: Node3D) -> void:
