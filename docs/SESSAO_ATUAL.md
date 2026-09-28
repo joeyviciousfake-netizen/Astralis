@@ -7,7 +7,7 @@
 > Regra de manutenção: não apagar histórico útil; corrigir contradições quando forem comprovadas; registrar mudanças de regra/especificação; não inventar testes ou resultados.
 
 ```yaml
-onde_estamos: "Ponte MCP pronta e provada (2026-09-27): Temp/opencode/mcp_call.py da as 14 ferramentas aos subagentes; mesa 3D rodada por ela (duelo real, zero erro). Git limpo."
+onde_estamos: "Mesa 3D igualada ao 2D (2026-09-27): posicao exata na marca, fluxo fiel mao, fusao completa, menus 2D, START/RB-LB certos. Prova MCP zero erro, GUT 123/123. Commit 7c8575a. Falta teste com joypad."
 
 # ---------- O QUE FIZEMOS NESTA SESSÃO (2026-09-25) ----------
 
