@@ -188,29 +188,40 @@ func test_posicao_carta_exatamente_no_painel() -> void:
 			if zona[i] == null:
 				continue
 			var sid := "p%d_m%d" % [lado, i]
-			var painel := slots.get_node_or_null(NodePath("Painel_" + sid)) as Node3D
+			var pv: Vector2i = mesa.call("_vis", lado, i) as Vector2i
+			var painel := slots.get_node_or_null(NodePath("Painel_p%d_m%d" % [pv.x, pv.y])) as Node3D
 			var carta: Node3D = null
 			for f in (_n3d(mesa, "Cartas") as Node3D).get_children():
 				if (f as Node).has_meta("slot_id") and str((f as Node).get_meta("slot_id")) == sid:
 					carta = f as Node3D
-			assert_true(painel != null, "Painel existe: " + sid)
+			assert_true(painel != null, "Painel existe: p%d_m%d (visual de %s)." % [pv.x, pv.y, sid])
 			assert_true(carta != null, "Carta desenhada no slot: " + sid)
 			if painel == null or carta == null:
 				continue
-			assert_almost_eq(carta.position.x, painel.position.x, 0.001, "Carta XZ no painel %s (x)." % sid)
-			assert_almost_eq(carta.position.z, painel.position.z, 0.001, "Carta XZ no painel %s (z)." % sid)
+			# D46: a carta do DADO `sid` é desenhada no ladrilho do slot
+			# VISUAL dela (na vez do rival = lado e coluna opostos). O painel
+			# é o mesmo de sempre: as 20 peças são construídas uma vez com as
+			# DUAS fileiras, e a perspectiva só troca os lugares entre elas.
+			assert_eq(str(carta.get_meta("slot_id")), sid,
+				"A carta continua sendo a do DADO %s (identidade; a troca é só desenho)." % sid)
+			assert_almost_eq(carta.position.x, painel.position.x, 0.001,
+				"Carta XZ no painel %s (x, ladrilho visual %d_m%d)." % [sid, pv.x, pv.y])
+			assert_almost_eq(carta.position.z, painel.position.z, 0.001,
+				"Carta XZ no painel %s (z, ladrilho visual %d_m%d)." % [sid, pv.x, pv.y])
 			# O 3D tem de ser a ARENA (dado) transformada por ESCALA uniforme +
 			# DESLOC (doc 15 §15.5) — o assert prova o TRANSFORM, não a
 			# identidade: a composição e o espelho do rival (D17/D18) vêm do
-			# dado, e escala/deslocamento são apresentação.
-			var p2: Vector2 = BoardLayout.get_pos(mesa.get("_arena_layout"), BoardLayout.slot_id(lado, "monstro", i), BoardLayout.default_pos(BoardLayout.slot_id(lado, "monstro", i)))
+			# dado, e escala/deslocamento são apresentação. E o painel é o do
+			# ladrilho VISUAL, então a arena que ele segue é a desse ladrilho.
+			var id_visual := BoardLayout.slot_id(pv.x, "monstro", pv.y)
+			var p2: Vector2 = BoardLayout.get_pos(mesa.get("_arena_layout"), id_visual, BoardLayout.default_pos(id_visual))
 			var esc: float = mesa.get("ESCALA_CAMPO")
 			var desl: Vector2 = mesa.get("DESLOC_CAMPO")
 			assert_true(esc > 0.0, "Escala de apresentação positiva.")
 			var esp_x := (p2.x - 1158.0) / 150.0 * esc + desl.x
 			var esp_z := (p2.y - 540.0) / 150.0 * esc + desl.y
-			assert_almost_eq(painel.position.x, esp_x, 0.001, "Painel %s no X do BoardLayout transformado." % sid)
-			assert_almost_eq(painel.position.z, esp_z, 0.001, "Painel %s no Z do BoardLayout transformado." % sid)
+			assert_almost_eq(painel.position.x, esp_x, 0.001, "Painel %s no X do BoardLayout transformado." % id_visual)
+			assert_almost_eq(painel.position.z, esp_z, 0.001, "Painel %s no Z do BoardLayout transformado." % id_visual)
 	# O transform é o MESMO nos 2 lados (escala uniforme = o espelho do rival
 	# continua valendo) e é o mesmo em X e Y da arena.
 	var mundo0: Vector3 = mesa.call("_pos_slot", 0, "monstro", 0)

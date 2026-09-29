@@ -2,30 +2,35 @@ extends "res://testing/astralis_test_base.gd"
 
 ## test_perspectiva_campo — a CAMADA DE PERSPECTIVA do doc 16 / D46.
 ##
-## A tela do duelo passa a ser a perspectiva de QUEM ESTA JOGANDO. NADA GIRA:
-## nem a câmera (D41), nem o campo, nem o céu. O que muda é PARA ONDE cada
-## carta é desenhada, e quem decide isso é UMA função só, `_vis`.
+## A tela do duelo é a perspectiva de QUEM ESTA JOGANDO. NADA GIRA: nem a
+## câmera (D41), nem o campo, nem o céu. O que muda é PARA ONDE cada carta é
+## desenhada, e quem decide isso é UMA função só, `_vis`.
 ##
 ## ESTE ARQUIVO CRESCEU COM CADA ETAPA do doc 16 §16.6:
-##   ETAPA 1 (esta) — a camada existe, todo o desenho passa por ela, e a
-##                    perspectiva está TRAVADA no jogador 0: a tela fica
-##                    EXATAMENTE igual à de antes. A foto de prova compara
-##                    pixel a pixel (o original rodando 2x já difere 1129 px
-##                    por causa do cursor que pulsa, então o "idêntico" é
-##                    "idêntico dentro do ruído do próprio jogo").
-##   ETAPA 2 — a perspectiva passa a seguir `current_player` (o teste da
-##                    identidade abaixo é o que muda de propósito aqui).
+##   ETAPA 1 (FEITA) — a camada existe, todo o desenho passa por ela, e a
+##                      perspectiva fica travada no jogador 0: a tela sai
+##                      IDÊNTICA (foto comparada pixel a pixel).
+##   ETAPA 2 (FEITA) — a perspectiva segue `current_player`: a carta ESMAECE
+##                      onde está e aparece esmaecendo do lado e da coluna
+##                      opostos, a de cima vira 180°, e o painel esquerdo na
+##                      vez do rival mostra a imagem padronizada (D46b).
 ##   ETAPA 3 — as mãos (a de baixo é a de quem joga, a de cima sempre virada).
 ##
-## O QUE ESTA ETAPA TRAVA:
-## (1) `_vis` é a identidade para os 20 lugares do campo (2 lados x 5 colunas);
+## O QUE ESTE ARQUIVO TRAVA:
+## (1) `_vis` segue o turno: identidade na vez do jogador 0, mesa virada na
+##     vez do rival, e a volta desfaz exatamente;
 ## (2) a carta desenhada está EXATAMENTE onde `_vis` mandou, e o giro de 180°
 ##     segue o LADO VISUAL (D6), não o lado do dado;
 ## (3) o ESTADO NÃO SE MOVE: a mesma carta continua no mesmo índice do
-##     `GameState` depois de redesenhar (a troca é só de desenho);
+##     `GameState` depois de redesenhar e depois da troca (a troca é só desenho);
 ## (4) andar pela posição visível (direita = direita na tela) continua certo
 ##     nos DOIS lados, porque o vizinho passa pela mesma função que desenha;
-## (5) a faixa do meio e as placas de nome NÃO espelham (D8).
+## (5) a faixa do meio e as placas de nome NÃO espelham (D8);
+## (6) a TROCA manda a carta para o outro lado, espelha a coluna, vira a de
+##     cima de cabeça para baixo, e a volta é reversível;
+## (7) a troca não deixa carta fantasma pendurada nem material transparente;
+## (8) D46b: na vez do rival o painel esquerdo fica sem nenhum dado da carta e
+##     mostra a imagem padronizada.
 ##
 ## Sem Fake (R2): a cena 3D real + o GameState real do DuelManager. Nada
 ## aqui duplica regra — o teste só pergunta ao desenho da mesa.
@@ -57,6 +62,22 @@ func _carta_do_campo(mesa: Node, lado: int, tipo: String, i: int) -> Node3D:
 	return null
 
 
+## A carta desenhada NO LADrilho VISUAL (lado_visual, coluna_visual). O
+## `slot_id` que a carta carrega é sempre do DADO (é a identidade dela), então
+## para a perspectiva do rival o caminho é o contrário: procuramos pelo LUGAR
+## onde ela está na tela.
+func _carta_por_slot_visual(mesa: Node, lado_visual: int, tipo: String, col_visual: int) -> Node3D:
+	var cartas: Node = mesa.get_node(CARTAS)
+	var alvo: Vector3 = mesa.call("_pos_slot", lado_visual, tipo, col_visual) as Vector3
+	for f in cartas.get_children():
+		if not (f as Node).has_meta("slot_id"):
+			continue
+		var p: Vector3 = (f as Node3D).position
+		if absf(p.x - alvo.x) < 0.0001 and absf(p.z - alvo.z) < 0.0001:
+			return f as Node3D
+	return null
+
+
 ## Carta de DADO no campo, montada pelo CONSTRUTOR REAL
 ## (`SummonSystem.construir_instancia` — o único lugar do jogo que monta
 ## instância, R1) e colocada no slot pedido. Este arquivo não está testando
@@ -78,31 +99,46 @@ func _poe_no_campo(mesa: Node, st, lado: int, i: int) -> bool:
 	return true
 
 
-## (1) A camada de perspectiva: a tela ainda é a do JOGADOR 0, e para os 20
-## lugares do campo `_vis` devolve o próprio (lado, coluna).
-func test_vis_e_a_identidade_e_a_tela_continua_a_do_jogador_0() -> void:
+## (1) A camada de perspectiva: a tela é a de QUEM ESTÁ JOGANDO, e `_vis` é o
+## único lugar que decide. Na vez do jogador 0 ela é a identidade; na vez do
+## rival cada coisa vai para o lado E a coluna opostas (a mesa virada).
+func test_vis_segue_o_turno_e_a_mesa_virada() -> void:
 	var mesa: Node = await _mesa3d_nova()
 	var st = mesa.get("_st")
 	st.set("current_player", 0)
-	assert_eq(int(mesa.call("_perspectiva")), 0, "Etapa 1: a perspectiva é a do jogador 0.")
+	assert_eq(int(mesa.call("_perspectiva")), 0, "Na vez do jogador 0 a tela é a dele.")
 	for lado in [0, 1]:
 		for i in range(COLUNAS):
 			var v: Vector2i = mesa.call("_vis", lado, i)
 			assert_eq(v, Vector2i(lado, i),
-				"Etapa 1: com o jogador 0 jogando, o lugar do dado (%d,%d) é ele mesmo." % [lado, i])
-	# E o MESMO com o rival na vez: a perspectiva ainda está travada (é o que a
-	# etapa 2 vai mudar de propósito). Sem isso, esta etapa já mexeu na tela.
+				"Na vez do jogador 0, o lugar do dado (%d,%d) é ele mesmo." % [lado, i])
+	# Vez do RIVAL: lado oposto E coluna oposta. E a perspective vem do
+	# MOTOR (R1): trocar o current_player troca a tela, sem variável guardada.
 	st.set("current_player", 1)
+	assert_eq(int(mesa.call("_perspectiva")), 1, "Na vez do rival a tela é a DELE.")
 	for lado in [0, 1]:
 		for i in range(COLUNAS):
 			var v2: Vector2i = mesa.call("_vis", lado, i)
-			assert_eq(v2, Vector2i(lado, i),
-				"Etapa 1: a perspectiva segue TRAVADA no jogador 0 (lado %d, coluna %d)." % [lado, i])
-	assert_eq(int(mesa.call("_perspectiva")), 0,
-		"Etapa 1: com o rival jogando a tela NAO virou a perspectiva (a etapa 2 faz isso).")
+			assert_eq(v2, Vector2i(1 - lado, COLUNAS - 1 - i),
+				"Na vez do rival, o dado (%d,%d) vai para (%d,%d) (mesa virada)." % [
+					lado, i, 1 - lado, COLUNAS - 1 - i])
+	# A fileira de BAIXO é sempre a de quem joga: o p1 em baixo, o p0 em cima.
+	for i in range(COLUNAS):
+		assert_eq((mesa.call("_vis", 0, i) as Vector2i).y, COLUNAS - 1 - i,
+			"Na vez do rival, o p0 vai para a fileira de cima (coluna %d espelhada)." % i)
+	# E a troca é uma involução: voltar a vez desfaz exatamente (D46 "Volta").
+	assert_eq(int(mesa.call("_perspectiva")), 1, "Preparo: ainda na vez do rival.")
+	st.set("current_player", 0)
+	for lado in [0, 1]:
+		for i in range(COLUNAS):
+			assert_eq(mesa.call("_vis", lado, i), Vector2i(lado, i),
+				"Voltou a vez: a tela é a do jogador de novo, carta por carta no mesmo lugar (%d,%d)." % [lado, i])
 	# Coluna fora de 0..4 não derruba nada (blindagem, como o resto da tela).
 	assert_eq(mesa.call("_vis", 0, -3), Vector2i(0, 0), "Coluna -3 trava em 0 (nunca crash).")
 	assert_eq(mesa.call("_vis", 1, 99), Vector2i(1, 4), "Coluna 99 trava em 4 (nunca crash).")
+	st.set("current_player", 1)
+	assert_eq(mesa.call("_vis", 0, -3), Vector2i(1, 4), "Coluna -3 trava em 0 também na vez do rival.")
+	assert_eq(mesa.call("_vis", 1, 99), Vector2i(0, 0), "Coluna 99 trava em 4 também na vez do rival.")
 
 
 ## (2) A carta desenhada está EXATAMENTE onde `_vis` mandou, e o giro de 180°
@@ -192,6 +228,184 @@ func test_direita_na_tela_e_direita_nos_dois_lados() -> void:
 			"No lado %d, andar para a DIREITA aumenta o X de tela (coluna %d)." % [lado, dir])
 		assert_true(float(mesa.call("_x_do_slot", lado, "monstro", esq)) < meio,
 			"No lado %d, andar para a ESQUERDA diminui o X de tela (coluna %d)." % [lado, esq])
+
+
+## (6) ETAPA 2 — a TROCA: quando a vez muda, a carta do p0 some do lado de
+## baixo e aparece no de cima (e o inverso), e o ESTADO NÃO SE MEXE. Aqui as
+## duas metades são desenhadas ao mesmo tempo (a que esmaece e a que entra),
+## então no headless o que se prova é o resultado final: a carta está no lado
+## novo, com a coluna espelhada e girada, e a mesma carta continua no mesmo
+## índice do `GameState`.
+func test_a_troca_manda_a_carta_para_o_outro_lado_sem_mexer_no_estado() -> void:
+	var mesa: Node = await _mesa3d_nova()
+	var st = mesa.get("_st")
+	assert_true(_poe_no_campo(mesa, st, 0, 0), "Preparo: o p0 tem carta no m0.")
+	assert_true(_poe_no_campo(mesa, st, 1, 0), "Preparo: o p1 tem carta no m0.")
+	st.set("current_player", 0)
+	mesa.call("_redesenhar", false)
+	await wait_process_frames(2)
+	var minha: Node3D = _carta_do_campo(mesa, 0, "monstro", 0)
+	assert_true(minha != null, "Na vez do jogador a carta do p0 está desenhada.")
+	if minha == null:
+		return
+	var pos_antes: Vector3 = minha.position
+	var cid_antes := str(minha.get_meta("card_id"))
+	var idx_antes: int = -1
+	for i in range(5):
+		var inst = (st.players[0] as Dictionary)["monster"][i]
+		if inst is Dictionary and str((inst as Dictionary).get("card_id", "")) == cid_antes:
+			idx_antes = i
+	assert_eq(idx_antes, 0, "Preparo: a carta do p0 está no índice 0 do estado.")
+	# ---- A VEZ PASSA. O motor muda o current_player; a tela segue.
+	st.set("current_player", 1)
+	mesa.call("_redesenhar", false)
+	await wait_process_frames(2)
+	# 1) a carta do p0 foi desenhada no LADO DE CIMA (visual), coluna espelhada
+	var v := mesa.call("_vis", 0, 0) as Vector2i
+	var no_visual: Node3D = _carta_por_slot_visual(mesa, v.x, "monstro", v.y)
+	assert_true(no_visual != null,
+		"Na vez do rival, a carta do p0 está desenhada no ladrilho VISUAL (%d,%d)." % [v.x, v.y])
+	if no_visual != null:
+		var esperado: Vector3 = mesa.call("_pos_slot", v.x, "monstro", v.y) as Vector3
+		assert_almost_eq(no_visual.position.x, esperado.x, 0.0001, "No X do ladrilho visual.")
+		assert_almost_eq(no_visual.position.z, esperado.z, 0.0001, "No Z do ladrilho visual.")
+		assert_true(no_visual.position.z < pos_antes.z,
+			"A carta do p0 foi para o LADO DE CIMA do campo (Z %.3f < %.3f, mais longe da câmera)." % [
+				no_visual.position.z, pos_antes.z])
+		# E, o que o usuário vê: ela SOBIU na tela.
+		var cam: Camera3D = mesa.get("_cam") as Camera3D
+		if cam != null:
+			var y_antes := cam.unproject_position(pos_antes).y
+			var y_depois := cam.unproject_position(no_visual.position).y
+			assert_true(y_depois < y_antes,
+				"Na TELA a carta do p0 subiu (y %.0f -> %.0f px; menor y = mais alto)." % [
+					y_antes, y_depois])
+		# e a carta de cima é lida de CABEÇA PARA BAIXO (D6): 180 graus
+		assert_almost_eq(no_visual.rotation_degrees.y, 180.0, 0.0001,
+			"A carta da fileira de cima está de cabeça para baixo (180 graus).")
+		assert_eq(str(no_visual.get_meta("card_id")), cid_antes,
+			"É a MESMA carta do p0 que mudou de lado (o meta é o slot do DADO).")
+	# 2) o ESTADO NÃO SE MEXE: o p0 continua com a carta no índice 0
+	var depois = (st.players[0] as Dictionary)["monster"][0]
+	assert_false(depois == null, "O estado do p0 continua com a carta no índice 0.")
+	if depois is Dictionary:
+		assert_eq(str((depois as Dictionary).get("card_id", "")), cid_antes,
+			"A carta do p0 é a MESMA no estado depois da troca (a troca é só desenho).")
+	var idx_depois: int = -1
+	for i in range(5):
+		var inst2 = (st.players[0] as Dictionary)["monster"][i]
+		if inst2 is Dictionary and str((inst2 as Dictionary).get("card_id", "")) == cid_antes:
+			idx_depois = i
+	assert_eq(idx_depois, 0, "A carta do p0 continua no MESMO índice do estado (0).")
+	# 3) e o que era do RIVAL desceu para a fileira de baixo, virado para frente
+	var vr := mesa.call("_vis", 1, 0) as Vector2i
+	var carta_rival: Node3D = _carta_por_slot_visual(mesa, vr.x, "monstro", vr.y)
+	assert_true(carta_rival != null, "A carta do p1 está desenhada no ladrilho visual dele.")
+	if carta_rival != null:
+		assert_almost_eq(carta_rival.rotation_degrees.y, 0.0, 0.0001,
+			"A carta de baixo (do rival) está de frente para o dono (0 graus).")
+	# 4) a volta desfaz: a tela é a do jogador de novo, no mesmo lugar
+	st.set("current_player", 0)
+	mesa.call("_redesenhar", false)
+	await wait_process_frames(2)
+	var voltou := _carta_do_campo(mesa, 0, "monstro", 0)
+	assert_true(voltou != null, "Voltou a vez: a carta do p0 está desenhada de novo.")
+	if voltou != null:
+		assert_almost_eq(voltou.position.x, pos_antes.x, 0.0001, "E no MESMO X de antes (a volta é reversível).")
+		assert_almost_eq(voltou.position.z, pos_antes.z, 0.0001, "E no MESMO Z de antes.")
+		assert_almost_eq(voltou.rotation_degrees.y, 0.0, 0.0001, "E virada para frente de novo.")
+
+
+## (7) ETAPA 2 — a troca é UMA troca só, sem fila e sem resto: depois dela
+## não sobra carta fantasma pendurada na tela, e a carta que fica é a do
+## ladrilho, na cara (alfa 1). Também trava que o estado continua igual.
+func test_a_troca_nao_deix_sobra_nem_fantasma() -> void:
+	var mesa: Node = await _mesa3d_nova()
+	var st = mesa.get("_st")
+	assert_true(_poe_no_campo(mesa, st, 0, 0), "Preparo: o p0 tem carta no m0.")
+	assert_true(_poe_no_campo(mesa, st, 1, 0), "Preparo: o p1 tem carta no m0.")
+	st.set("current_player", 0)
+	mesa.call("_redesenhar", false)
+	await wait_process_frames(2)
+	var antes_p1: Array = ((st.players[1] as Dictionary)["monster"] as Array).duplicate(true)
+	st.set("current_player", 1)
+	mesa.call("_redesenhar", false)
+	await wait_process_frames(4)
+	# Todas as cartas do campo estão no grupo `Cartas` (nenhuma em `Fantasmas`).
+	var cartas: Node = mesa.get_node(CARTAS)
+	var fantasma: Node = mesa.get_node_or_null("Camada3D/JanelaCampo/Viewport3D/Fantasmas")
+	assert_true(fantasma != null, "A camada de fantasmas existe.")
+	if fantasma != null:
+		assert_eq((fantasma as Node).get_child_count(), 0,
+			"NENHUMA carta ficou pendurada na camada de fantasmas depois da troca.")
+	# E as cartas que ficaram estão opacas (alfa 1 = o desenho normal).
+	for f in cartas.get_children():
+		if not (f as Node).has_meta("slot_id"):
+			continue
+		var corpo := (f as Node3D).get_node_or_null("Frente") as MeshInstance3D
+		if corpo == null:
+			continue
+		var mat = corpo.material_override as BaseMaterial3D
+		assert_true(mat != null, "A carta do campo tem material.")
+		if mat != null:
+			assert_almost_eq(mat.albedo_color.a, 1.0, 0.001,
+				"A carta que ficou está OPACA (o esmaecer acabou, sem material transparente sobrando).")
+	assert_eq(((st.players[1] as Dictionary)["monster"] as Array), antes_p1,
+		"A troca não mexeu no estado do p1.")
+
+
+## (8) D46b — na vez do rival o painel esquerdo continua vivo, mas mostra a
+## imagem PADRONIZADA (o verso) e NENHUM dado da carta.
+func test_painel_esquerdo_neutro_na_vez_do_rival() -> void:
+	var mesa: Node = await _mesa3d_nova()
+	var st = mesa.get("_st")
+	# Os rótulos saem das próprias variáveis da mesa (mesmo caminho que o
+	# desenho usa) — nada de adivinhar nome de nó.
+	var lbl_nome: Label = mesa.get("_lbl_foco_nome") as Label
+	var lbl_molde: Label = mesa.get("_lbl_foco_nome_molde") as Label
+	var lbl_stats: Label = mesa.get("_lbl_foco_stats") as Label
+	var lbl_tipo: Label = mesa.get("_lbl_foco_tipo") as Label
+	var lbl_desc: Label = mesa.get("_lbl_foco_desc") as Label
+	var lbl_copia: Label = mesa.get("_lbl_copia_foco") as Label
+	assert_true(lbl_nome != null and lbl_molde != null and lbl_stats != null
+		and lbl_tipo != null and lbl_desc != null and lbl_copia != null,
+		"O painel esquerdo tem as 6 peças de texto.")
+	if lbl_nome == null or lbl_molde == null or lbl_stats == null or lbl_tipo == null \
+			or lbl_desc == null or lbl_copia == null:
+		return
+	# Na vez do JOGADOR: o painel mostra a carta de verdade (dado real).
+	st.set("current_player", 0)
+	mesa.call("_atualizar_painel_foco")
+	assert_false(lbl_nome.text.is_empty(), "Na sua vez o painel mostra o nome da carta focada.")
+	assert_true(lbl_stats.text.contains("ATK/"), "Na sua vez o painel mostra ATK/DEF.")
+	# Na vez do RIVAL: o mesmo quadro, sem nenhum dado.
+	st.set("current_player", 1)
+	mesa.call("_atualizar_painel_foco")
+	assert_eq(lbl_nome.text, "", "D46b: na vez do rival o nome da carta some.")
+	assert_eq(lbl_molde.text, "", "D46b: na vez do rival o nome na moldura some.")
+	assert_eq(lbl_stats.text, "", "D46b: na vez do rival o ATK/DEF some.")
+	assert_eq(lbl_tipo.text, "", "D46b: na vez do rival o tipo some.")
+	assert_eq(lbl_desc.text, "", "D46b: na vez do rival a descrição some.")
+	assert_eq(lbl_copia.text, "", "D46b: na vez do rival o contador de cópias some.")
+	# E a imagem é a PADRONIZADA (o verso, asset do jogo), não a arte da carta.
+	var arte: TextureRect = mesa.get("_tex_foco_arte") as TextureRect
+	var moldura: TextureRect = mesa.get("_tex_foco_moldura") as TextureRect
+	assert_true(arte != null and moldura != null, "O painel tem a arte e a moldura.")
+	if arte != null:
+		var verso: Texture2D = mesa.call("_tex_cache", "assets/backs/verso_padrao.png")
+		assert_eq(_assinatura(arte.texture), _assinatura(verso),
+			"D46b: na vez do rival a imagem é o VERSO padrão, não a arte da carta.")
+	# E volta ao normal quando a vez volta.
+	st.set("current_player", 0)
+	mesa.call("_atualizar_painel_foco")
+	assert_false(lbl_nome.text.is_empty(), "Voltou a vez: o painel volta a mostrar a carta.")
+
+
+## Assinatura de uma textura (caminho + tamanho) para comparar sem pixel.
+func _assinatura(t: Texture2D) -> String:
+	if t == null:
+		return ""
+	return "%s|%dx%d" % [t.resource_path, t.get_width(), t.get_height()]
 
 
 ## (5) D8: a faixa do meio e as placas de nome são SEMPRE o painel do jogador.

@@ -13,9 +13,9 @@ que o jogo usa. Não existe cópia "fake" de nada (regra **R2**).
 | | |
 |---|---|
 | Arquivos de teste | **20** (+ 1 base de helpers) |
-| Testes | **172** |
-| Asserções | **3738** |
-| Tempo (headless) | **~156 s** (~10 s deles são 2 testes que esperam a IA real) |
+| Testes | **175** |
+| Asserções | **3801** |
+| Tempo (headless) | **~166 s** (~10 s deles são 2 testes que esperam a IA real) |
 | Conteúdo oficial usado | **722 cartas / 39 duelistas / 39 decks / 25081 receitas de fusão** |
 | Framework | **GUT 9.7.1** (`astralis/addons/gut/`) |
 | Godot | **4.7.2 headless** |
@@ -35,8 +35,8 @@ que o jogo usa. Não existe cópia "fake" de nada (regra **R2**).
 ```
 
 Use o executável **console** (`..._console.exe`): é ele que imprime o resumo
-no terminal. O resultado bom é `172/172 passed` + `---- All tests passed! ----`
-e o `Time` em ~156 s. O GUT sai com código 0 quando passa.
+no terminal. O resultado bom é `175/175 passed` + `---- All tests passed! ----`
+e o `Time` em ~166 s. O GUT sai com código 0 quando passa.
 
 Rodar direto no editor também funciona: abra `Godot/Godot_v4.7.2-stable_win64.exe`,
 importe `astralis/`, aba **GUT** → **Run**.
@@ -64,7 +64,7 @@ importe `astralis/`, aba **GUT** → **Run**.
 | `test_regra_turno1.gd` | 6 | A regra do **turno 1** (D43, corrigindo a D15): ninguém ataca enquanto o contador de turno for 1, para QUEM ESTIVER jogando — quem começou a partida não ataca, e o outro lado já entra no turno 2 atacando. Não é regra por jogador. A exceção do Campo de Testes (`is_test`, D34) fica igual, e a mensagem do dono da regra (`BattleSystem.ERRO_TURNO_1`) é uma só, sem string duplicada. |
 | `test_seed_sorteio.gd` | 5 | A **semente** `duel_setup.seed` (D42): `seed = 0` (ou ausente) = SEM SEMENTE, sorteio de verdade; `seed != 0` = semente fixa, e o mesmo duelo reproduzido carta por carta (mesmo primeiro jogador, mesma mão, mesma ordem do baralho). Trava que a semente fixa dá o mesmo resultado, que duas sementes dão baralhos diferentes, e que `first_p1`/`first_p2` são deterministas mesmo com seed 0. |
 | `test_turno_quem_comeca.gd` | 5 | **Quem começa** (D42): o motor sorteia o primeiro jogador e a tela 3D HONRA o `current_player` devolvido, inclusive quando o **rival** começa — nesse caso ela conduz o turno dele pelos sistemas reais e devolve a vez (antes o jogo travava em "Aguarde o rival"). Trava que o turno do rival sempre termina em `current_player == 0`, com trava de progresso (teto de passos) e sem reentrada em paralelo. |
-| `test_perspectiva_campo.gd` | 5 | A **camada de perspectiva** (doc 16 / D46, etapa 1): a tela passa a ser a perspectiva de quem joga, sem girar nada. Trava que `_vis` é a identidade nos 20 lugares do campo (e **também** com `current_player = 1`, que é o que a etapa 2 muda de propósito), que a carta desenhada está exatamente onde `_vis` mandou (X e Z) e gira pelo **lado visual**, que o **estado não se move** no redesenho, que o espelho do D18 continua valendo (lado 1: a coluna 0 é a da direita) e que andar para a direita aumenta o X de tela nos dois lados, e que a faixa do meio **não espelha** (D8). Etapa 1 = tela idêntica; a troca de lado é a etapa 2. |
+| `test_perspectiva_campo.gd` | 8 | A **perspectiva do campo** (doc 16 / D46, etapas 1 e 2): a tela do duelo é a perspectiva de QUEM ESTÁ JOGANDO, sem girar nada (nada viaja, nem a câmera nem o campo nem o céu). Trava que `_vis` segue o `current_player` do motor (identidade na sua vez, mesa virada na vez do rival, e a volta desfaz exatamente, com a coluna espelhada 0↔4), que a carta desenhada está exatamente onde `_vis` mandou e gira pelo **lado visual** (a de cima de cabeça para baixo), que o **estado não se move** (a mesma carta no mesmo índice do `GameState` depois de redesenhar e depois da troca), que a troca é um esmaecer cruzado sem fila nem fantasma pendurado nem material transparente sobrando, que o espelho do D18 continua valendo e andar para a direita aumenta o X de tela nos dois lados, que a faixa do meio **não espelha** (D8) e que **D46b**: na vez do rival o painel esquerdo fica sem nenhum dado e mostra a imagem padronizada. |
 
 ## A base única de helpers
 

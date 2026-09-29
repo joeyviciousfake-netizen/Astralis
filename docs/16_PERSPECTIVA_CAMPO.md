@@ -1,11 +1,11 @@
 # 16 — PERSPECTIVA DO CAMPO (plano da próxima leva)
 
-VERSION: 1.1
-STATUS: **PLANO — ETAPA 1 IMPLEMENTADA, O RESTO NÃO.** O usuário desenhou o
+VERSION: 1.2
+STATUS: **ETAPAS 1 E 2 IMPLEMENTADAS, O RESTO NÃO.** O usuário desenhou o
 plano com o Lead em 2026-09-28; a etapa 1 (a camada de perspectiva, com a tela
-igual à de hoje) foi feita em 2026-09-29 — ver §16.12. As perguntas §16.7 1 e 3
-foram respondidas pelo usuário (D46b). A execução continua pela etapa 2, com o
-aval do usuário.
+igual à de hoje) e a etapa 2 (a troca do campo) foram feitas em 2026-09-29 —
+ver §16.12. As perguntas §16.7 1 e 3 foram respondidas pelo usuário (D46b). A
+execução continua pela etapa 3 (as mãos), com o aval do usuário.
 OWNER: lead (a implementação é do runtime: `duel3d/mesa_3d.gd`)
 ORIGEM: conversa de 2026-09-28, depois de ver a faixa 2D (D45/D45b, já no git)
 DEPENDES: `13_TABULEIRO_DUELO.md`, `14_EXPERIENCIA_USUARIO.md`,
@@ -162,7 +162,7 @@ completa é a busca por `_pos_slot(`, `_pos_mao_arco(`, `_rot_deitada(`,
 | # | Etapa | PROVA | Status |
 |---|---|---|---|
 | 1 | **A camada de perspectiva, sem mudar a tela.** A função `_vis` + todo desenho passando por ela, com a perspectiva **travada no jogador 0**. | a foto fica **idêntica** à de hoje + teste que trava o visual atual | **FEITA 2026-09-29** — ver §16.12 |
-| 2 | **A troca do campo.** A perspectiva passa a seguir `current_player`; as cartas esmaecem e trocam de lado; a coluna espelha; a de cima vira 180°. | duas fotos (uma na sua vez, uma na dele) + teste da fileira de baixo = de quem joga, da coluna espelhada, e de que **o estado não se move** | a fazer |
+| 2 | **A troca do campo.** A perspectiva passa a seguir `current_player`; as cartas esmaecem e trocam de lado; a coluna espelha; a de cima vira 180°. | duas fotos (uma na sua vez, uma na dele) + teste da fileira de baixo = de quem joga, da coluna espelhada, e de que **o estado não se move** | **FEITA 2026-09-29** — ver §16.12 |
 | 3 | **As mãos.** Um caminho só: a de baixo é a de quem joga (aberta só se for a sua), a de cima é a do outro, **sempre virada e espelhada**. | fotos + teste da cara e da ordem | a fazer |
 | 4 | **As animações que seguem as cartas**: ataque, compra, fusão, carta ao centro; esconder o cursor na vez dele. | jogo rodando (jogo de verdade, com o rival jogando) + GUT | a fazer |
 | 5 | **Acabamento.** Tempo/curva, ferramenta de calibração (`--mesa3d-calib=1`), fotos para o registro, docs. | 2 fotos (mão + campo) | a fazer |
@@ -248,16 +248,18 @@ Nada disso trava a etapa 1.
 
 ## 16.11 ONDE ESTÁ A EXECUÇÃO
 
-**Status: ETAPA 1 FEITA (2026-09-29).** A próxima é a **etapa 2** (a troca do
-campo), e ela espera o usuário olhar a foto da etapa 1.
+**Status: ETAPAS 1 E 2 FEITAS (2026-09-29).** A próxima é a **etapa 3** (as
+mãos), e ela espera o usuário olhar as fotos da etapa 2.
 
 1. Abrir `docs/16_PERSPECTIVA_CAMPO.md` (este arquivo) **antes** de mexer em
    qualquer coisa.
 2. Conferir o `docs/SESSAO_ATUAL.md` (o caderno) e o `docs/DECISOES.md`.
-3. conferir o §16.12 (o que a etapa 1 deixou pronto e o que ela NÃO tocou).
-4. **Etapa 2**: a troca do campo. Começa trocando `_perspectiva()` por
-   `int(_st.current_player)` — é a linha que a etapa 1 deixou de propósito
-   travada — e daí em diante é a rotina de troca do §16.5.
+3. Conferir o §16.12 (o que as etapas 1 e 2 deixaram pronto e o que elas NÃO
+   tocaram).
+4. **Etapa 3**: as mãos. Um caminho só — a de baixo é a de quem joga (a sua
+   ABERTA, a dele VIRADA) e a de cima é a do outro, **sempre virada e
+   espelhada**. É a etapa que tira de cena o espelho da mão do rival (D45
+   item 8).
 
 ## 16.12 O que a etapa 1 deixou pronto (2026-09-29)
 
@@ -296,7 +298,6 @@ lugares entre elas — o conjunto é o mesmo antes e depois) e
 sempre o painel do jogador, D8).
 
 **A prova de que a tela não mudou (duas, independentes):**
-
 - **Foto, pixel a pixel.** Mesmo comando, mesmo projeto de teste (o das 722
   artes, pasta de temp), antes e depois: **113 pixels** diferentes em
   2.001.046 (0,006%). E o **controle** — o código ORIGINAL rodando duas vezes
@@ -325,3 +326,85 @@ montar a instância pelo **construtor real** (`SummonSystem.construir_instancia`
 o único do jogo, R1), que é o que o teste precisa: uma instância de verdade no
 estado, não uma regra de invocação.
 
+
+---
+
+## 16.13 A ETAPA 2 — a troca do campo (2026-09-29)
+
+**O que mudou:** `_perspectiva()` passou a devolver o `current_player` do
+MOTOR (lido na hora, nunca guardado). Só isso muda a tela; todo o resto do
+desenho já estava pronto desde a etapa 1.
+
+**A troca, uma rotina para as DUAS direções** (`_trocar_perspectiva`):
+
+1. as cartas do campo que estão na tela viram **fantasmas** e ficam **no mesmo
+   lugar** — elas esmaecem onde estão (D3: nada viaja, nada atravessa a tela);
+2. a tela nova é desenhada por baixo, no lugar novo, e as cartas **aparecem
+   esmaecendo**;
+3. tudo no mesmo baque (D4), 0,5 s, `TRANS_CUBIC`/`EASE_IN_OUT` (o padrão do
+   §16.7; o usuário pode mexer em `TROCA_DURACAO`). **O START não pula**
+   (D46b).
+
+**Onde ela acontece:** dentro do próprio `_redesenhar`. Ele é o funil por onde
+o motor entrega a vez (START, `_rival_auto`, `_levar_vez_para_o_jogador`), então
+não existe outro lugar que precise saber da troca — e `_perspectiva_antiga`
+só serve para saber que a vez mudou e rodar a troca **uma** vez.
+
+**A carta de cima é lida de cabeça para baixo (D6):** o giro de 180° já saía do
+LADO VISUAL desde a etapa 1, então ele acompanha a troca sozinho.
+
+**D46b, o painel esquerdo na vez do rival:** ele **continua vivo** (dá para
+focar o que quiser), mas mostra a **imagem padronizada** (o verso, que já é
+asset do jogo) e **nenhum dado** — sem nome, ATK/DEF, tipo, descrição,
+estrelas, orbe nem contador.
+
+**As duas ferramentas de prova que esta etapa exigiu** (doc 15 §15.0 já tinha
+o `--mesa3d-calib` como ferramenta do mesmo tipo; zero regra, sem a flag o jogo
+é exatamente o de sempre):
+
+- `--mesa3d-foto-frame=N` — em qual QUADRO a foto sai (padrão **90**, o de
+  sempre).
+- `--mesa3d-auto-passa=s` — passa a vez sozinho `s` segundos depois de a tela
+  ficar pronta, pelo **mesmo caminho do START**.
+
+**Por que elas foram necessárias:** a perspectiva só aparece quando a VEZ
+PASSA, e a vez do jogador espera o START — que ninguém aperta numa prova
+automática. E `duel_manager.gd:80` **força `first_p1` quando o setup tem
+`test_state`** (regra do Campo de Testes, D33), então não existe caminho
+automático até a vez do rival *com o campo cheio* por outro meio.
+
+**A prova:**
+
+- **Duas fotos** (mesmo projeto de teste das 722 artes): `e2_sua_vez.png` e
+  `e2_rival.png`, mais o lado a lado `e2_COMPARA_sua_vez_vs_rival.png` e o zoom
+  `e2_zoom_fileira_de_cima.png` (pasta de temp, fora do repo por R8). A foto da
+  vez do rival saiu com `perspectiva 1` no log, e nela: as 4 cartas do jogador
+  subiram de cabeça para baixo com a coluna espelhada, as do rival desceram,
+  e o painel esquerdo mostra só o verso.
+- **A visão do JOGADOR não mudou:** etapa 1 × etapa 2 na sua vez = **138 px** em
+  2.001.046 (0,007%) — o mesmo ruído do cursor pulsante. Entre as duas fotos da
+  etapa 2 são 681.780 px: a tela **virou mesmo**.
+- **GUT:** `test_perspectiva_campo.gd` foi de 5 para **8 testes / 116
+  asserts**, e a suíte inteira ficou **175/175, 3801 asserts, 0 SCRIPT ERROR,
+  0 orphans**. O teste novo da troca é sabotado e pego.
+- **Um teste antigo precisou mudar** (`test_mesa_3d_oficial.gd`, "carta no
+  painel"): ele afirmava que a carta do dado `p0_m0` fica no painel `p0_m0`, o
+  que é justamente o que a etapa 2 troca. Agora ele confere o painel do
+  ladrilho **visual** e, junto, que a carta continua sendo a do **dado**
+  (`slot_id` é a identidade dela). O painel em si não mudou: as 20 peças são
+  construídas uma vez com as duas fileiras e a perspectiva só troca os lugares
+  entre elas.
+
+**Erro meu desta etapa (no caderno, não esconder):** eu adicionei
+`_auto_passa_espera` com o valor inicial `-1.0` (contagem desligada) e nunca o
+liguei ao parsear a flag — a primeira foto saiu com `perspectiva 0` e a prova
+não existia. A segunda tentativa pegou. E o primeiro teste da troca afirmava
+que o "lado de cima" era o **Z maior**: no mundo 3D o topo é o Z **menor**
+(mais longe da câmera), então o teste é que estava errado; a trava real passou
+a ser pela **tela** (a carta sobe: `unproject_position`).
+
+**O que a etapa 2 NÃO tocou (é da etapa 3 e 4):** as duas mãos
+(`_pos_mao_arco`/`_y_da_mao`/`_passo_mao`), a compra, a fila de fusão, a carta
+ao centro, o ataque, e o cursor escondido na vez do rival. Por isso a foto da
+vez do rival ainda mostra **a sua mão embaixo** e a mão do rival em cima: é o
+comportamento antigo, e a etapa 3 é justamente a que conserta.

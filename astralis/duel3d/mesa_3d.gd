@@ -126,6 +126,10 @@ const APROXIMA_MAGIA_RIVAL := 0.05
 ## `GameState` e do `arena.schema.json`). Vive aqui porque a perspectiva
 ## (doc 16) espelha a COLUNA: coluna 0 <-> coluna 4, e o meio fica.
 const COLUNAS_CAMPO := 5
+## D46: duração da troca de perspectiva (o esmaecer do campo). O START NÃO
+## pula (D46b): a troca roda sempre, inteira. 0,5 s é o padrão do doc 16
+## §16.7 — o usuário pode mudar aqui a qualquer momento (D23).
+const TROCA_DURACAO := 0.5
 ## Janela de arte da MOLDURA REAL (medida no JPG do usuário, D38 — o JPG
 ## é 832x1248 e a janela fica em x 11,90%..89,18% e y 18,27%..70,99%).
 ## Usada no 3D e no painel 2D: a arte preenche a janela sem sobra, seja a
@@ -344,6 +348,9 @@ var _cam: Camera3D = null
 ## região do campo (dentro de Camada3D/JanelaCampo), com a câmera dentro.
 var _vp: SubViewport = null
 var _no_cartas: Node3D = null
+## D46: as cartas do campo que estão ESMAECENDO na troca de perspectiva. Mesmo
+## lugar no mundo, então elas não viajam (D3) — só se apagam.
+var _no_fantasmas: Node3D = null
 var _no_slots: Node3D = null
 var _cursor3d: Node3D = null
 ## Grupo que gira com a coisa focada (a moldura e a mão são filhas dele).
@@ -359,6 +366,15 @@ var _rival_rodando := false
 var _cursor_escala := 1.0
 var _flash_tela: ColorRect = null
 var _deck_pos := [Vector3(4.9, 0.6, 1.6), Vector3(-4.9, 0.6, -2.2)]
+## D46: onde a tela ESTAVA desenhando (0 = o jogador, 1 = o rival). Não é
+## estado do desenho — é só para saber que a vez TROCOU e rodar a troca uma
+## vez. A verdade é `_perspectiva()`, que lê o motor.
+var _perspectiva_antiga := 0
+## D46 (prova): em qual QUADRO a foto sai (90 = o de sempre) e em quantos
+## segundos a vez passa sozinha. Zero = desligado. Ver `_ver_autoquit`.
+var _foto_frame_alvo := 90
+var _auto_passa_em := 0.0
+var _auto_passa_espera := -1.0
 
 ## D44 (item 8): o topo ficou SÓ com foto + nome de cada duelista. Estas são
 ## as etiquetas de nome ao lado de cada retrato (dado real do duelista).
@@ -503,6 +519,9 @@ func _ready() -> void:
 		_calib_visual(get_node_or_null(NodePath("HUD")) as Control)
 	_fusions_data = _fusoes_do_data(data)
 	_fala("Mesa 3D: duelo real carregado.")
+	# D46: a 1ª tela NÃO troca de perspectiva (não há nada na tela para
+	# esmaecer ainda), então o valor de partida é o do motor neste momento.
+	_perspectiva_antiga = _perspectiva()
 	_redesenhar(false)
 	_atualizar_hud()
 	_iniciar_turno_do_duelo()
@@ -601,11 +620,27 @@ func _ver_autoquit() -> void:
 	# Só p/ validação headless (`-- --mesa3d-sair=5`). Sem o argumento, nada muda.
 	# Foto DEV (`-- --mesa3d-foto=<caminho>`): salva o viewport e sai.
 	# Só p/ conferir visual sem abrir o editor (some no final).
+	#
+	# D46 — as duas ferramentas que a troca de perspectiva precisou (ela só
+	# aparece quando a VEZ PASSA, e a vez do jogador espera o START, que
+	# ninguém aperta numa prova automática):
+	#   `--mesa3d-foto-frame=N`  em qual QUADRO a foto sai (padrão 90, o de
+	#                           sempre: sem a flag, nada muda);
+	#   `--mesa3d-auto-passa=s`  passa a vez sozinho `s` segundos depois de a
+	#                           tela ficar pronta, pelo MESMO caminho do START.
+	# As duas são PROVA (doc 16 §16.6, etapa 2), zero regra: nenhum estado do
+	# duelo delas vira produto, e sem a flag o jogo é exatamente o de sempre.
 	for a in OS.get_cmdline_user_args():
 		var s := str(a)
 		if s.begins_with("--mesa3d-foto="):
 			_foto_destino = s.trim_prefix("--mesa3d-foto=").strip_edges()
 			_foto_frames = 0
+		elif s.begins_with("--mesa3d-foto-frame="):
+			_foto_frame_alvo = maxi(int(s.trim_prefix("--mesa3d-foto-frame=")), 1)
+		elif s.begins_with("--mesa3d-auto-passa="):
+			_auto_passa_em = maxf(float(s.trim_prefix("--mesa3d-auto-passa=")), 0.0)
+			# 0 = a contagem começa agora (o `_process` só conta se for >= 0).
+			_auto_passa_espera = 0.0
 		if s.begins_with("--mesa3d-sair="):
 			var n := float(s.trim_prefix("--mesa3d-sair="))
 			if n > 0.0:
@@ -912,6 +947,13 @@ func _construir_campo() -> void:
 	_no_cartas = Node3D.new()
 	_no_cartas.name = "Cartas"
 	_vp.add_child(_no_cartas)
+	# D46: os FANTASMAS da troca de perspectiva. É o mesmo lugar no mundo
+	# (irmão de `Cartas`, sem transformação), então uma carta que sai daqui
+	# continua EXATAMENTE onde estava na tela — ela esmaece onde está, não
+	# viaja (D3). some do jogo quando o esmaecer acaba.
+	_no_fantasmas = Node3D.new()
+	_no_fantasmas.name = "Fantasmas"
+	_vp.add_child(_no_fantasmas)
 	# Cursor = retângulo AZUL BRILHANTE que ABRAÇA a coisa focada (doc 15
 	# §15.3) + a MÃO BRANCA no centro dela. `_cursor_grupo` gira junto com a
 	# focada, então a moldura é desenhada no PLANO DA CARTA (XY local) e
@@ -1060,11 +1102,12 @@ func _painel_slot(lado: int, tipo: String, indice: int) -> Node3D:
 # depois da troca. A troca é só de desenho (doc 16 §16.5, regra 4).
 
 ## De que lado a tela está desenhando o dado agora. ÚNICO lugar que decide.
-## ETAPA 1 (doc 16 §16.6): TRAVADO no jogador 0 — a tela fica EXATAMENTE igual
-## à de hoje, e a foto tem que sair idêntica. A etapa 2 troca só ESTA linha
-## por `int(_st.current_player)`; o resto do desenho já está pronto.
+## É o `current_player` do MOTOR (D42/D46), lido na hora: nunca uma variável
+## guardada, senão o desenho mente (R1). Sem estado ainda = jogador 0.
 func _perspectiva() -> int:
-	return 0
+	if _st == null:
+		return 0
+	return 1 if int(_st.current_player) == 1 else 0
 
 
 ## ONDE a carta do DADO (lado `lado`, coluna `i`) é desenhada agora.
@@ -1753,7 +1796,97 @@ func _deitar_carta(carta: Node3D, face_down: bool, em_defesa: bool, lado: int) -
 	carta.rotation_degrees = Vector3(-90.0, giro, 0.0)
 
 
+## As cartas do CAMPO que estão desenhadas agora (as da mão não contam: elas
+## são da etapa 3 do doc 16 e não trocam de lado ainda).
+func _cartas_do_campo() -> Array:
+	var out: Array = []
+	if _no_cartas == null:
+		return out
+	for f in _no_cartas.get_children():
+		if (f as Node).has_meta("slot_id"):
+			out.append(f as Node3D)
+	return out
+
+
+## ALFA de uma carta 3D inteira (0 = invisível, 1 = normal). Só DESENHO: mexe
+## no `albedo_color`/`modulate` das peças, nunca no dado nem no estado.
+## A transparência é ligada só enquanto ela está acesa e volta a opaca em 1,0 —
+## carta transparente o tempo todo mudaria a ordem de pintura das peças da
+## carta (frente/arte/orbe/estrelas ficam em camadas quase coplanares).
+func _alfa_da_carta(a: float, no: Node3D) -> void:
+	if no == null or not is_instance_valid(no):
+		return
+	var opaco := a >= 0.999
+	for f in no.get_children():
+		if f is MeshInstance3D:
+			var mat = (f as MeshInstance3D).material_override
+			if mat is BaseMaterial3D:
+				var bm := mat as BaseMaterial3D
+				bm.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED if opaco else BaseMaterial3D.TRANSPARENCY_ALPHA
+				var cor := bm.albedo_color
+				cor.a = a
+				bm.albedo_color = cor
+		elif f is Label3D:
+			(f as Label3D).modulate.a = a
+		elif f is Node3D:
+			_alfa_da_carta(a, f as Node3D)
+
+
+## Some com um fantasma depois do esmaecer (D3/D4).
+func _soltar_fantasma(no: Node3D) -> void:
+	if no != null and is_instance_valid(no):
+		_alfa_da_carta(1.0, no)
+		no.queue_free()
+
+
+## A TROCA DE PERSPECTIVA (doc 16 §16.5, D3/D4/D46) — uma rotina só, para as
+## DUAS direções, porque a troca é a mesma coisa: de 0 para 1 e de 1 para 0.
+##   1. as cartas do campo que estão na tela viram FANTASMAS e ficam no MESMO
+##      lugar: elas ESMAECEM onde estão (nada viaja, nada atravessa a tela);
+##   2. a tela nova é desenhada embaixo, no lugar novo, e as cartas APARECEM
+##      esmaecendo;
+##   3. tudo no mesmo baque (D4: não é fila uma a uma).
+## O ESTADO não se mexe: é o mesmo `GameState`, só mudou de onde cada carta é
+## desenhada (R1).
+func _trocar_perspectiva(com_efeito: bool) -> void:
+	var fantasmas: Array = _cartas_do_campo()
+	for g in fantasmas:
+		_no_cartas.remove_child(g as Node)
+		_no_fantasmas.add_child(g)
+	# A tela nova. `_perspectiva_antiga` já está atualizada, então esta
+	# chamada não entra na troca de novo.
+	_redesenhar(com_efeito)
+	if com_efeito and not _sem_render():
+		for g in fantasmas:
+			var no := g as Node3D
+			_alfa_da_carta(1.0, no)
+			var tw := no.create_tween()
+			tw.tween_method(Callable(self, "_alfa_da_carta").bind(no), 1.0, 0.0, TROCA_DURACAO) \
+				.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+			tw.tween_callback(Callable(self, "_soltar_fantasma").bind(no))
+		for c in _cartas_do_campo():
+			var nc := c as Node3D
+			_alfa_da_carta(0.0, nc)
+			var tw2 := nc.create_tween()
+			tw2.tween_method(Callable(self, "_alfa_da_carta").bind(nc), 0.0, 1.0, TROCA_DURACAO) \
+				.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	else:
+		# Sem render (teste/headless) ou sem nada na tela: a troca é um pulo,
+		# e o estado final tem que ser o mesmo dos dois jeitos.
+		for g in fantasmas:
+			_soltar_fantasma(g as Node3D)
+
+
 func _redesenhar(com_efeito: bool) -> void:
+	# D46: a tela é a perspectiva de QUEM ESTA JOGANDO. Se a vez trocou desde
+	# o último desenho, a troca acontece AQUI — `_redesenhar` é o funil por
+	# onde o motor entrega a vez, então não há outro lugar que precise saber.
+	var agora := _perspectiva()
+	if agora != _perspectiva_antiga and not _cartas_do_campo().is_empty():
+		_perspectiva_antiga = agora
+		_trocar_perspectiva(com_efeito)
+		return
+	_perspectiva_antiga = agora
 	_limpar_cartas()
 	if _st == null:
 		return
@@ -2845,6 +2978,14 @@ func _atualizar_painel_foco() -> void:
 		for f in _caixa_foco_estrelas.get_children():
 			(f as Node).queue_free()
 		return
+	# D46b: na vez do RIVAL o painel esquerdo CONTINUA VIVO (o jogador pode
+	# focar o que quiser), mas não entrega a carta: mostra a imagem
+	# PADRONIZADA do jogo (o verso) e NENHUM dado — sem nome, ATK/DEF, tipo,
+	# descrição, estrelas, orbe nem contador. É o que o rival está vendo, e o
+	# rival não pode saber o que você tem.
+	if _st != null and int(_st.current_player) == 1:
+		_atualizar_painel_neutro()
+		return
 	# Completa pelo DADO real quando a instância só tem o básico.
 	var cid := str(dado.get("id", dado.get("card_id", "")))
 	var real: Dictionary = dado
@@ -2917,6 +3058,37 @@ func _atualizar_painel_foco() -> void:
 		_tex_foco_arte.visible = false
 		_cor_foco_arte.visible = true
 		_cor_foco_arte.color = _cor_atributo(attr)
+
+
+## D46b: o painel na vez do RIVAL — a carta some, o quadro fica. Imagem
+## PADRONIZADA (o verso, que já é asset do jogo: nada inventado) e nenhum
+## dado. Só DESENHO; o estado não é tocado.
+func _atualizar_painel_neutro() -> void:
+	_lbl_foco_nome.text = ""
+	_lbl_foco_nome_molde.text = ""
+	_lbl_foco_stats.text = ""
+	_lbl_foco_tipo.text = ""
+	_lbl_foco_desc.text = ""
+	_lbl_copia_foco.text = ""
+	if _lbl_foco_estrelas != null:
+		_lbl_foco_estrelas.text = ""
+	for f in _caixa_foco_estrelas.get_children():
+		_caixa_foco_estrelas.remove_child(f as Node)
+		# `free()` imediato, não `queue_free`: a fila só drena no fim do frame,
+		# e o GUT conta órfão antes disso.
+		(f as Node).free()
+	_orbe_foco.texture = null
+	_orbe_foco.visible = false
+	_orbe_tipo_foco.texture = null
+	_orbe_tipo_foco.visible = false
+	_cor_foco_attr.color = Color(0.2, 0.2, 0.25)
+	_tex_foco_moldura.texture = _tex_cache("assets/frames/normal.jpg")
+	_tex_foco_orbe.texture = null
+	var verso := _tex_cache("assets/backs/verso_padrao.png")
+	_tex_foco_arte.texture = verso
+	_tex_foco_arte.visible = verso != null
+	_cor_foco_arte.visible = verso == null
+	_cor_foco_arte.color = Color(0.12, 0.12, 0.18)
 
 
 ## Quantas CÓPIAS da carta focada estão no BARALHO DO JOGADOR (dado real).
@@ -4234,15 +4406,36 @@ func _detalhes() -> void:
 	_fala(txt)
 
 
+func _auto_passa() -> void:
+	# D46 (PROVA, não jogabilidade): passa a vez pelo MESMO caminho do START.
+	# A fase da mão trava o START de propósito (D24/D26: tem que descer as 5
+	# cartas), então aqui o motor é levado até a MAIN do jogador primeiro — o
+	# `advance_phase` é o do motor, nada é forçado.
+	if _st == null or bool(_st.over):
+		return
+	var guarda := 0
+	while int(_st.current_player) == 0 and String(_st.phase) != "MAIN" and guarda < 8:
+		_duel.advance_phase()
+		guarda += 1
+	_fase_jogador = FASE_CAMPO
+	_passar_turno()
+
+
 func _process(delta: float) -> void:
 	# CÂMERA FIXA (ref): nunca mexe — só o cursor pulsa. Sem órbita/balanço.
 	_pulso += delta * 4.0
 	if not _foto_destino.is_empty():
 		_foto_frames += 1
-		if _foto_frames >= 90:
+		if _auto_passa_espera >= 0.0:
+			_auto_passa_espera += delta
+			if _auto_passa_espera >= _auto_passa_em:
+				_auto_passa_espera = -1.0
+				_auto_passa()
+		if _foto_frames >= _foto_frame_alvo:
 			var img := get_viewport().get_texture().get_image()
 			img.save_png(_foto_destino)
-			print("[MESA3D] Foto salva: " + _foto_destino)
+			print("[MESA3D] Foto salva (quadro %d, perspectiva %d): %s" % [
+				_foto_frames, _perspectiva(), _foto_destino])
 			get_tree().quit()
 	if _cam != null:
 		if _cam.position != CAM_POS:
