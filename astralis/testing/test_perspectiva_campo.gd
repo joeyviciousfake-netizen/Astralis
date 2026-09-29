@@ -211,6 +211,88 @@ func test_a_inversao_das_colunas_e_em_colunas_de_tela() -> void:
 					lado, i, int(p_minha[i]), int(p_rival[i])])
 
 
+## (10) ETAPA 3 — as MÃOS: a de BAIXO é a de QUEM ESTÁ JOGANDO e a de CIMA é
+## a do PASSIVE, SEMPRE virada (D7). A sua só sai ABERTA (é a única que o
+## jogador pode jogar); a do rival é de costas nos DOIS lugares. E é a mão que
+## DESLIZA na troca (D9), porque ela troca de dono na tela.
+func test_a_mao_de_baixo_e_a_de_quem_joga_e_a_de_cima_e_sempre_virada() -> void:
+	var mesa: Node = await _mesa3d_nova()
+	var st = mesa.get("_st")
+	# A mão de baixo é a do dono; a de cima é a do outro. Medido pela CARA
+	# (o nome desenhado existe só na carta aberta) e pelo lugar (a de baixo
+	# fica no arco grande, perto da câmera).
+	st.set("current_player", 0)
+	mesa.call("_redesenhar", false)
+	await wait_process_frames(2)
+	var baixo0 := _cartas_da_mao(mesa, 0)
+	var cima0 := _cartas_da_mao(mesa, 1)
+	assert_eq(baixo0.size(), 5, "Sua vez: a mão de baixo tem as 5 cartas do SEU jogador.")
+	assert_eq(cima0.size(), 5, "Sua vez: a mão de cima tem as 5 cartas do RIVAL.")
+	assert_false(baixo0.is_empty(), "Preparo: a mão de baixo tem cartas.")
+	if baixo0.is_empty():
+		return
+	# A de baixo é a SUA: nome impresso e virada para frente (sem os 180).
+	for c in baixo0:
+		var nome := c.get_node_or_null("Nome") as Label3D
+		assert_true(nome != null and nome.visible and not str(nome.text).is_empty(),
+			"Sua vez: a carta de BAIXO é a sua, ABERTA (nome impresso).")
+		assert_almost_eq(c.rotation_degrees.x, MAO_P0_TILT, 0.001,
+			"Sua vez: a carta de baixo está na inclinação da sua mão.")
+	# A de cima é SEMPRE virada: o nome não aparece.
+	for c2 in cima0:
+		var nome2 := c2.get_node_or_null("Nome") as Label3D
+		assert_true(nome2 == null or not nome2.visible,
+			"Sua vez: a carta de CIMA é do rival e está VIRADA (sem nome).")
+	# ---- VEZ DO RIVAL: as mãos trocam de lugar, e a de baixo é a DELE.
+	st.set("current_player", 1)
+	mesa.call("_redesenhar", false)
+	await wait_process_frames(4)
+	var baixo1 := _cartas_da_mao(mesa, 0)
+	var cima1 := _cartas_da_mao(mesa, 1)
+	var mao_rival: Array = ((st.players[1] as Dictionary)["hand"]) as Array
+	var mao_sua: Array = ((st.players[0] as Dictionary)["hand"]) as Array
+	assert_eq(baixo1.size(), mao_rival.size(),
+		"Na vez do rival, a mão de BAIXO tem a quantidade da mão DELE (%d)." % mao_rival.size())
+	assert_eq(cima1.size(), mao_sua.size(),
+		"Na vez do rival, a mão de CIMA tem a quantidade da SUA mão (%d)." % mao_sua.size())
+	# A de baixo agora é do RIVAL: portanto VIRADA (nada de nome).
+	for c3 in baixo1:
+		var nome3 := c3.get_node_or_null("Nome") as Label3D
+		assert_true(nome3 == null or not nome3.visible,
+			"Na vez do rival, a carta de BAIXO é a DELE e está VIRADA (sem nome).")
+	# E a de cima também é virada (a sua mão, que o jogador não pode ler de
+	# longe). NENHUM dos dois lados vaza nome na vez do rival.
+	for c4 in cima1:
+		var nome4 := c4.get_node_or_null("Nome") as Label3D
+		assert_true(nome4 == null or not nome4.visible,
+			"Na vez do rival, a carta de CIMA é a sua e está VIRADA (sem nome).")
+	# Volta a vez: sua mão aberta embaixo de novo (a troca é reversível).
+	st.set("current_player", 0)
+	mesa.call("_redesenhar", false)
+	await wait_process_frames(4)
+	var baixo2 := _cartas_da_mao(mesa, 0)
+	assert_eq(baixo2.size(), mao_sua.size(), "Voltou a vez: a mão de baixo é a sua de novo.")
+	if not baixo2.is_empty():
+		var nome5 := baixo2[0].get_node_or_null("Nome") as Label3D
+		assert_true(nome5 != null and nome5.visible and not str(nome5.text).is_empty(),
+			"Voltou a vez: a sua mão voltou ABERTA embaixo.")
+
+
+## Inclinação da mão de baixo que o jogo usa (a mesma const do runtime).
+const MAO_P0_TILT := -35.0
+
+
+## As cartas da mão desenhadas no lado VISUAL pedido (0 = baixo, 1 = cima).
+func _cartas_da_mao(mesa: Node, lado_visual: int) -> Array:
+	var out: Array = []
+	var cartas: Node = mesa.get_node(CARTAS)
+	for f in cartas.get_children():
+		if (f as Node).has_meta("mao_lado") and int((f as Node).get_meta("mao_lado")) == lado_visual:
+			out.append(f)
+	out.sort_custom(func(a, b): return int((a as Node).get_meta("mao_idx")) < int((b as Node).get_meta("mao_idx")))
+	return out
+
+
 ## Posição na TELA (1 = mais à esquerda) de cada carta, a partir do X projetado
 ## pela câmera. É o "slot 1..5" que o usuário conta olhando a foto.
 func _posicao_na_tela(xs: Dictionary) -> Dictionary:

@@ -1847,17 +1847,24 @@ func _soltar_fantasma(no: Node3D) -> void:
 		no.queue_free()
 
 
-## A TROCA DE PERSPECTIVA (doc 16 §16.5, D3/D4/D46) — uma rotina só, para as
+## A TROCA DE PERSPECTIVA (doc 16 §16.5, D3/D4/D9/D46) — uma rotina só, para as
 ## DUAS direções, porque a troca é a mesma coisa: de 0 para 1 e de 1 para 0.
-##   1. as cartas do campo que estão na tela viram FANTASMAS e ficam no MESMO
+##   1. as cartas do CAMPO que estão na tela viram FANTASMAS e ficam no MESMO
 ##      lugar: elas ESMAECEM onde estão (nada viaja, nada atravessa a tela);
-##   2. a tela nova é desenhada embaixo, no lugar novo, e as cartas APARECEM
+##   2. as cartas da MÃO viram fantasma e DESLIZAM para o outro lugar — a mão
+##      é a única coisa que se desloca (D9);
+##   3. a tela nova é desenhada por baixo, no lugar novo, e as cartas APARECEM
 ##      esmaecendo;
-##   3. tudo no mesmo baque (D4: não é fila uma a uma).
+##   4. tudo no mesmo baque (D4: não é fila uma a uma).
 ## O ESTADO não se mexe: é o mesmo `GameState`, só mudou de onde cada carta é
 ## desenhada (R1).
 func _trocar_perspectiva(com_efeito: bool) -> void:
-	var fantasmas: Array = _cartas_do_campo()
+	# Quem estava jogando ANTES: a mão dele estava embaixo e é a do passive
+	# depois, então é a que sobe para o topo. A do outro desce para baixo.
+	var baixo_antigo := _perspectiva_antiga
+	var fantasmas: Array = []
+	for f in _no_cartas.get_children():
+		fantasmas.append(f)
 	for g in fantasmas:
 		_no_cartas.remove_child(g as Node)
 		_no_fantasmas.add_child(g)
@@ -1869,10 +1876,17 @@ func _trocar_perspectiva(com_efeito: bool) -> void:
 			var no := g as Node3D
 			_alfa_da_carta(1.0, no)
 			var tw := no.create_tween()
-			tw.tween_method(Callable(self, "_alfa_da_carta").bind(no), 1.0, 0.0, TROCA_DURACAO) \
-				.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+			tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+			var destino := _destino_na_troca(no, baixo_antigo)
+			if destino != no.position:
+				# MÃO: desliza para o outro lugar (D9).
+				tw.tween_property(no, "position", destino, TROCA_DURACAO)
+			else:
+				# CAMPO: não viaja, só esmaece (D3).
+				tw.tween_method(Callable(self, "_alfa_da_carta").bind(no), 1.0, 0.0, TROCA_DURACAO)
+			tw.parallel().tween_method(Callable(self, "_alfa_da_carta").bind(no), 1.0, 0.0, TROCA_DURACAO)
 			tw.tween_callback(Callable(self, "_soltar_fantasma").bind(no))
-		for c in _cartas_do_campo():
+		for c in _no_cartas.get_children():
 			var nc := c as Node3D
 			_alfa_da_carta(0.0, nc)
 			var tw2 := nc.create_tween()
@@ -1883,6 +1897,25 @@ func _trocar_perspectiva(com_efeito: bool) -> void:
 		# e o estado final tem que ser o mesmo dos dois jeitos.
 		for g in fantasmas:
 			_soltar_fantasma(g as Node3D)
+
+
+## ONDE a carta que está na tela tem que estar DEPOIS da troca (D9). A carta do
+## CAMPO fica onde está (só esmaece, D3). A carta da MÃO troca de lugar: a mão
+## que estava embaixo era a de quem jogava, então ela sobe para o topo, e a
+## mão de cima desce para baixo — cada uma no arco do dono, no mesmo índice.
+func _destino_na_troca(no: Node3D, baixo_antigo: int) -> Vector3:
+	if no == null or not is_instance_valid(no) or not (no as Node).has_meta("mao_lado"):
+		return no.position if no != null else Vector3.ZERO
+	var era_baixo := int((no as Node).get_meta("mao_lado")) == 0
+	# O dono da carta: embaixo estava quem jogava; em cima estava o outro.
+	var dono := baixo_antigo if era_baixo else 1 - baixo_antigo
+	var idx: int = int((no as Node).get_meta("mao_idx"))
+	if _st == null:
+		return no.position
+	var mao: Array = ((_st.players[dono] as Dictionary)["hand"]) as Array
+	var idx_real := clampi(idx, 0, maxi(mao.size() - 1, 0))
+	# Se a mão encolheu (o dono do turno jogou uma carta), o arco é o novo.
+	return _pos_mao_arco(idx_real, maxi(mao.size(), 1), 1 if era_baixo else 0)
 
 
 func _redesenhar(com_efeito: bool) -> void:
@@ -1925,39 +1958,59 @@ func _redesenhar(com_efeito: bool) -> void:
 				carta.set_meta("slot_id", "p%d_%s%d" % [lado, ("m" if zona_nome == "monster" else "s"), i])
 				carta.set_meta("card_id", str(m.get("card_id", "")))
 				_no_cartas.add_child(carta)
-	# Mãos em arco: p0 aberta, p1 de costas (só contagem, sem vazar dado).
+	# Mãos em arco (doc 16 D7, etapa 3): a de BAIXO é a de QUEM ESTÁ JOGANDO e
+	# a de CIMA é a do PASSIVE, SEMPRE virada. `lado_visual` da mão é 0 = baixo
+	# (arcão grande, perto da câmera) e 1 = cima (mini, longe). A sua só sai
+	# ABERTA; a do rival é sempre de costas, como antes.
+	# Efeito: a mão é a ÚNICA coisa que troca de lugar (D9), e com a de cima
+	# sempre virada some o caso especial do D45 item 8 (a 5ª posição espelhada
+	# do rival) — a ordem da mão de cima não vaza informação.
 	# Rotação LIVRE (ordem do usuário): valor fixo editável, sem nenhum
 	# cálculo da câmera. Mude TILT_MAO_LIVRE à vontade (graus no eixo X).
-	var mao0: Array = (_st.players[0] as Dictionary)["hand"]
-	for i in range(mao0.size()):
-		var c := _fazer_carta(mao0[i] as Dictionary, false, 0, false)
+	var lado_baixo := _perspectiva()
+	var lado_cima := 1 - lado_baixo
+	var mao_baixo: Array = ((_st.players[lado_baixo] as Dictionary)["hand"]) as Array
+	var mao_baixo_aberta := lado_baixo == 0
+	for i in range(mao_baixo.size()):
+		var dado := (mao_baixo[i] as Dictionary) if mao_baixo_aberta else {}
+		var c := _fazer_carta(dado, not mao_baixo_aberta, lado_baixo, false)
 		# Mão PEQUENA no rodapé (fase 2/doc 15 §15.3): o X acompanha o
 		# centro do campo (calculado da câmera) e o Y/Z é o da const
 		# MAO_P0_YZ — a carta nasce cortada pela borda de baixo.
-		c.position = _pos_mao_arco(i, mao0.size(), 0)
+		c.position = _pos_mao_arco(i, mao_baixo.size(), 0)
 		# Levantada p/ fusão: só o selo na etiqueta (posição não muda). A
 		# etiqueta nasce escondida (o ATK/DEF já é impresso na carta): o
-		# selo é a única coisa que precisa aparecer flutuando.
-		var selo := _levantadas.find(i) + 1
-		if selo > 0:
-			var tag := c.get_node("TagPos") as Label3D
-			tag.text = "SELO %d" % selo
-			tag.visible = true
+		# selo é a única coisa que precisa aparecer flutuando. É sempre a
+		# SUA mão (o jogador é o único que combina carta).
+		if lado_baixo == 0:
+			var selo := _levantadas.find(i) + 1
+			if selo > 0:
+				var tag := c.get_node("TagPos") as Label3D
+				tag.text = "SELO %d" % selo
+				tag.visible = true
 		c.set_meta("mao_idx", i)
+		c.set_meta("mao_lado", 0)
 		_no_cartas.add_child(c)
-		c.rotation_degrees = Vector3(TILT_MAO_LIVRE, 0, 0)
+		# A pose da mão: ABERTA (a sua) ou DE COSTAS (a do rival, que joga
+		# de baixo mas não pode ser vista). `rotation_degrees` substitui os
+		# três eixos, então o giro de virada que `_fazer_carta` põe tem que
+		# entrar AQUI junto com a inclinação — senão a carta virada aparece
+		# de frente (foi o bug da 1a foto da etapa 3).
+		c.rotation_degrees = Vector3(TILT_MAO_LIVRE if mao_baixo_aberta else 180.0 + TILT_MAO_LIVRE, 0, 0)
 		if com_efeito and not _sem_render():
 			var alvo: Vector3 = c.position
-			c.position = _deck_pos[0]
+			c.position = _deck_pos[lado_baixo]
 			var tw := c.create_tween().set_parallel(true)
 			tw.tween_property(c, "position", alvo, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	var mao1: Array = (_st.players[1] as Dictionary)["hand"]
-	for j in range(mao1.size()):
-		var v := _fazer_carta({}, true, 1, false)
-		v.position = _pos_mao_arco(j, mao1.size(), 1)
+	var mao_topo: Array = ((_st.players[lado_cima] as Dictionary)["hand"]) as Array
+	for j in range(mao_topo.size()):
+		var v := _fazer_carta({}, true, lado_cima, false)
+		v.position = _pos_mao_arco(j, mao_topo.size(), 1)
+		v.set_meta("mao_idx", j)
+		v.set_meta("mao_lado", 1)
 		_no_cartas.add_child(v)
-		# D3: a mão do RIVAL é uma camada de MÃO — sempre desenhada por
-		# cima do campo. Sem isso, o ladrilho de magia do rival (o vidro
+		# D3: a mão de CIMA é uma camada de MÃO — sempre desenhada por
+		# cima do campo. Sem isso, o ladrilho de magia de cima (o vidro
 		# escuro, alpha 0,72) ficava NA FRENTE dela na tela e pintava a
 		# metade de baixo das cartas viradas, que na ref não tem nada
 		# atrás. A mão não é mais profunda que o campo, então a correção é

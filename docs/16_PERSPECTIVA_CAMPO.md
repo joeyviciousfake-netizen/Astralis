@@ -166,7 +166,7 @@ completa é a busca por `_pos_slot(`, `_pos_mao_arco(`, `_rot_deitada(`,
 |---|---|---|---|
 | 1 | **A camada de perspectiva, sem mudar a tela.** A função `_vis` + todo desenho passando por ela, com a perspectiva **travada no jogador 0**. | a foto fica **idêntica** à de hoje + teste que trava o visual atual | **FEITA 2026-09-29** — ver §16.12 |
 | 2 | **A troca do campo.** A perspectiva passa a seguir `current_player`; as cartas esmaecem e trocam de lado; a coluna espelha; a de cima vira 180°. | duas fotos (uma na sua vez, uma na dele) + teste da fileira de baixo = de quem joga, da coluna espelhada, e de que **o estado não se move** | **FEITA 2026-09-29** — ver §16.12 |
-| 3 | **As mãos.** Um caminho só: a de baixo é a de quem joga (aberta só se for a sua), a de cima é a do outro, **sempre virada e espelhada**. | fotos + teste da cara e da ordem | a fazer |
+| 3 | **As mãos.** Um caminho só: a de baixo é a de quem joga (aberta só se for a sua), a de cima é a do outro, **sempre virada e espelhada**. | fotos + teste da cara e da ordem | **FEITA 2026-09-29** — ver §16.14 |
 | 4 | **As animações que seguem as cartas**: ataque, compra, fusão, carta ao centro; esconder o cursor na vez dele. | jogo rodando (jogo de verdade, com o rival jogando) + GUT | a fazer |
 | 5 | **Acabamento.** Tempo/curva, ferramenta de calibração (`--mesa3d-calib=1`), fotos para o registro, docs. | 2 fotos (mão + campo) | a fazer |
 
@@ -254,18 +254,17 @@ Nada disso trava a etapa 1.
 
 ## 16.11 ONDE ESTÁ A EXECUÇÃO
 
-**Status: ETAPAS 1 E 2 FEITAS (2026-09-29).** A próxima é a **etapa 3** (as
-mãos), e ela espera o usuário olhar as fotos da etapa 2.
+**Status: ETAPAS 1, 2 E 3 FEITAS (2026-09-29).** A próxima é a **etapa 4** (as
+animações que seguem as cartas: ataque, compra, fusão, carta ao centro, e
+esconder o cursor na vez do rival), e ela espera o usuário jogar.
 
 1. Abrir `docs/16_PERSPECTIVA_CAMPO.md` (este arquivo) **antes** de mexer em
    qualquer coisa.
 2. Conferir o `docs/SESSAO_ATUAL.md` (o caderno) e o `docs/DECISOES.md`.
-3. Conferir o §16.12 (o que as etapas 1 e 2 deixaram pronto e o que elas NÃO
-   tocaram).
-4. **Etapa 3**: as mãos. Um caminho só — a de baixo é a de quem joga (a sua
-   ABERTA, a dele VIRADA) e a de cima é a do outro, **sempre virada e
-   espelhada**. É a etapa que tira de cena o espelho da mão do rival (D45
-   item 8).
+3. Conferir o §16.12, §16.13 e §16.14 (o que as três etapas deixaram pronto).
+4. **Etapa 4**: as animações. Ela exige o jogo rodando de verdade, com o rival
+   jogando — o resto das etapas foi provado por foto e GUT, esta precisa do
+   jogador na frente do teclado/controle.
 
 ## 16.12 O que a etapa 1 deixou pronto (2026-09-29)
 
@@ -414,3 +413,57 @@ a ser pela **tela** (a carta sobe: `unproject_position`).
 ao centro, o ataque, e o cursor escondido na vez do rival. Por isso a foto da
 vez do rival ainda mostra **a sua mão embaixo** e a mão do rival em cima: é o
 comportamento antigo, e a etapa 3 é justamente a que conserta.
+
+---
+
+## 16.14 A ETAPA 3 — as mãos (2026-09-29)
+
+**O que o usuário pediu:** "a mão de baixo está muito desalinhada comparada
+com a de cima", olhando a foto da etapa 2.
+
+**O que a etapa 2 tinha deixado:** as mãos **não tinham sido tocadas** (elas
+são a etapa 3), então não era regressão. E a geometria da mão de baixo estava
+certa: as 5 cartas com a mesma largura e o mesmo topo (medido na foto: topo em
+y=870 nas cinco). O que era realmente o problema: na vez do rival a mão de
+baixo continuava sendo a **do jogador**, grande e aberta, enquanto a de cima
+era a do rival, pequena e virada — as duas mãos com cara completamente
+diferente na mesma tela.
+
+**A correção (D7/D9, que já estavam decididas):** a mão de **baixo é a de quem
+está jogando** e a de **cima é a do passive, sempre virada**. A sua só sai
+**aberta**; a do rival é de costas nos dois lugares. E a mão é a única coisa
+que **desliza** na troca (D9): a que estava embaixo sobe para o topo e a de
+cima desce para baixo, cada uma no arco do dono e no mesmo índice — o resto
+(campo) continua sem viajar, só esmaecendo (D3).
+
+**Ganho extra, como o doc previa:** com a mão de cima sempre virada, a ordem
+das cartas dela não vaza informação, então **o caso especial do D45 item 8
+morre** (a 5ª posição da mão do rival espelhada). A mão parou de ter duas
+regras e passou a ter uma.
+
+**Prova:**
+
+- **Duas fotos** de novo: `e5_sua_vez.png` e `e5_rival.png` (+ o lado a lado
+  `e5_COMPARA.png`). Na vez do rival a mão de baixo é a **dele, virada**, e a
+  sua foi para o topo, também virada. Mais `e5_rival.png` com
+  `perspectiva 1` no log.
+- **GUT:** o arquivo foi de 9 para **10 testes / 185 asserts** (o (10) mede a
+  cara e o dono das duas mãos nos dois turnos, e que a volta é reversível),
+  sabotado e pego; suíte **177/177, 3870 asserts, 0 SCRIPT ERROR, 0
+  orphans**.
+- **Três testes antigos precisaram mudar**, e a mudança é instructive: eles
+  achavam "a carta da sua mão" pelo meta `mao_idx`, e agora **as duas mãos têm
+  `mao_idx`** (o índice dentro da mão do seu dono). Passaram a filtrar por
+  `mao_lado == 0` (a de baixo = a de quem joga). Sem isso eles mediam a mão
+  ERRADA e acusavam a carta virada de não ter orbe/estrela — que é
+  exatamente o que uma carta virada tem que não ter. O `mao_lado` é o meta
+  que torna a mão inequívoca.
+
+**Erro meu desta etapa (no caderno, não esconder):** a primeira foto da etapa
+3 mostrou as cartas da mão de baixo com o **interior cinza** (a frente vazia)
+em vez do verso. Causa: `rotation_degrees` substitui os TRÊS eixos, e a linha
+que punha a inclinação da mão (`TILT_MAO_LIVRE`) estava sobrescrevendo o giro
+de 180° que `_fazer_carta` põe na carta virada. Antes isso não aparecia porque
+a mão de baixo nunca era virada (ela era sempre a do jogador, aberta); com a
+etapa 3 ela passa a poder ser a do rival. Corrigido colocando a virada dentro
+da mesma expressão da inclinação.

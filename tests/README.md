@@ -13,9 +13,9 @@ que o jogo usa. Não existe cópia "fake" de nada (regra **R2**).
 | | |
 |---|---|
 | Arquivos de teste | **20** (+ 1 base de helpers) |
-| Testes | **176** |
-| Asserções | **3838** |
-| Tempo (headless) | **~166 s** (~10 s deles são 2 testes que esperam a IA real) |
+| Testes | **177** |
+| Asserções | **3870** |
+| Tempo (headless) | **~177 s** (~10 s deles são 2 testes que esperam a IA real) |
 | Conteúdo oficial usado | **722 cartas / 39 duelistas / 39 decks / 25081 receitas de fusão** |
 | Framework | **GUT 9.7.1** (`astralis/addons/gut/`) |
 | Godot | **4.7.2 headless** |
@@ -36,7 +36,7 @@ que o jogo usa. Não existe cópia "fake" de nada (regra **R2**).
 
 Use o executável **console** (`..._console.exe`): é ele que imprime o resumo
 no terminal. O resultado bom é `175/175 passed` + `---- All tests passed! ----`
-e o `Time` em ~166 s. O GUT sai com código 0 quando passa.
+e o `Time` em ~177 s. O GUT sai com código 0 quando passa.
 
 Rodar direto no editor também funciona: abra `Godot/Godot_v4.7.2-stable_win64.exe`,
 importe `astralis/`, aba **GUT** → **Run**.
@@ -64,7 +64,7 @@ importe `astralis/`, aba **GUT** → **Run**.
 | `test_regra_turno1.gd` | 6 | A regra do **turno 1** (D43, corrigindo a D15): ninguém ataca enquanto o contador de turno for 1, para QUEM ESTIVER jogando — quem começou a partida não ataca, e o outro lado já entra no turno 2 atacando. Não é regra por jogador. A exceção do Campo de Testes (`is_test`, D34) fica igual, e a mensagem do dono da regra (`BattleSystem.ERRO_TURNO_1`) é uma só, sem string duplicada. |
 | `test_seed_sorteio.gd` | 5 | A **semente** `duel_setup.seed` (D42): `seed = 0` (ou ausente) = SEM SEMENTE, sorteio de verdade; `seed != 0` = semente fixa, e o mesmo duelo reproduzido carta por carta (mesmo primeiro jogador, mesma mão, mesma ordem do baralho). Trava que a semente fixa dá o mesmo resultado, que duas sementes dão baralhos diferentes, e que `first_p1`/`first_p2` são deterministas mesmo com seed 0. |
 | `test_turno_quem_comeca.gd` | 5 | **Quem começa** (D42): o motor sorteia o primeiro jogador e a tela 3D HONRA o `current_player` devolvido, inclusive quando o **rival** começa — nesse caso ela conduz o turno dele pelos sistemas reais e devolve a vez (antes o jogo travava em "Aguarde o rival"). Trava que o turno do rival sempre termina em `current_player == 0`, com trava de progresso (teto de passos) e sem reentrada em paralelo. |
-| `test_perspectiva_campo.gd` | 9 | A **perspectiva do campo** (doc 16 / D46, etapas 1 e 2): a tela do duelo é a perspectiva de QUEM ESTÁ JOGANDO, sem girar nada (nada viaja, nem a câmera nem o campo nem o céu). Trava que `_vis` segue o `current_player` do motor (identidade na sua vez, **lado oposto com a coluna igual** na vez do rival, e a volta desfaz exatamente), que a carta desenhada está exatamente onde `_vis` mandou e gira pelo **lado visual** (a de cima de cabeça para baixo), que o **estado não se move** (a mesma carta no mesmo índice do `GameState` depois de redesenhar e depois da troca), que a troca é um esmaecer cruzado sem fila nem fantasma pendurado nem material transparente sobrando, que o espelho do D18 continua valendo e andar para a direita aumenta o X de tela nos dois lados, que a faixa do meio **não espelha** (D8) e que **D46b**: na vez do rival o painel esquerdo fica sem nenhum dado e mostra a imagem padronizada. E a regra do usuário em **colunas de tela** (D46c): a carta que está no slot 1 vai para o slot 5 e a do 5 para o 1, nos **dois** lados — medido pelo X projetado pela câmera, porque na fileira do rival o dado já vem espelhado e "dado 0" não é "slot 1 da tela". |
+| `test_perspectiva_campo.gd` | 10 | A **perspectiva do campo** (doc 16 / D46, etapas 1, 2 e 3): a tela do duelo e a perspectiva de QUEM ESTA JOGANDO, sem girar nada (nada viaja, nem a camera nem o campo nem o ceu). Trava que _vis segue o current_player do motor (identidade na sua vez, **lado oposto com a coluna igual** na vez do rival, e a volta desfaz exatamente), que a carta desenhada esta exatamente onde _vis mandou e gira pelo **lado visual** (a de cima de cabeca para baixo), que o **estado nao se move** (a mesma carta no mesmo indice do GameState depois de redesenhar e depois da troca), que a troca e um esmaecer cruzado sem fila nem fantasma pendurado nem material transparente sobrando, que o espelho do D18 continua valendo e andar para a direita aumenta o X de tela nos dois lados, que a faixa do meio **nao espelha** (D8) e que **D46b**: na vez do rival o painel esquerdo fica sem nenhum dado e mostra a imagem padronizada. A regra do usuario em **colunas de tela** (D46c): a carta que esta no slot 1 vai para o slot 5 e a do 5 para o 1, nos **dois** lados - medido pelo X projetado pela camera, porque na fileira do rival o dado ja vem espelhado e `dado 0` nao e `slot 1 da tela`. E a etapa 3 (D7/D9): a mao de baixo e a de quem joga (aberta so quando e a do jogador 0) e a de cima e a do passive, **sempre virada**, nos dois turnos, com a volta reversivel. |
 
 ## A base única de helpers
 

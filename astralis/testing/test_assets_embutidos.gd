@@ -81,7 +81,11 @@ func test_jogo_acha_o_vertido_e_a_moldura_sem_project() -> void:
 	# A carta 3D da sua mão tem que estar com a moldura de verdade.
 	var carta: Node3D = null
 	for f in (mesa.get_node("Camada3D/JanelaCampo/Viewport3D/Cartas") as Node3D).get_children():
-		if (f as Node).has_meta("mao_idx") and int((f as Node).get_meta("mao_idx")) == 0:
+		# D46 etapa 3: as DUAS mãos têm `mao_idx`, então "a sua mão" é a de
+		# BAIXO (`mao_lado` 0 = a de quem está jogando = o jogador aqui).
+		if (f as Node).has_meta("mao_idx") and (f as Node).has_meta("mao_lado") \
+				and int((f as Node).get_meta("mao_lado")) == 0 \
+				and int((f as Node).get_meta("mao_idx")) == 0:
 			carta = f as Node3D
 	assert_true(carta != null, "A 1a carta da sua mão está desenhada.")
 	if carta == null:
@@ -121,7 +125,9 @@ func test_carta_deitada_no_campo_igual_a_da_mao_com_nome_e_atkdef() -> void:
 	for f in cartas.get_children():
 		if (f as Node).has_meta("slot_id"):
 			do_campo = f as Node3D
-		elif (f as Node).has_meta("mao_idx") and int((f as Node).get_meta("mao_idx")) == 0:
+		elif (f as Node).has_meta("mao_idx") and (f as Node).has_meta("mao_lado") \
+				and int((f as Node).get_meta("mao_lado")) == 0 \
+				and int((f as Node).get_meta("mao_idx")) == 0:
 			da_mao = f as Node3D
 	assert_true(do_campo != null, "Carta invocada desenhada no campo.")
 	assert_true(da_mao != null, "Carta da mão desenhada.")

@@ -539,9 +539,13 @@ func test_maos_centralizadas_no_x_do_campo() -> void:
 		"A carta da ponta direita da mão não sai da tela (%.0f px)." % dir_mao)
 	assert_almost_eq(absf(passo1), MAO_P1_PASSO_TESTE, 0.001, "Passo por carta da mão do rival = MAO_P1_PASSO (espelhado em D45).")
 	# A carta DESENHADA tem que estar no ponto que a função devolveu.
+	# D46 etapa 3: as DUAS mãos têm `mao_idx`; a de BAIXO (`mao_lado` 0) é a
+	# de quem joga, que aqui é o jogador — é a que este teste mede.
 	var vistas := 0
 	for f in (_n3d(mesa, "Cartas") as Node3D).get_children():
-		if not (f as Node).has_meta("mao_idx"):
+		if not (f as Node).has_meta("mao_idx") or not (f as Node).has_meta("mao_lado"):
+			continue
+		if int((f as Node).get_meta("mao_lado")) != 0:
 			continue
 		vistas += 1
 		var i: int = int((f as Node).get_meta("mao_idx"))
