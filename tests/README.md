@@ -12,10 +12,10 @@ que o jogo usa. Não existe cópia "fake" de nada (regra **R2**).
 
 | | |
 |---|---|
-| Arquivos de teste | **13** (+ 1 base de helpers) |
-| Testes | **116** |
-| Asserções | **1877** |
-| Tempo (headless) | **~55 s** (~10 s deles são 2 testes que esperam a IA real) |
+| Arquivos de teste | **20** (+ 1 base de helpers) |
+| Testes | **172** |
+| Asserções | **3738** |
+| Tempo (headless) | **~156 s** (~10 s deles são 2 testes que esperam a IA real) |
 | Conteúdo oficial usado | **722 cartas / 39 duelistas / 39 decks / 25081 receitas de fusão** |
 | Framework | **GUT 9.7.1** (`astralis/addons/gut/`) |
 | Godot | **4.7.2 headless** |
@@ -35,13 +35,13 @@ que o jogo usa. Não existe cópia "fake" de nada (regra **R2**).
 ```
 
 Use o executável **console** (`..._console.exe`): é ele que imprime o resumo
-no terminal. O resultado bom é `116/116 passed` + `---- All tests passed! ----`
-e o `Time` em ~55 s. O GUT sai com código 0 quando passa.
+no terminal. O resultado bom é `172/172 passed` + `---- All tests passed! ----`
+e o `Time` em ~156 s. O GUT sai com código 0 quando passa.
 
 Rodar direto no editor também funciona: abra `Godot/Godot_v4.7.2-stable_win64.exe`,
 importe `astralis/`, aba **GUT** → **Run**.
 
-## Os 13 arquivos e o que cada um trava
+## Os 20 arquivos e o que cada um trava
 
 | Arquivo | Testes | O que trava |
 |---|---:|---|
@@ -58,6 +58,13 @@ importe `astralis/`, aba **GUT** → **Run**.
 | `test_project_arg.gd` | 12 | O `--project` e o `--setup`: sem argumento usa a pasta embutida, pasta inválida é reprovada, pasta válida é reconhecida pelos marcadores, caminho relativo resolve na raiz do repo, relativo inexistente avisa e cai na embutida, as duas formas (`--project pasta` e `--project=pasta`) dão o mesmo resultado, `--setup` por cima do projeto **vence** o duelo do projeto, `--setup` inválido avisa e segue com o do projeto, e a regra nova: projeto **sem arena** → o jogo avisa, `project_arena_path()` devolve vazio e a mesa usa a grade padrão com os 20 slots e o espelho certo. |
 | `test_campo_testes.gd` | 8 | O Campo de Testes (tab Testes do Studio): com `test_state`, o duelo começa em p0 na DRAW (fase da mão, D24), `my_hand` (fm_0001 + fm_0002) vira a mão de p0 na ordem + refill real até 5, o campo vira instâncias reais (ATK/DEF da base, face/posição do dado, estrela = guardiã 1, null = vazio nas magias), seed 42 fixa dá o mesmo campo + mão + deck em 2 montagens, sem `test_state` tudo igual a antes (5/5, campo vazio), o duelo de teste é jogável (DRAW→MAIN + 1 invocação normal), e o ataque no turno 1: **com** `test_state` p0 ataca na BATTLE e mata como o motor manda (fm_0001 3000 × fm_0004 1200 = 1800 de dano, 8000→6200), **sem** `test_state` p0 continua bloqueado com `Sem ataque no 1º turno.` (D15/D17). |
 | `test_card_layout.gd` | 14 | O molde da carta em dado (V1 só monstro): default embutido idêntico ao JSON oficial peça por peça, por-mil→px, molde válido move a peça (loader + carta), ausente/inválido cai no default, peça/campo ausente vira default, `visible_when` esconde o ATK fora de monstro (inclusive após virar/desvirar), carta mostra o dado real FM (nome, estrelas=level, ATK/DEF, id), mesa real renderiza pelo molde — e a trava **Rust × jogo**: matriz espelhada válido/inválido (kinds, somas x+w/y+h≤1000, enums, cores hex, versão 1, canvas 59×86), molde movido no formato do Studio (`layouts/card_layout_monster_default.json` com 9 peças, nome 35→70) lido e desenhado pelo jogo de verdade, e 13 divergências pinadas com prova (extras, null explícito, z 5.0, versão 1.0/"1", id longo 71 chars, name número — sem corrigir produto, dono corrige). |
+| `test_assets_embutidos.gd` | 4 | Os 17 assets de carta do jogo (`astralis/assets/`) são **byte-idênticos** aos do Studio (`astralis-studio/static/`, D38 — as molduras são do usuário e é PROIBIDO editar): os 17 pares batem em nome + tamanho + SHA-256, a lista de 17 é a mesma que o jogo procura (`ASSETS_EMBUTIDOS`), sem `--project` (é como o GUT roda) o jogo acha 17/17 e a carta sai com a moldura REAL (832×1248), e a carta deitada no campo tem a mesma composição da carta da mão, com nome/ATK/DEF do dado. |
+| `test_mesa_3d_oficial.gd` | 25 | O campo 3D OFICIAL (D40/D41): a cena sobe com duelo real do `DuelManager`, sem mesa/tampo/moldura, o mundo 3D dentro do SubViewport do campo, a lente **no eixo** (`frustum_offset = 0`), o HUD 2D com o dado real (painel da carta, placa de ATK/DEF, fases, retratos, contadores), a carta desenhada pelo molde, e a leva D45/D45b da faixa do meio: as 7 células na ordem do usuário, o vão entre as fileiras, os blocos limpos, o número branco, as três cores (azul/você, vermelho/rival, preto/cemitério), a foto quadrada do último carta do cemitério e a cor do turno acompanhando o `current_player`. |
+| `test_queda_cursor_rival.gd` | 6 | A **queda de linha** (D45): a troca de linha e de carta não pode derrubar a tela. Reproduz a pilha real varrendo as fileiras do rival, trava que o cursor e as cartas continuam onde devem, e que as zonas do `GameState` são lidas pelo tradutor único (`_chave_zona`) — lado fora de 0..1, chave desconhecida ou ausente viram lista vazia, nunca crash. |
+| `test_regra_turno1.gd` | 6 | A regra do **turno 1** (D43, corrigindo a D15): ninguém ataca enquanto o contador de turno for 1, para QUEM ESTIVER jogando — quem começou a partida não ataca, e o outro lado já entra no turno 2 atacando. Não é regra por jogador. A exceção do Campo de Testes (`is_test`, D34) fica igual, e a mensagem do dono da regra (`BattleSystem.ERRO_TURNO_1`) é uma só, sem string duplicada. |
+| `test_seed_sorteio.gd` | 5 | A **semente** `duel_setup.seed` (D42): `seed = 0` (ou ausente) = SEM SEMENTE, sorteio de verdade; `seed != 0` = semente fixa, e o mesmo duelo reproduzido carta por carta (mesmo primeiro jogador, mesma mão, mesma ordem do baralho). Trava que a semente fixa dá o mesmo resultado, que duas sementes dão baralhos diferentes, e que `first_p1`/`first_p2` são deterministas mesmo com seed 0. |
+| `test_turno_quem_comeca.gd` | 5 | **Quem começa** (D42): o motor sorteia o primeiro jogador e a tela 3D HONRA o `current_player` devolvido, inclusive quando o **rival** começa — nesse caso ela conduz o turno dele pelos sistemas reais e devolve a vez (antes o jogo travava em "Aguarde o rival"). Trava que o turno do rival sempre termina em `current_player == 0`, com trava de progresso (teto de passos) e sem reentrada em paralelo. |
+| `test_perspectiva_campo.gd` | 5 | A **camada de perspectiva** (doc 16 / D46, etapa 1): a tela passa a ser a perspectiva de quem joga, sem girar nada. Trava que `_vis` é a identidade nos 20 lugares do campo (e **também** com `current_player = 1`, que é o que a etapa 2 muda de propósito), que a carta desenhada está exatamente onde `_vis` mandou (X e Z) e gira pelo **lado visual**, que o **estado não se move** no redesenho, que o espelho do D18 continua valendo (lado 1: a coluna 0 é a da direita) e que andar para a direita aumenta o X de tela nos dois lados, e que a faixa do meio **não espelha** (D8). Etapa 1 = tela idêntica; a troca de lado é a etapa 2. |
 
 ## A base única de helpers
 

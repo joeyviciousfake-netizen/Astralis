@@ -1,8 +1,11 @@
 # 16 — PERSPECTIVA DO CAMPO (plano da próxima leva)
 
-VERSION: 1.0
-STATUS: **PLANO — NADA IMPLEMENTADO.** O usuário desenhou o plano com o Lead em
-2026-09-28; a execução começa na etapa 1, com o aval do usuário.
+VERSION: 1.1
+STATUS: **PLANO — ETAPA 1 IMPLEMENTADA, O RESTO NÃO.** O usuário desenhou o
+plano com o Lead em 2026-09-28; a etapa 1 (a camada de perspectiva, com a tela
+igual à de hoje) foi feita em 2026-09-29 — ver §16.12. As perguntas §16.7 1 e 3
+foram respondidas pelo usuário (D46b). A execução continua pela etapa 2, com o
+aval do usuário.
 OWNER: lead (a implementação é do runtime: `duel3d/mesa_3d.gd`)
 ORIGEM: conversa de 2026-09-28, depois de ver a faixa 2D (D45/D45b, já no git)
 DEPENDES: `13_TABULEIRO_DUELO.md`, `14_EXPERIENCIA_USUARIO.md`,
@@ -156,21 +159,13 @@ completa é a busca por `_pos_slot(`, `_pos_mao_arco(`, `_rot_deitada(`,
 
 ## 16.6 As etapas (com PROVA em cada uma)
 
-1. **A camada de perspectiva, sem mudar a tela.** A função `_vis` + todo
-   desenho passando por ela, com a perspectiva **travada no jogador 0**.
-   *Prova:* a foto fica **idêntica** à de hoje + teste que trava o visual atual.
-2. **A troca do campo.** A perspectiva passa a seguir `current_player`; as
-   cartas esmaecem e trocam de lado; a coluna espelha; a de cima vira 180°.
-   *Prova:* duas fotos (uma na sua vez, uma na dele) + teste da fileira de
-   baixo = de quem joga, da coluna espelhada, e de que **o estado não se move**.
-3. **As mãos.** Um caminho só: a de baixo é a de quem joga (aberta só se for a
-   sua), a de cima é a do outro, **sempre virada e espelhada**.
-   *Prova:* fotos + teste da cara e da ordem.
-4. **As animações que seguem as cartas**: ataque, compra, fusão, carta ao
-   centro; esconder o cursor na vez dele.
-   *Prova:* jogo rodando (jogo de verdade, com o rival jogando) + GUT.
-5. **Acabamento.** Tempo/curva, ferramenta de calibração (`--mesa3d-calib=1`),
-   fotos para o registro, docs.
+| # | Etapa | PROVA | Status |
+|---|---|---|---|
+| 1 | **A camada de perspectiva, sem mudar a tela.** A função `_vis` + todo desenho passando por ela, com a perspectiva **travada no jogador 0**. | a foto fica **idêntica** à de hoje + teste que trava o visual atual | **FEITA 2026-09-29** — ver §16.12 |
+| 2 | **A troca do campo.** A perspectiva passa a seguir `current_player`; as cartas esmaecem e trocam de lado; a coluna espelha; a de cima vira 180°. | duas fotos (uma na sua vez, uma na dele) + teste da fileira de baixo = de quem joga, da coluna espelhada, e de que **o estado não se move** | a fazer |
+| 3 | **As mãos.** Um caminho só: a de baixo é a de quem joga (aberta só se for a sua), a de cima é a do outro, **sempre virada e espelhada**. | fotos + teste da cara e da ordem | a fazer |
+| 4 | **As animações que seguem as cartas**: ataque, compra, fusão, carta ao centro; esconder o cursor na vez dele. | jogo rodando (jogo de verdade, com o rival jogando) + GUT | a fazer |
+| 5 | **Acabamento.** Tempo/curva, ferramenta de calibração (`--mesa3d-calib=1`), fotos para o registro, docs. | 2 fotos (mão + campo) | a fazer |
 
 Cada etapa é um commit, com o GUT verde. O usuário confere a foto antes de
 aprovar a próxima.
@@ -179,14 +174,25 @@ aprovar a próxima.
 
 ## 16.7 O que ainda falta o usuário decidir
 
-1. **Na vez do rival, o painel esquerdo** (a carta focada) congela na última
-   carta que você focou? (Lead sugere sim: você não pode focar nada quando não
-   é sua vez.)
-2. **No Campo de Testes** (aba de testes do Studio, D33/D34) a perspectiva
-   também troca quando o dummy joga? (Lead sugere que troque, para ser UMA
-   regra só; se ficar desorientado, a gente abre uma exceção depois.)
-3. **Pular a animação** com o START? (Lead sugere sim: você não fica preso.)
-4. **Duração e curva** da troca (Lead sugere 0,5 s, `TRANS_CUBIC`/`EASE_IN_OUT`).
+**FECHADAS em 2026-09-29 (D46b), quando a etapa 1 começou:**
+
+1. **Na vez do rival, o painel esquerdo** — **DECIDIDO: ele continua vivo.**
+   Ele mostra a carta que o RIVAL está vendo, mas com uma **imagem
+   padronizada**: não revela qual é a carta de verdade nem os dados dela
+   (sem nome/ATK/DEF/tipo/descrição). O painel não congela — ele troca de
+   conteúdo por um conteúdo neutro. (Implementa na etapa 2.)
+3. **Pular a animação** com o START? — **DECIDIDO: NÃO. Não existe pular.**
+   A troca de perspectiva roda sempre, inteira, quando a vez passa. O START é
+   o que encadeia a animação, não um botão de pular.
+
+**AINDA EM ABERTO (o usuário não respondeu; o Lead vai do padrão abaixo e o
+usuário muda quando quiser, D23):**
+
+2. **No Campo de Testes** (D33/D34) a perspectiva também troca quando o
+   dummy joga? *Padrão do Lead: troca*, para ser UMA regra só; se ficar
+   desorientado, abre-se uma exceção depois.
+4. **Duração e curva** da troca. *Padrão do Lead: 0,5 s, `TRANS_CUBIC` /
+   `EASE_IN_OUT`* (a sugestão original deste doc).
 
 Nada disso trava a etapa 1.
 
@@ -240,18 +246,82 @@ Nada disso trava a etapa 1.
 
 ---
 
-## 16.11 ONDE ESTÁ A EXECUÇÃO (para a próxima conversa)
+## 16.11 ONDE ESTÁ A EXECUÇÃO
 
-**Status: NADA IMPLEMENTADO.** O último commit é o da D45b (faixa 2D com as
-cores, o bloco limpo, o número branco, a foto do cemitério e a cor do turno).
-A partir dele:
+**Status: ETAPA 1 FEITA (2026-09-29).** A próxima é a **etapa 2** (a troca do
+campo), e ela espera o usuário olhar a foto da etapa 1.
 
 1. Abrir `docs/16_PERSPECTIVA_CAMPO.md` (este arquivo) **antes** de mexer em
    qualquer coisa.
 2. Conferir o `docs/SESSAO_ATUAL.md` (o caderno) e o `docs/DECISOES.md`.
-3. **Perguntar ao usuário se pode começar a etapa 1** (a camada de
-   perspectiva, com a tela igual à de hoje) — ele ainda não deu o "pode
-   começar" para essa leva.
-4. Fazer a etapa 1, provando com foto idêntica + GUT verde, e parar para o
-   usuário olhar.
+3. conferir o §16.12 (o que a etapa 1 deixou pronto e o que ela NÃO tocou).
+4. **Etapa 2**: a troca do campo. Começa trocando `_perspectiva()` por
+   `int(_st.current_player)` — é a linha que a etapa 1 deixou de propósito
+   travada — e daí em diante é a rotina de troca do §16.5.
+
+## 16.12 O que a etapa 1 deixou pronto (2026-09-29)
+
+**Uma função, e ela é a decisão:**
+
+```gdscript
+func _perspectiva() -> int:
+    return 0        # ETAPA 1 TRAVADA. A etapa 2 troca por int(_st.current_player).
+
+func _vis(lado: int, i: int) -> Vector2i:   # (lado, coluna) do DADO -> da TELA
+    if _perspectiva() == 0:
+        return Vector2i(lado, col)
+    return Vector2i(1 - lado, COLUNAS_CAMPO - 1 - col)
+```
+
+Mais dois atalhos que usam `_vis` por dentro, para ninguém chamar `_pos_slot`
+com lado do dado por engano: `_pos_slot_do_dado(lado, tipo, i)` (posição) e
+`_x_do_slot(lado, tipo, i)` (só o X, para quem anda pela posição visível).
+
+**O que JÁ passa por `_vis`:**
+
+| Onde | O que faz |
+|---|---|
+| `_redesenhar` (campo) | posição e giro de 180° de cada carta do campo |
+| `_posicionar_cursor` (as 4 fileiras) | onde a moldura de foco cai |
+| `_vizinho3d` + a troca de fileira | o vizinho pela posição visível (`_x_do_slot`) |
+| o print de boot do slot p0_m2 | diagnóstico |
+
+**O que a etapa 1 NÃO tocou (de propósito, é das etapas seguintes):**
+as duas mãos (`_pos_mao_arco`/`_y_da_mao`/`_passo_mao`), a compra, a fila de
+fusão, a carta ao centro, o ataque, o cursor escondido, a animação da troca.
+E também, com motivo escrito no código: `_painel_slot` (as 20 peças de vidro
+são construídas uma vez com as DUAS fileiras, e a perspectiva só troca os
+lugares entre elas — o conjunto é o mesmo antes e depois) e
+`_borda_da_fileira_px`/`_extensao_da_fileira_px` (medem a faixa do meio, que é
+sempre o painel do jogador, D8).
+
+**A prova de que a tela não mudou (duas, independentes):**
+
+- **Foto, pixel a pixel.** Mesmo comando, mesmo projeto de teste (o das 722
+  artes, pasta de temp), antes e depois: **113 pixels** diferentes em
+  2.001.046 (0,006%). E o **controle** — o código ORIGINAL rodando duas vezes
+  — difere em **1129 pixels**, na mesma região, porque o cursor de foco
+  **pulsa** (`_process`, `1.0 + 0.04*sin(pulso)`, depende do tempo do frame).
+  Então a mudança da etapa 1 é **10x menor que o ruído do próprio jogo**.
+  As fotos: `e1_ANTES.png`, `e1_FINAL.png` e o lado a lado
+  `e1_COMPARA_antes_depois.png` (pasta de temp, fora do repo por R8).
+- **GUT.** Arquivo novo `astralis/testing/test_perspectiva_campo.gd` (5
+  testes / 57 asserts) que trava: `_vis` identidade nos 20 lugares (e
+  **também** com `current_player = 1`, que é o que a etapa 2 vai mudar de
+  propósito), a carta desenhada exatamente onde `_vis` mandou, o giro pelo
+  lado VISUAL, o estado não se mexer no redesenho, a navegação visível certa
+  nos dois lados, e a faixa do meio não espelhar (D8). **Sabotado** de
+  propósito (`_perspectiva()` devolvendo 1) e o teste pegou.
+  Suíte inteira: **172/172, 3738 asserts, 0 SCRIPT ERROR, 0 orphans**.
+
+**Erro meu desta etapa (no caderno, não esconder):** a primeira versão do
+teste affirmava que no lado 1 a coluna 4 fica à direita da coluna 0. É o
+**contrário** — o lado 1 é espelhado no dado (D18), então lá a coluna 0 é a
+da direita. O teste estava errado, não o código; a trava real é "andar para a
+direita aumenta o X de tela", testada no meio da fileira. Primeira versão
+tambémAssume que o p1 consegue invocar na fase em que o GUT roda (não
+consegue — a mão dele não tem monstro nessa seed), então o teste passou a
+montar a instância pelo **construtor real** (`SummonSystem.construir_instancia`,
+o único do jogo, R1), que é o que o teste precisa: uma instância de verdade no
+estado, não uma regra de invocação.
 

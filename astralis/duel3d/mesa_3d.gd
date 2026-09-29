@@ -122,6 +122,10 @@ const PECA_PROF_CARTAS := 1.58
 ## cada 0,01 de Z ≈ 1,3 px no seu lado e ≈ 0,7 px no lado do rival).
 const APROXIMA_MAGIA_VOCE := 0.22
 const APROXIMA_MAGIA_RIVAL := 0.05
+## COLUNAS do campo (5 slots por fileira, D15/D17 — o mesmo 5 do
+## `GameState` e do `arena.schema.json`). Vive aqui porque a perspectiva
+## (doc 16) espelha a COLUNA: coluna 0 <-> coluna 4, e o meio fica.
+const COLUNAS_CAMPO := 5
 ## Janela de arte da MOLDURA REAL (medida no JPG do usuário, D38 — o JPG
 ## é 832x1248 e a janela fica em x 11,90%..89,18% e y 18,27%..70,99%).
 ## Usada no 3D e no painel 2D: a arte preenche a janela sem sobra, seja a
@@ -511,7 +515,7 @@ func _ready() -> void:
 		_conta_assets_embutidos()])
 	if _cam != null:
 		print("[MESA3D] Cam: pos=%s fov=%s alvo=%s." % [str(_cam.global_position), str(_cam.fov), str(CAM_ALVO)])
-		var px := _cam.unproject_position(_pos_slot(0, "monstro", 2))
+		var px := _cam.unproject_position(_pos_slot_do_dado(0, "monstro", 2))
 		print("[MESA3D] Slot p0_m2 na tela: janela=%s tela_x=%.1f." % [str(px), JANELA_CAMPO_X + px.x])
 		_calibrar_mao()
 	_ver_autoquit()
@@ -1006,6 +1010,12 @@ func _peca_prof_carta() -> float:
 ## claro em volta e ESPAÇO entre as peças (na ref são ladrilhos soltos, não
 ## um wireframe colado). O lado acompanha o campo (`_peca_lado`), então a
 ## fresta entre as peças continua a mesma em qualquer escala.
+##
+## NÃO passa pela perspectiva (doc 16) de propósito: as 20 peças são
+## construídas UMA vez, com as DUAS fileiras, e a perspectiva só troca os
+## lugares entre elas (lado 0 <-> lado 1). O conjunto de 20 ladrilhos é o
+## mesmo antes e depois, então aqui não há nada a trocar. A CARTA dentro do
+## ladrilho é que se move — e ela passa por `_vis` em `_redesenhar`.
 func _painel_slot(lado: int, tipo: String, indice: int) -> Node3D:
 	var p := _pos_slot(lado, tipo, indice)
 	var no := Node3D.new()
@@ -1029,10 +1039,66 @@ func _painel_slot(lado: int, tipo: String, indice: int) -> Node3D:
 	return no
 
 
+# ---- DOC 16 / D46: A CAMADA DE PERSPECTIVA ----
+#
+# A tela do duelo passa a ser a perspectiva de QUEM ESTA JOGANDO, como no
+# Forbidden Memories. NADA GIRA: nem a câmera (D41), nem o campo, nem o céu,
+# nem os ladrilhos. O que muda é PARA ONDE cada carta é desenhada.
+#
+# Uma decisão, um lugar: `_vis`. Todo desenho e toda animação perguntam a ela
+# "de que lado, em que coluna eu desenho a carta do dado (lado, i)?". Se cada
+# animação decidir por si, volta a mesma bagunça que o espelho do D18 criou
+# (doc 16 §16.10).
+#
+# Regra (doc 16 §16.5): perspectiva do jogador 0 = cada coisa onde está;
+# perspectiva do jogador 1 = cada coisa no lado OPOSTO e na coluna OPOSTA
+# (o "lado oposto + coluna oposta" é o arranjo virado, e ele sai de graça do
+# próprio dado: o lado 1 da arena JÁ é espelhado no X e com as fileiras
+# trocadas — `core/board_layout.gd` `default_pos`).
+#
+# O ESTADO NÃO SE MEXE: `players[lado]["monster"][i]` é a MESMA carta antes e
+# depois da troca. A troca é só de desenho (doc 16 §16.5, regra 4).
+
+## De que lado a tela está desenhando o dado agora. ÚNICO lugar que decide.
+## ETAPA 1 (doc 16 §16.6): TRAVADO no jogador 0 — a tela fica EXATAMENTE igual
+## à de hoje, e a foto tem que sair idêntica. A etapa 2 troca só ESTA linha
+## por `int(_st.current_player)`; o resto do desenho já está pronto.
+func _perspectiva() -> int:
+	return 0
+
+
+## ONDE a carta do DADO (lado `lado`, coluna `i`) é desenhada agora.
+## Devolve (lado visual, coluna visual). `lado` e `i` do DADO entram; o que
+## sai é sempre o lugar na TELA.
+func _vis(lado: int, i: int) -> Vector2i:
+	var col := clampi(i, 0, COLUNAS_CAMPO - 1)
+	if _perspectiva() == 0:
+		return Vector2i(lado, col)
+	return Vector2i(1 - lado, COLUNAS_CAMPO - 1 - col)
+
+
+## Posição de mundo do slot do DADO (lado, i) como ele é desenhado AGORA.
+## É o `_pos_slot` já passando pela perspectiva — use este nos lugares que
+## pensam em "a carta do dado (lado, i)", que é a maioria.
+func _pos_slot_do_dado(lado: int, tipo: String, i: int) -> Vector3:
+	var v := _vis(lado, i)
+	return _pos_slot(v.x, tipo, v.y)
+
+
+## X de mundo do slot do DADO (lado, i) como ele é desenhado agora. Para quem
+## anda pela POSIÇÃO visível (vizinho pela direita/esquerda, troca de fileira
+## preservando a coluna da tela) e não pelo índice.
+func _x_do_slot(lado: int, tipo: String, i: int) -> float:
+	return _pos_slot_do_dado(lado, tipo, i).x
+
+
 func _pos_slot(lado: int, tipo: String, indice: int) -> Vector3:
-	# Lê o XY oficial (BoardLayout real + layout da arena, com espelho do
-	# rival) e converte p/ XZ. Marca E carta usam este ponto: a carta fica
-	# EXATAMENTE na marca (mesmo XZ, só o Y muda).
+	# ATENÇÃO: `lado`/`indice` aqui são do DESENHO (lado visual, coluna
+	# visual), não do dado. Quem tem o lado/coluna do DADO usa `_vis` (direto)
+	# ou `_pos_slot_do_dado`/`_x_do_slot` (prontos). Lê o XY oficial
+	# (BoardLayout real + layout da arena, com espelho do rival) e converte
+	# p/ XZ. Marca E carta usam este ponto: a carta fica EXATAMENTE na marca
+	# (mesmo XZ, só o Y muda).
 	# A conversão passa pelo TRANSFORM DE APRESENTAÇÃO (escala uniforme +
 	# deslocamento do conjunto): a composição e o espelho do DADO ficam
 	# intactos, só o tamanho/posição do campo na tela mudam.
@@ -1540,6 +1606,10 @@ func _borda_da_fileira_px(lado: int, tipo: String, perto: bool) -> float:
 	var peca := _peca_prof_carta()
 	var linha := -1e9 if perto else 1e9
 	for i in range(5):
+		# `_pos_slot` com o LADO VISUAL: a fileira é medida onde ela está na
+		# tela. A faixa do meio NÃO espelha (D8/doc 16 D8 — ela é sempre o
+		# painel do jogador), e o vão entre as duas fileiras de monstro é
+		# simétrico, então a medida é a mesma nas duas perspectivas.
 		var p := _pos_slot(lado, tipo, i)
 		for sx in [-1.0, 1.0]:
 			var dz := peca * 0.5 if perto else -peca * 0.5
@@ -1665,9 +1735,12 @@ func _limpar_cartas() -> void:
 ## Pose da carta DEITADA no painel de vidro (doc 15 §15.3: na referência as
 ## cartas do campo estão deitadas na peça, não em pé). Só DESENHO:
 ##   virada  -> só o verso pra cima (a carta some, não vaza nome);
-##   aberta  -> topo da carta virado pro DONO do slot (o rival é espelho,
-##              D18) e a de DEFESA gira um quarto de volta no lugar, que é
-##              como o jogo mostra Ataque x Defesa (D24) sem texto flutuando.
+##   aberta  -> topo da carta virado pro DONO do slot (o dono é quem está
+##              jogando, e o lado que decide é o LADO VISUAL — doc 16 §16.5;
+##              na tela de hoje ele é o espelho do rival, D18) e a de DEFESA
+##              gira um quarto de volta no lugar, que é como o jogo mostra
+##              Ataque x Defesa (D24) sem texto flutuando.
+## `lado` aqui é o LADO VISUAL (saído de `_vis`), nunca o lado do dado.
 func _deitar_carta(carta: Node3D, face_down: bool, em_defesa: bool, lado: int) -> void:
 	if face_down:
 		carta.rotation_degrees = Vector3(90.0, 0.0, 0.0)
@@ -1686,6 +1759,9 @@ func _redesenhar(com_efeito: bool) -> void:
 		return
 	_artes_ok = 0
 	# Campo: 5+5 monstros + magias (se houver, ex. test_state) por lado.
+	# `v` é o lugar NA TELA desta carta do dado (doc 16 §16.5): posição e
+	# rotação saem dele, nunca do lado do dado. Na etapa 1 (perspectiva
+	# travada no p0) `v` é o próprio (lado, i) — a tela não muda.
 	for lado in [0, 1]:
 		for zona_nome in ["monster", "spell"]:
 			var zona := _zona_do_jogador(lado, zona_nome)
@@ -1696,12 +1772,15 @@ func _redesenhar(com_efeito: bool) -> void:
 				var tipo := "monstro" if zona_nome == "monster" else "magia"
 				var virada := bool(m.get("face_down", false))
 				var em_defesa := str(m.get("position", "ATK")) == "DEF"
-				var carta := _fazer_carta(_fantasia(m), virada, lado, em_defesa)
+				var v := _vis(lado, i)
+				var carta := _fazer_carta(_fantasia(m), virada, v.x, em_defesa)
 				# A carta do campo cresce com o campo (mesma proporção dentro
 				# do vidro) e fica apoiada na peça, não flutuando.
 				carta.scale = Vector3.ONE * ESCALA_CAMPO
-				carta.position = _pos_slot(lado, tipo, i) + Vector3(0, 0.015 * ESCALA_CAMPO, 0)
-				_deitar_carta(carta, virada, em_defesa, lado)
+				carta.position = _pos_slot(v.x, tipo, v.y) + Vector3(0, 0.015 * ESCALA_CAMPO, 0)
+				# O giro de 180° (a carta de cima é lida de cabeça baixa, D6)
+				# decide o LADO VISUAL, não o lado do dado.
+				_deitar_carta(carta, virada, em_defesa, v.x)
 				carta.set_meta("slot_id", "p%d_%s%d" % [lado, ("m" if zona_nome == "monster" else "s"), i])
 				carta.set_meta("card_id", str(m.get("card_id", "")))
 				_no_cartas.add_child(carta)
@@ -1789,17 +1868,21 @@ func _posicionar_cursor() -> void:
 				alvo = _pos_mao_arco(clampi(_col, 0, n - 1), n, 0)
 				_moldar_foco(LARG_CARTA, ALT_CARTA, Vector3(TILT_MAO_LIVRE, 0, 0), LARG_CARTA)
 		FILEIRA_MEU_M:
-			alvo = _pos_slot(0, "monstro", clampi(_col, 0, 4))
-			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, 0, 0), _peca_prof_carta())
+			var vm := _vis(0, clampi(_col, 0, 4))
+			alvo = _pos_slot(vm.x, "monstro", vm.y)
+			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, vm.x, 0), _peca_prof_carta())
 		FILEIRA_MEU_S:
-			alvo = _pos_slot(0, "magia", clampi(_col, 0, 4))
-			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, 0, 0), _peca_prof_carta())
+			var vs := _vis(0, clampi(_col, 0, 4))
+			alvo = _pos_slot(vs.x, "magia", vs.y)
+			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, vs.x, 0), _peca_prof_carta())
 		FILEIRA_RIVAL_M:
-			alvo = _pos_slot(1, "monstro", clampi(_col, 0, 4))
-			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, 1, _em_defesa(1, "monstro", clampi(_col, 0, 4))), _peca_prof_carta())
+			var vr := _vis(1, clampi(_col, 0, 4))
+			alvo = _pos_slot(vr.x, "monstro", vr.y)
+			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, vr.x, _em_defesa(1, "monstro", clampi(_col, 0, 4))), _peca_prof_carta())
 		FILEIRA_RIVAL_S:
-			alvo = _pos_slot(1, "magia", clampi(_col, 0, 4))
-			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, 1, _em_defesa(1, "magia", clampi(_col, 0, 4))), _peca_prof_carta())
+			var vt := _vis(1, clampi(_col, 0, 4))
+			alvo = _pos_slot(vt.x, "magia", vt.y)
+			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, vt.x, _em_defesa(1, "magia", clampi(_col, 0, 4))), _peca_prof_carta())
 		_:
 			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, 0, 0), _peca_prof_carta())
 	_foco = alvo
@@ -1808,7 +1891,8 @@ func _posicionar_cursor() -> void:
 
 ## Rotação de uma carta DEITADA no ladrilho — a mesma que `_deitar_carta`
 ## aplica na carta, para a moldura do foco sair girada junto (quem está em
-## DEFESA tem a moldura atravessada como a carta).
+## DEFESA tem a moldura atravessada como a carta). `lado` é o LADO VISUAL
+## (saído de `_vis`), como em `_deitar_carta`.
 func _rot_deitada(face_down: bool, lado: int, em_defesa: bool) -> Vector3:
 	if face_down:
 		return Vector3(90.0, 0.0, 0.0)
@@ -2124,6 +2208,8 @@ func _tex_metal(topo: Color, base: Color) -> GradientTexture2D:
 
 ## Extensão (x de tela) de uma fileira de ladrilhos: da coluna 0 até a 4,
 ## já em pixel do canvas (a janela do campo começa em PAINEL_ESQ_L).
+## Serve à faixa do meio, que é sempre o painel do jogador (D8/doc 16), então
+## mede a fileira como ela está desenhada agora.
 func _extensao_da_fileira_px(lado: int, tipo: String) -> Vector2:
 	var x0 := 1e9
 	var x1 := -1e9
@@ -3705,17 +3791,19 @@ func _larg_fileira(f: int) -> int:
 
 
 ## Vizinho por POSIÇÃO visível (igual ao 2D): direita sempre anda p/ a
-## direita que se vê. O rival é espelho (índice 0 à direita), então andar
-## por índice espelhava o controle. Aqui anda por X do slot, nunca por índice.
+## direita que se vê. Anda pelo X de TELA do slot como ele é DESENHADO agora
+## (`_x_do_slot`, que já passa pela perspectiva), nunca pelo índice: o espelho
+## do D18 e a troca de perspectiva do doc 16 viram a ordem visível, e quem
+## decide isso tem que ser a MESMA função que desenha.
 func _vizinho3d(lado: int, tipo: String, col_atual: int, dx: int) -> int:
-	var atual := _pos_slot(lado, tipo, clampi(col_atual, 0, 4)).x
+	var atual := _x_do_slot(lado, tipo, clampi(col_atual, 0, 4))
 	var melhor := clampi(col_atual, 0, 4)
 	var melhor_dist := 1e20
 	var achou := false
 	for i in range(5):
 		if i == clampi(col_atual, 0, 4):
 			continue
-		var delta := _pos_slot(lado, tipo, i).x - atual
+		var delta := _x_do_slot(lado, tipo, i) - atual
 		if dx > 0 and delta > 0.001 and absf(delta) < melhor_dist:
 			melhor_dist = absf(delta)
 			melhor = i
@@ -3730,7 +3818,7 @@ func _vizinho3d(lado: int, tipo: String, col_atual: int, dx: int) -> int:
 		var minx := 1e20
 		var mini_idx := clampi(col_atual, 0, 4)
 		for i in range(5):
-			var cx := _pos_slot(lado, tipo, i).x
+			var cx := _x_do_slot(lado, tipo, i)
 			if cx < minx:
 				minx = cx
 				mini_idx = i
@@ -3738,7 +3826,7 @@ func _vizinho3d(lado: int, tipo: String, col_atual: int, dx: int) -> int:
 	var maxx := -1e20
 	var maxi_idx := clampi(col_atual, 0, 4)
 	for i in range(5):
-		var cx2 := _pos_slot(lado, tipo, i).x
+		var cx2 := _x_do_slot(lado, tipo, i)
 		if cx2 > maxx:
 			maxx = cx2
 			maxi_idx = i
@@ -3827,13 +3915,13 @@ func _mover(dx: int, dy: int) -> void:
 			if novo_idx != idx:
 				var nova := int(ORDEM_CAMPO_3D[novo_idx])
 				# Preserva a COLUNA VISÍVEL (X de tela, igual ao 2D).
-				var atual_x := _pos_slot(int((_lado_tipo_da_fileira(_fileira) as Array)[0]), str((_lado_tipo_da_fileira(_fileira) as Array)[1]), clampi(_col, 0, 4)).x
+				var atual_x := _x_do_slot(int((_lado_tipo_da_fileira(_fileira) as Array)[0]), str((_lado_tipo_da_fileira(_fileira) as Array)[1]), clampi(_col, 0, 4))
 				var mln := int((_lado_tipo_da_fileira(nova) as Array)[0])
 				var mlt := str((_lado_tipo_da_fileira(nova) as Array)[1])
 				var melhor := 0
 				var melhor_dist := 1e20
 				for i in range(5):
-					var d := absf(_pos_slot(mln, mlt, i).x - atual_x)
+					var d := absf(_x_do_slot(mln, mlt, i) - atual_x)
 					if d < melhor_dist:
 						melhor_dist = d
 						melhor = i
