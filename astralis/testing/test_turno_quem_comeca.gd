@@ -154,8 +154,9 @@ func test_first_p2_rival_comeca_compra_joga_e_devolve_a_vez() -> void:
 	assert_eq(int(fim["mao0"]), 5, "Sua mão foi completada até 5 na sua DRAW (refill do motor): %d." % int(fim["mao0"]))
 	assert_true(mao_rival_antes >= 5, "Preparo: o rival começou com a mão de abertura do motor (%d)." % mao_rival_antes)
 	# D44 (item 6): a barra de fases SAIU da tela por ordem do usuário, e o
-	# turno agora é lido na FAIXA DO MEIO (3D), com o valor real do motor.
-	var txt := str((_n3d(mesa, "Campo/Faixa/Turno/Numero") as Label3D).text)
+	# turno agora é lido na FAIXA DO MEIO (que em D45 virou 2D, no HUD), com
+	# o valor real do motor.
+	var txt := str((mesa.get_node("HUD/Faixa2D/Celulas/Turno/Caixa/Numero") as Label).text)
 	assert_eq(txt, str(int(fim["turno"])), "Faixa do meio com o turno real do motor (%s)." % txt)
 	assert_true(mesa.get_node_or_null(NodePath("HUD/BarraFases")) == null, "Sem barra de fases na tela (D44).")
 

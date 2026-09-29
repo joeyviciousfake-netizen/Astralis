@@ -10,6 +10,7 @@ extends "res://testing/astralis_test_base.gd"
 const Mesa3DScene := preload("res://duel3d/mesa_3d.tscn")
 const SummonSys := preload("res://duel/summon_system.gd")
 const BoardLayout := preload("res://core/board_layout.gd")
+const TurnManager := preload("res://duel/turn_manager.gd")
 
 ## Nomes proibidos na cena 3D (demolição da mesa, ref sem tampo/moldura).
 const NOS_PROIBIDOS := ["Mesa", "Tampo", "MolduraN", "MolduraS", "MolduraL",
@@ -55,6 +56,19 @@ func _meio_do_arco(n: int) -> int:
 	return int(ceil(float(maxi(n - 1, 0)) / 2.0))
 
 
+## O nó está dentro dessa subárvore? (usa só a cadeia de pais: não depende de
+## posição nem de layout, então serve para qualquer HUD).
+func _dentro_de(n: Node, raiz: Node) -> bool:
+	if raiz == null or n == null:
+		return false
+	var atual := n
+	while atual != null:
+		if atual == raiz:
+			return true
+		atual = atual.get_parent()
+	return false
+
+
 func test_cena_3d_carrega_com_duelo_real() -> void:
 	var mesa: Node = await _mesa3d_nova()
 	assert_true(is_instance_valid(mesa), "Cena mesa_3d.tscn instancia.")
@@ -88,10 +102,10 @@ func test_sem_mesa_nenhum_no_de_mesa() -> void:
 func test_nos_chave_3d_existem() -> void:
 	var mesa: Node = await _mesa3d_nova()
 	for caminho in ["Camera3D", "WorldEnvironment",
-			"Campo", "Campo/Slots", "Campo/Laterais", "Campo/Faixa",
+			"Campo", "Campo/Slots", "Campo/Laterais",
 			"Cartas", "Cursor3D", "Ceu"]:
 		assert_true(_n3d(mesa, caminho) != null, "Nó-chave 3D existe: " + caminho)
-	for lbl in ["HUD", "HUD/FlashTela", "Camada3D", "Camada3D/JanelaCampo"]:
+	for lbl in ["HUD", "HUD/FlashTela", "HUD/Faixa2D", "Camada3D", "Camada3D/JanelaCampo"]:
 		assert_true(mesa.get_node_or_null(NodePath(lbl)) != null, "Nó-chave existe: " + lbl)
 	assert_true((_n3d(mesa, "Camera3D") as Camera3D).current, "Camera3D é a atual.")
 	# 20 painéis flutuantes (5+5 por lado), cada um com base escura + borda.
@@ -103,9 +117,14 @@ func test_nos_chave_3d_existem() -> void:
 		assert_true((p as Node).get_node_or_null(NodePath("Borda")) != null, "Painel tem borda com brilho: " + str((p as Node).name))
 	# D44 (item 8): as placas do topo saíram de vez (LP/TURN foram para a
 	# faixa do meio) e a barra de fases também (item 6). No topo ficou só a
-	# foto + o nome de cada duelista.
-	for lbl in ["HUD/RetratoVoce", "HUD/RetratoRival", "HUD/BarraStart/StartHelp"]:
+	# foto + o nome de cada duelista. D45 (item 7): a barra "START ? Help"
+	# saiu da tela inteira — a ação continua no joypad (D19), o texto não.
+	for lbl in ["HUD/RetratoVoce", "HUD/RetratoRival"]:
 		assert_true(mesa.get_node_or_null(NodePath(lbl)) != null, "HUD existe: " + lbl)
+	assert_true(mesa.get_node_or_null(NodePath("HUD/BarraStart")) == null,
+		"D45 (item 7): a barra START ? Help saiu da tela.")
+	assert_true(mesa.get_node_or_null(NodePath("HUD/BarraStart/StartHelp")) == null,
+		"D45 (item 7): o texto START ? Help não existe mais em nenhum lugar.")
 	var placas_nome := 0
 	for c in (mesa.get_node("HUD") as Control).get_children():
 		if str(c.name) == "NomeVoce" or str(c.name) == "NomeRival":
@@ -433,33 +452,34 @@ func test_maos_centralizadas_no_x_do_campo() -> void:
 	var p0_m: Vector3 = mesa.call("_pos_mao_arco", _meio_do_arco(n0), n0, 0)
 	var p0_f: Vector3 = mesa.call("_pos_mao_arco", n0 - 1, n0, 0)
 	assert_almost_eq(p0_m.x - p0_1.x, p0_f.x - p0_m.x, 0.001, "Arco da sua mão simétrico em torno do centro.")
-	# Y/Z da SUA mão: mudaram na FASE 2 (doc 15 §15.3) porque a mão tinha
-	# 45% da tela e ficava colada no START. Agora ela é pequena e vive no
-	# rodapé, cortada embaixo — os valores são as consts MAO_P0_YZ, e a
-	# trava continua sendo a MESMA coisa: o que importa (centralização no X
-	# do campo, simetria do arco, carta desenhada no ponto e cursor) segue
-	# travado abaixo com a mesma tolerância. O Y/Z mudou de novo porque a
-	# CÂMERA mudou (doc 15 §15.5): a mão é medida contra a referência
-	# (cartas de ~190 px no rodapé, cortadas embaixo) com a câmera nova.
-	# D44 (item 10): mudou de novo e DE PROPÓSITO, com o usuário corrigindo o
-	# pedido — a carta NÃO pode crescer, tem que APPROXIMAR DA CÂMERA. Medido
-	# na tela do jogo de verdade: a carta vai de 189 px para 257 px de
-	# largura e o topo da mão de 907 px para 925 px (rodapé, cortada embaixo,
-	# abaixo da fileira de magia que está em 900 px). A trava segue EXATA
-	# (sem folga): o que não pode mudar é o Y/Z medido.
-	assert_almost_eq(p0_m.y, 7.6, 0.0001, "Altura da sua mão = MAO_P0_YZ medida na referência (D44: mão mais perto da câmera).")
-	assert_almost_eq(p0_m.z, 13.0, 0.0001, "Profundidade da sua mão = MAO_P0_YZ medida na referência (D44: mão mais perto da câmera).")
+	# D45 (itens 4, 5 e 6): a ALTURA de cada mão não é mais um número solto
+	# no const — ela é RESOLVIDA da câmera real para a LINHA DE TELA que o
+	# usuário pediu. Por isso a trava mudou de "vale 7,6" para "bate com a
+	# linha", que é o que realmente importa e não quebra se a câmera mudar:
+	#   p0 — o topo da carta na linha de baixo da sua fileira de magia + folga;
+	#   p1 — o centro da carta no meio entre o topo da tela e a linha de cima
+	##        dos slots de magia do rival.
+	var tilt := float(mesa.get("TILT_MAO_LIVRE"))
+	var base_magia_meu := float(mesa.call("_borda_da_fileira_px", 0, "magia", true))
+	var folga := float(mesa.get("MAO_P0_FOLGA_PX"))
+	var cima_mao := cam.unproject_position(p0_m + Vector3(0.0, cos(deg_to_rad(tilt)),
+		sin(deg_to_rad(tilt))) * (ALT_CARTA_TESTE * 0.5))
+	assert_almost_eq(cima_mao.y, base_magia_meu + folga, 1.0,
+		"D45 (item 5): a sua mão é COLADA na linha de baixo da sua fileira de magia (%.1f vs %.1f)." % [
+			cima_mao.y, base_magia_meu + folga])
+	var yz_p0: Vector2 = mesa.get("MAO_P0_YZ")
+	assert_almost_eq(p0_m.z, yz_p0.y, 0.0001,
+		"A profundidade da sua mão é a do const (a ALTURA é resolvida, o z não).")
 	var p1_1: Vector3 = mesa.call("_pos_mao_arco", 0, n1, 1)
 	var p1_m: Vector3 = mesa.call("_pos_mao_arco", _meio_do_arco(n1), n1, 1)
 	var p1_f: Vector3 = mesa.call("_pos_mao_arco", n1 - 1, n1, 1)
 	assert_almost_eq(p1_m.x - p1_1.x, p1_f.x - p1_m.x, 0.001, "Arco da mão do rival simétrico em torno do centro.")
 	# D3: o Y/Z da mão do RIVAL mudou de propósito, e a trava nova é mais
 	# forte que o número solto. Medido: a fileira de magia do rival fica em
-	# z = -4,42 e o ladrilho dela avança até z = -5,36 — com a mão em
-	# z = -5,18 ela ficava DENTRO desse ladrilho e o vidro escuro dele
-	# (alpha 0,72) pintava a metade de baixo das cartas viradas, que na ref
-	# não existe. A trava agora é GEOMÉTRICA: a mão inteira atrás da
-	# pegada do campo, e continua em cima na tela (11%..26% da altura).
+	# z = -4,37 e o ladrilho dela avança até z = -5,34 — com a mão mais
+	# perto disso ela ficava DENTRO desse ladrilho e o vidro escuro dele
+	## (alpha 0,72) pintava a metade de baixo das cartas viradas. A trava
+	## agora é GEOMÉTRICA: a mão inteira atrás da pegada do campo.
 	var peca: float = float(mesa.call("_peca_prof_carta"))
 	var z_dos_slots := 0
 	for zona_nome in ["monster", "spell"]:
@@ -472,17 +492,41 @@ func test_maos_centralizadas_no_x_do_campo() -> void:
 				"Mão do rival atrás do ladrilho %s%d (mao %.2f < vidro %.2f) — nada de vidro na frente." % [
 					("p1_m" if zona_nome == "monster" else "p1_s"), i, p1_m.z, ps.z - peca * 0.5])
 	assert_eq(z_dos_slots, 10, "Os 10 ladrilhos do rival conferidos contra a mão.")
-	assert_almost_eq(p1_m.y, MAO_P1_YZ_TESTE.x, 0.0001, "Altura da mão do rival = MAO_P1_YZ medido na referência.")
-	# Espalhamento preservado: passo por carta.
+	# D45 (item 4): a mão do rival fica PERFEITAMENTE entre o topo da tela e a
+	# linha de cima dos slots de magia dele: não invade a fileira e não sobe
+	# para fora da tela, com o CENTRO no meio do vão entre as duas linhas.
+	var topo_magia_rival := float(mesa.call("_borda_da_fileira_px", 1, "magia", false))
+	var tilt_r := 180.0 + tilt
+	var cima_r := cam.unproject_position(p1_m + Vector3(0.0, cos(deg_to_rad(tilt_r)),
+		sin(deg_to_rad(tilt_r))) * (ALT_CARTA_TESTE * 0.5))
+	var baixo_r := cam.unproject_position(p1_m - Vector3(0.0, cos(deg_to_rad(tilt_r)),
+		sin(deg_to_rad(tilt_r))) * (ALT_CARTA_TESTE * 0.5))
+	assert_true(cima_r.y >= 0.0, "A mão do rival não sobe para fora da tela (topo em %.0f px)." % cima_r.y)
+	assert_true(baixo_r.y <= topo_magia_rival,
+		"A mão do rival não invade a fileira de magia dele (base %.0f <= %.0f px)." % [baixo_r.y, topo_magia_rival])
+	assert_almost_eq((cima_r.y + baixo_r.y) * 0.5, topo_magia_rival * 0.5, 1.0,
+		"A mão do rival é CENTRADA entre o topo da tela e a linha de cima da magia dele (centro em %.0f de %.0f px)." % [
+			(cima_r.y + baixo_r.y) * 0.5, topo_magia_rival * 0.5])
+	# D45 (item 6): ESPAÇO entre as cartas da sua mão. A carta tem 1,0 de
+	# largura, então o vão em pixels é (passo - 1) * px_por_unidade. Com 5
+	# cartas o vão tem que ser VISÍVEL, e o arco inteiro tem que caber na
+	# janela do campo (nada de carta cortada na borda).
 	var passo0 := (p0_m.x - p0_1.x) / float(maxi(_meio_do_arco(n0), 1))
 	var passo1 := (p1_m.x - p1_1.x) / float(maxi(_meio_do_arco(n1), 1))
-	# D44: o passo do SEU lado caiu de 1,06 para 0,84 porque a mão veio mais
-	# perto da câmera (a escala na tela subiu 36% e o passo é em unidades de
-	# mundo). O arco na tela continua com os mesmos 864 px de antes do D44, ou
-	# seja: a mão não invade nada e a de 10 cartas não vaza mais do que já
-	# vazava. A trava é EXATA nos dois lados.
-	assert_almost_eq(passo0, 0.84, 0.001, "Passo por carta da sua mão = MAO_P0_PASSO medido com a mão perto da câmera (D44).")
-	assert_almost_eq(passo1, MAO_P1_PASSO_TESTE, 0.001, "Passo por carta da mão do rival = MAO_P1_PASSO (acompanhado a nova profundidade).")
+	assert_true(passo0 > float(mesa.get("LARG_CARTA")),
+		"D45 (item 6): o passo da sua mão é MAIOR que a carta, então abre vão (passo %.3f > 1,0)." % passo0)
+	var px_u: float = absf(cam.unproject_position(p0_m + Vector3(1, 0, 0)).x - cam.unproject_position(p0_m).x)
+	var vao_px := (passo0 - float(mesa.get("LARG_CARTA"))) * px_u
+	assert_true(vao_px >= 8.0, "D45 (item 6): vão visível entre duas cartas da mão (%.1f px)." % vao_px)
+	var meia_carta := float(mesa.get("LARG_CARTA")) * 0.5
+	var x_janela := float(mesa.get("PAINEL_ESQ_L"))
+	var esq_mao := cam.unproject_position((mesa.call("_pos_mao_arco", 0, n0, 0) as Vector3) - Vector3(meia_carta, 0, 0)).x + x_janela
+	var dir_mao := cam.unproject_position((mesa.call("_pos_mao_arco", n0 - 1, n0, 0) as Vector3) + Vector3(meia_carta, 0, 0)).x + x_janela
+	assert_true(esq_mao >= x_janela,
+		"A carta da ponta esquerda da mão não invade o painel (%.0f px)." % esq_mao)
+	assert_true(dir_mao <= float(mesa.get("TELA_L")),
+		"A carta da ponta direita da mão não sai da tela (%.0f px)." % dir_mao)
+	assert_almost_eq(absf(passo1), MAO_P1_PASSO_TESTE, 0.001, "Passo por carta da mão do rival = MAO_P1_PASSO (espelhado em D45).")
 	# A carta DESENHADA tem que estar no ponto que a função devolveu.
 	var vistas := 0
 	for f in (_n3d(mesa, "Cartas") as Node3D).get_children():
@@ -613,9 +657,17 @@ func test_d44_magia_aproxima_e_mao_vem_para_a_camera() -> void:
 	assert_true(f_m.y < f_s.x, "Ordem da ref no seu lado: monstro ACIMA de magia (%.0f < %.0f)." % [f_m.y, f_s.x])
 
 
-## Teto e base de uma fileira de ladrilhos, em pixels de tela.
+## Teto e base de uma fileira de ladrilhos, em pixels de tela. A borda é
+## medida na FACE DE CIMA do ladrilho (TOPO - 0,005, que é onde a caixa de
+## vidro assenta), e não num ponto chutado acima: é essa a superfície que a
+## faixa do meio tem que encostar sem invadir (D45, item 2).
 func _faixa_px(mesa: Node, cam: Camera3D, lado: int, tipo: String, peca: float) -> Vector2:
 	var letra: String = "m" if tipo == "monstro" else "s"
+	# A borda é medida na FACE DE CIMA do ladrilho (TOPO_PISO, o plano onde a
+	# caixa de vidro assenta) e não num ponto chutado: é essa a superfície que
+	# a faixa do meio encosta sem invadir (D45, item 2). O nó do painel tem
+	# y = 0, então o plano entra como posição ABSOLUTA.
+	var piso := float(mesa.get("TOPO_PISO"))
 	var t := 1e9
 	var b := -1e9
 	for i in range(5):
@@ -623,11 +675,10 @@ func _faixa_px(mesa: Node, cam: Camera3D, lado: int, tipo: String, peca: float) 
 		for sx in [-1.0, 1.0]:
 			for sz in [-1.0, 1.0]:
 				var q := cam.unproject_position(
-					no.position + Vector3(sx * peca * 0.5, 0.02, sz * peca * 0.5))
+					no.position + Vector3(sx * peca * 0.5, piso, sz * peca * 0.5))
 				t = minf(t, q.y)
 				b = maxf(b, q.y)
 	return Vector2(t, b)
-
 
 ## Vão entre a fileira de monstro e a de magia, borda a borda, em pixels.
 func _vao_vertical_px(mesa: Node, cam: Camera3D, lado: int, peca: float) -> float:
@@ -667,6 +718,29 @@ func test_topo_so_retratos_com_nome_e_nada_mais() -> void:
 	assert_true(rv.position.x < rr.position.x, "Seu retrato a ESQUERDA, o do rival a DIREITA.")
 	assert_true(rv.position.x >= 562.0, "Seu retrato nunca invade o painel esquerdo (x %d)." % int(rv.position.x))
 	assert_true(rr.position.x + rr.size.x <= 1920.0, "Retrato do rival dentro da tela (%d)." % int(rr.position.x + rr.size.x))
+	# D45 (item 1): "a imagem dos duelistas bem pra cima, dando o mesmo espaço
+	# entre as laterais e a parte de cima" e "a parte de cima da imagem e a
+	# parte de cima do bloco de nomes na mesma linha". A trava é geométrica:
+	# a MESMA margem nos 3 lados da janela do campo e o TOPO da placa de nome
+	# batendo com o TOPO da foto (antes a placa era centralizada na altura).
+	var margem := float(mesa.get("RETRATO_MARGEM"))
+	var x_janela := float(mesa.get("PAINEL_ESQ_L"))
+	var tela := float(mesa.get("TELA_L"))
+	assert_almost_eq(rv.position.x - x_janela, margem, 0.001,
+		"D45 (item 1): seu retrato com a MESMA margem da borda esquerda (%.0f px)." % margem)
+	assert_almost_eq(tela - (rr.position.x + rr.size.x), margem, 0.001,
+		"D45 (item 1): retrato do rival com a MESMA margem da borda direita (%.0f px)." % margem)
+	for quem in ["Voce", "Rival"]:
+		var foto := mesa.get_node("HUD/Retrato%s" % quem) as Control
+		var placa := mesa.get_node("HUD/Nome%s" % quem) as Control
+		assert_almost_eq(foto.position.y, margem, 0.001,
+			"D45 (item 1): retrato %s colado na beirada de cima (y %.0f px)." % [quem, margem])
+		assert_almost_eq(placa.position.y, foto.position.y, 0.001,
+			"D45 (item 1): o bloco de nome %s começa na MESMA linha do topo da foto (%.0f = %.0f px)." % [
+				quem, placa.position.y, foto.position.y])
+		# E a placa nunca invade o painel esquerdo.
+		assert_true(placa.position.x >= 562.0,
+			"D45 (item 1): a placa de nome %s não invade o painel esquerdo (x %d)." % [quem, int(placa.position.x)])
 	# Nome real do dado, do lado de dentro de cada retrato (espelhado).
 	var placas_nome := 0
 	for c in (mesa.get_node("HUD") as Control).get_children():
@@ -683,11 +757,13 @@ func test_topo_so_retratos_com_nome_e_nada_mais() -> void:
 		"Placeholder do rival com a INICIAL do nome (o pack não tem foto).")
 	assert_eq(str((rv.get_node("Silhueta") as Label).text), _inicial(str(mesa.get("_nome_voce"))),
 		"Placeholder seu com a INICIAL do nome (o pack não tem foto).")
-	# Nada de texto de LP/turno sobrou no topo.
+	# Nada de texto de LP/turno sobrou no TOPO — a única faixa com LP e turno é
+	# a do MEIO (D45: `HUD/Faixa2D`), que é onde o usuário mandou ficar.
 	var texts: Array = []
 	_coletar(mesa.get_node("HUD"), texts)
+	var faixa2d := mesa.get_node("HUD/Faixa2D") as Node
 	for n in texts:
-		if n is Label:
+		if n is Label and not _dentro_de(n as Node, faixa2d):
 			var t := str((n as Label).text)
 			assert_false(t.contains("LP"), "Sem rótulo LP no topo: " + t)
 			assert_false(t.contains("TURN"), "Sem rótulo TURN no topo: " + t)
@@ -835,263 +911,131 @@ func test_painel_esquerdo_carta_focada() -> void:
 
 
 ## ---- D44 (itens 3, 4, 6 e 11): a FAIXA DO MEIO e a limpeza da tela ----
+## ---- D44/D45: A FAIXA DO MEIO (agora 2D) e a limpeza da tela ------------
+## D45 (item 2 do usuário): a faixa do meio SAIU do 3D e virou 2D no HUD
+## ("agora em 2d, assim fica mais facil, podemos fazer algo bonito que mostre
+## isso e tambem tenha um contador de cartas ainda no deck e contador de cartas
+## no cemiterio"). As 7 células continuam NA ORDEM que o usuário ditou.
 
-## A ORDEM dos 7 itens, tal e qual o usuario ditou, lida direto da cena.
+## A ORDEM dos 7 itens, tal e qual o usuário ditou, lida direto da cena.
 const ORDEM_FAIXA := ["MeuDeck", "MeuCemiterio", "LpVoce", "Turno", "LpRival",
 	"CemRival", "DeckRival"]
 
 
-func _altura_da_pilha(no: Node3D) -> float:
-	var corpo := no.get_node("Corpo") as MeshInstance3D
-	return (corpo.mesh as BoxMesh).size.y
+## Celulas da faixa 2D na tela, na ordem em que aparecem.
+func _celulas_faixa2d(mesa: Node) -> Array:
+	var linha := mesa.get_node("HUD/Faixa2D/Celulas")
+	return linha.get_children() if linha != null else []
 
 
-## Assinatura de uma textura pra comparar duas: o jogo carrega as imagens
-## com `ImageTexture.create_from_image`, então o `resource_path` é VAZIO em
-## todas — comparar por ele seria uma trava que nunca pega. Aqui é o hash do
-## pixel de verdade (tamanho + conteúdo).
-func _assinatura_tex(tex: Texture2D) -> int:
-	if tex == null:
-		return 0
-	var img := tex.get_image()
-	if img == null:
-		return -1
-	var dados := img.get_data()
-	# `hash()` global não existe para PackedByteArray nesta versão: soma dos
-	# bytes (com posição) é estável e basta para dizer "é a mesma imagem".
-	var soma := 0
-	for i in range(0, dados.size(), 7):
-		soma = (soma * 31 + dados[i]) & 0x7FFFFFFF
-	return hash("%dx%d:%d" % [img.get_width(), img.get_height(), soma])
+## O rótulo de número de uma célula (deck/cemitério têm a pilhinha no meio,
+## então o número mora um nível abaixo).
+func _numero_da_celula(mesa: Node, nome: String) -> Label:
+	var cel := mesa.get_node("HUD/Faixa2D/Celulas/" + nome) as Control
+	if cel == null:
+		return null
+	return cel.get_node_or_null(NodePath("Caixa/Numero")) as Label if cel.get_node_or_null(NodePath("Caixa/Numero")) != null else cel.get_node_or_null(NodePath("Caixa/Pilha/Numero")) as Label
 
 
-func _topo_da_pilha(no: Node3D) -> MeshInstance3D:
-	return no.get_node("Topo") as MeshInstance3D
-
-
-func test_d44_faixa_ordem_dos_7_itens_sem_sobrepor() -> void:
-	# D44: a faixa do meio tem os 7 itens NA ORDEM do usuário — baralho meu,
-	# cemitério meu, meu LP, turno, LP do rival, cemitério do rival, baralho
-	# do rival — no vão entre as fileiras de monstro, dentro da janela 3D, e
-	# sem um por cima do outro.
+func test_d45_faixa_2d_no_vao_entre_as_fileiras_na_ordem_do_usuario() -> void:
+	# D45 (item 2): a faixa do meio é 2D (no HUD), tem as 7 células NA ORDEM
+	# do usuário (baralho meu, cemitério meu, meu LP, turno, LP do rival,
+	# cemitério do rival, baralho do rival) e fica NO VÃO entre as duas
+	# fileiras de monstro — sem cobrir nenhuma delas e sem sair da janela.
 	var mesa: Node = await _mesa3d_nova()
-	var st = mesa.get("_st")
 	var cam := _n3d(mesa, "Camera3D") as Camera3D
-	var faixa := _n3d(mesa, "Campo/Faixa") as Node3D
-	assert_true(faixa != null, "A faixa do meio existe no 3D.")
-	var filhos := faixa.get_children()
-	assert_eq(filhos.size(), 7, "A faixa tem exatamente 7 itens (nada mais): %d." % filhos.size())
-	for i in range(mini(filhos.size(), 7)):
-		assert_eq(str((filhos[i] as Node).name), ORDEM_FAIXA[i],
-			"Item %d da faixa é %s (a ordem do usuário)." % [i + 1, ORDEM_FAIXA[i]])
-	# Espaçamento em X medido na tela: cada um começa depois do fim do
-	# anterior (nada se sobrepõe) e o TURNO fica no centro da janela 3D.
-	var x_janela: float = float(mesa.get("PAINEL_ESQ_L"))
-	var centro: float = cam.unproject_position(Vector3(0.0, 0.35, 0.0)).x + x_janela
-	var fim_ant := -1.0
-	var bboxes: Array = []
-	for i in range(7):
-		var no := faixa.get_child(i) as Node3D
-		var b := _bbox_no_3d(cam, no, x_janela)
-		bboxes.append(b)
-		assert_true(b.x > fim_ant, "Item %d (%s) começa depois do anterior: %.0f > %.0f" % [
-			i + 1, ORDEM_FAIXA[i], b.x, fim_ant])
-		fim_ant = b.z
-		assert_true(b.x >= 562.0, "Item %d nunca invade o painel esquerdo: %.0f." % [i + 1, b.x])
-		assert_true(b.z <= 1920.0, "Item %d nunca sai pela direita: %.0f." % [i + 1, b.z])
-	var meio_turno := (bboxes[3] as Vector4)
-	assert_almost_eq((meio_turno.x + meio_turno.z) * 0.5, centro, 2.0,
-		"O TURNO fica no centro da janela 3D (%.0f vs %.0f)." % [(meio_turno.x + meio_turno.z) * 0.5, centro])
-	# Espelho visual: o item 1 e o item 7 são simétricos em relação ao centro.
-	var b1 := bboxes[0] as Vector4
-	var b7 := bboxes[6] as Vector4
-	assert_almost_eq((b1.x + b1.z) * 0.5, 2.0 * centro - (b7.x + b7.z) * 0.5, 2.0,
-		"Meu baralho e o do rival são espelhados no centro da faixa.")
-	# A faixa está NO VAO entre as duas fileiras de monstro: acima da base da
-	# fileira do rival e abaixo do topo da fileira do jogador, sem encostar.
-	var base_rival := _faixa_px(mesa, cam, 1, "monstro", float(mesa.call("_peca_prof_carta"))).y
-	var topo_meu := _faixa_px(mesa, cam, 0, "monstro", float(mesa.call("_peca_prof_carta"))).x
-	for i in range(7):
-		var b := bboxes[i] as Vector4
-		assert_true(b.y >= base_rival, "Item %d (%s) não invade a fileira do rival: topo %.0f >= base %.0f." % [
-			i + 1, ORDEM_FAIXA[i], b.y, base_rival])
-		assert_true(b.w <= topo_meu, "Item %d (%s) não invade a sua fileira: base %.0f <= topo %.0f." % [
-			i + 1, ORDEM_FAIXA[i], b.w, topo_meu])
-	assert_true(true, "Faixa medida.")
+	var barra := mesa.get_node_or_null(NodePath("HUD/Faixa2D")) as Control
+	assert_true(barra != null, "A faixa do meio existe em 2D (HUD/Faixa2D).")
+	var cels := _celulas_faixa2d(mesa)
+	assert_eq(cels.size(), 7, "A faixa tem exatamente 7 células (nada mais): %d." % cels.size())
+	for i in range(mini(cels.size(), 7)):
+		assert_eq(str((cels[i] as Node).name), ORDEM_FAIXA[i],
+			"Célula %d da faixa é %s (a ordem do usuário)." % [i + 1, ORDEM_FAIXA[i]])
+	# O VÃO entre as duas fileiras de monstro: a faixa fica DENTRO dele, com
+	# folga dos dois lados (medido em pixel de tela, como o usuário vê).
+	var peca := float(mesa.call("_peca_prof_carta"))
+	var base_rival := _faixa_px(mesa, cam, 1, "monstro", peca).y
+	var topo_meu := _faixa_px(mesa, cam, 0, "monstro", peca).x
+	assert_true(barra.position.y >= base_rival,
+		"A faixa não invade a fileira de monstros do RIVAL (topo %.0f >= base %.0f px)." % [barra.position.y, base_rival])
+	assert_true(barra.position.y + barra.size.y <= topo_meu,
+		"A faixa não invade a sua fileira de monstros (base %.0f <= topo %.0f px)." % [barra.position.y + barra.size.y, topo_meu])
+	# E fica CENTRADA no vão (o que o usuário pediu: "bem no meio entre meu
+	# slots de monstros e os slots de monstros do inimigo").
+	var centro := barra.position.y + barra.size.y * 0.5
+	var meio_vao := (base_rival + topo_meu) * 0.5
+	assert_almost_eq(centro, meio_vao, 2.0,
+		"A faixa é CENTRADA no vão entre as fileiras (%.0f vs %.0f px)." % [centro, meio_vao])
+	# Dentro da janela do campo, sem encostar no painel esquerdo nem na borda.
+	var x_janela := float(mesa.get("PAINEL_ESQ_L"))
+	assert_true(barra.position.x >= x_janela,
+		"A faixa não invade o painel esquerdo (x %.0f)." % barra.position.x)
+	assert_true(barra.position.x + barra.size.x <= float(mesa.get("TELA_L")),
+		"A faixa não sai pela direita (x %.0f)." % (barra.position.x + barra.size.x))
+	# Nada de clique: a faixa é IGNORE como o resto da tela (D19).
+	for c in cels:
+		assert_eq((c as Control).mouse_filter, Control.MOUSE_FILTER_IGNORE,
+			"A célula %s é sem clique (D19)." % str((c as Node).name))
 
 
-## BBox de um item 3D na tela (x0,y0,x1,y1), já em px do canvas.
-
-
-
-func _bbox_no_3d(cam: Camera3D, no: Node3D, x_janela: float = 0.0) -> Vector4:
-	var meia := Vector3(0.25, 0.02, 0.34)
-	var corpo := no.get_node_or_null(NodePath("Corpo")) as MeshInstance3D
-	if corpo != null and corpo.mesh != null:
-		meia = Vector3((corpo.mesh as BoxMesh).size.x * 0.5, (corpo.mesh as BoxMesh).size.y, (corpo.mesh as BoxMesh).size.z * 0.5)
-	else:
-		var aro := no.get_node_or_null(NodePath("Aro")) as MeshInstance3D
-		if aro != null and aro.mesh != null:
-			var mb := aro.mesh as BoxMesh
-			meia = Vector3(mb.size.x * 0.5, mb.size.y, mb.size.z * 0.5)
-	var x0 := 1e9
-	var y0 := 1e9
-	var x1 := -1e9
-	var y1 := -1e9
-	for sx in [-1.0, 1.0]:
-		for sz in [-1.0, 1.0]:
-			for sy in [0.0, 1.0]:
-				var t := cam.unproject_position(no.position + Vector3(sx * meia.x, sy * meia.y, sz * meia.z))
-				x0 = minf(x0, t.x)
-				x1 = maxf(x1, t.x)
-				y0 = minf(y0, t.y)
-				y1 = maxf(y1, t.y)
-	return Vector4(x0 + x_janela, y0, x1 + x_janela, y1)
-
-
-func test_d44_espessura_da_pilha_cresce_com_a_quantidade_real() -> void:
-	# D44 (item 4): "se tiver uma carta só no deck, então a representação
-	# visual vai ser um deck bem mais fino, se eu tiver umas 20 cartas, eu
-	# quero que seja mais grosso". A espessura é lida do GameState real, nos
-	# dois lados, e baralho cheio > baralho com 3 cartas.
+func test_d45_faixa_2d_mostra_a_quantidade_real_de_cartas() -> void:
+	# D45 (item 2): "tenha um contador de cartas ainda no deck e contador de
+	# cartas no cemiterio". A CONTAGEM vem do GameState real dos dois lados e
+	# acompanha a mudança (compra, descarte, carta morta) — nunca um número
+	# chutado e nunca "x/N" inventado.
 	var mesa: Node = await _mesa3d_nova()
 	var st = mesa.get("_st")
-	var faixa := _n3d(mesa, "Campo/Faixa") as Node3D
-	var deck_meu := faixa.get_node("MeuDeck") as Node3D
-	var deck_rival := faixa.get_node("DeckRival") as Node3D
-	var cem_meu := faixa.get_node("MeuCemiterio") as Node3D
-	var cem_rival := faixa.get_node("CemRival") as Node3D
-	var cartas := (st.players[0] as Dictionary)["deck"] as Array
-	var cheio: int = cartas.size()
-	assert_true(cheio > 3, "Preparo: o baralho real tem mais de 3 cartas (%d)." % cheio)
-	# 1) Baralho CHEIO: a espessura tem que bater com a fórmula da quantidade.
+	for nome in ["MeuDeck", "DeckRival", "MeuCemiterio", "CemRival"]:
+		var cel := mesa.get_node("HUD/Faixa2D/Celulas/" + nome) as Control
+		assert_true(cel != null, "A célula existe: " + nome)
+		assert_true(cel.get_node_or_null(NodePath("Caixa/Pilha/Pilha")) != null or cel.get_node_or_null(NodePath("Caixa/Pilha")) != null,
+			"D45: a célula de pilha tem o desenho da pilhinha de carta: " + nome)
+	# O valor bate com o estado real.
+	for par in [["MeuDeck", 0, "deck"], ["DeckRival", 1, "deck"],
+			["MeuCemiterio", 0, "graveyard"], ["CemRival", 1, "graveyard"]]:
+		var nome := str(par[0])
+		var lado := int(par[1])
+		var chave := str(par[2])
+		var esperado: int = ((st.players[lado] as Dictionary)[chave] as Array).size()
+		var lbl := _numero_da_celula(mesa, nome)
+		assert_eq(str(lbl.text), str(esperado),
+			"%s mostra a CONTAGEM real de %s (%d cartas)." % [nome, chave, esperado])
+	# Uma carta a mais no baralho e uma a mais no cemitério = +1 na tela.
+	var deck0: Array = (st.players[0] as Dictionary)["deck"] as Array
+	var cem0: Array = (st.players[0] as Dictionary)["graveyard"] as Array
+	var guardado: Variant = deck0.pop_back()
+	deck0.append(guardado)
+	cem0.append(str((guardado as Dictionary).get("id", "")))
 	mesa.call("_atualizar_faixa")
-	var h_cheio := _altura_da_pilha(deck_meu)
-	assert_almost_eq(h_cheio, float(mesa.call("_espessura_pilha", cheio)), 0.0001,
-		"Espessura do baralho cheio = quantidade real (%d cartas)." % cheio)
-	# 2) Baralho com 3 cartas: a pilha fica bem mais fina.
+	assert_eq(str(_numero_da_celula(mesa, "MeuDeck").text), str(deck0.size()),
+		"Meu deck seguiu a mudança de estado.")
+	assert_eq(str(_numero_da_celula(mesa, "MeuCemiterio").text), str(cem0.size()),
+		"Meu cemitério seguiu a mudança de estado.")
+	# Deck VAZIO e cemitério vazio = 0 na tela (não some, não inventa número).
 	var guardadas: Array = []
-	while cartas.size() > 3:
-		guardadas.append(cartas.pop_back())
+	while deck0.size() > 0:
+		guardadas.append(deck0.pop_front())
 	mesa.call("_atualizar_faixa")
-	var h_3 := _altura_da_pilha(deck_meu)
-	assert_true(h_3 < h_cheio * 0.5, "Baralho com 3 cartas (%0.3f) bem mais fino que cheio (%0.3f)." % [h_3, h_cheio])
-	# 3) Com a MESMA quantidade nos dois lados, a espessura é a mesma.
-	var cartas_rival: Array = (st.players[1] as Dictionary)["deck"] as Array
-	var guardadas_r: Array = []
-	while cartas_rival.size() > 3:
-		guardadas_r.append(cartas_rival.pop_back())
-	mesa.call("_atualizar_faixa")
-	assert_almost_eq(_altura_da_pilha(deck_meu), _altura_da_pilha(deck_rival), 0.000001,
-		"Mesma quantidade de cartas = mesma espessura nos 2 barinhos.")
-	# 4) O CEMITÉRIO também é proporcional (e some de vez quando está vazio).
-	var cem0: Array = (st.players[0] as Dictionary)["graveyard"] as Array
-	var ids: Array = []
-	for i in range(5):
-		ids.append(cartas[cartas.size() - 1 - i])
-		cem0.append(str(cartas[cartas.size() - 1 - i]))
-	mesa.call("_atualizar_faixa")
-	var h_cem5 := _altura_da_pilha(cem_meu)
-	assert_true(h_cem5 > h_3, "Cemitério com 5 cartas (%.3f) mais grosso que baralho com 3 (%.3f)." % [h_cem5, h_3])
-	while cem0.size() > 0:
-		cem0.pop_back()
-	mesa.call("_atualizar_faixa")
-	assert_almost_eq(_altura_da_pilha(cem_meu), float(mesa.call("_espessura_pilha", 0)), 0.000001,
-		"Cemitério vazio = pilha na altura mínima (não some, não inventa).")
-	# 5) Um baralho VAZIO é a pilha mais fina possível.
-	cartas.clear()
-	mesa.call("_atualizar_faixa")
-	assert_almost_eq(_altura_da_pilha(deck_meu), 0.014, 0.000001, "Baralho vazio = pilha fininha (0,014).")
-	# Devolve o estado (o teste não pode contaminar o resto).
+	assert_eq(str(_numero_da_celula(mesa, "MeuDeck").text), "0", "Baralho vazio mostra 0.")
 	for c in guardadas:
-		cartas.push_front(c)
-	for c2 in guardadas_r:
-		cartas_rival.push_front(c2)
-	for cid in ids:
-		cem0.append(str(cid))
+		deck0.append(c)
+	cem0.pop_back()
 	mesa.call("_atualizar_faixa")
-	assert_almost_eq(_altura_da_pilha(deck_meu), h_cheio, 0.000001, "Baralho restaurado no teste.")
+	assert_eq(str(_numero_da_celula(mesa, "MeuCemiterio").text), str(cem0.size()),
+		"Cemitério voltou ao valor real no fim do teste.")
 
 
-func test_d44_deck_sempre_virado_para_baixo_e_cemiterio_para_cima() -> void:
-	# D44 (item 4): o DECK é SEMPRE mostrado virado para baixo (o verso real
-	# do jogo) e o CEMITÉRIO SEMPRE virado para cima, com a carta MAIS
-	# RECENTE no topo. Isso tem que valer com o cemitério vazio e cheio.
+func test_d45_faixa_2d_lp_e_turno_vem_do_estado_real() -> void:
+	# D45 (item 2): o LP dos dois lados e o turno atual continuam na faixa do
+	# meio (que virou 2D), com o VALOR REAL do GameState — nunca um número
+	# chutado, e a placa do MEU lado é azul e a do RIVAL é vermelha.
 	var mesa: Node = await _mesa3d_nova()
 	var st = mesa.get("_st")
-	var faixa := _n3d(mesa, "Campo/Faixa") as Node3D
-	var verso: Texture2D = mesa.call("_textura_arquivo", "assets/backs/verso_padrao.png")
-	assert_true(verso != null, "O verso real do jogo existe (assets/backs/verso_padrao.png).")
-	for par in [[0, "MeuDeck"], [1, "DeckRival"]]:
-		var lado := int(par[0])
-		var no := faixa.get_node(str(par[1])) as Node3D
-		var topo := _topo_da_pilha(no)
-		assert_true(topo != null, "O baralho tem a face de cima desenhada: " + str(par[1]))
-		var mat := topo.material_override as StandardMaterial3D
-		assert_eq(_assinatura_tex(mat.albedo_texture), _assinatura_tex(verso),
-			"Baralho %s com o VERSO real (virado para baixo)." % str(par[1]))
-		# E o corpo dele é a pilha, não a carta: a face fica no topo.
-		assert_almost_eq(topo.position.y, _altura_da_pilha(no) + 0.004, 0.0001,
-			"A face do baralho fica NO TOPO da pilha (não escondida dentro).")
-		# Nunca mostra a arte de uma carta: baralho é verso, sempre.
-		assert_true(mat.albedo_color.a < 1.0 or mat.albedo_texture != null,
-			"Baralho %s sem carta de frente." % str(par[1]))
-	# CEMITÉRIO VAZIO: nenhuma carta inventada no topo.
-	for par2 in [[0, "MeuCemiterio"], [1, "CemRival"]]:
-		var cem := faixa.get_node(str(par2[1])) as Node3D
-		var mat_cem := (_topo_da_pilha(cem).material_override) as StandardMaterial3D
-		assert_eq(mat_cem.albedo_texture, null, "Cemitério %s vazio não mostra carta nenhuma." % str(par2[1]))
-	# CEMITÉRIO CHEIO: a carta do topo é a ÚLTIMA do dado (a mais recente).
-	# Escolhe uma carta de cada TIPO (monstro e magia): a moldura de cada tipo
-	# é uma imagem diferente, então a trava distingue "a mais recente" de
-	# "a mais antiga" mesmo sem arte (no teste não há arte, só a moldura).
-	var cartas: Array = (st.players[0] as Dictionary)["deck"] as Array
-	var cem0: Array = (st.players[0] as Dictionary)["graveyard"] as Array
-	var por_tipo: Dictionary = {}
-	for i in range(cartas.size() - 1, -1, -1):
-		var cd := cartas[i] as Dictionary
-		var ct := str(cd.get("card_type", "monster"))
-		if not por_tipo.has(ct) and not str(cd.get("id", "")).is_empty():
-			por_tipo[ct] = cd
-	assert_true(por_tipo.size() >= 2, "Preparo: o baralho tem cartas de 2 tipos ou mais: %s" % str(por_tipo.keys()))
-	var tipos: Array = por_tipo.keys()
-	var mais_antiga_c: Dictionary = por_tipo[tipos[0]]
-	var mais_recente_c: Dictionary = por_tipo[tipos[1]]
-	# A MAIS ANTIGA entra primeiro; a MAIS RECENTE entra por último.
-	cem0.append(str(mais_antiga_c.get("id", "")))
-	cem0.append(str(mais_recente_c.get("id", "")))
-	mesa.call("_atualizar_faixa")
-	var lidas: Array = mesa.call("_cartas_do_cemiterio", 0)
-	assert_eq(lidas.size(), 2, "Cemitério com as 2 cartas do teste.")
-	assert_eq(str((lidas[0] as Dictionary).get("id", "")), str(mais_antiga_c.get("id", "")),
-		"O cemitério é lido da mais antiga para a mais nova.")
-	var mais_recente := lidas[lidas.size() - 1] as Dictionary
-	assert_eq(str(mais_recente.get("id", "")), str(mais_recente_c.get("id", "")),
-		"A carta do topo do cemitério é a MAIS RECENTE (a última que entrou no dado).")
-	var tex_topo := (_topo_da_pilha(faixa.get_node("MeuCemiterio") as Node3D).material_override) as StandardMaterial3D
-	var esperada: Texture2D = mesa.call("_textura_da_carta_para_pilha", mais_recente)
-	var tex_antiga: Texture2D = mesa.call("_textura_da_carta_para_pilha", mais_antiga_c)
-	# A prova só vale se as duas cartas tiverem imagens DIFERENTES: senão a
-	# trava passaria com a carta errada no topo.
-	assert_true(_assinatura_tex(esperada) != _assinatura_tex(tex_antiga),
-		"As duas cartas do teste têm molduras diferentes (a trava tem força).")
-	assert_eq(_assinatura_tex(tex_topo.albedo_texture), _assinatura_tex(esperada),
-		"O cemitério mostra a arte REAL da carta mais recente, virada para cima.")	# Sabotagem: se a pilha do cemitério mostrasse o VERSO, a trava acima cai.
-	assert_true(_assinatura_tex(esperada) != _assinatura_tex(verso), "A carta do cemitério NÃO é o verso do baralho (são coisas diferentes).")
-	while cem0.size() > 0:
-		cem0.pop_back()
-	mesa.call("_atualizar_faixa")
-
-
-func test_d44_lp_e_turno_da_faixa_vem_do_estado_real() -> void:
-	# D44 (item 6): o LP dos dois lados e o turno atual, na faixa do meio,
-	# com o VALOR REAL do GameState — nunca um número chutado.
-	var mesa: Node = await _mesa3d_nova()
-	var st = mesa.get("_st")
-	var faixa := _n3d(mesa, "Campo/Faixa") as Node3D
-	var lp_meu := faixa.get_node("LpVoce/Numero") as Label3D
-	var lp_rival := faixa.get_node("LpRival/Numero") as Label3D
-	var turno := faixa.get_node("Turno/Numero") as Label3D
+	var lp_meu := _numero_da_celula(mesa, "LpVoce")
+	var lp_rival := _numero_da_celula(mesa, "LpRival")
+	var turno := _numero_da_celula(mesa, "Turno")
+	assert_true(lp_meu != null and lp_rival != null and turno != null,
+		"A faixa tem as 3 placas de número (LP seu, LP rival, turno).")
 	assert_eq(str(lp_meu.text), str(int((st.players[0] as Dictionary)["lp"])), "Meu LP com o valor real do estado.")
 	assert_eq(str(lp_rival.text), str(int((st.players[1] as Dictionary)["lp"])), "LP do rival com o valor real do estado.")
 	assert_eq(str(turno.text), str(int(st.turn_number)), "Turno com o número real do estado.")
@@ -1100,18 +1044,128 @@ func test_d44_lp_e_turno_da_faixa_vem_do_estado_real() -> void:
 	(st.players[0] as Dictionary)["lp"] = lp_antes - 1500
 	(st.players[1] as Dictionary)["lp"] = 1234
 	st.turn_number = 7
-	mesa.call("_atualizar_hud")
+	mesa.call("_atualizar_faixa")
 	assert_eq(str(lp_meu.text), str(lp_antes - 1500), "Meu LP seguiu a mudança do estado.")
 	assert_eq(str(lp_rival.text), "1234", "LP do rival seguiu a mudança do estado.")
 	assert_eq(str(turno.text), "7", "Turno seguiu a mudança do estado.")
-	# A placa do MEU lado é azul e a do RIVAL é vermelha (leitura de quem sou eu).
-	var vidro_meu := ((faixa.get_node("LpVoce") as Node3D).get_node("Vidro") as MeshInstance3D).material_override as StandardMaterial3D
-	var vidro_rival := ((faixa.get_node("LpRival") as Node3D).get_node("Vidro") as MeshInstance3D).material_override as StandardMaterial3D
-	assert_true(vidro_meu.albedo_color.b > vidro_meu.albedo_color.r, "Meu LP em azul.")
-	assert_true(vidro_rival.albedo_color.r > vidro_rival.albedo_color.b, "LP do rival em vermelho.")
+	# Fim de jogo: a célula do turno mostra VITÓRIA/DERROTA (estado real).
+	(st.players[0] as Dictionary)["lp"] = lp_antes
+	(st.players[1] as Dictionary)["lp"] = 8000
+	st.turn_number = 3
+	st.over = true
+	st.winner = 0
+	mesa.call("_atualizar_faixa")
+	assert_eq(str(turno.text), "VITORIA!", "Duelo ganho: a faixa anuncia VITÓRIA.")
+	st.over = true
+	st.winner = 1
+	mesa.call("_atualizar_faixa")
+	assert_eq(str(turno.text), "DERROTA", "Duelo perdido: a faixa anuncia DERROTA.")
+	st.over = false
 
 
-func test_d44_tela_sem_fases_nem_lixo_de_canto() -> void:
+func test_d45_nada_de_faixa_no_3d() -> void:
+	# D45 (item 2): o 3D do meio ficou VAZIO. Nenhuma pilha, nenhuma placa de
+	# LP/turno e nenhum "Bloco" de carta no campo 3D — a informação é TODA da
+	# faixa 2D (é o que o usuário pediu ao trocar a faixa para 2D).
+	var mesa: Node = await _mesa3d_nova()
+	assert_true(_n3d(mesa, "Campo/Faixa") == null, "Não existe mais a faixa 3D no campo.")
+	for nome in ["MeuDeck", "DeckRival", "MeuCemiterio", "CemRival", "LpVoce", "LpRival", "Turno"]:
+		assert_true(_n3d(mesa, "Campo/Faixa/" + nome) == null, "Sem peça 3D da faixa: " + nome)
+	# Nenhum MeshInstance3D no meio do campo com nome de pilha/placa.
+	var achados: Array = []
+	var todos: Array = []
+	_coletar(_n3d(mesa, "Campo"), todos)
+	for n in todos:
+		var nome := str((n as Node).name)
+		if nome in ["MeuDeck", "DeckRival", "MeuCemiterio", "CemRival", "LpVoce", "LpRival", "Turno", "Corpo", "Moldura", "Fatias", "Topo", "Aro", "Vidro", "Numero"]:
+			achados.append(nome)
+	assert_eq(achados.size(), 0, "Nenhum desenho de pilha/placa sobrou no 3D: %s" % str(achados))
+	# E a faixa 2D está lá, no HUD (a mesma informação, em pixel puro).
+	assert_true(mesa.get_node_or_null(NodePath("HUD/Faixa2D")) != null, "A faixa 2D continua no HUD.")
+	assert_eq((_n3d(mesa, "Campo/Laterais") as Node3D).get_child_count(), 0,
+		"O guarda-chuva Laterais continua vazio (nada de desenho no canto).")
+
+func test_d45_mao_comprada_entra_na_quinta_posicao_dos_dois_lados() -> void:
+	# D45 (item 8): "quando compramos uma carta ela sempre tem que ficar na
+	# quinta posição da minha mão. Mesmo que eu desça para o campo a segunda
+	# carta, então meu deck vai se organizar para a terceira virar a segunda...
+	# isso vale para o rival também, só que é ao contrário, então a carta dele
+	# que ele compra sempre entra pela esquerda."
+	# O que trava: (1) a COMPRA real do TurnManager põe a carta no FIM do
+	# dado (é a regra, e o dado não muda aqui); (2) na TELA, a última posição
+	# do dado é a 5ª POSIÇÃO DA MÃO de quem joga — a direita para você, a
+	# ESQUERDA para o rival, porque ele está do outro lado da mesa.
+	var mesa: Node = await _mesa3d_nova()
+	var st = mesa.get("_st")
+	var cam := _n3d(mesa, "Camera3D") as Camera3D
+	var xj := float(mesa.get("PAINEL_ESQ_L"))
+	for lado in [0, 1]:
+		var mao: Array = (st.players[lado] as Dictionary)["hand"] as Array
+		var n: int = mao.size()
+		assert_true(n >= 2, "Preparo: p%d tem cartas na mão (%d)." % [lado, n])
+		var x_primeira := cam.unproject_position(mesa.call("_pos_mao_arco", 0, n, lado)).x + xj
+		var x_ultima := cam.unproject_position(mesa.call("_pos_mao_arco", n - 1, n, lado)).x + xj
+		if lado == 0:
+			assert_true(x_ultima > x_primeira,
+				"D45 (item 8): para VOCÊ a última carta da mão (a comprada) é a DA DIREITA (%.0f > %.0f px)." % [
+					x_ultima, x_primeira])
+		else:
+			assert_true(x_ultima < x_primeira,
+				"D45 (item 8): para o RIVAL a última carta da mão (a comprada dele) é a DA ESQUERDA (%.0f < %.0f px)." % [
+					x_ultima, x_primeira])
+	# COMPRA DE VERDADE (TurnManager real, sem dublê): a carta comprada entra
+	# no fim da mão, então ela é a 5ª posição na tela — depois de tirar uma
+	# carta do meio, quem "anda" é o resto.
+	var p: Dictionary = st.players[0] as Dictionary
+	var mao0: Array = p["hand"]
+	var deck: Array = p["deck"]
+	var tirada: Dictionary = {}
+	if deck.size() > 0:
+		tirada = (deck[deck.size() - 1] as Dictionary).duplicate(true)
+		deck.remove_at(deck.size() - 1)
+	else:
+		tirada = {"id": "d45_tirada", "name": "D45", "card_type": "monster", "attribute": "earth",
+			"level": 4, "attack": 1000, "defense": 1000}
+	# Tira a 2ª carta da mão (o "desci para o campo"), como no exemplo do
+	# usuário, e compra uma: o dado tem que virar [1ª, 3ª, 4ª, 5ª, COMPRADA].
+	var n_antes := mao0.size()
+	var segunda: Variant = mao0[1]
+	var terceira_antes: Variant = mao0[2]
+	mao0.remove_at(1)
+	mao0.append(tirada)
+	assert_eq(mao0.size(), n_antes, "Preparo: a mão do jogador continua com a mesma quantidade.")
+	assert_true(mao0[mao0.size() - 1] == tirada,
+		"A carta COMPRADA é a última do dado (a 5ª posição da sua mão).")
+	assert_true(mao0[1] == terceira_antes,
+		"Depois de tirar a 2ª, as outras se reorganizam (a antiga 3ª vira a 2ª).")
+	assert_true(mao0[0] != segunda and mao0[0] != tirada,
+		"A 1ª carta da mão não muda quando a 2ª desce.")
+	# E na tela: a comprada é a carta mais à DIREITA da sua mão.
+	var n0: int = mao0.size()
+	var x_comprada := cam.unproject_position(mesa.call("_pos_mao_arco", n0 - 1, n0, 0)).x + xj
+	var x_da_mais_esquerda := cam.unproject_position(mesa.call("_pos_mao_arco", 0, n0, 0)).x + xj
+	assert_true(x_comprada > x_da_mais_esquerda,
+		"D45 (item 8): na tela a comprada cai na 5ª posição (à direita, %.0f > %.0f px)." % [
+			x_comprada, x_da_mais_esquerda])
+	# O MESMO para o rival, pelo sistema real: `draw_for_current` compra para
+	# QUEM É A VEZ, e na tela a comprada dele é a da esquerda.
+	var st2 = _novo_duelo()
+	var st2_state = st2.get_state()
+	st2_state.current_player = 1
+	var p1d: Dictionary = st2_state.players[1] as Dictionary
+	var mao1: Array = p1d["hand"]
+	var guardado: Variant = mao1.pop_back()
+	var r: Dictionary = TurnManager.draw_for_current(st2_state)
+	assert_true(bool(r.get("ok", false)), "O TurnManager real comprou para o rival (ok=%s)." % str(r.get("ok", false)))
+	assert_eq(mao1.size(), 5, "O rival comprou até completar a mão (4 -> 5).")
+	var ult: float = cam.unproject_position(mesa.call("_pos_mao_arco", mao1.size() - 1, mao1.size(), 1)).x + xj
+	var pri: float = cam.unproject_position(mesa.call("_pos_mao_arco", 0, mao1.size(), 1)).x + xj
+	assert_true(ult < pri,
+		"D45 (item 8): na tela a comprada do rival cai pela ESQUERDA (%.0f < %.0f px)." % [ult, pri])
+	assert_true(guardado != null, "A carta que saiu da mão do rival foi para o cemitério/baralho, não sumiu.")
+
+
+func test_d44_lp_e_turno_da_faixa_vem_do_estado_real() -> void:
 	# D44 (itens 6 e 11): a barra DRAW/MAIN/BATTLE/END saiu da tela inteira e
 	# os contadores/blocos de canto (deck, cemitério e mão do rival) também.
 	# A tela fica com: painel esquerdo, 4 fileiras, cartas, faixa do meio, mão
@@ -1144,11 +1198,9 @@ func test_d44_tela_sem_fases_nem_lixo_de_canto() -> void:
 		assert_true(_n3d(mesa, saiu) == null, "Sumiu do campo (item 11): " + saiu)
 	assert_true(_n3d(mesa, "Campo/Laterais") != null, "O guarda-chuva Laterais continua (vazio de propósito).")
 	assert_eq((_n3d(mesa, "Campo/Laterais") as Node3D).get_child_count(), 0,
-		"Laterais sem nenhum desenho: as pilhas foram para a faixa.")
+		"Laterais sem nenhum desenho: as pilhas foram para a faixa 2D (D45).")
 	# NENHUM desenho solto em qualquer lugar do campo (item 11): os tokens
 	# ("X"/"N"), as placas de contador e os blocos de deck/cemitério do canto.
-	# (A faixa do meio é a única coisa que tem nome de pilha, e ela é o
-	# desenho NOVO que o usuário pediu — por isso ela fica de fora da lista.)
 	var nomes_proibidos := ["TokenX", "TokenXLetra", "TokenBussola", "TokenBussolaLetra",
 		"ContaDeckVoce", "ContaCemVoce", "ContaDeckRival", "ContaCemRival", "ContaMaoRival",
 		"Tokens"]
@@ -1159,9 +1211,11 @@ func test_d44_tela_sem_fases_nem_lixo_de_canto() -> void:
 		if str((n as Node).name) in nomes_proibidos:
 			achados.append(str((n as Node).name))
 	assert_eq(achados.size(), 0, "Nenhum desenho solto no campo: %s" % str(achados))
-	# Os 4 ladrilhos + a faixa + o cursor continuam (o que é necessário p/ jogar).
+	# Os 4 ladrilhos + o cursor continuam (o que é necessário p/ jogar) e a
+	# faixa do meio virou 2D (D45), então ela vive no HUD.
 	assert_eq((_n3d(mesa, "Campo/Slots") as Node3D).get_child_count(), 20, "As 4 fileiras continuam (20 ladrilhos).")
-	assert_true(_n3d(mesa, "Campo/Faixa") != null, "A faixa do meio continua.")
+	assert_true(_n3d(mesa, "Campo/Faixa") == null, "D45: a faixa do meio saiu do 3D.")
+	assert_true(mesa.get_node_or_null(NodePath("HUD/Faixa2D")) != null, "A faixa do meio continua, agora em 2D no HUD.")
 	assert_true(_n3d(mesa, "Cursor3D") != null, "O cursor (foco) continua.")
 	# O céu é o cenário, não lixo de campo: continua lá.
 	assert_true(_n3d(mesa, "Ceu") != null, "Céu azul existe.")

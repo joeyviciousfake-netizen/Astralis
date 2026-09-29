@@ -122,18 +122,6 @@ const PECA_PROF_CARTAS := 1.58
 ## cada 0,01 de Z ≈ 1,3 px no seu lado e ≈ 0,7 px no lado do rival).
 const APROXIMA_MAGIA_VOCE := 0.22
 const APROXIMA_MAGIA_RIVAL := 0.05
-## X (em unidades de `_ponto_lateral`, ou seja já passando por
-## ESCALA_CAMPO) da faixa onde ficam baralho e cemitério. Medido: a última
-## coluna do campo acaba em mundo x 5,44 e a janela do campo CORTA em
-## 6,35 (z do rival) e 5,55 (z do jogador) — a coluna enche a janela, então
-## a pilha é uma FITA estreita (0,45 carta) apoiada na borda, como na ref,
-## e não um bloco largo cortado. Em mundo x 5,26 a fita cabe nas duas
-## profundidades sem sair da janela.
-const PILHA_X := 4.28
-const PILHA_L := 0.45
-## Comprimento da pilha (no sentido Z): curto, como uma pilha de cartas no
-## canto da ref, e não uma tira atravessando a fileira (D4).
-const PILHA_C := 0.72
 ## Janela de arte da MOLDURA REAL (medida no JPG do usuário, D38 — o JPG
 ## é 832x1248 e a janela fica em x 11,90%..89,18% e y 18,27%..70,99%).
 ## Usada no 3D e no painel 2D: a arte preenche a janela sem sobra, seja a
@@ -143,53 +131,50 @@ const JANELA_ART_X1 := 0.8918
 const JANELA_ART_Y0 := 0.1827
 const JANELA_ART_Y1 := 0.7099
 
-## ---- D44: A FAIXA DO MEIO (itens 3, 4 e 6) ------------------------------
-## As pilhas de baralho/cemitério e as placas de LP/turno SAÍM DOS CANTOS e
-## passam a viver no vão entre a fileira de monstro do RIVAL e a SUA, na
-## ordem que o usuário ditou: baralho meu, cemitério meu, meu LP, turno,
-## LP do rival, cemitério do rival, baralho do rival. As fileiras de
-## ladrilho NÃO se mexem (D44 travou monstros e o ajuste de magia).
-## O Z da faixa é o ponto médio do z das DUAS fileiras de monstro, lido do
-## dado real em `_z_da_faixa()` — não é um número chutado.
-## O X de cada item é a posição na ordem (item 4 = turno, no centro exato da
-## janela 3D), com o passo medido para caber 7 itens sem se tocar.
-## Passo entre os 7 itens, em unidades de mundo. Medido na tela: com 1,50 os
-## 7 itens ocupam x 692..1790 px, ou seja a largura TODA da janela 3D menos
-## 130 px de folga de cada lado (a janela vai de 562 a 1920) — a faixa
-## aproveita o vão inteiro sem encostar no painel esquerdo nem na borda.
-const FAIXA_PASSO := 1.50
-## Puxão de Z do meio do vão para o lado do jogador, para a faixa ficar
-## CENTRADA na tela (a câmera olha de cima e o meio geométrico sai ~30 px
-## alto). Medido na foto: o vão é y 455..568 e a faixa precisa sair em
-## 475..545, então 0,56 de Z (uns 10 px).
-const FAIXA_PUXA_Z := 0.56
-## A pilha é PEQUENA de propósito (o usuário: "continuem pequenos assim"):
-## 45% do tamanho de uma carta deitada, o que cabe na altura do vão.
-const PILHA_ESCALA := 0.45
-## A ALTURA da pilha (eixo Y, o "volume de cartas" que o usuário pediu) é
-## proporcional à quantidade REAL de cartas do estado: um baralho quase
-## vazio fica com a pilha fininha e um baralho cheio fica com a pilha grossa.
-## Estes dois números vieram da MEDIDA na tela (jogo de verdade, 1920x1080):
-## com o baralho cheio (35 cartas) a pilha precisa de ~0,20 de altura para
-## a diferença aparecer, e o teto evita que a pilha saia do vão das fileiras.
-const PILHA_POR_CARTA := 0.008
-const PILHA_ESPESSURA_MIN := 0.014
-const PILHA_ESPESSURA_MAX := 0.24
-## Quantas cartas do CEMITÉRIO aparecem desenhadas no topo da pilha (as reais
-## do dado, da mais antiga para a mais nova, com a MAIS RECENTE no topo).
-const PILHA_CARTAS_NO_TOPO := 3
-## A PLACA de LP/turno é maior que a pilha (o número tem que ser legível de
-## longe). Medido na tela: a pilha ocupa 50 px de largura e a placa 116 px,
-## e as duas cabem na faixa sem se encostar (passo de 1,32 = 148 px).
-const FAIXA_PLACA_L := 1.04
-const FAIXA_PLACA_C := 0.62
-## Mundo por pixel da fonte do número da placa (fonte 64): 0,0062 * 64 = 0,40
-## de altura, que é o que cabe na placa de 1,04 sem encostar na borda.
-const FAIXA_NUMERO_PIXEL := 0.0062
-## Cor da lateral (a "borda" de papel) de cada pilha, por lado: a sua é
-## azul-esverdeada e a do rival vermelha, como o LP de cada um.
-const COR_PILHA_VOCE := Color(0.16, 0.30, 0.42)
-const COR_PILHA_RIVAL := Color(0.42, 0.16, 0.18)
+## Chão de desenho do campo: o plano da FACE DE CIMA do ladrilho (a caixa de
+## vidro tem 0,05 de espessura assentada em TOPO - 0,03, ou seja o topo dela
+## fica em TOPO - 0,005). É o único dono desse número no arquivo: as bordas
+## de tela das fileiras (`_borda_da_fileira_px`) e a faixa 2D medem a partir
+## daqui, então "a linha dos slots" é UM número, não três.
+const TOPO_PISO := TOPO - 0.005
+## ---- D45: A FAIXA DO MEIO, AGORA EM 2D -----------------------------------
+## D44 colocou baralho, cemitério, LP e turno no vao entre as duas fileiras
+## de monstro, mas em 3D (caixas deitadas no chao). D45 (item 2 do usuario):
+## "vai continuar essa faixa no meio mas agora em 2d, assim fica mais facil,
+## podemos fazer algo bonito que mostre isso e tambem tenha um contador de
+## cartas ainda no deck e contador de cartas no cemiterio".
+## POR QUE 2D E MAIS FACIL (e nao e gambiarra): em 3D, a posicao de um objeto
+## no chao e a soma de TRES numeros que precisam concordar — o z da fileira,
+## metade da profundidade do ladrilho e a profundidade do proprio objeto — e a
+## "altura do chao" na tela e uma FAIXA (o ladrilho e um plano visto de
+## lado), nao uma linha. Em 2D a posicao e o pixel: uma linha, um numero, e
+## da para fazer bonito de verdade. A faixa 3D foi REMOVIDA por inteiro
+## (pilhas, placas, fatias, `_construir_faixa`).
+## A ORDEM das 7 celulas e a que o usuario ditou (D44, travada):
+##   MeuDeck, MeuCemiterio, LpVoce, Turno, LpRival, CemRival, DeckRival
+## As alturas/larguras sao do DADO e da CAMERA (as bordas reais das fileiras
+## em `_borda_da_fileira_px` e a largura real da fileira em
+## `_extensao_da_fileira_px`), entao a faixa acompanha o campo em qualquer
+## enquadramento. Zero regra: so leitura (R1/R3).
+const FAIXA2D_ALT := 64              # altura da barra (o vao entre as fileiras tem 87 px)
+const FAIXA2D_GAP := 6               # vao entre as celulas
+const FAIXA2D_MARGEM_L := 10.0        # folga da faixa ate a borda da fileira
+const FAIXA2D_FONDO := Color(0.043, 0.063, 0.145, 0.86)
+const FAIXA2D_ARO := Color(0.36, 0.52, 0.92, 0.95)
+const FAIXA2D_CEL_FUNDO := Color(0.07, 0.10, 0.22, 0.90)
+const FAIXA2D_CEL_ARO := Color(0.30, 0.40, 0.66, 0.90)
+const FAIXA2D_CEL_ARO_VOCE := Color(0.35, 0.68, 0.95, 0.95)
+const FAIXA2D_CEL_ARO_RIVAL := Color(0.92, 0.45, 0.40, 0.95)
+const FAIXA2D_COR_LP := Color(1.0, 0.86, 0.22, 1.0)
+const FAIXA2D_COR_NUM := Color(0.92, 0.95, 1.00, 1.0)
+const FAIXA2D_COR_NOME := Color(0.70, 0.78, 0.95, 0.95)
+const FAIXA2D_FONTE_NUM := 30
+const FAIXA2D_FONTE_CONT := 26
+const FAIXA2D_FONTE_NOME := 12
+## Cor da "pilhinha" 2D de cada celula (deck = carta virada, cemiterio = carta
+## com a face pra cima) e o vinco entre as laminas.
+const FAIXA2D_PILHA_COR := Color(0.90, 0.86, 0.74, 1.0)
+const FAIXA2D_PILHA_VINCO := Color(0.42, 0.44, 0.52, 1.0)
 
 ## ---- HUD 2D (doc 15 §15.3 — TUDO medido na referência, em px do canvas
 ## 1920x1080; a referência é 1024x583 e o §15.3 traz os %) ----------------
@@ -227,27 +212,31 @@ const BARRA_FASES_GAP := 8
 ## RETRATOS: moldura no estilo da ref. O rival fica no canto superior
 ## DIREITO da faixa do campo; o jogador, no canto superior ESQUERDO da
 ## mesma faixa (simétrico ao rival), longe do painel da carta.
+## D45 (item 1): "a imagem dos duelistas bem pra cima, com o mesmo espaço
+## entre as laterais e a parte de cima". A margem é UM número só, usado nos
+## TRÊS lugares (esquerda, direita e topo) da janela do campo — por isso os
+## dois retratos ficam a MESMA distância da borda lateral e da borda de cima
+## (14 px), e não "quase no canto" como antes (y 96, colado na fileira do
+## rival).
+const RETRATO_MARGEM := 14
 const RETRATO_L := 136
-const RETRATO_RIVAL_X := 1770
-const RETRATO_RIVAL_Y := 96
-const RETRATO_VOCE_X := 578
-const RETRATO_VOCE_Y := 96
-## D44 (item 8): a placa de NOME do duelista fica AO LADO do retrato (para
-## dentro, para os dois lados ficarem espelhados) e nunca invade o painel
-## esquerdo, que termina em x 562. As medidas saem da foto de 136 px: a placa
-## tem 300x44, centralizada na altura do retrato (y 96..232 -> 142..186) e
-## encosta na foto sem cobrir nada.
+const RETRATO_VOCE_X := PAINEL_ESQ_PX + RETRATO_MARGEM              # 576
+const RETRATO_RIVAL_X := TELA_L - RETRATO_MARGEM - RETRATO_L        # 1770
+const RETRATO_VOCE_Y := RETRATO_MARGEM                             # 14
+const RETRATO_RIVAL_Y := RETRATO_MARGEM                            # 14
+## D45 (item 1): a placa de NOME do duelista fica AO LADO do retrato (para
+## dentro, para os dois lados ficarem espelhados), nunca invade o painel
+## esquerdo (que termina em x 562) e tem o TOPO NA MESMA LINHA do topo da
+## foto — era o que o usuário pediu ("a parte de cima da imagem e a parte de
+## cima do bloco de nomes na mesma linha"). Antes a placa era centralizada na
+## altura do retrato (y 142 dentro de um retrato de y 96..232).
 const RETRATO_NOME_L := 300
 const RETRATO_NOME_A := 44
-const RETRATO_NOME_VOCE_X := 726
-const RETRATO_NOME_VOCE_Y := 142
-const RETRATO_NOME_RIVAL_X := 1458
-const RETRATO_NOME_RIVAL_Y := 142
-## START / Help: canto inferior direito (x 84%..98%, y 96%..100% na ref).
-const START_X := 1680
-const START_Y := 1020
-const START_L := 214
-const START_A := 44
+const RETRATO_NOME_VOCE_X := RETRATO_VOCE_X + RETRATO_L + 10        # 722
+const RETRATO_NOME_RIVAL_X := RETRATO_RIVAL_X - 10 - RETRATO_NOME_L # 1460
+## D45 (item 7): a barra "START ? Help" da referência foi EXCLUÍDA por ordem do
+## usuário. A ação continua existindo no CONTROLE (D19, o botão START do
+## joypad), que é o que passa o turno — o que saiu da tela foi só o texto.
 ## Cores da ref (amarelo do valor/nome, verde do tipo, laranja da barra).
 const COR_PAINEL := Color(0.106, 0.137, 0.251, 1.0)   # #1b2340 azul-marinho
 const COR_PAINEL_BORDA := Color(0.30, 0.38, 0.62, 1.0)
@@ -268,34 +257,38 @@ const COR_FOCO_AZUL := Color(0.35, 0.70, 1.0, 1.0)
 ## "de pé" E legível com a câmera fixa de cima (a -12° a carta aparece
 ## achatada em 57% da altura e não dá pra ler).
 const TILT_MAO_LIVRE := -35.0
-## Arco da MÃO (só desenho). Passo = distância entre cartas; Y/Z = altura e
-## profundidade: TROCAR AQUI à vontade (ordem do usuário: nada disso muda).
-## O X do CENTRO do arco NÃO mora aqui — ele é CALCULADO da câmera real em
-## `_x_centro_da_mao`, senão a mão fica torta na tela (ver `_pos_mao_arco`).
-## D44 (item 10 do usuário): a carta NÃO cresceu — LARG_CARTA/ALT_CARTA
-## continuam 1,0 x 86/59, a proporção real 59x86 de todo o jogo. O que mudou
-## foi a DISTÂNCIA da sua mão até a câmera: a mão veio mais para a frente
-## (z de 10,0 para 13,0) e subiu em y (4,63 -> 7,6) para continuar no rodapé,
-## de pé, em arco leve e cortada pela borda de baixo. Medido na tela, com o
-## jogo de verdade: a carta vai de 189 px para 257 px de largura (13,4% da
-## tela) com o tamanho no MUNDO igual (1,000 x 1,458) — cresce a impressão,
-## não a carta. O topo da mão fica em y=925 px, abaixo da base da fileira de
-## magia do jogador (900 px): a mão não cobre a fileira.
-## D44: o PASSO caiu junto (1,06 -> 0,84) porque a escala da mão subiu 36% e o
-## passo é em unidades de mundo. Com 0,84 o arco da mão mede na tela
-## [247..1111] px — exatamente os mesmos 864 px de antes do D44, então a mão
-## não invadiu nada e a de 10 cartas não passa a vazar mais do que já vazava.
-## Se um dia a mão apertar, o que se diminui é ESTE passo, nunca a carta.
-const MAO_P0_PASSO := 0.84
-const MAO_P1_PASSO := 0.86
-const MAO_P0_YZ := Vector2(7.6, 13.0)   # Vector2(y, z): sua mão (perto, embaixo)
+## Arco da MÃO (só desenho). Passo = distância entre cartas; Z = profundidade.
+## D45 (itens 4, 5 e 6): quem decide a ALTURA (Y) de cada mão é a CÂMERA REAL
+## (mesma matemática de `_x_centro_da_mao`, que já centraliza o X no centro do
+## campo), porque o usuário pediu ALTURAS DE LINHA, não números:
+##   - a SUA mão fica COLADA na linha de baixo da sua fileira de magia
+##     (item 5: "perto da linha de baixo dos slots das cartas magias minhas");
+##   - a mão do RIVAL fica CENTRADA entre o topo da tela e a linha de cima dos
+##     slots de magia dele (item 4: "perfeitamente entre a parte de cima da
+##     tela e a parte de cima dos slots de cartas magicas dele").
+## `_y_da_mao` resolve os dois Y por secante e memoriza por câmera. O Y que
+## está no Vector2 abaixo é só o FALLBACK para quando não há câmera (o desenho
+## não quebra, ele só sai no lugar antigo).
+const MAO_P0_YZ := Vector2(7.6, 12.7)   # Vector2(y fallback, z): sua mao
 ## Mão do RIVAL (longe, ATRÁS do campo). Medido: a fileira de magia do
-## rival (p1_s) fica em z = -4,42 e o ladrilho dela avança até z = -5,36;
-## com a mão em z = -5,18 ela ficava DENTRO desse ladrilho e o vidro
-## escuro dele (alpha 0,72) cobria a metade de baixo das cartas viradas
-## (D3). A mão agora é jogada para trás de toda a pegada do campo
-## (z = -6,45) e desce um pouco para não sumir atrás da barra superior.
+## rival (p1_s) fica em z = -4,37 e o ladrilho dela avança até z = -5,34;
+## com a mão mais perto disso ela ficava DENTRO desse ladrilho e o vidro
+## escuro dele (alpha 0,72) cobria a metade de baixo das cartas viradas (D3).
+## A mão é jogada para trás de toda a pegada do campo (z = -6,45).
 const MAO_P1_YZ := Vector2(-0.35, -6.45)
+## D45 (item 5): folga entre o topo da carta da sua mão e a linha de baixo da
+## sua fileira de magia. 5 px = "bem próxima" sem encostar no ladrilho.
+const MAO_P0_FOLGA_PX := 5.0
+## D45 (item 6): "minhas cartas estão muito juntas, tem uma passando por
+## dentro das outras" — a carta tem 1,0 de largura, então PASSO MAIOR que 1,0
+## é o que abre o vão. 1,08 = 8% de carta de espaço entre elas (medido: 21 px
+## de vão com a mão na profundidade de baixo). Com a mão lotando (6+ cartas) o
+## passo cede para o arco caber na janela do campo (teto de largura), senão a
+## carta da ponta sairia da tela.
+const MAO_P0_PASSO := 1.08
+const MAO_P0_PASSO_MIN := 0.55
+const MAO_P0_LARG_ARCO := 4.32
+const MAO_P1_PASSO := 0.86
 ## X de mundo do centro do arco SEM câmera (fallback: só não quebra o desenho).
 const MAO_P0_X_SEM_CAM := 0.3
 const MAO_P1_X_SEM_CAM := -2.8
@@ -358,10 +351,6 @@ var _cursor_escala := 1.0
 var _flash_tela: ColorRect = null
 var _deck_pos := [Vector3(4.9, 0.6, 1.6), Vector3(-4.9, 0.6, -2.2)]
 
-## D44: o LP e o turno passaram a viver na FAIXA DO MEIO (3D), não mais nas
-## placas do topo (que o usuário mandou remover). São Label3D deitado no
-## campo, e o VALOR sempre vem do GameState real.
-var _lbl_lp_rival: Label3D = null
 ## D44 (item 8): o topo ficou SÓ com foto + nome de cada duelista. Estas são
 ## as etiquetas de nome ao lado de cada retrato (dado real do duelista).
 var _lbl_placa_nome_voce: Label = null
@@ -377,25 +366,21 @@ var _lbl_copia_foco: Label = null
 var _lbl_mao_rival: Label = null
 var _lbl_fase: Label = null
 var _lbl_log: Label = null
-var _lbl_lp_voce: Label3D = null
 var _lbl_dica: Label = null
 var _lbl_slot: Label = null
 var _lbl_fila: Label = null
-## D44 (itens 3, 4 e 6): a FAIXA DO MEIO, com os 7 itens na ordem do
-## usuário. O guarda-chuva é `Faixa`; cada peça tem seu nó com o nome do
-## lugar dela na ordem (o teste lê a ordem direto na cena).
-var _faixa: Node3D = null
-var _no_pilha_deck_voce: Node3D = null
-var _no_pilha_cem_voce: Node3D = null
-var _no_placa_lp_voce: Node3D = null
-var _no_placa_turno: Node3D = null
-var _no_placa_lp_rival: Node3D = null
-var _no_pilha_cem_rival: Node3D = null
-var _no_pilha_deck_rival: Node3D = null
-## D44 (item 8): o topo ficou SÓ com foto + nome. O resto da informação
-## (LP/turno) foi para a faixa do meio.
-var _lbl_turno: Label3D = null
-var _lbl_turno_num: Label3D = null
+## D45 (item 2): a FAIXA DO MEIO agora é 2D (filha do HUD), com os 7 itens
+## na ordem do usuário e o VALOR sempre do GameState real. `_cel_*` é o
+## guarda-chuva ("Faixa2D") e `_num_*` os 7 números que `_atualizar_faixa`
+## reescreve (contagem de cartas do deck/cemitério + LP + turno).
+var _faixa2d: Control = null
+var _num_meu_deck: Label = null
+var _num_meu_cem: Label = null
+var _num_lp_voce: Label = null
+var _num_turno: Label = null
+var _num_lp_rival: Label = null
+var _num_cem_rival: Label = null
+var _num_deck_rival: Label = null
 var _retrato_rival_foto: TextureRect = null
 var _retrato_rival_silhueta: Label = null
 var _retrato_voce_foto: TextureRect = null
@@ -424,12 +409,6 @@ var _nome_voce := "VOCÊ"
 var _nome_rival := "RIVAL"
 var _retrato_voce := ""
 var _retrato_rival := ""
-## Contadores de deck/cemitério (só leitura do estado real).
-var _lbl_conta_deck_rival: Label3D = null
-var _lbl_conta_cem_rival: Label3D = null
-var _lbl_conta_deck_voce: Label3D = null
-var _lbl_conta_cem_voce: Label3D = null
-var _lbl_conta_mao_rival: Label3D = null
 var _log: Array = []
 var _fusions_data: Dictionary = {"schema_version": 1, "recipes": [], "rules": []}
 var _arena_data: Dictionary = {}
@@ -468,6 +447,10 @@ var _foco := Vector3.ZERO
 var _x_centro_mao := Vector2.ZERO
 ## instance_id da câmera usada no cálculo acima (0 = ainda não calculou).
 var _x_centro_mao_cam := 0
+## Y de mundo de cada mão (x = p0, y = p1), CALCULADO da câmera real para a
+## linha de tela pedida (D45, itens 4 e 5) e memorizado do mesmo jeito.
+var _y_mao_cache := Vector2.ZERO
+var _y_mao_cam := 0
 var _pulso := 0.0
 var _foto_destino := ""
 var _foto_frames := -1
@@ -499,6 +482,11 @@ func _ready() -> void:
 	# Campo DEPOIS da arena (os painéis nascem no XZ real; antes nasciam
 	# na grade padrão e a carta no layout — bug silencioso).
 	_construir_campo()
+	# D45 (item 2): a faixa do meio é 2D e vive no HUD, no vão entre as duas
+	# fileiras de monstro (que ela mede do dado + da câmera, não chuta).
+	_construir_faixa_2d(get_node_or_null(NodePath("HUD")) as Control)
+	if _quer_calib_visual():
+		_calib_visual(get_node_or_null(NodePath("HUD")) as Control)
 	_fusions_data = _fusoes_do_data(data)
 	_fala("Mesa 3D: duelo real carregado.")
 	_redesenhar(false)
@@ -616,6 +604,90 @@ func _sem_render() -> bool:
 	if not is_inside_tree():
 		return true
 	return DisplayServer.get_name() == "headless"
+
+
+## ---------- CALIBRAÇÃO VISUAL (ferramenta de desenho, zero regra) ----------
+## Pedido do usuário (D45, item 2): "crie um quadrado grande do tamanho de toda
+## a mesa, deixe a parte de cima do quadrado da mesma altura que os slots do
+## campo, assim o que for para dentro desse quadrado, vamos saber que está
+## afundando".
+## Então isto é um QUADRADO VERMELHO (semi-transparente) que cobre a mesa
+## inteira a partir da LINHA DOS SLOTS: a base de tudo que assenta na mesa
+## tem que ficar ACIMA da linha de cima do quadrado; o que entrar dentro do
+## quadrado está afundado. As linhas das outras fileiras também aparecem,
+## para bater o olho nelas de uma vez.
+## Só DESENHO e só ligado por `--mesa3d-calib=1` (fora disso a tela fica
+## limpa). Para ver: rode o jogo com a flag e tire a foto de sempre
+## (`--mesa3d-foto`), que o quadrado aparece na imagem.
+const CALIB_ALTURA := 3
+const CALIB_COR_QUAD := Color(0.90, 0.10, 0.12, 0.20)
+const CALIB_COR_LINHA := Color(1.0, 0.25, 0.15, 0.95)
+const CALIB_COR_LINHA_FINA := Color(1.0, 0.85, 0.20, 0.75)
+
+
+func _quer_calib_visual() -> bool:
+	for a in OS.get_cmdline_user_args():
+		var s := str(a).strip_edges()
+		if s == "--mesa3d-calib" or s == "--mesa3d-calib=1" or s == "--mesa3d-calib=true":
+			return true
+		if s.begins_with("--mesa3d-calib="):
+			return s.trim_prefix("--mesa3d-calib=").strip_edges() != "0"
+	return false
+
+
+## Monta o quadrado de calibração dentro do HUD (por cima de tudo). Cada linha
+## é a BORDA REAL de uma fileira, lida do dado + da câmera (`_borda_da_fileira_px`),
+## então o desenho dele é a medida, não um número chutado.
+func _calib_visual(hud: Control) -> void:
+	var x0 := float(PAINEL_ESQ_L)
+	var larg := float(TELA_L) - x0
+	# A linha de cima do quadrado é a LINHA DOS SLOTS: a borda de cima da
+	# fileira de monstro do jogador, que é o chão da mesa onde o baralho, o
+	# cemitério, o LP e o turno têm que APOIAR a base. O ladrilho é um plano
+	# visto de lado (tem 2 bordas na tela); a de cima é a que faz a leitura
+	# do "afundado", e a de baixo aparece na lista de linhas finas.
+	var linha_slots := _borda_da_fileira_px(0, "monstro", false)
+	var quad := ColorRect.new()
+	quad.name = "CalibQuad"
+	quad.color = CALIB_COR_QUAD
+	quad.position = Vector2(x0, linha_slots)
+	quad.size = Vector2(larg, float(TELA_A) - linha_slots)
+	quad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(quad)
+	# Linha de cima do quadrado = a linha dos slots (a mais grossa, a que
+	# manda): a base de deck/cemitério/LP/turno tem que ficar nela ou acima.
+	_calib_linha(hud, "CalibLinhaSlots", linha_slots, CALIB_COR_LINHA, CALIB_ALTURA, x0, larg,
+		"LINHA DOS SLOTS (%.0f px): tudo ABAIXO desta linha esta AFUNDADO na mesa" % linha_slots)
+	# As outras bordas, finas, para medir tudo de uma vez.
+	var pares := [
+		["base do monstro seu ( ladrilho)", _borda_da_fileira_px(0, "monstro", true)],
+		["base da magia rival", _borda_da_fileira_px(1, "magia", true)],
+		["topo da magia rival", _borda_da_fileira_px(1, "magia", false)],
+		["base do monstro rival", _borda_da_fileira_px(1, "monstro", true)],
+		["topo do monstro rival", _borda_da_fileira_px(1, "monstro", false)],
+		["base da magia sua", _borda_da_fileira_px(0, "magia", true)],
+		["topo da mao (sua)", _borda_da_fileira_px(0, "magia", true) + MAO_P0_FOLGA_PX],
+	]
+	var y := 0.0
+	for par in pares:
+		y = float(par[1])
+		_calib_linha(hud, "CalibL%s" % str(par[0]).replace(" ", ""), y, CALIB_COR_LINHA_FINA, 1, x0, larg,
+			"%s: %.0f px" % [str(par[0]), y])
+	print("[MESA3D] Calib visual: quadrado de y=%.0f ate o rodape (linha dos slots em %.0f px)." % [
+		linha_slots, linha_slots])
+
+
+func _calib_linha(hud: Control, nome: String, y: float, cor: Color, alt: int, x0: float, larg: float, txt: String) -> void:
+	var l := ColorRect.new()
+	l.name = nome
+	l.color = cor
+	l.position = Vector2(x0, y - float(alt) * 0.5)
+	l.size = Vector2(larg, float(alt))
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(l)
+	var r := _rotulo_hud(nome + "Texto", txt, Vector2(x0 + 8.0, y - 20.0), 16, Color(1, 1, 1, 0.9))
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(r)
 
 
 # ---- JANELA DO CAMPO (doc 15 §15.4) ----
@@ -818,11 +890,11 @@ func _construir_campo() -> void:
 	campo.add_child(laterais)
 	# D44 (itens 3, 4, 6 e 11): as pilhas de baralho/cemitério e os
 	# contadores SAÍRAM dos cantos (o usuário: "estão muito no canto e está
-	# ruim de visualizar"). Agora eles vivem na FAIXA DO MEIO, no vão entre as
-	# duas fileiras de monstro, com a espessura proporcional à quantidade real
-	# de cartas. `Laterais` fica vazio de propósito: é o guarda-chuva que o
-	# resto da cena já usava, e some qualquer desenho solto do canto.
-	_construir_faixa(campo)
+	# ruim de visualizar"). D45 (item 2): eles passaram também para 2D, na
+	# faixa do meio do HUD (`_construir_faixa_2d`) — o 3D do meio ficou
+	# VAZIO de propósito, que é o que o usuário pediu ("agora em 2d, assim
+	# fica mais facil"). `Laterais` também: é o guarda-chuva que o resto da
+	# cena já usava, e some qualquer desenho solto do canto.
 	_no_cartas = Node3D.new()
 	_no_cartas.name = "Cartas"
 	_vp.add_child(_no_cartas)
@@ -844,244 +916,6 @@ func _construir_campo() -> void:
 	_cursor_grupo.add_child(_cursor_moldura)
 	_construir_mao_cursor()
 	print("[MESA3D] Campo: 20 painéis + faixa do meio (7 itens) + Cursor3D.")
-
-
-## ---- D44: A FAIXA DO MEIO (itens 3, 4 e 6) ------------------------------
-## Os 7 itens, NA ORDEM que o usuário ditou, dentro da janela 3D, no vão entre
-## a fileira de monstro do rival e a sua:
-##   1 MeuDeck (pilha virada para baixo)   2 MeuCemiterio (pilha virada para
-##   cima, mais recente no topo)   3 LpVoce   4 Turno   5 LpRival
-##   6 CemRival   7 DeckRival
-## Cada item é um Node3D com o nome do seu lugar na ordem, filho de `Faixa`,
-## para a trava do teste ler a ordem direto na cena. O X de cada um é
-## `FAIXA_PASSO * (i - 3)`: o TURNO fica no centro exato da janela 3D e o
-## resto se espelha em torno dele (espelho VISUAL — a lógica de espelho do
-## campo é a do D18 e não muda).
-func _construir_faixa(campo: Node3D) -> void:
-	var faixa := Node3D.new()
-	faixa.name = "Faixa"
-	campo.add_child(faixa)
-	_faixa = faixa
-	var z := _z_da_faixa()
-	# 1 e 7: baralho (SEMPRE virado para baixo, com o verso real do jogo).
-	_no_pilha_deck_voce = _criar_pilha(faixa, "MeuDeck", 0, z, COR_PILHA_VOCE)
-	_no_pilha_cem_voce = _criar_pilha(faixa, "MeuCemiterio", 1, z, COR_PILHA_VOCE)
-	# 3, 4 e 5: LP dos dois lados e o turno (sempre do GameState real).
-	_no_placa_lp_voce = _criar_placa_faixa(faixa, "LpVoce", 2, z,
-		Color(0.13, 0.28, 0.70, 0.94), COR_METAL_TOPO)
-	_no_placa_turno = _criar_placa_faixa(faixa, "Turno", 3, z,
-		Color(0.07, 0.12, 0.38, 0.96), COR_FASE_ATIVA)
-	_no_placa_lp_rival = _criar_placa_faixa(faixa, "LpRival", 4, z,
-		Color(0.72, 0.13, 0.18, 0.94), Color(0.95, 0.55, 0.45))
-	# 6: cemitério do rival (virado para cima, mais recente no topo).
-	_no_pilha_cem_rival = _criar_pilha(faixa, "CemRival", 5, z, COR_PILHA_RIVAL)
-	_no_pilha_deck_rival = _criar_pilha(faixa, "DeckRival", 6, z, COR_PILHA_RIVAL)
-	_lbl_lp_voce = _no_placa_lp_voce.get_node("Numero") as Label3D
-	_lbl_turno = _no_placa_turno.get_node("Numero") as Label3D
-	_lbl_turno_num = _lbl_turno
-	_lbl_lp_rival = _no_placa_lp_rival.get_node("Numero") as Label3D
-	# As contas do canto saíram de vez (D44): quem mostra a quantidade agora
-	# é a ALTURA da pilha, que é lida do mesmo estado real.
-	_lbl_conta_deck_voce = null
-	_lbl_conta_cem_voce = null
-	_lbl_conta_deck_rival = null
-	_lbl_conta_cem_rival = null
-	_lbl_conta_mao_rival = null
-	print("[MESA3D] Faixa do meio: 7 itens em z=%.2f (passo %.2f)." % [z, FAIXA_PASSO])
-
-
-## Z da FAIXA: o ponto médio entre as DUAS fileiras de monstro, lido do
-## dado real (a arena manda na composição), mais um puxão para o JOGADOR.
-## O puxão não é chute: a câmera olha de cima, então o meio geométrico do
-## vão (z = -0,40) sai 31 px ACIMA do meio do vão na tela. 0,42 de Z valem
-## ~30 px aí, e é o que deixa a faixa centrada entre as fileiras (medido na
-## foto: vão y 467..555, faixa y 476..549).
-func _z_da_faixa() -> float:
-	var a := _pos_slot(1, "monstro", 0).z
-	var b := _pos_slot(0, "monstro", 0).z
-	return (a + b) * 0.5 + FAIXA_PUXA_Z
-
-
-## X de um item da faixa pelo LUGAR dele na ordem (0..6). O item 4 (turno)
-## fica no centro: é o espelho visual dos dois lados em torno do meio.
-func _x_da_faixa(indice: int) -> float:
-	return (float(indice) - 3.0) * FAIXA_PASSO
-
-
-## PILHA da faixa: uma pilha de cartas DEITADAS, pequena (PILHA_ESCALA do
-## tamanho de uma carta), com a ALTURA proporcional à quantidade real
-## (`_espessura_pilha`). O topo mostra a face de verdade: o VERSO do jogo
-## no baralho (sempre virado para baixo) e a carta REAL mais recente do
-## cemitério (sempre virado para cima).
-func _criar_pilha(pai: Node3D, nome: String, indice: int, z: float, cor_lado: Color) -> Node3D:
-	var no := Node3D.new()
-	no.name = nome
-	no.position = Vector3(_x_da_faixa(indice), TOPO, z)
-	pai.add_child(no)
-	# Corpo da pilha: a "altura" é a caixa que cresce com as cartas. A carta
-	# deitada tem a largura no X e o comprimento no Z, como no ladrilho.
-	no.add_child(_caixa("Corpo", Vector3(LARG_CARTA * PILHA_ESCALA, 1.0, ALT_CARTA * PILHA_ESCALA),
-		Vector3.ZERO, _mat(cor_lado, 0.30)))
-	# Borda de papel clara: dá a leitura de "carta" em vez de "blocinho de
-	# plástico" (era o que o usuário reclamou do canto).
-	var moldura := _caixa("Moldura", Vector3(LARG_CARTA * PILHA_ESCALA, 1.0, ALT_CARTA * PILHA_ESCALA),
-		Vector3(0, 0.5, 0), _mat(Color(0.88, 0.84, 0.72), 0.5))
-	moldura.scale = Vector3(1.04, 1.0, 1.03)
-	no.add_child(moldura)
-	# A face de cima (a do baralho ou a carta mais recente do cemitério) é
-	# criada por `_atualizar_faixa`, conforme o estado real.
-	return no
-
-
-## PLACA da faixa (LP/turno): vidro escuro com aro metálico e o número por
-## cima, DEITADA no campo (mesma pose das antigas placas de contador, que o
-## usuário lia bem). O número é Label3D e o chamador escreve o valor real.
-func _criar_placa_faixa(pai: Node3D, nome: String, indice: int, z: float, vidro: Color, aro: Color) -> Node3D:
-	var no := Node3D.new()
-	no.name = nome
-	no.position = Vector3(_x_da_faixa(indice), TOPO, z)
-	pai.add_child(no)
-	no.add_child(_caixa("Aro", Vector3(FAIXA_PLACA_L, 0.05, FAIXA_PLACA_C), Vector3(0, -0.012, 0), _mat(aro, 0.45, 0.0, 1.0)))
-	no.add_child(_caixa("Vidro", Vector3(FAIXA_PLACA_L * 0.94, 0.05, FAIXA_PLACA_C * 0.86), Vector3(0, 0.006, 0), _mat(vidro, 0.15, 0.0, 1.0)))
-	var l := _rotulo3d("0", 64, Color(1, 1, 1))
-	l.name = "Numero"
-	l.rotation_degrees = Vector3(-90, 0, 0)
-	l.position = Vector3(0, 0.05, 0)
-	# `pixel_size` de um Label3D é o mundo por pixel da fonte: com fonte 64,
-	# 0,0038 (o padrão do jogo) daria um número de 0,24 de altura. Aqui o
-	# número tem que caber NA PLACA (1,04 de largura), então 0,0062 dá
-	# 0,40 de altura — medido na foto, o número ocupa ~40% da placa.
-	l.pixel_size = FAIXA_NUMERO_PIXEL
-	no.add_child(l)
-	return no
-
-
-## ALTURA (eixo Y) da pilha para uma quantidade REAL de cartas: cresce com o
-## número de cartas e tem teto, para a pilha não sair do vão das fileiras.
-func _espessura_pilha(quantidade: int) -> float:
-	return clampf(PILHA_ESPESSURA_MIN + float(maxi(quantidade, 0)) * PILHA_POR_CARTA,
-		PILHA_ESPESSURA_MIN, PILHA_ESPESSURA_MAX)
-
-
-## Preenche a face de cima de uma pilha: `textura` é o que se vê de cima
-## (o verso do baralho, ou a carta real mais recente do cemitério).
-## A face é REUSADA (mesmo nó, mesma malha): só o material muda. Assim não
-## enche a pilha de quadradinhos a cada redesenho (o `queue_free` é adiado e
-## o nó novo herdava o nome automático).
-func _pintar_topo_pilha(no: Node3D, textura: Texture2D, cor: Color) -> void:
-	var m := no.get_node_or_null(NodePath("Topo")) as MeshInstance3D
-	if m == null:
-		var q := QuadMesh.new()
-		q.size = Vector2(LARG_CARTA * PILHA_ESCALA * 0.94, ALT_CARTA * PILHA_ESCALA * 0.94)
-		m = MeshInstance3D.new()
-		m.name = "Topo"
-		m.mesh = q
-		m.rotation_degrees = Vector3(-90, 0, 0)
-		no.add_child(m)
-	var mat := StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	if textura != null:
-		mat.albedo_texture = textura
-	else:
-		mat.albedo_color = cor
-	m.material_override = mat
-	# A face fica EM CIMA da pilha (a espessura é a altura do corpo), senão
-	# o baralho cheio esconderia o próprio verso dentro do bloco.
-	m.position = Vector3(0, _espessura_da_pilha(no) + 0.004, 0)
-
-
-## Altura (eixo Y) com que a pilha está desenhada agora — o topo acompanha.
-func _espessura_da_pilha(no: Node3D) -> float:
-	var corpo := no.get_node_or_null(NodePath("Corpo")) as MeshInstance3D
-	if corpo == null or corpo.mesh == null:
-		return PILHA_ESPESSURA_MIN
-	var mb := corpo.mesh as BoxMesh
-	return PILHA_ESPESSURA_MIN if mb == null else mb.size.y
-
-
-## Cartas REAIS do topo do cemitério (da mais antiga para a mais nova, então
-## a ÚLTIMA da lista é a mais recente e é a que fica no topo da pilha).
-## Devolve [] quando o cemitério está vazio.
-func _cartas_do_cemiterio(lado: int) -> Array:
-	var saida: Array = []
-	if _st == null:
-		return saida
-	var cem: Array = (_st.players[lado] as Dictionary).get("graveyard", []) as Array
-	var ini := maxi(cem.size() - PILHA_CARTAS_NO_TOPO, 0)
-	for i in range(ini, cem.size()):
-		var cid := str(cem[i])
-		if cid.is_empty():
-			continue
-		var base: Dictionary = {}
-		if _cartas.has(cid):
-			base = (_cartas[cid] as Dictionary).duplicate(true)
-		else:
-			base = {"id": cid, "name": cid, "card_type": "monster", "attribute": "earth"}
-		saida.append(base)
-	return saida
-
-
-## Textura da face da carta na pilha: a arte de verdade quando existe, senão
-## a moldura do tipo (mesma regra da carta 3D).
-func _textura_da_carta_para_pilha(carta: Dictionary) -> Texture2D:
-	var tex := _textura_arte(carta)
-	if tex != null:
-		return tex
-	return _textura_arquivo(_moldura_da_carta(carta))
-
-
-## D44: escreve na faixa o que o estado real manda — a ALTURA de cada pilha
-## (baralho e cemitério dos dois lados), a carta do topo de cada cemitério,
-## o verso no baralho e o LP/turno nas 3 placas. Só leitura, zero regra.
-func _atualizar_faixa() -> void:
-	if _st == null or _faixa == null:
-		return
-	var verso := _textura_arquivo("assets/backs/verso_padrao.png")
-	for par in [[0, _no_pilha_deck_voce, true], [0, _no_pilha_cem_voce, false],
-			[1, _no_pilha_cem_rival, false], [1, _no_pilha_deck_rival, true]]:
-		var lado := int(par[0])
-		var no := par[1] as Node3D
-		if no == null:
-			continue
-		var eh_deck := bool(par[2])
-		var p: Dictionary = _st.players[lado] as Dictionary
-		var lista: Array = (p["deck"] if eh_deck else p.get("graveyard", [])) as Array
-		var grossura := _espessura_pilha(lista.size())
-		# O corpo da pilha cresce pela quantidade REAL de cartas.
-		for parte in ["Corpo", "Moldura"]:
-			var caixa := no.get_node_or_null(NodePath(parte)) as MeshInstance3D
-			if caixa == null:
-				continue
-			var mb := caixa.mesh as BoxMesh
-			if mb == null:
-				continue
-			var tam := mb.size
-			tam.y = grossura
-			mb.size = tam
-			caixa.position.y = grossura * 0.5
-		if eh_deck:
-			# DECK: SEMPRE virado para baixo, com o verso real do jogo.
-			_pintar_topo_pilha(no, verso, Color(0.45, 0.28, 0.13))
-		else:
-			# CEMITÉRIO: SEMPRE virado para cima, com a carta MAIS RECENTE
-			# (a última do dado) no topo. Vazio = um colchão neutro, sem carta
-			# nenhuma inventada.
-			var cartas := _cartas_do_cemiterio(lado)
-			if cartas.is_empty():
-				_pintar_topo_pilha(no, null, Color(0.24, 0.30, 0.42))
-			else:
-				_pintar_topo_pilha(no,
-					_textura_da_carta_para_pilha(cartas[cartas.size() - 1] as Dictionary),
-					Color(0.20, 0.24, 0.36))
-	if _lbl_lp_voce != null:
-		_lbl_lp_voce.text = "%d" % int((_st.players[0] as Dictionary)["lp"])
-	if _lbl_lp_rival != null:
-		_lbl_lp_rival.text = "%d" % int((_st.players[1] as Dictionary)["lp"])
-	if _lbl_turno != null:
-		if bool(_st.over):
-			_lbl_turno.text = "VITÓRIA!" if int(_st.winner) == 0 else "DERROTA"
-		else:
-			_lbl_turno.text = "%d" % int(_st.turn_number)
 
 
 ## Redesenha a moldura do foco com o tamanho e a inclinação da focada.
@@ -1586,15 +1420,122 @@ func _fantasia(inst: Dictionary) -> Dictionary:
 # ---- DESENHO A PARTIR DO ESTADO REAL (só leitura, sem regra) ----
 
 func _pos_mao_arco(i: int, n: int, lado: int) -> Vector3:
-	# Mão em arco SIMÉTRICO (t=0 no meio: 1ª e última equidistantes do centro)
-	# e CENTRALIZADO NA TELA (bug do usuário 2026-09-28: o X era chutado "no
-	# olho" e a sua mão e a do rival saíam tortas). O X do centro agora vem
-	# da CÂMERA REAL; passo e Y/Z continuam os do usuário (não mudam).
+	# Mão em arco SIMÉTRICO (t=0 no meio: 1ª e última equidistantes do centro),
+	# CENTRALIZADO NA TELA e na ALTURA DE LINHA pedida — o X e o Y saem da
+	# CÂMERA REAL (bug do usuário 2026-09-28: o X era chutado "no olho" e a
+	# mão saía torta; D45: o Y idem, porque ele pediu altura, não número).
+	# D45 (item 8): a ordem do arco do RIVAL é ESPELHADA. Ele joga do outro
+	# lado da mesa, então a 5ª carta DA MÃO DELE é a que aparece na ESQUERDA
+	# da tela. A compra entra sempre na última posição do dado (o
+	# `TurnManager` compra pro fim), então: você vê a comprada na DIREITA
+	# (5ª posição sua) e o rival vê a dele na ESQUERDA (5ª posição dele).
 	var t := float(i) - float(maxi(n - 1, 0)) / 2.0
 	var c := _x_centro_da_mao()
+	var y := _y_da_mao(lado)
 	if lado == 0:
-		return Vector3(c.x + t * MAO_P0_PASSO, MAO_P0_YZ.x, MAO_P0_YZ.y)
-	return Vector3(c.y + t * MAO_P1_PASSO, MAO_P1_YZ.x, MAO_P1_YZ.y)
+		return Vector3(c.x + t * _passo_mao(n, 0), y, MAO_P0_YZ.y)
+	return Vector3(c.y - t * _passo_mao(n, 1), y, MAO_P1_YZ.y)
+
+
+## Passo entre cartas da mão. D45 (item 6): o passo do JOGADOR é MAIOR que a
+## largura da carta (1,0), então abre um VÃO de verdade entre elas; só cede
+## quando a mão lota e o arco não caberia na janela do campo (aí o que
+## encolhe é o passo, nunca a carta). O do RIVAL é o de sempre: cartas de
+## costas, pequenas, coladas.
+func _passo_mao(n: int, lado: int) -> float:
+	if lado == 1:
+		return MAO_P1_PASSO
+	return clampf(MAO_P0_LARG_ARCO / float(maxi(n - 1, 1)),
+		MAO_P0_PASSO_MIN, MAO_P0_PASSO)
+
+
+## ALTURA (Y de mundo) de cada mão, resolvida da CÂMERA REAL para as LINHAS
+## que o usuário pediu (D45, itens 4 e 5):
+##   p0 — o TOPO da carta na linha de baixo da sua fileira de magia, mais a
+##        folga de MAO_P0_FOLGA_PX (a mão não cobre a fileira nem fica
+##        pendurada no vazio embaixo dela);
+##   p1 — o CENTRO da carta no meio entre o topo da tela e a linha de cima
+##        dos slots de magia do rival.
+## As DUAS linhas saem do dado real (posição dos ladrilhos) + da projeção da
+## câmera. Sem câmera, cai no Y antigo do const (o desenho não quebra). A
+## câmera é FIXA, então isto roda UMA vez e fica memorizado por
+## `instance_id` — no redesenho vira a leitura de 1 float.
+func _y_da_mao(lado: int) -> float:
+	var id_cam := 0
+	if _cam != null and is_instance_valid(_cam):
+		id_cam = _cam.get_instance_id()
+	if id_cam != 0 and id_cam == _y_mao_cam:
+		return _y_mao_cache[lado]
+	var y0 := MAO_P0_YZ.x
+	var y1 := MAO_P1_YZ.x
+	if id_cam != 0:
+		y0 = _y_mao_na_linha(MAO_P0_YZ.y, TILT_MAO_LIVRE,
+			_borda_da_fileira_px(0, "magia", true) + MAO_P0_FOLGA_PX, false)
+		y1 = _y_mao_na_linha(MAO_P1_YZ.y, 180.0 + TILT_MAO_LIVRE,
+			_borda_da_fileira_px(1, "magia", false) * 0.5, true)
+	_y_mao_cache = Vector2(y0, y1)
+	_y_mao_cam = id_cam
+	return _y_mao_cache[lado]
+
+
+## Y de mundo (com o Z travado) que põe a carta da mão — de pé, na inclinação
+## da mão — numa LINHA DE TELA: o topo dela (`pelo_centro` falso) ou o centro
+## dela (verdadeiro).
+## É BISSEÇÃO, não secante: a projeção tem divisão de perspectiva, então a
+## linha de tela NÃO é linear no Y e a secante de 2 pontos erra 20 px quando o
+## chute inicial está longe (foi exatamente o que aconteceu na 1ª vez). A
+## linha é monótona no Y, então a bisseção dá o mesmo resultado em qualquer
+## máquina. São 30 passos, UMA vez por câmera (memorizado em `_y_da_mao`).
+func _y_mao_na_linha(z: float, tilt_graus: float, alvo: float, pelo_centro: bool) -> float:
+	var lo := -8.0
+	var hi := 20.0
+	var f_lo := _erro_linha_mao(lo, z, tilt_graus, alvo, pelo_centro)
+	var f_hi := _erro_linha_mao(hi, z, tilt_graus, alvo, pelo_centro)
+	# Alvo fora do intervalo (nunca acontece com as linhas do jogo, mas a
+	# função não pode devolver lixo se um dia acontecer): abre a faixa.
+	var guarda := 0
+	while f_lo * f_hi > 0.0 and guarda < 12:
+		lo -= 10.0
+		hi += 10.0
+		f_lo = _erro_linha_mao(lo, z, tilt_graus, alvo, pelo_centro)
+		f_hi = _erro_linha_mao(hi, z, tilt_graus, alvo, pelo_centro)
+		guarda += 1
+	for _k in range(30):
+		var meio := (lo + hi) * 0.5
+		var f_meio := _erro_linha_mao(meio, z, tilt_graus, alvo, pelo_centro)
+		if absf(f_meio) < 0.01:
+			return meio
+		if (f_meio > 0.0) == (f_lo > 0.0):
+			lo = meio
+			f_lo = f_meio
+		else:
+			hi = meio
+	return (lo + hi) * 0.5
+
+
+func _erro_linha_mao(y: float, z: float, tilt_graus: float, alvo: float, pelo_centro: bool) -> float:
+	var b := _caixa_carta_tela(Vector3(0.0, y, z), tilt_graus)
+	return ((b.y + b.w) * 0.5 if pelo_centro else b.y) - alvo
+
+
+## LINHA DE TELA (y em px) da borda de uma fileira de ladrilhos: `perto` = a
+## borda de BAIXO (a mais perto da câmera, que é a "base" que se vê embaixo da
+## fileira) e `perto` falso = a de CIMA. Sai do dado real (os 5 ladrilhos da
+## fileira) + da projeção da câmera — nenhuma linha da tela é chutada.
+## Medida na FACE DE CIMA do ladrilho (TOPO_PISO), que é a superfície que a
+## faixa do meio encosta e que a mão do jogador fica logo abaixo.
+func _borda_da_fileira_px(lado: int, tipo: String, perto: bool) -> float:
+	if _cam == null or not is_instance_valid(_cam):
+		return float(TELA_A)
+	var peca := _peca_prof_carta()
+	var linha := -1e9 if perto else 1e9
+	for i in range(5):
+		var p := _pos_slot(lado, tipo, i)
+		for sx in [-1.0, 1.0]:
+			var dz := peca * 0.5 if perto else -peca * 0.5
+			var q := _cam.unproject_position(p + Vector3(sx * peca * 0.5, TOPO_PISO - TOPO, dz))
+			linha = maxf(linha, q.y) if perto else minf(linha, q.y)
+	return linha
 
 
 ## X de mundo do centro do arco de CADA lado, calculado para o centro do arco
@@ -1612,8 +1553,9 @@ func _x_centro_da_mao() -> Vector2:
 	else:
 		# Alvo = X de tela onde o centro do campo cai (o próprio ponto (0,*,0)).
 		var alvo := _cam.unproject_position(Vector3(0.0, TOPO, 0.0)).x
-		_x_centro_mao = Vector2(_x_mao_no_alvo(MAO_P0_YZ.x, MAO_P0_YZ.y, alvo),
-			_x_mao_no_alvo(MAO_P1_YZ.x, MAO_P1_YZ.y, alvo))
+		_x_centro_mao = Vector2(
+			_x_mao_no_alvo(_y_da_mao(0), MAO_P0_YZ.y, alvo),
+			_x_mao_no_alvo(_y_da_mao(1), MAO_P1_YZ.y, alvo))
 	_x_centro_mao_cam = id_cam
 	return _x_centro_mao
 
@@ -2059,7 +2001,10 @@ func _fundo_retrato(tom: Color) -> TextureRect:
 ## inventado) e o nome real do dado ao lado.
 func _construir_retratos(hud: Control) -> void:
 	# RIVAL: foto na direita (x 1770) e nome à ESQUERDA dela, alinhado à
-	# direita, para os dois lados ficarem espelhados.
+	# direita, para os dois lados ficarem espelhados. D45 (item 1): as fotos
+	# subiram para a beirada de cima da janela do campo (RETRATO_MARGEM dos
+	# três lados: esquerda, direita e topo) e a placa de nome tem o TOPO na
+	# MESMA LINHA do topo da foto.
 	var ret_rival := PanelContainer.new()
 	ret_rival.name = "RetratoRival"
 	ret_rival.add_theme_stylebox_override("panel", _estilo_retrato())
@@ -2085,7 +2030,7 @@ func _construir_retratos(hud: Control) -> void:
 	_retrato_rival_silhueta.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	ret_rival.add_child(_retrato_rival_silhueta)
 	hud.add_child(ret_rival)
-	_lbl_placa_nome_rival = _placa_nome_retrato(hud, "NomeRival", RETRATO_NOME_RIVAL_X, RETRATO_NOME_RIVAL_Y,
+	_lbl_placa_nome_rival = _placa_nome_retrato(hud, "NomeRival", RETRATO_NOME_RIVAL_X, RETRATO_RIVAL_Y,
 		RETRATO_NOME_L, RETRATO_NOME_A, HORIZONTAL_ALIGNMENT_RIGHT, Color(1.0, 0.72, 0.62))
 	# VOCÊ: foto na esquerda (x 578) e nome à DIREITA dela, alinhado à
 	# esquerda (espelho do rival).
@@ -2114,7 +2059,7 @@ func _construir_retratos(hud: Control) -> void:
 	_retrato_voce_silhueta.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	ret_voce.add_child(_retrato_voce_silhueta)
 	hud.add_child(ret_voce)
-	_lbl_placa_nome_voce = _placa_nome_retrato(hud, "NomeVoce", RETRATO_NOME_VOCE_X, RETRATO_NOME_VOCE_Y,
+	_lbl_placa_nome_voce = _placa_nome_retrato(hud, "NomeVoce", RETRATO_NOME_VOCE_X, RETRATO_VOCE_Y,
 		RETRATO_NOME_L, RETRATO_NOME_A, HORIZONTAL_ALIGNMENT_LEFT, Color(0.70, 0.92, 1.0))
 
 
@@ -2151,12 +2096,223 @@ func _tex_metal(topo: Color, base: Color) -> GradientTexture2D:
 	return t
 
 
+# ---- D45: A FAIXA DO MEIO EM 2D (item 2 do usuário) ----------------------
+## "vai continuar essa faixa no meio mas agora em 2d, assim fica mais facil,
+## podemos fazer algo bonito que mostre isso e tambem tenha um contador de
+## cartas ainda no deck e contador de cartas no cemiterio".
+##
+## A barra é posicionada no VÃO entre as duas fileiras de monstro, e o vão
+## não é chutado: ele sai das bordas REAIS das fileiras (dado + câmera, em
+## `_borda_da_fileira_px`). A largura sai da fileira real (`_extensao_da_fileira_px`).
+## As 7 células seguem a ordem do usuário (D44, travada) e cada uma mostra:
+##   deck       -> pilhinha 2D + CONTAGEM de cartas do baralho real
+##   cemitério  -> pilhinha 2D + CONTAGEM de cartas do cemitério real
+##   LP         -> número do GameState
+##   TURNO      -> número do GameState
+## Nada aqui calcula regra: é só leitura (R1/R3), como toda a tela.
+
+## Extensão (x de tela) de uma fileira de ladrilhos: da coluna 0 até a 4,
+## já em pixel do canvas (a janela do campo começa em PAINEL_ESQ_L).
+func _extensao_da_fileira_px(lado: int, tipo: String) -> Vector2:
+	var x0 := 1e9
+	var x1 := -1e9
+	if _cam == null or not is_instance_valid(_cam):
+		return Vector2(float(PAINEL_ESQ_L), float(TELA_L))
+	var peca := _peca_prof_carta()
+	for i in range(5):
+		var p := _pos_slot(lado, tipo, i)
+		for sz in [-1.0, 1.0]:
+			var q := _cam.unproject_position(p + Vector3(sz * peca * 0.5, 0.0, 0.0))
+			x0 = minf(x0, q.x)
+			x1 = maxf(x1, q.x)
+	return Vector2(x0 + float(PAINEL_ESQ_L), x1 + float(PAINEL_ESQ_L))
+
+
+## Monta a faixa 2D dentro do HUD (por cima do campo 3D). Cada célula é um nó
+## com o nome do seu lugar na ordem, para a trava do teste ler a ordem e os
+## valores direto da tela.
+func _construir_faixa_2d(hud: Control) -> void:
+	if hud == null:
+		return
+	# O vão: entre a base da fileira de monstro do RIVAL e o topo da SUA.
+	var y_topo := _borda_da_fileira_px(1, "monstro", true)
+	var y_base := _borda_da_fileira_px(0, "monstro", false)
+	var alt := clampf(y_base - y_topo - 10.0, 40.0, float(FAIXA2D_ALT))
+	var y := y_topo + ((y_base - y_topo) - alt) * 0.5
+	var ex := _extensao_da_fileira_px(0, "monstro")
+	var x0 := ex.x + FAIXA2D_MARGEM_L
+	var x1 := ex.y - FAIXA2D_MARGEM_L
+	var larg := maxf(x1 - x0, 200.0)
+
+	var barra := PanelContainer.new()
+	barra.name = "Faixa2D"
+	barra.add_theme_stylebox_override("panel", _estilo_faixa2d())
+	barra.position = Vector2(x0, y)
+	barra.size = Vector2(larg, alt)
+	barra.custom_minimum_size = Vector2(larg, alt)
+	barra.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(barra)
+	_faixa2d = barra
+
+	var linha := HBoxContainer.new()
+	linha.name = "Celulas"
+	linha.add_theme_constant_override("separation", int(FAIXA2D_GAP))
+	linha.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	linha.set_anchors_preset(Control.PRESET_FULL_RECT)
+	linha.offset_left = 6.0
+	linha.offset_right = -6.0
+	linha.offset_top = 5.0
+	linha.offset_bottom = -5.0
+	barra.add_child(linha)
+
+	var larg_cel: float = (larg - 12.0 - FAIXA2D_GAP * 6.0) / 7.0
+	# 1 MeuDeck, 2 MeuCemiterio, 3 LpVoce, 4 Turno, 5 LpRival, 6 CemRival,
+	# 7 DeckRival — a ordem que o usuário ditou (D44, travada).
+	var cel_meu_deck := _celula_faixa_2d(linha, "MeuDeck", larg_cel, alt - 10.0, FAIXA2D_CEL_ARO_VOCE, "DECK")
+	var cel_meu_cem := _celula_faixa_2d(linha, "MeuCemiterio", larg_cel, alt - 10.0, FAIXA2D_CEL_ARO_VOCE, "CEMITERIO")
+	var cel_lp_voce := _celula_faixa_2d(linha, "LpVoce", larg_cel, alt - 10.0, FAIXA2D_CEL_ARO_VOCE, "SEU LP", true)
+	var cel_turno := _celula_faixa_2d(linha, "Turno", larg_cel, alt - 10.0, FAIXA2D_CEL_ARO, "TURNO", true)
+	var cel_lp_rival := _celula_faixa_2d(linha, "LpRival", larg_cel, alt - 10.0, FAIXA2D_CEL_ARO_RIVAL, "LP RIVAL", true)
+	var cel_cem_rival := _celula_faixa_2d(linha, "CemRival", larg_cel, alt - 10.0, FAIXA2D_CEL_ARO_RIVAL, "CEMITERIO")
+	var cel_deck_rival := _celula_faixa_2d(linha, "DeckRival", larg_cel, alt - 10.0, FAIXA2D_CEL_ARO_RIVAL, "DECK")
+	_num_meu_deck = cel_meu_deck.get_node("Caixa/Pilha/Numero") as Label
+	_num_meu_cem = cel_meu_cem.get_node("Caixa/Pilha/Numero") as Label
+	_num_lp_voce = cel_lp_voce.get_node("Caixa/Numero") as Label
+	_num_turno = cel_turno.get_node("Caixa/Numero") as Label
+	_num_lp_rival = cel_lp_rival.get_node("Caixa/Numero") as Label
+	_num_cem_rival = cel_cem_rival.get_node("Caixa/Pilha/Numero") as Label
+	_num_deck_rival = cel_deck_rival.get_node("Caixa/Pilha/Numero") as Label
+	_atualizar_faixa()
+	print("[MESA3D] Faixa 2D: 7 celulas em x=%.0f..%.0f y=%.0f..%.0f (vao das fileiras %.0f..%.0f px)." % [
+		x0, x0 + larg, y, y + alt, y_topo, y_base])
+
+
+## Estilo da barra: vidro escuro com aro metálico e um brilho fino de cima —
+## o mesmo "metal com bisel" da referência, em vez de chapa.
+func _estilo_faixa2d() -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = FAIXA2D_FONDO
+	s.border_color = FAIXA2D_ARO
+	s.set_border_width_all(2)
+	s.set_corner_radius_all(6)
+	s.shadow_color = Color(0, 0, 0, 0.45)
+	s.shadow_size = 4
+	return s
+
+
+## Uma célula da faixa. `com_pilha` = true desenha a pilhinha de carta (deck e
+## cemitério, com a CONTAGEM de cartas ao lado); false = só o número grande
+## (LP e turno). Todo mundo ganha a plaquinha com o nome do que é, em
+## LETRAS MIÚDAS: é o que deixa a faixa legível sem poluir.
+func _celula_faixa_2d(pai: Control, nome: String, larg: float, alt: float, cor_aro: Color,
+		titulo: String, so_numero := false) -> Control:
+	var cel := PanelContainer.new()
+	cel.name = nome
+	cel.add_theme_stylebox_override("panel", _estilo_celula_faixa(cor_aro))
+	cel.custom_minimum_size = Vector2(larg, alt)
+	cel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	cel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	cel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pai.add_child(cel)
+
+	var v := VBoxContainer.new()
+	v.name = "Caixa"
+	v.add_theme_constant_override("separation", 0)
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cel.add_child(v)
+
+	var nome_l := _rotulo_placa_clara("Nome", titulo, FAIXA2D_FONTE_NOME)
+	nome_l.add_theme_color_override("font_color", FAIXA2D_COR_NOME)
+	nome_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	nome_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(nome_l)
+
+	if so_numero:
+		var num := _rotulo_placa_clara("Numero", "0", FAIXA2D_FONTE_NUM)
+		num.add_theme_color_override("font_color", FAIXA2D_COR_LP)
+		num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		num.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		v.add_child(num)
+		return cel
+
+	# Deck/cemitério: a pilhinha de carta + a CONTAGEM de cartas reais.
+	var h := HBoxContainer.new()
+	h.name = "Pilha"
+	h.add_theme_constant_override("separation", 6)
+	h.alignment = BoxContainer.ALIGNMENT_CENTER
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	v.add_child(h)
+	h.add_child(_pilhinha_2d(nome))
+	var num := _rotulo_placa_clara("Numero", "0", FAIXA2D_FONTE_CONT)
+	num.add_theme_color_override("font_color", FAIXA2D_COR_NUM)
+	num.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	num.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(num)
+	return cel
+
+
+## A "pilhinha" de carta da célula: 3 lâminas finas com o vinco entre elas
+## (o desenho 2D do que era a pilha 3D, agora cabe numa célula e tem a
+## CONTAGEM do lado). `nome` muda o nome do nó, nada mais.
+func _pilhinha_2d(nome: String) -> Control:
+	var p := Control.new()
+	p.name = "Mini%s" % ("Deck" if nome.ends_with("Deck") else "Cem")
+	p.custom_minimum_size = Vector2(20, 30)
+	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for i in range(3):
+		var lamina := ColorRect.new()
+		lamina.name = "Lamina%d" % i
+		lamina.color = FAIXA2D_PILHA_VINCO if i == 0 else FAIXA2D_PILHA_COR
+		lamina.position = Vector2(float(i) * 2.0, float(2 - i) * 3.0)
+		lamina.size = Vector2(16, 4)
+		lamina.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		p.add_child(lamina)
+	return p
+
+
+func _estilo_celula_faixa(cor_aro: Color) -> StyleBoxFlat:
+	var s := StyleBoxFlat.new()
+	s.bg_color = FAIXA2D_CEL_FUNDO
+	s.border_color = cor_aro
+	s.set_border_width_all(1)
+	s.set_corner_radius_all(4)
+	return s
+
+
+## D45 (item 2): escreve na faixa 2D o que o estado REAL manda — a contagem
+## de cartas do baralho e do cemitério dos dois lados, o LP de cada um e o
+## turno atual. Só leitura, zero regra (R1/R3).
+func _atualizar_faixa() -> void:
+	if _st == null or _faixa2d == null:
+		return
+	if _num_meu_deck != null:
+		_num_meu_deck.text = "%d" % (_lista_do_jogador(0, "deck") as Array).size()
+	if _num_meu_cem != null:
+		_num_meu_cem.text = "%d" % (_lista_do_jogador(0, "graveyard") as Array).size()
+	if _num_deck_rival != null:
+		_num_deck_rival.text = "%d" % (_lista_do_jogador(1, "deck") as Array).size()
+	if _num_cem_rival != null:
+		_num_cem_rival.text = "%d" % (_lista_do_jogador(1, "graveyard") as Array).size()
+	if _num_lp_voce != null:
+		_num_lp_voce.text = "%d" % _int_do_jogador(0, "lp")
+	if _num_lp_rival != null:
+		_num_lp_rival.text = "%d" % _int_do_jogador(1, "lp")
+	if _num_turno != null:
+		if bool(_st.over):
+			_num_turno.text = "VITORIA!" if int(_st.winner) == 0 else "DERROTA"
+		else:
+			_num_turno.text = "%d" % int(_st.turn_number)
+
+
 func _construir_hud() -> void:
 	# HUD 2D na referência (doc 15 §15.3): painel esquerdo azul-marinho com a
-	# carta focada, os retratos com foto + nome (D44, item 8) e START. Tudo
-	# IGNORE (D19). D44: a barra superior com LP/TURN e a barra de fases
-	# DRAW/MAIN/BATTLE/END saíram de vez — essa informação foi para a faixa
-	# do meio, no 3D (`_construir_faixa`).
+	# carta focada e os retratos com foto + nome. Tudo IGNORE (D19). D44: a
+	# barra superior com LP/TURN e a barra de fases DRAW/MAIN/BATTLE/END
+	# saíram de vez — essa informação foi para a faixa do meio (que em D45
+	# virou 2D, `_construir_faixa_2d`, montada depois do campo). D45 (item 7):
+	# a barra START ? Help também saiu.
 	var hud := Control.new()
 	hud.name = "HUD"
 	hud.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -2173,22 +2329,9 @@ func _construir_hud() -> void:
 	_lbl_slot = null
 	_lbl_fila = null
 	_lbl_dica = null
-	var barra_start := PanelContainer.new()
-	barra_start.name = "BarraStart"
-	var est_start := StyleBoxFlat.new()
-	est_start.bg_color = Color(0.02, 0.02, 0.05, 0.9)
-	est_start.border_color = Color(0.30, 0.32, 0.40)
-	est_start.set_border_width_all(2)
-	est_start.set_corner_radius_all(6)
-	barra_start.add_theme_stylebox_override("panel", est_start)
-	barra_start.position = Vector2(START_X, START_Y)
-	barra_start.size = Vector2(START_L, START_A)
-	barra_start.custom_minimum_size = Vector2(START_L, START_A)
-	barra_start.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var lbl_start := _rotulo_hud("StartHelp", "START ? Help", Vector2.ZERO, 24, Color(1, 1, 1))
-	lbl_start.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	barra_start.add_child(lbl_start)
-	hud.add_child(barra_start)
+	# D45 (item 7): a barra "START ? Help" foi EXCLUÍDA da tela por ordem do
+	# usuário. A ação de passar o turno continua no CONTROLE (D19: botão
+	# START do joypad) — o que saiu foi só o texto, que era info repetida.
 	_flash_tela = ColorRect.new()
 	_flash_tela.name = "FlashTela"
 	_flash_tela.color = Color(1, 1, 1)
@@ -2226,8 +2369,9 @@ func _construir_fundo_painel(hud: Control) -> void:
 ## D44 (item 8): as placas do topo (a azul com seu LP, a caixa TURN e a
 ## vermelha com o LP do rival) foram REMOVIDAS da tela por ordem do usuário:
 ## "na parte de cima da tela remova todas as informações pois troquei elas de
-## lugar". O LP e o turno agora vivem na FAIXA DO MEIO (3D, `_construir_faixa`)
-## e no topo ficou só a foto + o nome de cada duelista (`_construir_retratos`).
+## lugar". O LP e o turno agora vivem na FAIXA DO MEIO — que em D45 (item 2)
+## virou 2D (`_construir_faixa_2d`) — e no topo ficou só a foto + o nome de
+## cada duelista (`_construir_retratos`).
 
 ## D44 (item 6): a BARRA DE FASES (DRAW/MAIN/BATTLE/END) saiu da tela inteira
 ## por ordem do usuário: "atualmente existe DRAW, MAIN, BATTLE e END, eu quero

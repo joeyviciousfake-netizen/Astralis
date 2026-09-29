@@ -1,9 +1,38 @@
 # 15 — VISUAL DA MESA DE DUELO (espelho da referência)
 
+VERSION: 1.9 (D45: a faixa do meio virou 2D; START/HELP fora; retratos no alto)
 STATUS: AUTHORITATIVE (contrato visual, owner: lead)
 ORIGEM: pedido do usuário 2026-09-28 — "deixar o visual do nosso duelo idêntico a essa imagem"
 REFERÊNCIA: `C:\Users\Max\Downloads\Screenshot-2021-05-05-214047-e1620266990864.webp` (1024x583)
 ESCOPO: **SÓ O DESENHO.** Nenhuma mecânica de duelo muda (R1).
+
+## 15.0 D45 — a leva de correções do usuário (2026-09-28)
+
+Oito pedidos do usuário depois de jogar, todos de DESENHO:
+
+| # | Pedido | Onde mora |
+|---|---|---|
+| 1 | Retratos bem na beirada de cima, mesmo espaço nas 3 laterais, e o bloco de nome com o TOPO na MESMA LINHA do topo da foto | `RETRATO_MARGEM` (14 px) + `RETRATO_*_Y` + placa de nome no mesmo `y` |
+| 2 | A faixa do meio (deck/cemitério/LP/turno) **virou 2D** no vão entre as fileiras | `HUD/Faixa2D` (§15.7) |
+| 3 | Pilha de deck/cemitério que pareça cartas empilhadas (o bloco branco saiu) | resolvido pelo 2D: a "pilhinha" é desenhada na célula, com a CONTAGEM de cartas |
+| 4 | Mão do rival entre o topo da tela e o topo dos slots de magia dele | `_y_da_mao` (altura resolvida da câmera) |
+| 5 | Sua mão colada na linha de baixo da sua fileira de magia | idem (topo da carta = base da fileira + 5 px) |
+| 6 | Espaço entre as cartas da sua mão (não podem se atravessar) | `MAO_P0_PASSO` = 1,08 (> 1,0 = vão de verdade) |
+| 7 | "START ? Help" fora da tela | removido; a ação continua no joypad (D19) |
+| 8 | A carta comprada entra sempre na 5ª posição: você à direita, o rival pela esquerda (ele joga do outro lado da mesa) | arco do rival ESPELHADO em `_pos_mao_arco` |
+
+**Por que a faixa foi para 2D (§15.7).** Em 3D, a posição de um objeto no chão
+é a soma de três números que precisam concordar (o z da fileira, metade da
+profundidade do ladrilho e a profundidade do próprio objeto), e "a altura do
+chão" na tela é uma **faixa** (o ladrilho é um plano visto de lado), não uma
+linha. Era por isso que a base entrava e saía do lugar a cada ajuste. Em 2D a
+posição é o pixel: uma linha, um número, e dá para fazer bonito de verdade.
+
+**Ferramenta de conferência visual (novo, D45).** Ligar com
+`--mesa3d-calib=1`: a tela ganha um quadrado vermelho grande com a **linha de
+cima na altura dos slots** (tudo que entrar dentro dele está afundado na
+mesa) e as linhas das outras fileiras com o nome e o valor em pixels. Só
+desenho, zero regra, e fora disso a tela fica limpa.
 
 ## 15.1 O que muda e o que NÃO muda
 
@@ -168,10 +197,38 @@ tag `restaurar-antes-tagforce` (commit `fd89783`).
 
 ## 15.6 Ferramenta de prova
 
-O jogo já sai com `-- --mesa3d-foto=<caminho.png>` (salva o viewport e sai).
-É o jeito de olhar a tela real e comparar com a referência. Usar em toda fase.
+O jogo já sai com `-- --mesa3d-foto=<caminho.png>` (salva o viewport e sai)
+e com `--mesa3d-calib=1` (liga o quadrado de calibração do §15.0). É o jeito de
+olhar a tela real e comparar com a referência. Usar em toda fase.
 
 Para a arte aparecer, o jogo precisa de um projeto com os assets: dá para
 apontar `--project` para uma cópia descompactada do
 `studio_pack_20260925_180627_COMPLETO.apack` (722 cartas, 59 MB, tem as artes).
 Isso é sonda de desenvolvimento em pasta temporária, não vai para o repo.
+
+## 15.7 A faixa do meio em 2D (D45, item 2)
+
+A faixa continua no MEIO da tela, entre a fileira de monstros do rival e a
+sua, mas agora é **2D** (filha do HUD, por cima do campo 3D). Sete células na
+ordem que o usuário ditou (D44, travada):
+
+```text
+[ DECK 40 ][ CEMITERIO 0 ][ SEU LP 8000 ][ TURNO 1 ][ LP RIVAL 8000 ][ CEMITERIO 0 ][ DECK 35 ]
+```
+
+- **Deck e cemitério**: pilhinha de carta desenhada (3 lâminas) + **CONTAGEM
+  de cartas** lida do `GameState` real (`players[lado].deck` /
+  `.graveyard`). Deck vazio e cemitério vazio mostram `0` — não somem, não
+  inventam número.
+- **LP e turno**: número grande do estado real; a placa do MEU lado tem aro
+  azul e a do RIVAL vermelho; a célula do turno anuncia `VITÓRIA!` /
+  `DERROTA` quando o duelo acaba.
+- **Posição**: medida, não chutada. O vão vem das bordas REAIS das duas
+  fileiras de monstros (`_borda_da_fileira_px`, dado + câmera) e a largura vem
+  da extensão real da fileira (`_extensao_da_fileira_px`). A barra é
+  **centrada no vão** e nunca invade nenhuma das duas fileiras.
+- **Zero regra** (R1/R3): a faixa só lê o estado. O `Campo/Faixa` 3D do D44
+  foi REMOVIDO por inteiro (pilhas, placas, fatias de carta, `_construir_faixa`).
+
+O que essa faixa **não** é: não é o tabuleiro, não calcula nada, e o Godot
+continua sendo o dono de LP, compra, descarte e vitória.
