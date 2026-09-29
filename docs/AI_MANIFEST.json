@@ -28,7 +28,8 @@
     { "file": "docs/12_DISTRIBUICAO_EXPORTACAO.md", "owner": "systems+runtime+editor", "purpose": ".astralis binario + cadeado + bundles", "depends_on": ["03", "04"] },
     { "file": "docs/13_TABULEIRO_DUELO.md", "owner": "lead", "purpose": "zonas 5+5, fases, mao, LP, win/lose + duel_setup", "depends_on": ["02", "04", "05"] },
     { "file": "docs/14_EXPERIENCIA_USUARIO.md", "owner": "lead", "purpose": "padrao Simples/Avancado, galeria, erros PT-BR, guia 5min", "depends_on": ["01", "05", "06", "07", "08", "09", "10"] },
-    { "file": "docs/15_VISUAL_DUELO.md", "owner": "lead", "purpose": "contrato visual da mesa: medida da ref, SubViewport (sem perspectiva torta), fonte de cada imagem", "depends_on": ["02", "04", "05", "13", "14"] }
+    { "file": "docs/15_VISUAL_DUELO.md", "owner": "lead", "purpose": "contrato visual da mesa: medida da ref, SubViewport (sem perspectiva torta), fonte de cada imagem", "depends_on": ["02", "04", "05", "13", "14"] },
+    { "file": "docs/16_PERSPECTIVA_CAMPO.md", "owner": "lead", "purpose": "PLANO (nao implementado) da perspectiva do campo: a tela passa a ser a visao de quem joga, sem girar nada. Ler ANTES de mexer na mesa", "depends_on": ["13", "14", "15"] }
   ],
   "contract_files": {
     "owner": "systems",
