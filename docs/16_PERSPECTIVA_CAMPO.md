@@ -54,7 +54,7 @@ E o motivo (o ganho real):
 | D2 | **Nada gira.** O campo, a câmera e o céu ficam parados. | nunca `frustum_offset`, nunca deslocamento de X, nunca giro de câmera (D41/D42 intactos) |
 | D3 | **No campo, ninguém viaja.** A carta **esmaece** (some) onde está e **aparece esmaecendo** do outro lado. Sem voar, sem atravessar a tela, sem deslizar. | "a carta sumindo do meu campo e aparecendo no campo dele" |
 | D4 | **Todas as cartas de uma vez**, num só baque. Não é fila uma a uma. | decisão do usuário |
-| D5 | **A coluna é ESPELHADA**: a carta da coluna 0 vai para a coluna 4, e assim por diante. O arranjo final é como uma mesa virada, feito carta por carta. | o usuário escolheu "coluna espelhada" |
+| D5 | **A COLUNA DE TELHA INVERTE**: a carta que está no slot 1 (esquerda→direita) aparece no slot 5 quando a vez passa, e a do slot 5 no slot 1 — **vale para as cartas dos DOIS lados**. | o usuário, depois de ver a foto da etapa 2 (2026-09-29). Atenção: a inversão NÃO vem de espelhar a coluna em `_vis` — vem do espelho de X que o lado 1 da arena já tem no dado (D18). Espelhar a coluna também fazia os dois se anular. |
 | D6 | **A carta que fica na fileira de cima é desenhada de cabeça para baixo** (o dono lê ela de cabeça baixa, como no FM). | o usuário escolheu "igual o FM" |
 | D7 | **Mão sempre nos dois lugares.** A de quem joga fica embaixo (a sua **aberta**, a dele **virada**) e a do passive fica em cima, **sempre virada**: na sua vez é a dele no topo virada; na vez dele é a sua no topo virada. | decisão do usuário |
 | D8 | **A faixa do meio e as placas de nome NÃO espelham.** Continuam sendo o painel do jogador. | decisão do usuário |
@@ -112,19 +112,22 @@ faixa 3D do D44 virou 2D (D45): em 2D a posição é o pixel.
 ```gdscript
 # ONDE a carta do lado `lado`, coluna `i` é DESENHADA agora.
 # Perspectiva do jogador 0: cada coisa onde está.
-# Perspectiva do jogador 1: cada coisa no lado OPOSTO e na coluna OPOSTA.
-# (o "lado oposto + coluna oposta" é o arranjo virado, feito por dados)
-func _vis(lado: int, i: int) -> Vector2i:   # x = lado visual, y = coluna visual
+# Perspectiva do jogador 1: cada coisa no lado OPOSTO, na MESMA coluna.
+# (a inversão de TELHA — slot 1 vira slot 5 — vem sozinha do espelho de X do
+#  lado 1 no dado; se a coluna fosse espelhada aqui, os dois se anulariam)
+func _vis(lado: int, i: int) -> Vector2i:
     if int(_st.current_player) == 0:
         return Vector2i(lado, i)
-    return Vector2i(1 - lado, 4 - i)
+    return Vector2i(1 - lado, i)
 ```
 
 Regras que decorrem (e que o teste tem que cravar):
 
 - **A fileira de baixo é sempre de quem joga.** Na sua vez, são as suas cartas
   embaixo; na dele, são as dele embaixo.
-- **A coluna espelha junto** (0↔4, 1↔3, 2 fica).
+- **A coluna de TELHA inverte** (D5, corrigido pelo usuário): o slot 1 vai para
+  o 5, e o 5 para o 1, nos dois lados. É o espelho de X do lado 1 no dado
+  fazendo o serviço — a coluna do dado NÃO é espelhada.
 - **A carta de cima é de cabeça para baixo** (o dono lê de cabeça baixa).
 - **O estado não se move:** `players[lado]["monster"][i]` é a MESMA carta antes
   e depois da troca. A troca é só de desenho.
@@ -201,9 +204,12 @@ Nada disso trava a etapa 1.
 ## 16.8 Os testes que a trava tem que ter (GUT)
 
 - `p0` joga: monstro do p0 na fileira de baixo, coluna natural; o do p1 na de
-  cima, coluna espelhada.
-- `p1` joga: o oposto (o do p0 na de cima, coluna espelhada, virado 180°; o
-  do p1 na de baixo, coluna natural).
+  cima.
+- `p1` joga: o oposto (o do p0 na de cima, virado 180°; o do p1 na de baixo).
+- **A inversão é medida em COLUNAS DE TELA** (o X projetado pela câmera de
+  verdade, ordenado da esquerda para a direita): a carta que estava no slot 1
+  vai para o 5 e a do 5 para o 1, **nos dois lados** (D5). Medir pelo índice
+  do dado não prova nada, porque na fileira do rival o dado já vem espelhado.
 - **O estado não se move**: a mesma carta em `players[0]["monster"][0]` antes e
   depois (R1 na prática).
 - **A mão**: a de baixo é a de quem joga; **aberta só quando é a do jogador

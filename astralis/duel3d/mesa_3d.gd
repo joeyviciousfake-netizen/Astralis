@@ -1093,10 +1093,13 @@ func _painel_slot(lado: int, tipo: String, indice: int) -> Node3D:
 # (doc 16 §16.10).
 #
 # Regra (doc 16 §16.5): perspectiva do jogador 0 = cada coisa onde está;
-# perspectiva do jogador 1 = cada coisa no lado OPOSTO e na coluna OPOSTA
-# (o "lado oposto + coluna oposta" é o arranjo virado, e ele sai de graça do
-# próprio dado: o lado 1 da arena JÁ é espelhado no X e com as fileiras
-# trocadas — `core/board_layout.gd` `default_pos`).
+# perspectiva do jogador 1 = cada coisa no lado OPOSTO, na MESMA coluna. O
+# "lado oposto" é o arranjo virado, e ele sai de graça do próprio dado: o
+# lado 1 da arena JÁ é espelhado no X e com as fileiras trocadas
+# (`core/board_layout.gd` `default_pos`). E porque esse espelho de X já
+# existe, a coluna NÃO é espelhada aqui — senão os dois se anulam e a carta
+# volta para o mesmo lugar da tela (foi o que o usuário viu na foto da etapa
+# 2; a regra dele, em colunas de tela: slot 1 vira slot 5, nos dois lados).
 #
 # O ESTADO NÃO SE MEXE: `players[lado]["monster"][i]` é a MESMA carta antes e
 # depois da troca. A troca é só de desenho (doc 16 §16.5, regra 4).
@@ -1113,11 +1116,16 @@ func _perspectiva() -> int:
 ## ONDE a carta do DADO (lado `lado`, coluna `i`) é desenhada agora.
 ## Devolve (lado visual, coluna visual). `lado` e `i` do DADO entram; o que
 ## sai é sempre o lugar na TELA.
+##
+## COLUNA: NÃO espelha, e isso é o ponto (correção do usuário 2026-09-29,
+## depois da foto da etapa 2). Trocar de LADO já espelha o X por causa do
+## espelho do rival no dado (D18: o lado 1 da arena tem o índice 0 à
+## direita), então espelhar a coluna TAMBÉM fazia os dois se anular e a carta
+## voltava para o mesmo lado da tela. A regra é a do usuário, em colunas de
+## TELA: a carta que estava no slot 1 (esquerda->direita) aparece no slot 5,
+## e vale para as cartas dos DOIS lados.
 func _vis(lado: int, i: int) -> Vector2i:
-	var col := clampi(i, 0, COLUNAS_CAMPO - 1)
-	if _perspectiva() == 0:
-		return Vector2i(lado, col)
-	return Vector2i(1 - lado, COLUNAS_CAMPO - 1 - col)
+	return Vector2i(lado, clampi(i, 0, COLUNAS_CAMPO - 1)) if _perspectiva() == 0 else Vector2i(1 - lado, clampi(i, 0, COLUNAS_CAMPO - 1))
 
 
 ## Posição de mundo do slot do DADO (lado, i) como ele é desenhado AGORA.

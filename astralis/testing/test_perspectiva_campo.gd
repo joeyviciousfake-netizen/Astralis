@@ -112,20 +112,21 @@ func test_vis_segue_o_turno_e_a_mesa_virada() -> void:
 			var v: Vector2i = mesa.call("_vis", lado, i)
 			assert_eq(v, Vector2i(lado, i),
 				"Na vez do jogador 0, o lugar do dado (%d,%d) é ele mesmo." % [lado, i])
-	# Vez do RIVAL: lado oposto E coluna oposta. E a perspective vem do
-	# MOTOR (R1): trocar o current_player troca a tela, sem variável guardada.
+	# Vez do RIVAL: lado oposto, MESMA coluna. A inversão de TELA vem sozinha
+	# do espelho de X que o lado 1 da arena já tem no dado (D18) — por isso a
+	# coluna NÃO é espelhada aqui (ver o teste (9), que mede na tela).
 	st.set("current_player", 1)
 	assert_eq(int(mesa.call("_perspectiva")), 1, "Na vez do rival a tela é a DELE.")
 	for lado in [0, 1]:
 		for i in range(COLUNAS):
 			var v2: Vector2i = mesa.call("_vis", lado, i)
-			assert_eq(v2, Vector2i(1 - lado, COLUNAS - 1 - i),
-				"Na vez do rival, o dado (%d,%d) vai para (%d,%d) (mesa virada)." % [
-					lado, i, 1 - lado, COLUNAS - 1 - i])
+			assert_eq(v2, Vector2i(1 - lado, i),
+				"Na vez do rival, o dado (%d,%d) vai para (%d,%d) (lado oposto, coluna igual)." % [
+					lado, i, 1 - lado, i])
 	# A fileira de BAIXO é sempre a de quem joga: o p1 em baixo, o p0 em cima.
 	for i in range(COLUNAS):
-		assert_eq((mesa.call("_vis", 0, i) as Vector2i).y, COLUNAS - 1 - i,
-			"Na vez do rival, o p0 vai para a fileira de cima (coluna %d espelhada)." % i)
+		assert_eq((mesa.call("_vis", 0, i) as Vector2i).x, 1,
+			"Na vez do rival, o p0 vai para a fileira de CIMA (coluna %d)." % i)
 	# E a troca é uma involução: voltar a vez desfaz exatamente (D46 "Volta").
 	assert_eq(int(mesa.call("_perspectiva")), 1, "Preparo: ainda na vez do rival.")
 	st.set("current_player", 0)
@@ -137,8 +138,92 @@ func test_vis_segue_o_turno_e_a_mesa_virada() -> void:
 	assert_eq(mesa.call("_vis", 0, -3), Vector2i(0, 0), "Coluna -3 trava em 0 (nunca crash).")
 	assert_eq(mesa.call("_vis", 1, 99), Vector2i(1, 4), "Coluna 99 trava em 4 (nunca crash).")
 	st.set("current_player", 1)
-	assert_eq(mesa.call("_vis", 0, -3), Vector2i(1, 4), "Coluna -3 trava em 0 também na vez do rival.")
-	assert_eq(mesa.call("_vis", 1, 99), Vector2i(0, 0), "Coluna 99 trava em 4 também na vez do rival.")
+	assert_eq(mesa.call("_vis", 0, -3), Vector2i(1, 0), "Coluna -3 trava em 0 também na vez do rival.")
+	assert_eq(mesa.call("_vis", 1, 99), Vector2i(0, 4), "Coluna 99 trava em 4 também na vez do rival.")
+
+
+## (9) A REGRA DO USUÁRIO, medida na TELA (o que ele viu na foto da etapa 2):
+## "se na minha vez eu colocar uma carta no meu slot 1 de monstro (esquerda
+## pra direita), quando for a vez do rival aquela minha carta tem que aparecer
+## no slot 5 do campo (esquerda pra direita)" — e vale para as cartas dos DOIS
+## lados.
+##
+## O que é medido é a POSIÇÃO NA TELA (a ordem das 5 cartas pelo X projetado
+## pela câmera de verdade, da esquerda para a direita), e NÃO o índice do
+## dado: na fileira do rival o próprio dado já vem espelhado (D18), então
+## "dado 0" e "slot 1 da tela" são coisas diferentes. A regra é: a carta que
+## está no slot P da tela vai para o slot COLUNAS+1-P quando a vez passa.
+func test_a_inversao_das_colunas_e_em_colunas_de_tela() -> void:
+	var mesa: Node = await _mesa3d_nova()
+	var st = mesa.get("_st")
+	var cam: Camera3D = mesa.get("_cam") as Camera3D
+	assert_true(cam != null, "A mesa tem a câmera real (a projeção é o que prova a tela).")
+	if cam == null:
+		return
+	for lado in [0, 1]:
+		for i in range(COLUNAS):
+			assert_true(_poe_no_campo(mesa, st, lado, i), "Preparo: p%d m%d tem carta." % [lado, i])
+		var tela_minha := {}
+		var tela_rival := {}
+		st.set("current_player", 0)
+		mesa.call("_redesenhar", false)
+		await wait_process_frames(2)
+		for i in range(COLUNAS):
+			var c: Node3D = _carta_do_campo(mesa, lado, "monstro", i)
+			if c != null:
+				tela_minha[i] = cam.unproject_position(c.position).x
+		st.set("current_player", 1)
+		mesa.call("_redesenhar", false)
+		await wait_process_frames(2)
+		for i in range(COLUNAS):
+			var c2: Node3D = _carta_do_campo(mesa, lado, "monstro", i)
+			if c2 != null:
+				tela_rival[i] = cam.unproject_position(c2.position).x
+		if tela_minha.size() != COLUNAS or tela_rival.size() != COLUNAS:
+			fail_test("Preparo: as 5 cartas do p%d ficaram desenhadas nos 2 turnos." % lado)
+			continue
+		# Posição na TELA (1 = mais à esquerda) de cada carta do dado.
+		var p_minha := _posicao_na_tela(tela_minha)
+		var p_rival := _posicao_na_tela(tela_rival)
+		for i in range(COLUNAS):
+			assert_eq(int(p_rival[i]), COLUNAS + 1 - int(p_minha[i]),
+				"p%d: a carta que estava no slot %d da tela foi para o slot %d quando a vez passou." % [
+					lado, int(p_minha[i]), int(p_rival[i])])
+		# E o caso que o usuário citou: o slot 1 vira o slot 5, e vice-versa.
+		var i_do_1 := -1
+		var i_do_5 := -1
+		for i in range(COLUNAS):
+			if int(p_minha[i]) == 1:
+				i_do_1 = i
+			if int(p_minha[i]) == COLUNAS:
+				i_do_5 = i
+		assert_true(i_do_1 >= 0 and i_do_5 >= 0, "Preparo: achei as cartas das pontas do p%d." % lado)
+		if i_do_1 >= 0:
+			assert_eq(int(p_rival[i_do_1]), COLUNAS,
+				"p%d: a carta no slot 1 da tela foi para o slot 5 na vez do rival." % lado)
+		if i_do_5 >= 0:
+			assert_eq(int(p_rival[i_do_5]), 1,
+				"p%d: a carta no slot 5 da tela foi para o slot 1 na vez do rival." % lado)
+		# E a fileira inteira é a imagem espelhada: slot 2 <-> 4, meio fica.
+		for i in range(COLUNAS):
+			assert_eq(int(p_rival[i]), COLUNAS + 1 - int(p_minha[i]),
+				"p%d: a fileira inteira inverte de lugar na tela (dado %d: slot %d -> %d)." % [
+					lado, i, int(p_minha[i]), int(p_rival[i])])
+
+
+## Posição na TELA (1 = mais à esquerda) de cada carta, a partir do X projetado
+## pela câmera. É o "slot 1..5" que o usuário conta olhando a foto.
+func _posicao_na_tela(xs: Dictionary) -> Dictionary:
+	var pares: Array = []
+	for i in xs:
+		pares.append([float(xs[i]), int(i)])
+	pares.sort_custom(func(a, b): return float(a[0]) < float(b[0]))
+	var out: Dictionary = {}
+	var p := 1
+	for par in pares:
+		out[int(par[1])] = p
+		p += 1
+	return out
 
 
 ## (2) A carta desenhada está EXATAMENTE onde `_vis` mandou, e o giro de 180°
