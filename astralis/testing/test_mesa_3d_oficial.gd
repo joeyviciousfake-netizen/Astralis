@@ -910,16 +910,16 @@ func test_painel_esquerdo_carta_focada() -> void:
 	assert_true(filhos_ceu >= 24, "Céu com pilares + nuvens (10 + 14): %d." % filhos_ceu)
 
 
-## ---- D44 (itens 3, 4, 6 e 11): a FAIXA DO MEIO e a limpeza da tela ----
-## ---- D44/D45: A FAIXA DO MEIO (agora 2D) e a limpeza da tela ------------
-## D45 (item 2 do usuário): a faixa do meio SAIU do 3D e virou 2D no HUD
-## ("agora em 2d, assim fica mais facil, podemos fazer algo bonito que mostre
-## isso e tambem tenha um contador de cartas ainda no deck e contador de cartas
-## no cemiterio"). As 7 células continuam NA ORDEM que o usuário ditou.
+## ---- D44/D45: A FAIXA DO MEIO (2D) e a limpeza da tela -------------------
+## D45: a faixa do meio saiu do 3D e virou 2D no HUD (item 2). D45 item 1
+## trocou o cemitério e o baralho de lugar, e os itens 3 a 7 limparam os
+## blocos (sem palavra, sem ícone), colocaram cor por lado, número branco, a
+## foto da última carta do cemitério e a cor do turno acompanhando quem joga.
 
-## A ORDEM dos 7 itens, tal e qual o usuário ditou, lida direto da cena.
-const ORDEM_FAIXA := ["MeuDeck", "MeuCemiterio", "LpVoce", "Turno", "LpRival",
-	"CemRival", "DeckRival"]
+## A ORDEM dos 7 itens, tal e qual o usuário ditou (D45, item 1: o cemitério
+## e o baralho trocaram de lugar), lida direto da cena.
+const ORDEM_FAIXA := ["MeuCemiterio", "MeuDeck", "LpVoce", "Turno", "LpRival",
+	"DeckRival", "CemRival"]
 
 
 ## Celulas da faixa 2D na tela, na ordem em que aparecem.
@@ -928,15 +928,37 @@ func _celulas_faixa2d(mesa: Node) -> Array:
 	return linha.get_children() if linha != null else []
 
 
-## O rótulo de número de uma célula (deck/cemitério têm a pilhinha no meio,
-## então o número mora um nível abaixo).
+func _celula(mesa: Node, nome: String) -> PanelContainer:
+	return mesa.get_node("HUD/Faixa2D/Celulas/" + nome) as PanelContainer
+
+
+## O rótulo de número de uma célula.
 func _numero_da_celula(mesa: Node, nome: String) -> Label:
-	var cel := mesa.get_node("HUD/Faixa2D/Celulas/" + nome) as Control
-	if cel == null:
-		return null
-	return cel.get_node_or_null(NodePath("Caixa/Numero")) as Label if cel.get_node_or_null(NodePath("Caixa/Numero")) != null else cel.get_node_or_null(NodePath("Caixa/Pilha/Numero")) as Label
+	return _celula(mesa, nome).get_node("Caixa/Numero") as Label
 
 
+## A cor de um PanelContainer da tela (o estilo do painel).
+func _estilo_de(p: Control) -> StyleBoxFlat:
+	return p.get_theme_stylebox("panel") as StyleBoxFlat
+
+
+## Assinatura de uma textura pra comparar duas: o jogo carrega as imagens com
+## `ImageTexture.create_from_image`, então o `resource_path` é VAZIO em todas
+## — comparar por ele seria uma trava que nunca pega. Aqui é o hash do pixel
+## de verdade (tamanho + conteúdo).
+func _assinatura_tex(tex: Texture2D) -> int:
+	if tex == null:
+		return 0
+	var img := tex.get_image()
+	if img == null:
+		return -1
+	var dados := img.get_data()
+	# `hash()` global não existe para PackedByteArray nesta versão: soma dos
+	# bytes (com posição) é estável e basta para dizer "é a mesma imagem".
+	var soma := 0
+	for i in range(0, dados.size(), 7):
+		soma = (soma * 31 + dados[i]) & 0x7FFFFFFF
+	return hash("%dx%d:%d" % [img.get_width(), img.get_height(), soma])
 func test_d45_faixa_2d_no_vao_entre_as_fileiras_na_ordem_do_usuario() -> void:
 	# D45 (item 2): a faixa do meio é 2D (no HUD), tem as 7 células NA ORDEM
 	# do usuário (baralho meu, cemitério meu, meu LP, turno, LP do rival,
@@ -978,6 +1000,209 @@ func test_d45_faixa_2d_no_vao_entre_as_fileiras_na_ordem_do_usuario() -> void:
 			"A célula %s é sem clique (D19)." % str((c as Node).name))
 
 
+func test_d45_blocos_limpos_numero_branco_e_cor_por_lado() -> void:
+	# D45 (itens 2, 3, 4 e 5): os blocos ficaram LIMPOS (sem palavra DECK /
+	# CEMITERIO / SEU LP / TURNO / LP RIVAL e sem o ícone de pilhinha), o
+	# NÚMERO é branco, e cada lado tem o SEU conjunto de cor (borda escura +
+	# interior mais claro): azul no seu, vermelho no do rival, e o MESMO
+	# conjunto no bloco do nome (topo) e no bloco do LP daquele lado. O
+	# cemitério é o bloco PRETO dos dois lados.
+	var mesa: Node = await _mesa3d_nova()
+	var st = mesa.get("_st")
+	var celulas := _celulas_faixa2d(mesa)
+	# (1) NENHUMA palavra e NENHUM ícone dentro dos 7 blocos.
+	var icones: Array = []
+	for c in celulas:
+		var cel := c as Control
+		var dentro: Array = []
+		_coletar(cel, dentro)
+		for n in dentro:
+			var no := n as Node
+			if no.name in ["Pilha", "MiniDeck", "MiniCem", "Lamina0", "Nome"]:
+				icones.append("%s: %s" % [str(cel.name), str(no.name)])
+			if n is Label:
+				var t := str((n as Label).text)
+				if not t.is_valid_int() and not _eh_resultado_de_turno(t):
+					icones.append("%s: %s" % [str(cel.name), t])
+	assert_eq(icones.size(), 0, "D45 (item 3): nenhum nome/icone sobrou nos blocos: %s" % str(icones))
+	# Só o número mora dentro de cada bloco (mais a foto do cemitério).
+	for c in celulas:
+		var cel := c as Control
+		var filhos := cel.get_node("Caixa").get_children()
+		for n in filhos:
+			var nome := str((n as Node).name)
+			assert_true(nome == "Numero" or nome == "Arte",
+				"D45 (item 3): dentro do bloco %s só número ou foto (%s)." % [str(cel.name), nome])
+	# (2) Todo número é BRANCO (itens 4 e 7).
+	for par in [["MeuDeck", 0, "deck"], ["DeckRival", 1, "deck"],
+			["MeuCemiterio", 0, "graveyard"], ["CemRival", 1, "graveyard"],
+			["LpVoce", 0, "lp"], ["LpRival", 1, "lp"], ["Turno", 0, "turn_number"]]:
+		var lbl := _numero_da_celula(mesa, str(par[0]))
+		var cor := lbl.get_theme_color("font_color")
+		assert_true(cor.r > 0.95 and cor.g > 0.95 and cor.b > 0.95,
+			"D45 (item 4): o número de %s é branco (%.2f,%.2f,%.2f)." % [str(par[0]), cor.r, cor.g, cor.b])
+	# (3) Conjunto de cor por lado, e o MESMO conjunto no bloco do nome.
+	var azul_borda := Color(mesa.get("COR_AZUL_BORDA"))
+	var azul_fundo := Color(mesa.get("COR_AZUL_FUNDO"))
+	var verm_borda := Color(mesa.get("COR_VERM_BORDA"))
+	var verm_fundo := Color(mesa.get("COR_VERM_FUNDO"))
+	var pret_borda := Color(mesa.get("COR_PRETO_BORDA"))
+	var pret_fundo := Color(mesa.get("COR_PRETO_FUNDO"))
+	var meu_lp := _estilo_de(_celula(mesa, "LpVoce"))
+	var rival_lp := _estilo_de(_celula(mesa, "LpRival"))
+	var meu_nome := _estilo_de(mesa.get_node("HUD/NomeVoce") as Control)
+	var rival_nome := _estilo_de(mesa.get_node("HUD/NomeRival") as Control)
+	assert_eq(meu_lp.border_color, azul_borda, "Item 2: o bloco do seu LP tem borda azul escura.")
+	assert_eq(meu_lp.bg_color, azul_fundo, "Item 2: o bloco do seu LP tem interior azul mais claro.")
+	assert_eq(meu_nome.border_color, azul_borda, "Item 2: o bloco do SEU NOME tem o MESMO azul do seu LP (borda).")
+	assert_eq(meu_nome.bg_color, azul_fundo, "Item 2: o bloco do SEU NOME tem o MESMO azul do seu LP (interior).")
+	assert_eq(rival_lp.border_color, verm_borda, "Item 2: o bloco do LP rival tem borda vermelha escura.")
+	assert_eq(rival_lp.bg_color, verm_fundo, "Item 2: o bloco do LP rival tem interior vermelho mais claro.")
+	assert_eq(rival_nome.border_color, verm_borda, "Item 2: o bloco do NOME DO RIVAL tem o MESMO vermelho do LP dele (borda).")
+	assert_eq(rival_nome.bg_color, verm_fundo, "Item 2: o bloco do NOME DO RIVAL tem o MESMO vermelho do LP dele (interior).")
+	# Deck e LP do mesmo lado dividem a cor; o turno começa na cor de quem joga.
+	assert_eq(_estilo_de(_celula(mesa, "MeuDeck")).bg_color, azul_fundo, "Seu deck é azul como o seu LP.")
+	assert_eq(_estilo_de(_celula(mesa, "DeckRival")).bg_color, verm_fundo, "Deck do rival é vermelho como o LP dele.")
+	# (4) Os DOIS CEMITÉRIOS são pretos: borda que não é preta escura, dentro
+	# um preto mais claro.
+	for nome in ["MeuCemiterio", "CemRival"]:
+		var e := _estilo_de(_celula(mesa, nome))
+		assert_eq(e.border_color, pret_borda, "Item 5: borda preta (não escura) no " + nome + ".")
+		assert_eq(e.bg_color, pret_fundo, "Item 5: interior preto mais claro no " + nome + ".")
+	# A borda PRETA tem que ser mais clara que o preto puro, e o interior mais
+	# claro que a borda (é o que o usuário pediu: "um preto mas não é um
+	# escuro... dentro um preto mais claro").
+	assert_true(pret_fundo.r > pret_borda.r + 0.05, "Item 5: o interior do cemitério é mais claro que a borda.")
+	assert_true(pret_borda.r > 0.0, "Item 5: a borda do cemitério é preta (não azulada).")
+	assert_true(absf(pret_borda.r - pret_borda.g) < 0.02 and absf(pret_borda.r - pret_borda.b) < 0.02,
+		"Item 5: a borda do cemitério é preta de verdade (R = G = B).")
+	assert_true(st != null, "Preparo: estado real carregado.")
+
+
+## O texto da célula do turno no fim de jogo é resultado, não nome de bloco.
+func _eh_resultado_de_turno(t: String) -> bool:
+	return t == "VITORIA!" or t == "DERROTA"
+
+
+func test_d45_cor_do_turno_alterna_com_quem_esta_jogando() -> void:
+	# D45 (item 7): "no bloco do turno ele vai ficar alternando a cor sempre
+	# para o turno de quem ta jogando: se for para o meu turno vai ficar azul,
+	# o mesmo azul da borda do bloco do meu LP, e quando for o turno do inimigo
+	# vai ser vermelho, o mesmo vermelho da borda do LP do inimigo. O número
+	# fica branco." Quem manda é o `current_player` do MOTOR (R3).
+	var mesa: Node = await _mesa3d_nova()
+	var st = mesa.get("_st")
+	var azul_borda := Color(mesa.get("COR_AZUL_BORDA"))
+	var azul_fundo := Color(mesa.get("COR_AZUL_FUNDO"))
+	var verm_borda := Color(mesa.get("COR_VERM_BORDA"))
+	var verm_fundo := Color(mesa.get("COR_VERM_FUNDO"))
+	var cel := _celula(mesa, "Turno")
+	st.current_player = 0
+	mesa.call("_atualizar_faixa")
+	var e := _estilo_de(cel)
+	assert_eq(e.border_color, azul_borda, "Item 7: turno SEU = azul (mesma borda do seu LP).")
+	assert_eq(e.bg_color, azul_fundo, "Item 7: turno SEU = azul (mesmo interior do seu LP).")
+	st.current_player = 1
+	mesa.call("_atualizar_faixa")
+	e = _estilo_de(cel)
+	assert_eq(e.border_color, verm_borda, "Item 7: turno do RIVAL = vermelho (mesma borda do LP dele).")
+	assert_eq(e.bg_color, verm_fundo, "Item 7: turno do RIVAL = vermelho (mesmo interior do LP dele).")
+	# E o número continua branco nos dois casos.
+	assert_true(_numero_da_celula(mesa, "Turno").get_theme_color("font_color").r > 0.95,
+		"Item 7: o número do turno é branco.")
+
+
+func test_d45_cemiterio_mostra_a_foto_quadrada_da_ultima_carta() -> void:
+	# D45 (item 6): no bloco do SEU cemitério vai a foto da última carta que
+	# foi para o seu cemitério, num QUADRADO PERFEITO preenchendo a ponta
+	# esquerda do bloco; no do rival é igual, mas a foto fica na DIREITA. A
+	# foto é a arte REAL do dado (nunca inventada) e o corte é quadrado
+	# (a imagem não distorce).
+	var mesa: Node = await _mesa3d_nova()
+	var st = mesa.get("_st")
+	var cartas: Dictionary = mesa.get("_cartas")
+	# Escolhe uma carta que TEM arte no dado (o pack FM tem 722 PNGs).
+	var com_arte: Dictionary = {}
+	for cid in cartas:
+		var c := cartas[cid] as Dictionary
+		if not str(c.get("artwork", "")).is_empty():
+			com_arte = c
+			break
+	assert_false(com_arte.is_empty(), "Preparo: o dado tem carta com arte (para a foto do cemitério).")
+	var meu_arte := _celula(mesa, "MeuCemiterio").get_node("Caixa/Arte") as TextureRect
+	var rival_arte := _celula(mesa, "CemRival").get_node("Caixa/Arte") as TextureRect
+	assert_true(meu_arte != null and rival_arte != null, "Os dois cemitérios têm o nó da foto.")
+	# Cemitério vazio = sem foto (nunca uma imagem inventada).
+	var cem0: Array = (st.players[0] as Dictionary)["graveyard"] as Array
+	var cem1: Array = (st.players[1] as Dictionary)["graveyard"] as Array
+	while cem0.size() > 0:
+		cem0.pop_back()
+	while cem1.size() > 0:
+		cem1.pop_back()
+	mesa.call("_atualizar_faixa")
+	assert_false(meu_arte.visible, "Cemitério vazio: sem foto no seu bloco.")
+	assert_false(rival_arte.visible, "Cemitério vazio: sem foto no bloco do rival.")
+	# Uma carta no cemitério: a foto é a arte REAL dela, e o ÚLTIMO id da lista
+	# é o que aparece (é a que foi para lá por último).
+	var primeiro: String = str(com_arte.get("id", ""))
+	var segundo: Dictionary = {}
+	for cid in cartas:
+		if str(cid) != primeiro and not str((cartas[cid] as Dictionary).get("artwork", "")).is_empty():
+			segundo = cartas[cid] as Dictionary
+			break
+	cem0.append(primeiro)
+	cem1.append(primeiro)
+	mesa.call("_atualizar_faixa")
+	# A CARTA escolhida é a última do dado, e a foto é a arte real dela. Sem
+	# assets no headless (o jogo embute só as 17 peças da carta, não as 722
+	# artes que moram no PROJETO), a arte volta vazia e o bloco fica só com a
+	# contagem — o que também é a trava do "nunca uma imagem inventada".
+	var escolhida := mesa.call("_carta_do_cemiterio", 0) as Dictionary
+	assert_eq(str(escolhida.get("id", "")), primeiro,
+		"O bloco do seu cemitério aponta para a ÚLTIMA carta do dado.")
+	var esperada: Texture2D = mesa.call("_arte_real", escolhida)
+	assert_eq(_assinatura_tex(meu_arte.texture), _assinatura_tex(esperada),
+		"A foto do seu cemitério é a arte REAL da carta que foi para lá.")
+	assert_eq(_assinatura_tex(rival_arte.texture), _assinatura_tex(esperada),
+		"A foto do cemitério do rival é a arte da carta DELE.")
+	assert_eq(meu_arte.visible, esperada != null,
+		"Foto visível só quando o dado tem arte (sem imagem inventada).")
+	var rival_escolhida := mesa.call("_carta_do_cemiterio", 1) as Dictionary
+	assert_eq(str(rival_escolhida.get("id", "")), primeiro,
+		"O cemitério do rival lê o dado DELE, não o seu.")
+	# A última do dado é a que fica: põe outra carta depois e a foto muda.
+	if not segundo.is_empty():
+		cem0.append(str(segundo.get("id", "")))
+		mesa.call("_atualizar_faixa")
+		var esperada2: Texture2D = mesa.call("_arte_real", segundo)
+		assert_eq(str((mesa.call("_carta_do_cemiterio", 0) as Dictionary).get("id", "")),
+			str(segundo.get("id", "")), "Com uma segunda carta, a escolhida passa a ser a ÚLTIMA (a mais recente).")
+		assert_eq(_assinatura_tex(meu_arte.texture), _assinatura_tex(esperada2),
+			"A foto do cemitério acompanha a última carta.")
+		cem0.pop_back()
+	# A foto é um QUADRADO PERFEITO: largura = altura, e é um CORTE (a imagem
+	# não estica). Lado a lado: a sua na esquerda, a do rival na direita.
+	await wait_process_frames(2)
+	var caixa_meu := _celula(mesa, "MeuCemiterio").get_node("Caixa") as Control
+	assert_almost_eq(meu_arte.size.x, meu_arte.size.y, 0.5,
+		"Item 6: a foto do seu cemitério é um QUADRADO perfeito (%.1f x %.1f px)." % [meu_arte.size.x, meu_arte.size.y])
+	assert_almost_eq(rival_arte.size.x, meu_arte.size.x, 0.5,
+		"Item 6: a foto do cemitério do rival é o mesmo quadrado (%.1f px de lado)." % meu_arte.size.x)
+	assert_true(meu_arte.size.y >= caixa_meu.size.y - 2.0,
+		"Item 6: a foto PREENCHE o bloco na altura (%.0f de %.0f px de área útil)." % [meu_arte.size.y, caixa_meu.size.y])
+	assert_true(meu_arte.size.x >= 20.0,
+		"Item 6: a foto tem tamanho de verdade (%.0f px de lado)." % meu_arte.size.x)
+	assert_true(meu_arte.get_parent().get_child(0) == meu_arte,
+		"Item 6: no SEU cemitério a foto fica na ponta ESQUERDA do bloco.")
+	assert_true(rival_arte.get_parent().get_child(rival_arte.get_parent().get_child_count() - 1) == rival_arte,
+		"Item 6: no cemitério do RIVAL a foto fica na ponta DIREITA do bloco.")
+	assert_eq(meu_arte.stretch_mode, TextureRect.STRETCH_KEEP_ASPECT_COVERED,
+		"Item 6: a foto é um CORTE quadrado (a imagem não distorce).")
+	cem0.pop_back()
+	cem1.pop_back()
+	mesa.call("_atualizar_faixa")
+
+
 func test_d45_faixa_2d_mostra_a_quantidade_real_de_cartas() -> void:
 	# D45 (item 2): "tenha um contador de cartas ainda no deck e contador de
 	# cartas no cemiterio". A CONTAGEM vem do GameState real dos dois lados e
@@ -986,10 +1211,7 @@ func test_d45_faixa_2d_mostra_a_quantidade_real_de_cartas() -> void:
 	var mesa: Node = await _mesa3d_nova()
 	var st = mesa.get("_st")
 	for nome in ["MeuDeck", "DeckRival", "MeuCemiterio", "CemRival"]:
-		var cel := mesa.get_node("HUD/Faixa2D/Celulas/" + nome) as Control
-		assert_true(cel != null, "A célula existe: " + nome)
-		assert_true(cel.get_node_or_null(NodePath("Caixa/Pilha/Pilha")) != null or cel.get_node_or_null(NodePath("Caixa/Pilha")) != null,
-			"D45: a célula de pilha tem o desenho da pilhinha de carta: " + nome)
+		assert_true(_celula(mesa, nome) != null, "A célula existe: " + nome)
 	# O valor bate com o estado real.
 	for par in [["MeuDeck", 0, "deck"], ["DeckRival", 1, "deck"],
 			["MeuCemiterio", 0, "graveyard"], ["CemRival", 1, "graveyard"]]:

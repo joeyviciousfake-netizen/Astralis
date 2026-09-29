@@ -161,20 +161,25 @@ const FAIXA2D_GAP := 6               # vao entre as celulas
 const FAIXA2D_MARGEM_L := 10.0        # folga da faixa ate a borda da fileira
 const FAIXA2D_FONDO := Color(0.043, 0.063, 0.145, 0.86)
 const FAIXA2D_ARO := Color(0.36, 0.52, 0.92, 0.95)
-const FAIXA2D_CEL_FUNDO := Color(0.07, 0.10, 0.22, 0.90)
-const FAIXA2D_CEL_ARO := Color(0.30, 0.40, 0.66, 0.90)
-const FAIXA2D_CEL_ARO_VOCE := Color(0.35, 0.68, 0.95, 0.95)
-const FAIXA2D_CEL_ARO_RIVAL := Color(0.92, 0.45, 0.40, 0.95)
-const FAIXA2D_COR_LP := Color(1.0, 0.86, 0.22, 1.0)
-const FAIXA2D_COR_NUM := Color(0.92, 0.95, 1.00, 1.0)
-const FAIXA2D_COR_NOME := Color(0.70, 0.78, 0.95, 0.95)
-const FAIXA2D_FONTE_NUM := 30
-const FAIXA2D_FONTE_CONT := 26
-const FAIXA2D_FONTE_NOME := 12
-## Cor da "pilhinha" 2D de cada celula (deck = carta virada, cemiterio = carta
-## com a face pra cima) e o vinco entre as laminas.
-const FAIXA2D_PILHA_COR := Color(0.90, 0.86, 0.74, 1.0)
-const FAIXA2D_PILHA_VINCO := Color(0.42, 0.44, 0.52, 1.0)
+## D45: TRÊS conjuntos de cor, cada um com BORDA escura e INTERIOR mais claro,
+## e o MESMO conjunto vale para o bloco do nome (topo) e para o bloco do LP
+## daquele lado — foi o que o usuário pediu ("no bloco do meu nome, borda azul
+## mais escura e dentro azul mais claro... faça o mesmo no bloco do meu LP").
+##   azul     = você (deck, LP e o turno quando é sua vez)
+##   vermelho = rival (deck, LP e o turno quando é a vez dele)
+##   preto    = os dois cemitérios (borda preta que não é preta escura, dentro
+##              um preto mais claro)
+const COR_AZUL_BORDA := Color(0.07, 0.17, 0.40, 0.98)
+const COR_AZUL_FUNDO := Color(0.16, 0.40, 0.76, 0.96)
+const COR_VERM_BORDA := Color(0.40, 0.06, 0.09, 0.98)
+const COR_VERM_FUNDO := Color(0.74, 0.17, 0.20, 0.96)
+const COR_PRETO_BORDA := Color(0.07, 0.07, 0.08, 0.98)
+const COR_PRETO_FUNDO := Color(0.21, 0.21, 0.25, 0.96)
+## Todo NÚMERO da faixa é branco (D45, itens 4 e 7): LP, turno e as contagens
+## de cartas. Não há mais nome/"rótulo" em cima de nada (item 3).
+const FAIXA2D_COR_NUM := Color(1, 1, 1, 1)
+const FAIXA2D_FONTE_NUM := 34
+const FAIXA2D_FONTE_CONT := 30
 
 ## ---- HUD 2D (doc 15 §15.3 — TUDO medido na referência, em px do canvas
 ## 1920x1080; a referência é 1024x583 e o §15.3 traz os %) ----------------
@@ -374,6 +379,11 @@ var _lbl_fila: Label = null
 ## guarda-chuva ("Faixa2D") e `_num_*` os 7 números que `_atualizar_faixa`
 ## reescreve (contagem de cartas do deck/cemitério + LP + turno).
 var _faixa2d: Control = null
+## Célula do TURNO (a que muda de cor com quem está jogando, D45 item 7) e as
+## duas fotos de CEMITÉRIO (a última carta que foi para lá, D45 item 6).
+var _turno_cel: PanelContainer = null
+var _arte_meu_cem: TextureRect = null
+var _arte_cem_rival: TextureRect = null
 var _num_meu_deck: Label = null
 var _num_meu_cem: Label = null
 var _num_lp_voce: Label = null
@@ -2031,7 +2041,7 @@ func _construir_retratos(hud: Control) -> void:
 	ret_rival.add_child(_retrato_rival_silhueta)
 	hud.add_child(ret_rival)
 	_lbl_placa_nome_rival = _placa_nome_retrato(hud, "NomeRival", RETRATO_NOME_RIVAL_X, RETRATO_RIVAL_Y,
-		RETRATO_NOME_L, RETRATO_NOME_A, HORIZONTAL_ALIGNMENT_RIGHT, Color(1.0, 0.72, 0.62))
+		RETRATO_NOME_L, RETRATO_NOME_A, HORIZONTAL_ALIGNMENT_RIGHT, COR_VERM_BORDA, COR_VERM_FUNDO)
 	# VOCÊ: foto na esquerda (x 578) e nome à DIREITA dela, alinhado à
 	# esquerda (espelho do rival).
 	var ret_voce := PanelContainer.new()
@@ -2060,16 +2070,17 @@ func _construir_retratos(hud: Control) -> void:
 	ret_voce.add_child(_retrato_voce_silhueta)
 	hud.add_child(ret_voce)
 	_lbl_placa_nome_voce = _placa_nome_retrato(hud, "NomeVoce", RETRATO_NOME_VOCE_X, RETRATO_VOCE_Y,
-		RETRATO_NOME_L, RETRATO_NOME_A, HORIZONTAL_ALIGNMENT_LEFT, Color(0.70, 0.92, 1.0))
+		RETRATO_NOME_L, RETRATO_NOME_A, HORIZONTAL_ALIGNMENT_LEFT, COR_AZUL_BORDA, COR_AZUL_FUNDO)
 
 
-## Placa de NOME ao lado do retrato (D44, item 8): fundo escuro com borda na
-## cor do lado, e o nome do duelista REAL do dado por dentro. Só desenho.
+## Placa de NOME ao lado do retrato (D44, item 8; cores em D45, item 2): o MESMO
+## conjunto de cor do bloco de LP daquele lado — borda escura (azul a sua,
+## vermelha a do rival) e interior mais claro. O nome é o REAL do dado.
 func _placa_nome_retrato(hud: Control, nome: String, x: float, y: float, larg: float, alt: float,
-		align: int, cor: Color) -> Label:
+		align: int, cor_borda: Color, cor_fundo: Color) -> Label:
 	var p := PanelContainer.new()
 	p.name = nome
-	p.add_theme_stylebox_override("panel", _estilo_placa(Color(0.05, 0.07, 0.16, 0.88), cor))
+	p.add_theme_stylebox_override("panel", _estilo_placa(cor_fundo, cor_borda))
 	p.position = Vector2(x, y)
 	p.size = Vector2(larg, alt)
 	p.custom_minimum_size = Vector2(larg, alt)
@@ -2166,22 +2177,35 @@ func _construir_faixa_2d(hud: Control) -> void:
 	barra.add_child(linha)
 
 	var larg_cel: float = (larg - 12.0 - FAIXA2D_GAP * 6.0) / 7.0
-	# 1 MeuDeck, 2 MeuCemiterio, 3 LpVoce, 4 Turno, 5 LpRival, 6 CemRival,
-	# 7 DeckRival — a ordem que o usuário ditou (D44, travada).
-	var cel_meu_deck := _celula_faixa_2d(linha, "MeuDeck", larg_cel, alt - 10.0, FAIXA2D_CEL_ARO_VOCE, "DECK")
-	var cel_meu_cem := _celula_faixa_2d(linha, "MeuCemiterio", larg_cel, alt - 10.0, FAIXA2D_CEL_ARO_VOCE, "CEMITERIO")
-	var cel_lp_voce := _celula_faixa_2d(linha, "LpVoce", larg_cel, alt - 10.0, FAIXA2D_CEL_ARO_VOCE, "SEU LP", true)
-	var cel_turno := _celula_faixa_2d(linha, "Turno", larg_cel, alt - 10.0, FAIXA2D_CEL_ARO, "TURNO", true)
-	var cel_lp_rival := _celula_faixa_2d(linha, "LpRival", larg_cel, alt - 10.0, FAIXA2D_CEL_ARO_RIVAL, "LP RIVAL", true)
-	var cel_cem_rival := _celula_faixa_2d(linha, "CemRival", larg_cel, alt - 10.0, FAIXA2D_CEL_ARO_RIVAL, "CEMITERIO")
-	var cel_deck_rival := _celula_faixa_2d(linha, "DeckRival", larg_cel, alt - 10.0, FAIXA2D_CEL_ARO_RIVAL, "DECK")
-	_num_meu_deck = cel_meu_deck.get_node("Caixa/Pilha/Numero") as Label
-	_num_meu_cem = cel_meu_cem.get_node("Caixa/Pilha/Numero") as Label
+	var alt_cel := alt - 10.0
+	# A ORDEM que o usuário ditou (D45, item 1: cemitério e deck trocaram de
+	# lugar): MeuCemiterio, MeuDeck, LpVoce, Turno, LpRival, DeckRival,
+	# CemRival. Três conjuntos de cor, um por lado + o preto dos cemitérios
+	# (item 2 e 5), e o turno no MEIO, com a cor de quem está jogando (item 7).
+	var cel_meu_cem := _celula_faixa_2d(linha, "MeuCemiterio", larg_cel, alt_cel,
+		COR_PRETO_BORDA, COR_PRETO_FUNDO, "arte_esq")
+	var cel_meu_deck := _celula_faixa_2d(linha, "MeuDeck", larg_cel, alt_cel,
+		COR_AZUL_BORDA, COR_AZUL_FUNDO, "numero")
+	var cel_lp_voce := _celula_faixa_2d(linha, "LpVoce", larg_cel, alt_cel,
+		COR_AZUL_BORDA, COR_AZUL_FUNDO, "numero")
+	var cel_turno := _celula_faixa_2d(linha, "Turno", larg_cel, alt_cel,
+		COR_AZUL_BORDA, COR_AZUL_FUNDO, "numero")
+	var cel_lp_rival := _celula_faixa_2d(linha, "LpRival", larg_cel, alt_cel,
+		COR_VERM_BORDA, COR_VERM_FUNDO, "numero")
+	var cel_deck_rival := _celula_faixa_2d(linha, "DeckRival", larg_cel, alt_cel,
+		COR_VERM_BORDA, COR_VERM_FUNDO, "numero")
+	var cel_cem_rival := _celula_faixa_2d(linha, "CemRival", larg_cel, alt_cel,
+		COR_PRETO_BORDA, COR_PRETO_FUNDO, "arte_dir")
+	_arte_meu_cem = cel_meu_cem.get_node("Caixa/Arte") as TextureRect
+	_num_meu_cem = cel_meu_cem.get_node("Caixa/Numero") as Label
+	_num_meu_deck = cel_meu_deck.get_node("Caixa/Numero") as Label
 	_num_lp_voce = cel_lp_voce.get_node("Caixa/Numero") as Label
+	_turno_cel = cel_turno as PanelContainer
 	_num_turno = cel_turno.get_node("Caixa/Numero") as Label
 	_num_lp_rival = cel_lp_rival.get_node("Caixa/Numero") as Label
-	_num_cem_rival = cel_cem_rival.get_node("Caixa/Pilha/Numero") as Label
-	_num_deck_rival = cel_deck_rival.get_node("Caixa/Pilha/Numero") as Label
+	_num_deck_rival = cel_deck_rival.get_node("Caixa/Numero") as Label
+	_arte_cem_rival = cel_cem_rival.get_node("Caixa/Arte") as TextureRect
+	_num_cem_rival = cel_cem_rival.get_node("Caixa/Numero") as Label
 	_atualizar_faixa()
 	print("[MESA3D] Faixa 2D: 7 celulas em x=%.0f..%.0f y=%.0f..%.0f (vao das fileiras %.0f..%.0f px)." % [
 		x0, x0 + larg, y, y + alt, y_topo, y_base])
@@ -2200,90 +2224,106 @@ func _estilo_faixa2d() -> StyleBoxFlat:
 	return s
 
 
-## Uma célula da faixa. `com_pilha` = true desenha a pilhinha de carta (deck e
-## cemitério, com a CONTAGEM de cartas ao lado); false = só o número grande
-## (LP e turno). Todo mundo ganha a plaquinha com o nome do que é, em
-## LETRAS MIÚDAS: é o que deixa a faixa legível sem poluir.
-func _celula_faixa_2d(pai: Control, nome: String, larg: float, alt: float, cor_aro: Color,
-		titulo: String, so_numero := false) -> Control:
+## Uma célula da faixa. Só DUAS formas, porque o usuário pediu bloco limpo
+## (item 3: sem palavra e sem ícone):
+##   "numero"  — só o NÚMERO, branco, grande e centralizado (deck, LP, turno);
+##   "arte_esq" / "arte_dir" — a FOTO quadrada da última carta do CEMITÉRIO
+##   preenchendo a ponta ESQUERDA (a sua) ou DIREITA (a do rival), com a
+##   contagem de cartas do lado oposto.
+## A cor vem do par (borda escura, interior mais claro) que o chamador passou.
+func _celula_faixa_2d(pai: Control, nome: String, larg: float, alt: float, cor_borda: Color,
+		cor_fundo: Color, tipo: String) -> Control:
 	var cel := PanelContainer.new()
 	cel.name = nome
-	cel.add_theme_stylebox_override("panel", _estilo_celula_faixa(cor_aro))
+	cel.add_theme_stylebox_override("panel", _estilo_celula_faixa(cor_borda, cor_fundo))
 	cel.custom_minimum_size = Vector2(larg, alt)
 	cel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	cel.clip_contents = true
 	cel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pai.add_child(cel)
 
-	var v := VBoxContainer.new()
-	v.name = "Caixa"
-	v.add_theme_constant_override("separation", 0)
-	v.alignment = BoxContainer.ALIGNMENT_CENTER
-	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	cel.add_child(v)
-
-	var nome_l := _rotulo_placa_clara("Nome", titulo, FAIXA2D_FONTE_NOME)
-	nome_l.add_theme_color_override("font_color", FAIXA2D_COR_NOME)
-	nome_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	nome_l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	v.add_child(nome_l)
-
-	if so_numero:
-		var num := _rotulo_placa_clara("Numero", "0", FAIXA2D_FONTE_NUM)
-		num.add_theme_color_override("font_color", FAIXA2D_COR_LP)
-		num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		num.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		v.add_child(num)
-		return cel
-
-	# Deck/cemitério: a pilhinha de carta + a CONTAGEM de cartas reais.
 	var h := HBoxContainer.new()
-	h.name = "Pilha"
-	h.add_theme_constant_override("separation", 6)
+	h.name = "Caixa"
+	h.add_theme_constant_override("separation", 4)
 	h.alignment = BoxContainer.ALIGNMENT_CENTER
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	v.add_child(h)
-	h.add_child(_pilhinha_2d(nome))
-	var num := _rotulo_placa_clara("Numero", "0", FAIXA2D_FONTE_CONT)
+	cel.add_child(h)
+
+	var num := _rotulo_placa_clara("Numero", "0",
+		FAIXA2D_FONTE_CONT if tipo != "numero" else FAIXA2D_FONTE_NUM)
 	num.add_theme_color_override("font_color", FAIXA2D_COR_NUM)
+	num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	num.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	num.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	num.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	h.add_child(num)
+
+	if tipo == "numero":
+		num.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(num)
+		return cel
+
+	# Cemitério: a foto QUADRADA da última carta que foi para lá, na ponta que
+	# o usuário pediu (esquerda no seu, direita no do rival), e a contagem do
+	# lado oposto. A arte é um CORTE quadrado da imagem real (nunca esticada).
+	var arte := TextureRect.new()
+	arte.name = "Arte"
+	arte.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	arte.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	arte.size_flags_vertical = Control.SIZE_FILL
+	var lado_art: float = alt
+	arte.custom_minimum_size = Vector2(lado_art, lado_art)
+	arte.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN if tipo == "arte_esq" else Control.SIZE_SHRINK_END
+	arte.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	arte.visible = false
+	num.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if tipo == "arte_esq":
+		h.add_child(arte)
+		h.add_child(num)
+	else:
+		h.add_child(num)
+		h.add_child(arte)
 	return cel
 
 
-## A "pilhinha" de carta da célula: 3 lâminas finas com o vinco entre elas
-## (o desenho 2D do que era a pilha 3D, agora cabe numa célula e tem a
-## CONTAGEM do lado). `nome` muda o nome do nó, nada mais.
-func _pilhinha_2d(nome: String) -> Control:
-	var p := Control.new()
-	p.name = "Mini%s" % ("Deck" if nome.ends_with("Deck") else "Cem")
-	p.custom_minimum_size = Vector2(20, 30)
-	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for i in range(3):
-		var lamina := ColorRect.new()
-		lamina.name = "Lamina%d" % i
-		lamina.color = FAIXA2D_PILHA_VINCO if i == 0 else FAIXA2D_PILHA_COR
-		lamina.position = Vector2(float(i) * 2.0, float(2 - i) * 3.0)
-		lamina.size = Vector2(16, 4)
-		lamina.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		p.add_child(lamina)
-	return p
-
-
-func _estilo_celula_faixa(cor_aro: Color) -> StyleBoxFlat:
+func _estilo_celula_faixa(cor_borda: Color, cor_fundo: Color) -> StyleBoxFlat:
 	var s := StyleBoxFlat.new()
-	s.bg_color = FAIXA2D_CEL_FUNDO
-	s.border_color = cor_aro
-	s.set_border_width_all(1)
+	s.bg_color = cor_fundo
+	s.border_color = cor_borda
+	s.set_border_width_all(2)
 	s.set_corner_radius_all(4)
 	return s
 
 
-## D45 (item 2): escreve na faixa 2D o que o estado REAL manda — a contagem
-## de cartas do baralho e do cemitério dos dois lados, o LP de cada um e o
-## turno atual. Só leitura, zero regra (R1/R3).
+## Carta REAL do topo do cemitério de um lado: a ÚLTIMA do dado (a que foi
+## para lá por último), com a roupa do dado (nome, atributo, arte). Vazio do
+## cemitério = {} — nunca uma carta inventada (R3).
+func _carta_do_cemiterio(lado: int) -> Dictionary:
+	var cem := _lista_do_jogador(lado, "graveyard")
+	if cem.is_empty():
+		return {}
+	var cid := str(cem[cem.size() - 1])
+	if cid.is_empty() or not _cartas.has(cid):
+		return {}
+	return _cartas[cid] as Dictionary
+
+
+## Arte REAL da carta para a foto do cemitério (D45, item 6). Passa pelo
+## CACHE de textura (`_tex_cache`), então a faixa não relê a imagem do disco a
+## cada atualização, e devolve nulo quando o dado não tem arte (o bloco fica
+## só com a contagem — nunca uma imagem inventada, R3).
+func _arte_real(carta: Dictionary) -> Texture2D:
+	var rel := str(carta.get("artwork", "")).strip_edges()
+	if rel.is_empty():
+		return null
+	return _tex_cache(rel)
+
+
+## D45: escreve na faixa 2D o que o estado REAL manda — a contagem de cartas
+## do baralho e do cemitério dos dois lados, o LP de cada um, o turno atual e
+## a FOTO da última carta que foi para cada cemitério. A COR da célula do
+## turno alterna com quem está jogando (azul = você, vermelho = rival, o mesmo
+## conjunto de cores do LP daquele lado). Só leitura, zero regra (R1/R3).
 func _atualizar_faixa() -> void:
 	if _st == null or _faixa2d == null:
 		return
@@ -2295,6 +2335,16 @@ func _atualizar_faixa() -> void:
 		_num_deck_rival.text = "%d" % (_lista_do_jogador(1, "deck") as Array).size()
 	if _num_cem_rival != null:
 		_num_cem_rival.text = "%d" % (_lista_do_jogador(1, "graveyard") as Array).size()
+	# A foto do cemitério: a arte REAL da última carta que foi para lá (ou
+	# nada, se estiver vazio — nunca uma imagem inventada).
+	for par in [[0, _arte_meu_cem], [1, _arte_cem_rival]]:
+		var arte := par[1] as TextureRect
+		if arte == null:
+			continue
+		var carta := _carta_do_cemiterio(int(par[0]))
+		var tex := _arte_real(carta)
+		arte.texture = tex
+		arte.visible = tex != null
 	if _num_lp_voce != null:
 		_num_lp_voce.text = "%d" % _int_do_jogador(0, "lp")
 	if _num_lp_rival != null:
@@ -2304,6 +2354,20 @@ func _atualizar_faixa() -> void:
 			_num_turno.text = "VITORIA!" if int(_st.winner) == 0 else "DERROTA"
 		else:
 			_num_turno.text = "%d" % int(_st.turn_number)
+	_tingir_turno()
+
+
+## D45 (item 7): a célula do TURNO muda de cor com quem está jogando — azul
+## (o mesmo conjunto do seu LP) na sua vez, vermelho (o mesmo do LP do rival)
+## na vez dele. A cor vem do `current_player` do motor, nunca de um contador
+## solto (R3), e o número é branco.
+func _tingir_turno() -> void:
+	if _turno_cel == null or not is_instance_valid(_turno_cel):
+		return
+	var meu := int(_st.current_player) == 0
+	_turno_cel.add_theme_stylebox_override("panel", _estilo_celula_faixa(
+		COR_AZUL_BORDA if meu else COR_VERM_BORDA,
+		COR_AZUL_FUNDO if meu else COR_VERM_FUNDO))
 
 
 func _construir_hud() -> void:

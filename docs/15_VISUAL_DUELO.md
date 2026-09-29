@@ -14,12 +14,16 @@ Oito pedidos do usuário depois de jogar, todos de DESENHO:
 |---|---|---|
 | 1 | Retratos bem na beirada de cima, mesmo espaço nas 3 laterais, e o bloco de nome com o TOPO na MESMA LINHA do topo da foto | `RETRATO_MARGEM` (14 px) + `RETRATO_*_Y` + placa de nome no mesmo `y` |
 | 2 | A faixa do meio (deck/cemitério/LP/turno) **virou 2D** no vão entre as fileiras | `HUD/Faixa2D` (§15.7) |
-| 3 | Pilha de deck/cemitério que pareça cartas empilhadas (o bloco branco saiu) | resolvido pelo 2D: a "pilhinha" é desenhada na célula, com a CONTAGEM de cartas |
-| 4 | Mão do rival entre o topo da tela e o topo dos slots de magia dele | `_y_da_mao` (altura resolvida da câmera) |
-| 5 | Sua mão colada na linha de baixo da sua fileira de magia | idem (topo da carta = base da fileira + 5 px) |
-| 6 | Espaço entre as cartas da sua mão (não podem se atravessar) | `MAO_P0_PASSO` = 1,08 (> 1,0 = vão de verdade) |
-| 7 | "START ? Help" fora da tela | removido; a ação continua no joypad (D19) |
+| 3 | Blocos **limpos**: sem as palavras (DECK, CEMITÉRIO, SEU LP, TURNO, LP RIVAL) e sem ícone de pilha | `_celula_faixa_2d` só tem número + foto |
+| 4 | Todo número da faixa em **branco** | `FAIXA2D_COR_NUM` |
+| 5 | Cor do **cemitério**: borda preta (que não é preta escura) e interior preto mais claro | `COR_PRETO_BORDA` / `COR_PRETO_FUNDO` |
+| 6 | **Foto da última carta do cemitério** num quadrado perfeito: ponta esquerda no seu, ponta direita no do rival | `_carta_do_cemiterio` + `_arte_real` + `Caixa/Arte` |
+| 7 | A célula do **turno** alterna a cor com quem está jogando (azul = você, vermelho = rival) | `_tingir_turno` (lê `current_player`) |
 | 8 | A carta comprada entra sempre na 5ª posição: você à direita, o rival pela esquerda (ele joga do outro lado da mesa) | arco do rival ESPELHADO em `_pos_mao_arco` |
+| 9 | A mão do rival entre o topo da tela e o topo dos slots de magia dele | `_y_da_mao` (altura resolvida da câmera) |
+| 10 | Sua mão colada na linha de baixo da sua fileira de magia | idem (topo da carta = base da fileira + 5 px) |
+| 11 | Espaço entre as cartas da sua mão (não podem se atravessar) | `MAO_P0_PASSO` = 1,08 (> 1,0 = vão de verdade) |
+| 12 | "START ? Help" fora da tela | removido; a ação continua no joypad (D19) |
 
 **Por que a faixa foi para 2D (§15.7).** Em 3D, a posição de um objeto no chão
 é a soma de três números que precisam concordar (o z da fileira, metade da
@@ -210,19 +214,32 @@ Isso é sonda de desenvolvimento em pasta temporária, não vai para o repo.
 
 A faixa continua no MEIO da tela, entre a fileira de monstros do rival e a
 sua, mas agora é **2D** (filha do HUD, por cima do campo 3D). Sete células na
-ordem que o usuário ditou (D44, travada):
+ordem que o usuário ditou (D44; em D45 o **cemitério e o baralho trocaram de
+lugar**):
 
 ```text
-[ DECK 40 ][ CEMITERIO 0 ][ SEU LP 8000 ][ TURNO 1 ][ LP RIVAL 8000 ][ CEMITERIO 0 ][ DECK 35 ]
+[ FOTO 2 ][ DECK 40 ][ SEU LP 8000 ][ TURNO 1 ][ LP RIVAL 8000 ][ DECK 35 ][ 1 FOTO ]
 ```
 
-- **Deck e cemitério**: pilhinha de carta desenhada (3 lâminas) + **CONTAGEM
-  de cartas** lida do `GameState` real (`players[lado].deck` /
-  `.graveyard`). Deck vazio e cemitério vazio mostram `0` — não somem, não
-  inventam número.
-- **LP e turno**: número grande do estado real; a placa do MEU lado tem aro
-  azul e a do RIVAL vermelho; a célula do turno anuncia `VITÓRIA!` /
-  `DERROTA` quando o duelo acaba.
+- **Deck**: só a CONTAGEM de cartas do baralho real.
+- **Cemitério**: a CONTAGEM + a **FOTO da última carta que foi para lá**, num
+  **quadrado perfeito** preenchendo a ponta **esquerda** (a sua) ou
+  **direita** (a do rival). É um *corte* quadrado da arte real (a imagem nunca
+  distorce) e vem pelo cache de textura. Cemitério vazio = sem foto (nunca
+  uma imagem inventada).
+- **LP e turno**: número do GameState real, sempre **branco**. A célula do
+  **turno muda de cor com quem está jogando** (o `current_player` do motor):
+  azul na sua vez, vermelho na vez dele.
+- **Sem palavra e sem ícone** dentro dos blocos (D45, item 3): a informação
+  sozinha, com a plaquinha identificada pela cor.
+- **Três conjuntos de cor**, cada um com borda escura e interior mais claro:
+
+| Conjunto | Borda | Interior | Onde |
+|---|---|---|---|
+| azul | `COR_AZUL_BORDA` | `COR_AZUL_FUNDO` | seu deck, seu LP, bloco do **seu nome** (topo), turno na sua vez |
+| vermelho | `COR_VERM_BORDA` | `COR_VERM_FUNDO` | deck e LP do rival, bloco do **nome do rival** (topo), turno na vez dele |
+| preto | `COR_PRETO_BORDA` (preto que não é preto escuro) | `COR_PRETO_FUNDO` (preto mais claro) | os **dois cemitérios** |
+
 - **Posição**: medida, não chutada. O vão vem das bordas REAIS das duas
   fileiras de monstros (`_borda_da_fileira_px`, dado + câmera) e a largura vem
   da extensão real da fileira (`_extensao_da_fileira_px`). A barra é
