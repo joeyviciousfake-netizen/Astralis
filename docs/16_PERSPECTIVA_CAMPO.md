@@ -572,8 +572,9 @@ usuario preferir o contrário.)
   - `d47_90.png` mostra o meio da volta: o campo visivelmente atravessado, a
     sua mão já do outro lado, e o HUD no meio do virar (placas estreitas, faixa
     com ~65% da largura).
-- **GUT**: `astralis/testing/test_volta_mesa.gd`, **11 testes / 149 asserts**
-  (era 10/96 antes da D51, que acrescentou a trava do espelho), no lugar do
+- **GUT**: `astralis/testing/test_volta_mesa.gd`, **12 testes**
+  (era 10/96 antes da D51, que acrescentou a trava do espelho, e a D52 acrescentou
+  a das mãos), no lugar do
   `test_perspectiva_campo.gd` (que foi apagado junto com a D46). Trava:
   a câmera é filha do pivô e não se move; a lente no eixo e o centro do campo no
   lugar; a volta vai a 180 e volta a 0 (e é idempotente); **as cartas do campo
@@ -688,9 +689,118 @@ deixar a câmera num ângulo com a distância de outro.
 simétrico, com a posição e a rotação **trocadas aos 90°** (que é o instante em
 que o HUD está com largura zero, então ninguém vê a troca). Continua valendo
 o que a D47 deixou escrito acima: a mão do jogador, no mundo, fica a 34,8
-unidades da câmera na visão do rival (23,5° fora do eixo, FOV de 20°), então
+unidades da câmera na visão do rival (23,5° fora do eixo, FOV de 20), então
 **trocar só a rotação não resolve** — a posição também precisa ser trocada por
 uma espelhada, ou seja a mão do jogador no ponto "longe" e a do rival no
 "perto", com a altura preservada. É a próxima etapa, e a decisão do desenho é
 dele.
+
+## 16.17 A D52 — AS DUAS MÃOS, UMA EM CADA LUGAR (2026-09-30)
+
+### O pedido (palavras do usuário)
+
+> "1 - quando eu estou na perspectiva do inimigo as cartas da MINHA MÃO tem que
+> aparecer no outro lado da tela igual as cartas do inimigo [aparecem] quando
+> estou na minha rodada"; "as cartas dele tem que aparecer posicionadas
+> exatamente como aparecem pra mim quando estou vendo as minhas cartas na minha
+> rodada, mas [...] deixe algo tapando a frente da carta"; e a regra: "na minha
+> perspectiva você pega todas as informações de rotação e posicionamento das
+> minhas cartas da mão [...] com essas informações o que tem que ser feito é
+> colar os valores que você pegou e colocar eles na visão do inimigo, só que
+> invertido alguns valores [...] faça que essa troca de valores aconteça quando
+> chegar nos 90 graus".
+
+Antes disto a D47 deixou escrito que a mão do jogador **não aparecia** na
+visão do rival (23,6° do eixo, FOV de 20) e que nenhuma posição fixa resolveria.
+A D52 é a resposta a isso, e ela **reabre parte da D47**: as mãos passam a se
+mover, o que a D47 travava ("as mãos não se mexem um milímetro").
+
+### A regra (uma, e sai de graça)
+
+**Quem está jogando ocupa o lugar de BAIXO; o outro, o de CIMA. E na vista do
+rival cada lugar é o ESPELHO do mesmo lugar na sua vista** — que é a D51
+inteira: as duas vistas já são espelhos uma da outra, então não é preciso
+refazer uma única medida.
+
+| | sua visão | visão do rival |
+|---|---|---|
+| embaixo | a sua mão, **de frente** | a mão dele, **de costas** |
+| em cima | a mão dele, de costas | a sua mão, de costas |
+
+Os números, medidos no jogo (`_pose_da_mao`):
+
+- lugar de baixo: `z = 12,7` na sua vista, `z = -13,496` na do rival — as duas
+  a **8,2 unidades** da câmera dos dois lados (20,9 − 12,7 = 21,696 − 13,496),
+  ou seja **o mesmo tamanho de carta na tela**.
+- lugar de cima: `z = -6,45` na sua vista, `z = 5,654` na do rival — as duas a
+  27,35 unidades da câmera, a mesma distância, a mesma letterbox na tela.
+- o Y e o X **não mudam**: a câmera do rival é o espelho exato da sua, então o
+  mesmo ponto de mundo cai na mesma linha de tela dos dois lados. É por isso
+  que `_y_da_mao` e `_x_centro_da_mao` (resolvidos uma vez, na vista do
+  jogador) valem para as duas, e que a vista do jogador fica **byte a byte**.
+
+### A CARA: por que as duas ficam de pé na vista do rival
+
+Na vista do rival as DUAS mãos mostram o verso, e as duas com a MESMA
+inclinação (+35°, o espelho da do lugar de baixo). Não é gosto: **o verso de
+uma carta não é o espelho da frente dela**, então uma carta vista por trás não
+pode ser a imagem espelhada de uma carta vista pela frente. Virada de cabeça
+para baixo (como a mão do rival aparece na sua vista) mostraria a **arte** da
+carta do jogador em vez do verso. O usuário pediu o verso ("igual as cartas do
+inimigo aparecem na minha rodada"), e a posição e o tamanho batem exatamente.
+
+### O que o código ganhou (e o que NÃO ganhou)
+
+- `_dono_do_lugar_perto()`: quem está no lugar de baixo, pelo mesmo número que
+  manda a volta (`_giro_campo` nos 90°, D47). Nada guardado em outro lugar.
+- `_pose_da_mao(perto)`: **dono único** da pose do lugar (x, y, z, tilt,
+  verso). Antes a posição era uma conta e a rotação outra, escritas em dois
+  lugares — foi assim que a carta chegou a ter uma pose no lugar e outra no
+  desenho.
+- `_pos_mao_arco(i, n, lado)`: o `lado` continua sendo o DONO no dado, e quem
+  decide o lugar é a vista. O **sentido do arco passou a ser o da vista** (a
+  câmera do rival espelha o X do mundo, e sem isso o rival veria a própria mão
+  ao contrário — o D45 item 8 + D18 se cancelando).
+- `_pose_da_carta_da_mao` + `_aplicar_vista_da_mao`: a troca acontece nos 90°,
+  andando nas cartas já desenhadas (sem redesenhar tudo), e o cursor some na
+  vista do rival (ele fica preso na carta da sua mão e, com as mãos trocadas,
+  ficaria em cima da mão dele denunciando a sua escolha).
+- `_camada_da_mao(no, sem_profundidade)`: o lugar de cima é camada de mão (o
+  vidro do campo o pintaria por cima, D3) e o de baixo fica **com sombra e
+  profundidade normais** — senão a vista do jogador mudava.
+- As constantes `MAO_P0_*`/`MAO_P1_*` viraram `LUGAR_PERTO_*`/`LUGAR_LONGE_*`:
+  depois da D52 elas são do LUGAR, e o nome antigo (do jogador e do rival)
+  passaria a mentir.
+- **`_aquecer_a_mao()` no boot**: o Y e o X dos dois lugares são resolvidos
+  com a tela na vista do JOGADOR, antes de qualquer carta ser desenhada. Sem
+  isto o cache seria resolvido na primeira mão que aparecesse — e se o rival
+  começar o duelo (D42, sorteado pelo motor) viria com a câmera do lado errado
+  e o `_borda_da_fileira_px` invertido, guardando a altura errada para sempre.
+
+### A prova
+
+- **GUT**: `astralis/testing/test_volta_mesa.gd` **12 testes**,
+  suíte **181/181, 3822 asserts, 0 SCRIPT ERROR, 0 orphans**. A trava nova
+  (`test_as_duas_maos_trocam_de_lugar_e_as_duas_aparecem`) crava: quem joga
+  embaixo nas duas vistas; **as DUAS mãos na tela nas duas vistas** (a sua não
+  aparecia); o lugar de baixo do rival na **mesma caixa de tela** do seu (X,
+  altura, topo e base, com o mesmo tamanho); o Z de cada lugar espelhado em
+  `2 × _z_simetria`; **as duas mãos do rival sem nome/ATK/selo** em cima do
+  verso; as duas de pé; o cursor escondido na vista do rival; **a troca nos
+  90°** (89° ainda é a sua vista, 91° já é a do rival); e o `GameState` intacto
+  (R1). O `test_as_cartas_do_campo_nao_se_mexem_na_volta` da D47 foi
+  **reescrito no trecho das mãos** (o campo continua travado em zero
+  deslocamento): a trava antiga ("as mãos não se mexem") é o que a D52
+  substituiu.
+- **Fotos** (pasta de temp, fora do repo — R8): `d52_rival.png` (a vista do
+  rival: a mão dele embaixo, grande e tapada; a sua em cima, de costas),
+  `ab_d52_fixa.png` (a sua vista) e a comparação `d52_COMPARA_maos.png`.
+- **A sua visão não mudou**: com a mesma semente (`--setup` com `test_state`),
+  a foto antes × depois dá **100,0000% dos pixels iguais** na região do campo, e
+  na área da mão 161 px de 2.001.046 (0,008%), todos na borda antialiasada da
+  carta — o controle do **mesmo** build, duas execuções, varia de 9 a 59 px na
+  mesma região (é o cursor, que pulsa com o tempo). As travas geométricas do
+  D45 (altura na linha da fileira + 5 px, z 12,7, passo 1,08, X no centro do
+  campo, mão de cima inteira na tela) passam com as mesmas tolerâncias.
+
 
