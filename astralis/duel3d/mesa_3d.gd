@@ -111,17 +111,21 @@ const PECA_EM_CARTAS := 1.40
 ## que a carta DEITADA (ALT_CARTA = 1,4576 larguras), para a carta de DEF
 ## caber dentro da peça em vez de encostar/cortar na borda.
 const PECA_PROF_CARTAS := 1.58
-## D44 (item 5 do usuário): quanto a fileira de MAGIA avança no Z em direção
-## à fileira de MONSTRO, para o vão VERTICAL entre as duas ficar igual ao vão
-## HORIZONTAL entre dois slots vizinhos. Só a linha de magia usa isto — a de
-## monstro fica exatamente onde está (nem X nem Z).
-## Números medidos NA TELA (canvas 1920x1080, jogo de verdade), antes do
-## ajuste: vão horizontal entre slots vizinhos = 25,2 px; vão vertical
-## monstro->magia = 28,5 px no RIVAL e 42,8 px no JOGADOR. Fechar essa
-## diferença é o que estes dois números resolvem (calibrados por iteração:
-## cada 0,01 de Z ≈ 1,3 px no seu lado e ≈ 0,7 px no lado do rival).
-const APROXIMA_MAGIA_VOCE := 0.22
-const APROXIMA_MAGIA_RIVAL := 0.05
+## D49: o vão vertical monstro->magia NÃO é mais corrigido aqui. A correção
+## vivia em APROXIMA_MAGIA_VOCE (0,22) e APROXIMA_MAGIA_RIVAL (0,05), dois
+## números chutados por iteração de CALIBRAÇÃO DE TELA para compensar o dado —
+## e por isso o dado nunca era o que a tela mostrava. O pedido do usuário foi
+## o contrário: UM valor só (263) em todo o campo, medido POR CÓDIGO, e a
+## correspondência dado↔tela exata. O vão agora vem inteiro do
+## `arena_starter.json` (y 695/958 no jogador, 305/42 no rival = 263 nos dois
+## lados), o mesmo número do passo horizontal. NADA desloca a fileira de magia
+## aqui: se algum dia o vão ficar feio de novo, o dado é que se muda — não um
+## desvio escondido no código. O 2D legado (`duel_legacy2d/duel_board.gd`) usa
+## a mesma grade.
+## ATENÇÃO (o que a tela NÃO pode prometer): o vão é igual em MUNDO, mas a
+## perspectiva faz o mesmo intervalo aparecer com 276 px na fileira da frente,
+## 257 px no meio e 220 px no fundo. Isso é projeção, não erro do dado (doc 15
+## §15.4 proíbe mexer na lente), então NÃO use foto para julgar este número.
 ## COLUNAS do campo (5 slots por fileira, D15/D17 — o mesmo 5 do
 ## `GameState` e do `arena.schema.json`). Vive aqui porque a perspectiva
 ## (doc 16) espelha a COLUNA: coluna 0 <-> coluna 4, e o meio fica.
@@ -1138,18 +1142,12 @@ func _pos_slot(lado: int, tipo: String, indice: int) -> Vector3:
 	var sid := BoardLayoutScript.slot_id(lado, tipo, indice)
 	var padrao := BoardLayoutScript.default_pos(sid)
 	var p2 := BoardLayoutScript.get_pos(_arena_layout, sid, padrao)
+	# D49: a conversão é PURA e igual para os 4 tipos de slot (monstro/magia,
+	# jogador/rival). O vão vertical monstro->magia é o do DADO (263 = o mesmo
+	# do passo horizontal) e a fileira de monstro fica exatamente onde o dado
+	# diz. Não existe mais nenhum desvio por tipo aqui: se a tela mostrar um vão
+	# torto, a causa é a perspectiva da câmera (doc 15 §15.4), não este código.
 	var z := (p2.y - CENTRO_Y) / DIV * ESCALA_CAMPO + DESLOC_CAMPO.y
-	# D44 (item 5 do usuário): a fileira de MAGIA se APROXIMA da de MONSTRO,
-	# porque o vão vertical entre elas estava bem maior que o vão horizontal
-	# entre dois slots vizinhos. A fileira de MONSTRO NÃO se mexe — nem no X
-	# nem no Z — o deslocamento abaixo só entra na linha de magia. É
-	# apresentação pura, aplicada DEPOIS do transform, então a arena (dado)
-	# continua mandando na composição relativa e no espelho do rival.
-	if tipo == "magia":
-		# O sinal é o do lado: a SUA magia sobe (z MENOR = mais longe da
-		# câmera) e a do RIVAL desce (z MAIOR = mais perto). O centro do campo
-		# fica em z = 0, então o sinal do z já diz de que lado é a fileira.
-		z -= (APROXIMA_MAGIA_VOCE if lado == 0 else -APROXIMA_MAGIA_RIVAL)
 	return Vector3(
 		(p2.x - CENTRO_X) / DIV * ESCALA_CAMPO + DESLOC_CAMPO.x,
 		TOPO, z)
