@@ -7,7 +7,6 @@ extends "res://testing/astralis_test_base.gd"
 ## existe texto da ref (placas, painel carta, fases, contadores, menus
 ## funcionais) e que painéis/HUD/fases trazem o dado real.
 
-const Mesa3DScene := preload("res://duel3d/mesa_3d.tscn")
 const SummonSys := preload("res://duel/summon_system.gd")
 const BoardLayout := preload("res://core/board_layout.gd")
 const TurnManager := preload("res://duel/turn_manager.gd")
@@ -19,7 +18,6 @@ const NOS_PROIBIDOS := ["Mesa", "Tampo", "MolduraN", "MolduraS", "MolduraL",
 ## perspectiva — o mundo 3D inteiro (céu, campo, cartas, mão, cursor) mora
 ## dentro de um SubViewport com a região do campo, mostrado por baixo do HUD
 ## 2D. Os nós 3D mantiveram os MESMOS nomes; só ganharam o prefixo da janela.
-const JANELA := "Camada3D/JanelaCampo/Viewport3D"
 ## Consts do desenho 3D que o GUT espelha (D3 mudou a mão do rival para
 ## trás do campo). A trava é o valor da const do runtime: se alguém mexer
 ## na const sem atualizar o desenho, o teste acusa.
@@ -32,26 +30,6 @@ const LUGAR_LONGE_YZ_TESTE := Vector2(-0.35, -6.45)
 const LUGAR_LONGE_PASSO_TESTE := 0.86
 
 
-## Procura um nó do MUNDO 3D (dentro da janela do campo).
-func _n3d(mesa: Node, caminho: String) -> Node:
-	return mesa.get_node_or_null(NodePath(JANELA + "/" + caminho))
-
-
-func _mesa3d_nova():
-	var mesa: Node = Mesa3DScene.instantiate()
-	add_child_autofree(mesa)
-	await wait_process_frames(6)
-	return mesa
-
-
-func _coletar(n: Node, out: Array) -> void:
-	out.append(n)
-	for f in n.get_children():
-		_coletar(f, out)
-
-
-## Índice do MEIO do arco de uma mão de n cartas (com n par o meio do arco
-## cai entre 2 cartas — é o que a mesa usa na calibração).
 func _meio_do_arco(n: int) -> int:
 	return int(ceil(float(maxi(n - 1, 0)) / 2.0))
 

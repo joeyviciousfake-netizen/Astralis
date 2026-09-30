@@ -18,7 +18,6 @@ extends "res://testing/astralis_test_base.gd"
 ##
 ## Sem Fake (R2): a mesa real, os sistemas reais, os arquivos de verdade.
 
-const Mesa3DScene := preload("res://duel3d/mesa_3d.tscn")
 const Mesa3DScript := preload("res://duel3d/mesa_3d.gd")
 
 ## Os 17 pares, nome a nome. Tem que ser exatamente a lista que o jogo usa.

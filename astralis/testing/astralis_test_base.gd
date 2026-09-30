@@ -36,6 +36,11 @@ const DuelManagerScript := preload("res://duel/duel_manager.gd")
 const SummonSystem := preload("res://duel/summon_system.gd")
 const TableScript := preload("res://duel_legacy2d/duel_table.gd")
 const MesaScene := preload("res://duel_legacy2d/duel_table.tscn")
+const Mesa3DScene := preload("res://duel3d/mesa_3d.tscn")
+
+## O mundo 3D (doc 15 15.4) mora dentro de um SubViewport: o caminho da janela
+## é o prefixo de TODO nó 3D da mesa.
+const JANELA := "Camada3D/JanelaCampo/Viewport3D"
 
 
 # ---------- DUELO (motor, sem cena) ----------
@@ -83,7 +88,10 @@ func _garantir_monstros_na_mao(st, player_idx: int, quantos: int) -> void:
 			k += 1
 
 
-# ---------- MESA REAL (duel_legacy2d/duel_table.tscn) ----------
+# ---------- MESA REAL 2D (duel_legacy2d/duel_table.tscn) ----------
+# ESTE BLOCO SAI NO F2 (D54: o 2D aposentado foi removido). As funcoes
+# `_mesa_nova` e `_fluxo_completo_ate_campo` usam `MesaScene`/`TableScript`,
+# que nao existiram mais depois do D54.
 
 # Mesa nova de verdade: instancia a cena, espera 4 quadros (a mesa monta o
 # duelo e desenha sozinha) e devolve o nó. O GUT libera no fim do teste.
@@ -92,6 +100,61 @@ func _mesa_nova():
 	add_child_autofree(mesa)
 	await wait_process_frames(4)
 	return mesa
+
+
+# ---------- MESA REAL 3D (duel3d/mesa_3d.tscn) ----------
+# A mesa OFICIAL desde o D40. Mesma ideia da 2D: instancia a cena real e
+# espera o boot montar o duelo e o desenho.
+
+func _mesa3d_nova():
+	var mesa: Node = Mesa3DScene.instantiate()
+	add_child_autofree(mesa)
+	await wait_process_frames(6)
+	return mesa
+
+
+# Procura um nó do MUNDO 3D (dentro da janela do campo).
+func _n3d(mesa: Node, caminho: String) -> Node:
+	return mesa.get_node_or_null(NodePath(JANELA + "/" + caminho))
+
+
+# Todas as cartas 3D desenhadas (as 4 fileiras + as DUAS mãos).
+func _cartas3d(mesa: Node) -> Array:
+	var cartas := _n3d(mesa, "Cartas")
+	return cartas.get_children() if cartas != null else []
+
+
+# A carta da mão no índice pedido, pelo meta `mao_dono` + `mao_idx` (D52: as
+# DUAS mãos têm `mao_idx`, então quem diz de quem é a carta é o DONO).
+# PEGA A MAIS NOVA, e não a primeira: `_redesenhar` marca a carta antiga com
+# `queue_free` e cria a nova, então entre um redesenho e o fim do quadro as
+# DUAS existem com o mesmo par de metas - e a que o jogo está desenhando (a
+# que a animação move) é a última.
+func _carta_da_mao(mesa: Node, idx: int, dono: int = 0) -> Node3D:
+	var achada: Node3D = null
+	for f in _cartas3d(mesa):
+		if (f as Node).has_meta("mao_dono") and int((f as Node).get_meta("mao_dono")) == dono \
+				and int((f as Node).get_meta("mao_idx")) == idx:
+			achada = f as Node3D
+	return achada
+
+
+# Junta a árvore inteira num Array (para varrer nós/texto).
+func _coletar(n: Node, out: Array) -> void:
+	out.append(n)
+	for f in n.get_children():
+		_coletar(f, out)
+
+
+# Todo texto que a cena EXIBE (Label 2D e Label3D). Serve para provar que um
+# dado do rival não vaza na tela (R1).
+func _textos_visiveis(n: Node, out: Array) -> void:
+	if n is Label:
+		out.append(str((n as Label).text))
+	elif n is Label3D:
+		out.append(str((n as Label3D).text))
+	for f in n.get_children():
+		_textos_visiveis(f, out)
 
 
 # Roda o fluxo fiel completo na mesa real via confirmar de verdade:

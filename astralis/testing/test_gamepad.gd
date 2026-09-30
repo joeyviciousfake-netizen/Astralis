@@ -1,16 +1,15 @@
 extends "res://testing/astralis_test_base.gd"
 
 ## test_gamepad — GUT do controle 100% gamepad na mesa (D26, R2: sem Fake).
-## Usa o InputMap real (project.godot) + o script real da mesa
-## (duel_table.gd) via cena real. Sem gamepad físico: simula com
-## Input.action_press/action_release + chama o passo do cursor
-## (_pad_mover/_pad_cancelar). START reservado (pausar sem ação).
+## Usa o InputMap real (project.godot) + a cena real da mesa OFICIAL
+## (duel3d/mesa_3d.tscn). Sem gamepad físico: simula com
+## Input.action_press/action_release + chama o passo real do cursor
+## (_mover/_cancelar). START reservado (pausar sem ação).
 ## Trava D26 parcial: 11 ações só-joypad (zero teclado/mouse) + mesa
 ## sem controle clicável (sinal clicada removido de verdade).
 ## Bug aqui vira teste permanente.
 
-const CardViewScript := preload("res://ui/card_view.gd")
-# TableScript e MesaScene vêm da base (astralis_test_base.gd) - R8: uma cópia só.
+# Os helpers de mesa (_mesa3d_nova) vêm da base (astralis_test_base.gd) - R8.
 
 const ACOES_CONTROLE := [
 	"mover_cima", "mover_baixo", "mover_esq", "mover_dir",
@@ -62,45 +61,40 @@ func test_mover_so_tem_evento_de_joypad() -> void:
 
 
 func test_cursor_anda_e_volta_passo_real() -> void:
-	# Cena real (mesa jogável de verdade). Simula o direcional sem
-	# gamepad físico e anda 1 passo p/ direita + volta p/ esquerda.
-	var mesa: Node = MesaScene.instantiate()
-	add_child_autofree(mesa)
-	await wait_process_frames(4)
+	# Mesa 3D real. Simula o direcional sem gamepad físico e anda 1 passo
+	# p/ direita + volta p/ esquerda, pelo mesmo código que o jogo usa.
+	var mesa: Node = await _mesa3d_nova()
 	assert_true(is_instance_valid(mesa), "Mesa real instanciada.")
-	var fileira_ini: int = int(mesa.get("_pad_fileira"))
-	assert_eq(fileira_ini, TableScript.FILEIRA_MAO, "Cursor começa na fileira da mão.")
-	var col_ini: int = int(mesa.get("_pad_col"))
-	var larg: int = int(mesa.call("_pad_largura_fileira", fileira_ini))
-	assert_true(larg > 1, "Preparo: mão tem %d cartas, dá p/ andar esq/dir." % larg)
+	var fileira_ini: int = int(mesa.get("_fileira"))
+	var col_ini: int = int(mesa.get("_col"))
+	var larg: int = int(mesa.call("_larg_fileira", fileira_ini))
+	assert_true(larg > 1, "Preparo: a fileira tem %d casas, dá p/ andar esq/dir." % larg)
 	# Segura o direcional (simula o controle) e dá 1 passo real.
 	Input.action_press("mover_dir")
 	assert_true(Input.is_action_pressed("mover_dir"), "Direcional simulado fica pressionado.")
-	mesa.call("_pad_mover", 1, 0)
+	mesa.call("_mover", 1, 0)
 	Input.action_release("mover_dir")
 	assert_false(Input.is_action_pressed("mover_dir"), "Direcional simulado solta após o passo.")
-	var col_meio: int = int(mesa.get("_pad_col"))
+	var col_meio: int = int(mesa.get("_col"))
 	assert_eq(col_meio, posmod(col_ini + 1, larg), "1 passo p/ direita anda 1 casa.")
 	assert_ne(col_meio, col_ini, "Cursor saiu da posição inicial.")
 	# Volta 1 passo p/ esquerda e cai na posição inicial.
 	Input.action_press("mover_esq")
-	mesa.call("_pad_mover", -1, 0)
+	mesa.call("_mover", -1, 0)
 	Input.action_release("mover_esq")
-	var col_volta: int = int(mesa.get("_pad_col"))
-	assert_eq(col_volta, col_ini, "1 passo p/ esquerda volta à posição inicial.")
-	assert_eq(int(mesa.get("_pad_fileira")), fileira_ini, "Fileira não mudou no passo lateral.")
+	assert_eq(int(mesa.get("_col")), col_ini, "1 passo p/ esquerda volta à posição inicial.")
+	assert_eq(int(mesa.get("_fileira")), fileira_ini, "Fileira não mudou no passo lateral.")
 
 
 func test_cancelar_desfaz_escolha_real() -> void:
-	# Cancelar da mesa real: limpa a carta escolhida (volta ao neutro).
-	var mesa: Node = MesaScene.instantiate()
-	add_child_autofree(mesa)
-	await wait_process_frames(4)
+	# Cancelar na mesa 3D real: desce uma carta levantada (volta ao neutro).
+	var mesa: Node = await _mesa3d_nova()
 	assert_true(is_instance_valid(mesa), "Mesa real instanciada p/ cancelar.")
-	mesa.set("_sel_mao", 0)
-	mesa.call("_pad_cancelar")
-	assert_eq(int(mesa.get("_sel_mao")), -1, "cancelar limpa a carta escolhida.")
-	assert_eq(int(mesa.get("_sel_atk")), -1, "cancelar deixa sem atacante escolhido.")
+	mesa.set("_levantadas", [0, 2])
+	mesa.set("_sub_mao", 0)
+	mesa.call("_cancelar")
+	assert_eq((mesa.get("_levantadas") as Array).size(), 1, "cancelar abaixa a última levantada.")
+	assert_eq((mesa.get("_levantadas") as Array).back(), 0, "Fica a que foi levantada antes.")
 
 
 func test_todas_11_acoes_so_joypad_zero_teclado_mouse() -> void:
@@ -123,43 +117,6 @@ func test_todas_11_acoes_so_joypad_zero_teclado_mouse() -> void:
 		assert_eq(n_mouse, 0, "'%s' tem zero evento de mouse." % str(acao))
 
 
-func _coletar_arvore(n: Node, out: Array) -> void:
-	out.append(n)
-	for f in n.get_children():
-		_coletar_arvore(f, out)
-
-
-func test_mesa_sem_controle_clicavel() -> void:
-	# D26 parcial (100% controle): a mesa não tem controle clicável.
-	# (a) Texto da cena: nenhum Button/TextureButton declarado.
-	var caminho := "res://duel_legacy2d/duel_table.tscn"
-	assert_true(FileAccess.file_exists(caminho), "duel_table.tscn existe.")
-	var arq := FileAccess.open(caminho, FileAccess.READ)
-	if arq == null:
-		assert_true(false, "duel_table.tscn abre p/ leitura.")
-		return
-	var texto := arq.get_as_text()
-	assert_false(texto.contains("Button"), "duel_table.tscn sem Button/TextureButton (só controle).")
-	# (b) Cena real: nenhum BaseButton + textos sem clique (o que a mesa expõe).
-	var mesa: Node = MesaScene.instantiate()
-	add_child_autofree(mesa)
-	await wait_process_frames(4)
-	assert_true(is_instance_valid(mesa), "Mesa real instanciada p/ varredura.")
-	assert_eq((mesa as Control).mouse_filter, Control.MOUSE_FILTER_IGNORE, "Raiz da mesa não recebe clique.")
-	var todos: Array = []
-	_coletar_arvore(mesa, todos)
-	var n_botao := 0
-	var n_texto_clicavel := 0
-	var n_carta_clicavel := 0
-	for n in todos:
-		if n is BaseButton:
-			n_botao += 1
-		if n is Label and (n as Control).mouse_filter != Control.MOUSE_FILTER_IGNORE:
-			n_texto_clicavel += 1
-		if n is CardViewScript:
-			assert_false((n as Node).has_signal("clicada"), "Carta sem sinal clicada (100% controle).")
-			if (n as Control).mouse_filter != Control.MOUSE_FILTER_IGNORE:
-				n_carta_clicavel += 1
-	assert_eq(n_botao, 0, "Mesa real tem zero botão clicável.")
-	assert_eq(n_texto_clicavel, 0, "Todo texto da mesa está sem clique.")
-	assert_eq(n_carta_clicavel, 0, "Toda carta da mesa está sem clique.")
+## A varredura "mesa sem controle clicavel" (nenhum Button, nenhum Control com
+## clique) saiu daqui: ela vivia no duel_table.tscn e ja e feita na mesa
+## OFICIAL por test_mesa_3d_oficial/test_mesa_3d_so_joypad_sem_clique.

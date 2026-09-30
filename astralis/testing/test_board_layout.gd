@@ -8,10 +8,8 @@ extends "res://testing/astralis_test_base.gd"
 ## _contar_monstros_na_mao) vêm de astralis_test_base.gd.
 
 const BoardLayoutScript := preload("res://core/board_layout.gd")
-const BoardScript := preload("res://duel_legacy2d/duel_board.gd")
-const CardViewScript := preload("res://ui/card_view.gd")
-# ProjectLoaderScript/DuelManagerScript/SummonSystem/TableScript/MesaScene
-# vêm da base (astralis_test_base.gd) - R8: uma cópia só.
+# ProjectLoaderScript/DuelManagerScript/SummonSystem e MesaScene3D vêm da
+# base (astralis_test_base.gd) - R8: uma cópia só.
 
 
 func _ids_esperados() -> Array:
@@ -60,22 +58,19 @@ func test_get_pos_com_xy_custom_retorna_custom() -> void:
 	assert_eq(via_array, Vector2(30, 40), "Array [x,y] também vale como XY.")
 	var via_dict: Vector2 = BoardLayoutScript.get_pos({"p0_m2": {"x": 50, "y": 60}}, "p0_m2")
 	assert_eq(via_dict, Vector2(50, 60), "Dict {x,y} também vale como XY.")
-	# O desenho (2D legado) usa o XY do layout.
-	var r: Rect2 = BoardScript.slot_rect(0, "monstro", 2, layout)
-	assert_eq(r.position, custom, "slot_rect usa o XY do layout da arena.")
-	assert_eq(r.size, Vector2(BoardScript.PECA, BoardScript.PECA), "O ladrilho 2D tem o tamanho de sempre.")
+	# Quem DESPENHA o XY do layout e a mesa 3D (`_pos_slot`): a trava de que o
+	# slot sai no XY do dado esta em test_mesa_3d_oficial
+	# (test_posicao_carta_exatamente_no_painel).
 
 
 func test_sem_layout_nao_inventa_posicao() -> void:
-	# D50: SEM GRADE NO CÓDIGO. Sem layout, `get_pos` devolve NULO e o desenho
-	# 2D devolve um retângulo vazio — a "segunda arena" que fazia o jogo cair
-	# numa tela diferente da oficial NÃO EXISTE MAIS.
+	# D50: SEM GRADE NO CÓDIGO. Sem layout, `get_pos` devolve NULO - a
+	# "segunda arena" que fazia o jogo cair numa tela diferente da oficial
+	# NÃO EXISTE MAIS.
 	var sem_layout: Vector2 = BoardLayoutScript.get_pos({}, "p0_m2")
 	assert_eq(sem_layout, BoardLayoutScript.NULO, "Sem layout, get_pos devolve NULO (não há grade para cair).")
 	assert_eq(BoardLayoutScript.default_pos("p0_m2"), BoardLayoutScript.NULO, "default_pos é só o 'não tem posição' (D50).")
 	assert_eq(BoardLayoutScript.default_pos("xx"), BoardLayoutScript.NULO, "ID inválido também devolve NULO.")
-	var r: Rect2 = BoardScript.slot_rect(0, "monstro", 2, {})
-	assert_eq(r.size, Vector2.ZERO, "Sem layout, o 2D legado não desenha o slot (retângulo vazio).")
 	# O fallback explícito do chamador ainda funciona (quem sabe o que fazer).
 	var queda := Vector2(-1, -1)
 	assert_eq(BoardLayoutScript.get_pos({}, "invalido", queda), queda, "Slot fora do layout usa o fallback do chamador.")
@@ -95,7 +90,6 @@ func test_arquivo_ruim_nao_inventa_posicao() -> void:
 	for layout_ruim in [vazio1, vazio2, vazio3]:
 		var p: Vector2 = BoardLayoutScript.get_pos(layout_ruim, "p0_m0")
 		assert_eq(p, BoardLayoutScript.NULO, "Com arquivo ruim, get_pos devolve NULO (nada é inventado).")
-		assert_eq(BoardScript.slot_rect(0, "monstro", 0, layout_ruim).size, Vector2.ZERO, "Com arquivo ruim, o 2D não desenha o slot.")
 	# E a validação diz exatamente o que falta, para o log ser útil.
 	var faltando: Array = BoardLayoutScript.valida_arena_oficial({})
 	assert_eq(faltando.size(), 20, "Layout vazio: a validação aponta os 20 slots que faltam.")
@@ -268,101 +262,75 @@ func test_hand_fallback_sem_hand() -> void:
 	assert_eq(BoardLayoutScript.get_hand({"hand": {"p0": {"x": 1000, "y": 900, "step": 100}}}, 1), f1, "Sem p1 no {hand}, volta fallback p1.")
 
 
-func test_p1_nunca_expoe_id_so_contagem() -> void:
-	# Rival desenha de costas: só a QUANTIDADE, nunca id/nome (R1).
-	var arena: Dictionary = BoardLayoutScript.load_arena_data(BoardLayoutScript.starter_arena_path())
+func test_p1_nunca_expoe_id_ou_nome() -> void:
+	# R1: a mao do RIVAL e de costas - a tela mostra a CONTAGEM (as cartas dele
+	# desenhadas) e nunca o id, o nome ou o ATK delas. No 2D legado isso era
+	# `set_facedown` + escala 0,55; na mesa 3D (a oficial) a mao do rival nasce
+	# de VERSO e o lugar de cima e tapado inteiro (D52).
 	var duel = _novo_duelo()
 	var st = duel.get_state()
 	var mao_rival: Array = (st.players[1] as Dictionary)["hand"]
-	assert_true(mao_rival.size() > 0, "Preparo: rival tem cartas na mão.")
+	assert_true(mao_rival.size() > 0, "Preparo: rival tem cartas na mao.")
 	var segredos := {}
 	for c in mao_rival:
 		if c is Dictionary:
 			segredos[str((c as Dictionary).get("id", ""))] = true
 			segredos[str((c as Dictionary).get("name", ""))] = true
-	var mesa = TableScript.new()
-	mesa._arena_data = arena
-	mesa._st = st
-	mesa._sel_mao = -1
-	var camada := Control.new()
-	mesa._camada_mao = camada
-	mesa._desenhar_mao(false)
-	var filhos: Array = camada.get_children()
-	var n0: int = ((st.players[0] as Dictionary)["hand"] as Array).size()
-	var n1: int = mao_rival.size()
-	assert_eq(filhos.size(), n0 + n1, "Mesa desenha p0 abertas + p1 de costas (contagem).")
-	var minis := 0
-	for vista in filhos:
-		if not (vista is Control) or not vista.has_method("set_facedown"):
-			continue
-		var escala: Vector2 = (vista as Control).scale
-		if escala.is_equal_approx(Vector2(0.55, 0.55)):
-			minis += 1
-			var carta: Dictionary = vista.get("_carta")
-			assert_true(carta.is_empty(), "Mini p1 nasce vazia (setup({})), sem id.")
-			assert_true(bool(vista.get("_face_down")), "Mini p1 é de costas.")
-			assert_eq((vista as Control).mouse_filter, Control.MOUSE_FILTER_IGNORE, "Mini p1 não é clicável.")
-			assert_false((vista as Node).has_signal("clicada"), "Sinal clicada removido (D26 parcial, 100% controle).")
-			for f in (vista as Node).get_children():
-				if f is Label:
-					assert_false(segredos.has((f as Label).text), "Texto não vaza id/nome do rival.")
-	assert_eq(minis, n1, "Qtd de minis = cartas do rival (só contagem).")
-	camada.free()
-	mesa.free()
+	# Os dois baralhos saem do MESMO pool de cartas (FM), entao um nome que
+	# tambem esta na SUA mao pode (e deve) aparecer na tela. O que nao pode
+	# aparecer e o que SO o rival tem - por isso os nomes da sua mao saem da
+	# lista de segredos.
+	var mao_meu: Array = (st.players[0] as Dictionary)["hand"]
+	for c in mao_meu:
+		if c is Dictionary:
+			segredos.erase(str((c as Dictionary).get("id", "")))
+			segredos.erase(str((c as Dictionary).get("name", "")))
+	# 1) Nenhum texto da cena inteira (Label 2D e Label3D) vaza id/nome dele.
+	var mesa = await _mesa3d_nova()
+	var textos: Array = []
+	_textos_visiveis(mesa, textos)
+	var vazou: Array = []
+	for t in textos:
+		for s2 in segredos:
+			if str(s2) != "" and str(t).contains(str(s2)):
+				vazou.append("%s (em '%s')" % [s2, t])
+	assert_true(vazou.is_empty(), "A tela nao vaza id/nome de carta do rival: %s" % str(vazou))
+	# 2) A mao do rival ESTA desenhada: e a contagem que aparece, nao o nome.
+	var n_rival := 0
+	for i in range(mao_rival.size()):
+		if _carta_da_mao(mesa, i, 1) != null:
+			n_rival += 1
+	assert_eq(n_rival, mao_rival.size(), "As %d cartas do rival estao desenhadas (so contagem)." % mao_rival.size())
+	# 3) E a sua mao NAO esta de costas (o contrario seria esconder a sua).
+	var n_meu := 0
+	for i in range(mao_meu.size()):
+		if _carta_da_mao(mesa, i, 0) != null:
+			n_meu += 1
+	assert_eq(n_meu, mao_meu.size(), "A sua mao de %d cartas tambem esta desenhada." % mao_meu.size())
 
 
-func test_pos_mao_centraliza_soma_simetrica() -> void:
-	# _pos_mao real: centro médio = cx da arena, pares somam 2*cx.
-	var arena: Dictionary = BoardLayoutScript.load_arena_data(BoardLayoutScript.starter_arena_path())
-	var mesa = TableScript.new()
-	mesa._arena_data = arena
-	for lado in [0, 1]:
-		var h: Dictionary = BoardLayoutScript.get_hand(arena, lado)
-		var cx := float(h.get("x", 1240.0))
-		var larg := CardViewScript.TAM.x
-		if lado == 1:
-			larg *= 0.55
-		for n in [1, 2, 3, 5, 7]:
-			var centros: Array = []
-			for i in range(n):
-				var p: Vector2 = mesa._pos_mao(i, n, lado)
-				centros.append(p.x + larg / 2.0)
-			var media := 0.0
-			for c in centros:
-				media += float(c)
-			media /= float(n)
-			assert_almost_eq(media, cx, 0.05, "lado %d n=%d: centro médio = cx." % [lado, n])
-			for i in range(n):
-				var soma: float = float(centros[i]) + float(centros[n - 1 - i])
-				assert_almost_eq(soma, 2.0 * cx, 0.05, "lado %d n=%d i=%d: soma simétrica = 2*cx." % [lado, n, i])
-			if n == 1:
-				assert_almost_eq(float(centros[0]), cx, 0.05, "lado %d: carta única centraliza no cx." % lado)
-			# Fileira não cobre os slots: p0 embaixo (y>=900), p1 no topo (y<=120).
-			for i in range(n):
-				var py: float = (mesa._pos_mao(i, n, lado) as Vector2).y
-				if lado == 0:
-					assert_true(py >= 900.0, "p0 carta %d/%d fica embaixo (y=%.0f)." % [i, n, py])
-				else:
-					assert_true(py <= 120.0, "p1 carta %d/%d fica no topo (y=%.0f)." % [i, n, py])
-	mesa.free()
+## O arco da mao em 2D (_pos_mao, centro = cx da arena) foi junto com a mesa
+## legada. No 3D o X do arco de cada LUGAR de mao e resolvido da camera real
+## (`_x_centro_da_mao`) e a trava dessa invariante esta no arquivo 3D:
+## test_mesa_3d_oficial/test_maos_centralizadas_no_x_do_campo (erro 0,00 px
+## nos dois lugares) e test_volta_mesa/test_as_duas_maos_trocam_de_lugar_e_as_duas_aparecem.
 
 
 func test_animacao_recriar_mesa_2x_sem_erro() -> void:
-	# Cena real 2x: tween preso à carta morre no free, recriar não quebra.
+	# Guarda de CRASH da cena real: tween preso a carta que morre no free,
+	# recriar a mesa nao quebra. Roda na mesa 3D (a oficial desde o D40).
 	for k in [1, 2]:
-		var mesa: Node = MesaScene.instantiate()
-		add_child_autofree(mesa)
-		await wait_process_frames(4)
-		assert_true(is_instance_valid(mesa), "Mesa %d válida após instanciar." % k)
+		var mesa: Node = await _mesa3d_nova()
+		assert_true(is_instance_valid(mesa), "Mesa %d valida apos instanciar." % k)
 		var st: Variant = mesa.get("_st")
 		assert_true(st != null, "Mesa %d tem estado real (duelo montado)." % k)
 		var n0: int = ((st.players[0] as Dictionary)["hand"] as Array).size()
 		var n1: int = ((st.players[1] as Dictionary)["hand"] as Array).size()
-		var camada: Node = mesa.get("_camada_mao")
-		assert_eq(camada.get_child_count(), n0 + n1, "Mesa %d desenha p0+p1 com animação." % k)
-		mesa.call("_atualizar", true)
+		var n_cartas: int = _cartas3d(mesa).size()
+		assert_eq(n_cartas, n0 + n1, "Mesa %d desenha as DUAS maos (efeito ligado)." % k)
+		mesa.call("_redesenhar", true, 0)
 		await wait_process_frames(6)
-		assert_eq((mesa.get("_camada_mao") as Node).get_child_count(), n0 + n1, "Mesa %d recriada com efeito mantém contagem." % k)
+		assert_eq(_cartas3d(mesa).size(), n0 + n1, "Mesa %d recriada com efeito mantem a contagem." % k)
 		mesa.queue_free()
 		await wait_process_frames(2)
-	assert_true(true, "2 mesas criadas/liberadas sem erro (tween preso à carta).")
+	assert_true(true, "2 mesas criadas/liberadas sem erro (tween preso a carta).")

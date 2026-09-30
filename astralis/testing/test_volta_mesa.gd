@@ -32,20 +32,12 @@ extends "res://testing/astralis_test_base.gd"
 ##
 ## Sem Fake (R2): a cena 3D real + o GameState real do DuelManager.
 
-const Mesa3DScene := preload("res://duel3d/mesa_3d.tscn")
 const SummonSys := preload("res://duel/summon_system.gd")
 
 const CARTAS := "Camada3D/JanelaCampo/Viewport3D/Cartas"
 const PIVO := "Camada3D/JanelaCampo/Viewport3D/PivoMesa"
 const CAMERA := "Camada3D/JanelaCampo/Viewport3D/PivoMesa/Camera3D"
 const COLUNAS := 5
-
-
-func _mesa3d_nova() -> Node:
-	var mesa: Node = Mesa3DScene.instantiate()
-	add_child_autofree(mesa)
-	await wait_process_frames(6)
-	return mesa
 
 
 ## Carta de DADO no campo, pelo CONSTRUTOR REAL do jogo
@@ -733,16 +725,3 @@ func test_o_controle_fica_travado_enquanto_a_mesa_gira() -> void:
 	mesa.set("_girando", false)
 	assert_true((mesa.get("_log") as Array).size() >= log_antes,
 		"A tela continua viva (o bloqueio e so do controle, nao da tela).")
-
-
-## A carta da mao no indice pedido, pelo meta `mao_dono` + `mao_idx` (D52: as
-## DUAS maos tem `mao_idx`, entao quem diz de quem e a carta e o DONO; e elas
-## trocam de lugar na volta, entao o "Nome visivel" nao serve mais como filtro).
-func _carta_da_mao(mesa: Node, idx: int, dono: int = 0) -> Node3D:
-	var cartas: Node = mesa.get_node(CARTAS)
-	var achada: Node3D = null
-	for f in cartas.get_children():
-		if (f as Node).has_meta("mao_dono") and int((f as Node).get_meta("mao_dono")) == dono \
-				and int((f as Node).get_meta("mao_idx")) == idx:
-			achada = f as Node3D
-	return achada

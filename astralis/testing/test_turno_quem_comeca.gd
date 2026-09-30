@@ -24,16 +24,9 @@ extends "res://testing/astralis_test_base.gd"
 ## `turn_order` e lê o que o motor devolveu em `current_player` — a tela só
 ## honra esse número.
 
-const Mesa3DScene := preload("res://duel3d/mesa_3d.tscn")
 const DuelManager := preload("res://duel/duel_manager.gd")
-const JANELA := "Camada3D/JanelaCampo/Viewport3D"
 
 
-func _n3d(raiz: Node, caminho: String) -> Node:
-	return raiz.get_node_or_null(NodePath(JANELA + "/" + caminho))
-
-
-## Quantas cartas tem na zona pedida de um lado (só CONTA o estado real).
 func _contar_zona(st, lado: int, zona_nome: String) -> int:
 	var n := 0
 	for m in ((st.players[lado] as Dictionary)[zona_nome] as Array):

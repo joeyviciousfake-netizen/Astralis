@@ -23,14 +23,9 @@ extends "res://testing/astralis_test_base.gd"
 ## de verdade. Sem dublê. Nenhum teste aqui depende de sonda nem de
 ## argumento de linha de comando.
 
-const Mesa3DScene := preload("res://duel3d/mesa_3d.tscn")
-const JANELA := "Camada3D/JanelaCampo/Viewport3D"
 ## As 4 fileiras de slot: as 2 do jogador e as 2 do RIVAL (as que quebravam).
 const FILEIRAS_RIVAL := [3, 4]
 
-
-func _n3d(raiz: Node, caminho: String) -> Node:
-	return raiz.get_node_or_null(NodePath(JANELA + "/" + caminho))
 
 
 func _mesa_3d_real() -> Node:

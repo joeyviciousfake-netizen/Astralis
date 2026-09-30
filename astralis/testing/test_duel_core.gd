@@ -241,6 +241,35 @@ func test_sem_ataque_do_jogador_no_turno_1() -> void:
 	assert_eq(str(a.get("erro", "")), BattleSystem.ERRO_TURNO_1, "Erro do turno 1 é o esperado.")
 
 
+func test_turno_3_libera_o_ataque_dos_dois_lados() -> void:
+	# D43: a trava é pelo NÚMERO do turno, não pelo lado. No turno 1 NINGUÉM
+	# ataca (nem você, nem o rival); a partir do turno 2 os dois atacam.
+	# Esta trava morava no `test_mesa_3bugs` (mesa 2D, removida com o legado):
+	# ela é regra de `battle_system`, então mora aqui, sem mesa.
+	var duel = _novo_duelo()
+	var st = duel.get_state()
+	duel.advance_phase() # DRAW -> MAIN
+	duel.advance_phase() # MAIN -> BATTLE
+	assert_eq(String(st.phase), "BATTLE", "Preparo: estamos na BATTLE.")
+	assert_eq(int(st.turn_number), 1, "Preparo: turno 1.")
+	# Um monstro de ATK de frente em cada lado (dado organizado, regra intacta).
+	(st.players[0] as Dictionary)["monster"][0] = _inst(2000, "ATK")
+	(st.players[1] as Dictionary)["monster"][0] = _inst(2000, "ATK")
+	var lado_da_vez: int = int(st.current_player)
+	for lado in [0, 1]:
+		var p: Dictionary = BattleSystem.can_attack(st, lado, 0)
+		if lado == lado_da_vez:
+			assert_false(bool(p.get("ok", false)), "Turno 1: quem está jogando não ataca (erro '%s')." % str(p.get("erro", "")))
+			assert_eq(str(p.get("erro", "")), BattleSystem.ERRO_TURNO_1, "Turno 1: o erro é o do turno 1.")
+		else:
+			assert_eq(str(p.get("erro", "")), "Só o jogador da vez pode atacar.", "Fora da vez: o bloqueio é por vez, não por turno.")
+	st.set("turn_number", 3)
+	for lado in [0, 1]:
+		st.set("current_player", lado)
+		var p2: Dictionary = BattleSystem.can_attack(st, lado, 0)
+		assert_true(bool(p2.get("ok", false)), "Turno 3: lado %d ataca (erro '%s')." % [lado, str(p2.get("erro", ""))])
+
+
 func test_so_ataca_virado_para_cima_em_atk() -> void:
 	# D17: carta virada p/ baixo (ou em DEF) não pode atacar.
 	var duel = _novo_duelo()

@@ -28,7 +28,7 @@ extends "res://testing/astralis_test_base.gd"
 ##     null explícito, z float, versão float, id longo e name número — o teste
 ##     prova o comportamento REAL do jogo e cita o do Rust (main.rs) no texto.
 ##
-## Helpers de duelo/mesa (_mesa_nova) vêm de astralis_test_base.gd.
+## Helpers de duelo (DuelManager, Summon) vêm de astralis_test_base.gd.
 ## ProjectLoaderScript vem da base - R8: uma cópia só.
 
 const CardLayoutScript := preload("res://core/card_layout.gd")
@@ -352,21 +352,11 @@ func test_cardview_nunca_quebra() -> void:
 
 # ---------- (8) MESA REAL RENDERIZA COM O MOLDE ----------
 
-func test_mesa_real_renderiza_com_molde() -> void:
-	# duel_table.tscn de verdade: a mão desenha cartas pelo molde, sem erro.
-	var mesa = await _mesa_nova()
-	assert_true(is_instance_valid(mesa), "Mesa real instanciada.")
-	var camada: Node = mesa.get("_camada_mao")
-	assert_true(camada.get_child_count() > 0, "Mesa desenha a mão (cartas reais).")
-	var vistas := 0
-	for v in camada.get_children():
-		if v is CardViewScript:
-			vistas += 1
-			assert_eq(((v.get("_pecas") as Dictionary).size()), 8, "Carta da mesa tem as 8 peças.")
-			assert_eq(str(v.get("_layout_id")), "card_layout_monster_default", "Carta da mesa usa o molde default.")
-			var nome := ((v.get("_pecas") as Dictionary)["name"] as Control)
-			assert_almost_eq(nome.position.x, 7.02, 0.01, "Nome da mesa no x do molde (54‰ de 130).")
-	assert_true(vistas > 0, "Mão tem CardViews de verdade (%d)." % vistas)
+## A "mesa real renderiza pelo molde" ia na duel_table.tscn (2D). A mesa 3D
+## (a oficial) tambem mostra a carta real, e quem trava isso hoje e
+## test_assets_embutidos (a carta deitada no campo sai igual a da mao, com
+## nome e ATK/DEF) + test_mesa_3d_oficial (posicao no painel, verso, painel
+## esquerdo). O molde em si,separado do desenho, e testado aqui do comeco ao fim.
 
 
 # ---------- (9) COMPAT: RUST ACEITA = JOGO ACEITA E RENDERIZA ----------
