@@ -11,28 +11,14 @@ extends RefCounted
 ## invertido (índice 0 à direita) e fileiras trocadas (monstro perto
 ## do centro, magia longe), espelhando o lado 0.
 
-## Grade embutida = A ARENA OFICIAL (D48: uma arena só). Estes números são
-## os MESMOS do schemas/examples/arenas/arena_starter.json, na mesma ordem.
-## D48 travou isso em teste (test_grade_embutida_igual_arena_oficial): se um
-## mudar, o outro tem que mudar junto, senão o jogo cai numa grade fantasma.
-## D49: a grade é PERFEITA — UM valor só (263) em TODO o campo: o passo
-## horizontal entre slots vizinhos E o vão vertical monstro->magia, nos dois
-## lados e nos dois tipos. Os 305/695 dos monstros ficam CONGELADOS de propósito
-## (a distância entre a fileira do jogador e a do rival, 390, não faz parte da
-## grade e o usuário pediu para não mexer nela).
-const SLOT := 165.0
-## GAP não é estética: SLOT + GAP = 263 = o PASSO oficial da arena (632→1684).
-const GAP := 98.0
-const GRID_X := 632.0
-## Fileiras em ESPELHO (só desenho): monstro sempre perto do centro,
-## magia sempre longe, e sempre a 263 do monstro do MESMO lado.
-## Rival/cima: monstro 305, magia 42 (263 acima). Você/baixo: monstro 695,
-## magia 958 (263 abaixo).
-const Y_RIVAL_MONSTRO := 305.0
-const Y_RIVAL_MAGIA := 42.0
-const Y_VOCE_MONSTRO := 695.0
-const Y_VOCE_MAGIA := 958.0
-
+## D50: A MESA É O DADO, E HÁ SÓ UM DADO. Estas constantes saíram: a grade
+## embutida que vivia aqui era a segunda cópia da arena (a terceira estava no
+## `duel_legacy2d/duel_board.gd`), e era ela que fazia o jogo cair numa tela
+## diferente da oficial sem ninguém ver. A posição de cada slot vem SO do
+## arquivo `schemas/examples/arenas/arena_starter.json` (arena_oficial_path).
+## Os números da mesa (632→1684 de 263 em 263; y 695/958 e 305/42, com o vão
+## monstro->magia = 263 dos dois lados e a distância 390 entre as fileiras de
+## monstro CONGELADA) vivem só naquele arquivo, e o D49 travou isso em teste.
 const NULO := Vector2(-99999, -99999)
 
 const DataLoaderScript := preload("res://core/data_loader.gd")
@@ -153,71 +139,59 @@ static func eh_slot_valido(slot: String) -> bool:
 	return true
 
 
-## Grade embutida em ESPELHO (a mesma do arena_starter.json e do
-## duel_board.gd). Volta (-1,-1) se ID inválido.
-## Lado 0 (você/baixo): X crescente 632→1684 (índice 0 à esquerda).
-## Lado 1 (rival/cima): X ESPELHADO 1684→632 (índice 0 à direita) +
-## fileiras trocadas (monstro 305 perto do centro, magia 42 longe).
-## Só DESENHO: IDs/lógica continuam no índice.
+## D50: NAO EXISTE MAIS GRADE NO CODIGO. Este arquivo era o segundo lugar (e o
+## terceiro, no `duel_legacy2d/duel_board.gd`) onde os numeros da mesa
+## estavam escritos, e era o que fazia o jogo cair numa tela diferente da
+## arena oficial sem ninguem ver. AGORA O DADO E O UNICO DONO: a posicao de
+## cada slot vem SO do arquivo `arena_oficial.json`, e nao existe nenhuma
+## segunda fonte. `get_pos` le o layout; se o slot nao estiver no arquivo, o
+## jogo avisa em voz alta (ver `valida_arena_oficial`) e NAO inventa posicao.
 static func default_pos(slot: String) -> Vector2:
-	if not eh_slot_valido(slot):
-		return Vector2(-1, -1)
-	var indice := int(slot[4])
-	var lado := slot[1]
-	var letra := slot[3]
-	var x := GRID_X + indice * (SLOT + GAP)
-	if lado == "1":
-		x = GRID_X + (4 - indice) * (SLOT + GAP)
-	var y := Y_VOCE_MONSTRO
-	if lado == "1" and letra == "m":
-		y = Y_RIVAL_MONSTRO
-	elif lado == "1" and letra == "s":
-		y = Y_RIVAL_MAGIA
-	elif lado == "0" and letra == "s":
-		y = Y_VOCE_MAGIA
-	return Vector2(x, y)
+	# D50: kept only as the "nao ha posicao" answer. NAO tem mais grade aqui.
+	# Quem chama precisa do layout (arena_oficial_path) - ver get_pos.
+	return NULO
 
 
-## Os 20 IDs esperados -> Vector2 padrão.
+## Os 20 IDs esperados -> Vector2 do DADO (a arena oficial). Sem layout, tudo
+## NULO: e assim que o jogo percebe que o arquivo nao veio, em vez de desenhar
+## uma grade imaginaria.
 static func default_layout() -> Dictionary:
 	var out: Dictionary = {}
 	for lado in [0, 1]:
 		for i in range(5):
 			var id_m := slot_id(lado, "monstro", i)
 			var id_s := slot_id(lado, "magia", i)
-			out[id_m] = default_pos(id_m)
-			out[id_s] = default_pos(id_s)
+			out[id_m] = NULO
+			out[id_s] = NULO
 	return out
 
 
-## Caminho do arena_starter no disco (pasta de trabalho schemas/examples/).
+## Caminho do ARQUIVO DA ARENA OFICIAL (a mesa do jogo, D50: uma só).
 static func starter_arena_path() -> String:
 	var res_dir: String = ProjectSettings.globalize_path("res://")
 	return res_dir.path_join("../schemas/examples/arenas/arena_starter.json").simplify_path()
 
 
-## Caminho da arena <arena_id>.json na pasta do --project (se válido)
-## ou na embutida. Sem --project (ou pasta inválida), volta o starter
-## de sempre. Nunca quebra: ausente cai na grade padrão em load_arena_data.
-## D29: schemas/examples/ é SÓ TESTE. Com base de PROJETO (--project) e a
-## arena ausente lá, NÃO lê de examples/ — devolve "" e a mesa usa a grade
-## padrão embutida (default_layout/default_hand), que tem os MESMOS números
-## do arena_starter.json (x 632/895/1158/1421/1684, y 695/958/305/42,
-## mão p0 1240/980/95 e p1 1240/20/60). Só DESENHO: nenhuma regra muda.
+
+## `schemas/examples/arenas/arena_starter.json` e a MESMA mesa que o jogo
+## desenha (20 slots + mao p0/p1). NAO existe mais nenhuma outra arena:
+## nem no codigo (as grades do `board_layout.gd` e do `duel_legacy2d/
+## duel_board.gd` foram apagadas) nem por projeto (o projeto nao tem mais
+## pasta `arenas/`; o D50 tirou o override por projeto).
+static func arena_oficial_path() -> String:
+	return starter_arena_path()
+
+
+## D50: o override por projeto foi REMOVIDO de proposito. Existia só para
+## deixar um projeto trocar a mesa por outra, e é exatamente a "segunda arena"
+## que o usuario mandou tirar. O jogo tem UMA mesa; o `arena_id` do
+## `duel_setup` continua no contrato (o dado FM traz `arena_starter`) e o
+## runtime o ignora de propósito, avisando no log.
 static func project_arena_path(arena_id: String = "arena_starter") -> String:
 	var aid := arena_id.strip_edges()
-	if aid.is_empty():
-		aid = "arena_starter"
-	var base: String = DataLoaderScript.project_base_dir()
-	var cand: String = base.path_join("arenas").path_join(aid + ".json")
-	if FileAccess.file_exists(cand):
-		return cand
-	if base == DataLoaderScript.starter_kit_dir():
-		# Sem --project: a base É a embutida (exemplos), então o starter
-		# continua valendo (é o caso dos testes).
-		return starter_arena_path()
-	print("[ARENA] Arena '%s' não existe no projeto: usando a grade padrão." % aid)
-	return ""
+	if aid != "" and aid != "arena_starter":
+		print("[ARENA] arena_id '%s' IGNORADO: o jogo tem UMA arena só (D50), a arena oficial." % aid)
+	return arena_oficial_path()
 
 
 ## Converte valor do layout em Vector2. Aceita Vector2, Array [x,y] ou Dict {x,y}.
@@ -238,56 +212,82 @@ static func para_vec(v: Variant) -> Vector2:
 	return NULO
 
 
-## Pega a posição: primeiro o layout, senão a grade padrão, senão o fallback.
-static func get_pos(layout: Dictionary, slot: String, fallback: Vector2 = Vector2(-1, -1)) -> Vector2:
+## Pega a posição de UM slot: SÓ do layout (o arquivo da arena oficial).
+## D50: não existe mais "grade padrão" aqui — se o slot não estiver no
+## arquivo, o jogo tem um problema de verdade e o fallback do chamador é usado
+## (a mesa avisa antes, em `valida_arena_oficial`).
+static func get_pos(layout: Dictionary, slot: String, fallback: Vector2 = NULO) -> Vector2:
 	if layout.has(slot):
 		var c := para_vec(layout[slot])
 		if c != NULO:
 			return c
-	var d := default_pos(slot)
-	if d.x >= 0.0 and d.y >= 0.0:
-		return d
 	return fallback
 
 
-## Lê a arena do disco -> {slots, hand} (novo formato completo).
+## Confere que a arena oficial tem os 20 slots. D50: como não existe mais
+## grade no código, um arquivo faltando ou quebrado é um ERRO DE VERDADE —
+## devolve a lista do que falta e a mesa não inventa posição nenhuma.
+static func valida_arena_oficial(slots: Dictionary) -> Array:
+	var faltando: Array = []
+	for lado in [0, 1]:
+		for i in range(5):
+			for tipo in ["monstro", "magia"]:
+				var sid := slot_id(lado, tipo, i)
+				var p := get_pos(slots, sid)
+				if p == NULO:
+					faltando.append(sid)
+	if faltando.is_empty():
+		print("[ARENA] Arena oficial OK: 20 slots, uma mesa só (D50).")
+	else:
+		push_warning("[ARENA] A arena oficial está com %d slot(s) faltando: %s. "
+			% [faltando.size(), str(faltando)]
+			+ "O jogo NÃO inventa posição (D50): sem o arquivo schemas/examples/arenas/"
+			+ "arena_starter.json completo, o campo não pode ser desenhado.")
+		print("[ARENA] ERRO: faltando %d slot(s): %s. O campo não vai ser desenhado (D50, sem grade no código)." % [faltando.size(), str(faltando)])
+	return faltando
+
+
+## Lê a arena do disco -> {slots, hand}.
 ## slots: Dict slot_id -> Vector2 (só desenho). hand: {p0,p1} com x/y/step.
-## hand é OPCIONAL: arena sem hand continua válida, volta fallback
-## p0(1240,980,95)/p1(1240,20,60). Nunca quebra: arquivo ruim volta
-## slots vazio + hand fallback + aviso PT-BR.
+## D50: `path` é sempre a arena OFICIAL do jogo (arena_oficial_path) — não
+## existe override por projeto. Arquivo faltando/quebrado = erro honesto
+## (slots vazio + aviso PT-BR), e a mesa NÃO desenha o campo, porque não há
+## mais nenhuma grade no código para cair.
 static func load_arena_data(path: String) -> Dictionary:
-	var vazio := {"slots": {}, "hand": {"p0": default_hand(0), "p1": default_hand(1)}}
+	var sem_hand := {"p0": default_hand(0), "p1": default_hand(1)}
+	var vazio := {"slots": {}, "hand": sem_hand}
 	if path.is_empty():
-		# Projeto sem arena: usa a grade padrão (mesmos números do starter).
-		print("[ARENA] Sem arena no projeto: usando a grade padrão.")
+		push_warning("[ARENA] Caminho da arena oficial vazio: o campo não pode ser desenhado (D50).")
+		print("[ARENA] ERRO: sem caminho da arena oficial. O campo não vai ser desenhado (D50).")
 		return vazio
 	if not FileAccess.file_exists(path):
-		push_warning("[ARENA] Arquivo não encontrado: %s. Usando grade padrão." % path)
-		print("[ARENA] Arquivo não encontrado, usando grade padrão: " + path)
+		push_warning("[ARENA] Arena oficial não encontrada: %s. O campo não pode ser desenhado (D50)." % path)
+		print("[ARENA] ERRO: arena oficial não encontrada: " + path + ". O campo não vai ser desenhado (D50, sem grade no código).")
 		return vazio
 	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
-		push_warning("[ARENA] Não foi possível abrir: %s. Usando grade padrão." % path)
-		print("[ARENA] Não foi possível abrir, usando grade padrão: " + path)
+		push_warning("[ARENA] Não foi possível abrir a arena oficial: %s." % path)
+		print("[ARENA] ERRO: não foi possível abrir: " + path + ". O campo não vai ser desenhado (D50).")
 		return vazio
 	var texto: String = f.get_as_text()
 	var json := JSON.new()
 	if json.parse(texto) != OK:
-		push_warning("[ARENA] JSON inválido em %s: %s. Usando grade padrão." % [path, json.get_error_message()])
-		print("[ARENA] JSON inválido, usando grade padrão: " + path)
+		push_warning("[ARENA] JSON inválido na arena oficial %s: %s" % [path, json.get_error_message()])
+		print("[ARENA] ERRO: JSON inválido: " + path + ". O campo não vai ser desenhado (D50).")
 		return vazio
 	if not (json.data is Dictionary):
-		push_warning("[ARENA] Formato inesperado em %s (esperava objeto). Usando grade padrão." % path)
+		push_warning("[ARENA] Formato inesperado na arena oficial %s (esperava objeto)." % path)
 		return vazio
 	var dados: Dictionary = json.data
 	if not dados.has("slots") or not (dados["slots"] is Array):
-		push_warning("[ARENA] Arena sem lista 'slots' em %s. Usando grade padrão." % path)
+		push_warning("[ARENA] Arena oficial sem lista 'slots' em %s." % path)
+		print("[ARENA] ERRO: arena oficial sem 'slots': " + path + ". O campo não vai ser desenhado (D50).")
 		return vazio
 	var layout: Dictionary = {}
 	var lista: Array = dados["slots"]
 	if lista.size() != 20:
-		push_warning("[ARENA] Arena precisa de 20 slots, achou %d em %s. Faltando usa grade padrão." % [lista.size(), path])
-		print("[ARENA] Esperava 20 slots, achou %d. Completando com grade padrão." % lista.size())
+		push_warning("[ARENA] Arena oficial precisa de 20 slots, achou %d em %s." % [lista.size(), path])
+		print("[ARENA] A arena oficial tem %d slots (esperava 20)." % lista.size())
 	for item in lista:
 		if not (item is Dictionary):
 			push_warning("[ARENA] Slot inválido ignorado (esperava objeto com slot_id/x/y).")
@@ -304,30 +304,24 @@ static func load_arena_data(path: String) -> Dictionary:
 			push_warning("[ARENA] Slot duplicado '%s' ignorado (vale o primeiro)." % sid)
 			continue
 		if not d.has("x") or not d.has("y"):
-			push_warning("[ARENA] Slot '%s' sem x/y, ignorado (usa grade padrão)." % sid)
+			push_warning("[ARENA] Slot '%s' sem x/y, ignorado (D50: sem grade no código, fica sem posição)." % sid)
 			continue
 		var vx = d["x"]
 		var vy = d["y"]
 		if not (vx is float or vx is int) or not (vy is float or vy is int):
-			push_warning("[ARENA] Slot '%s' sem x/y válidos, ignorado (usa grade padrão)." % sid)
+			push_warning("[ARENA] Slot '%s' sem x/y válidos, ignorado (D50: sem grade no código, fica sem posição)." % sid)
 			continue
 		layout[sid] = Vector2(float(vx), float(vy))
-	var faltando: Array = []
-	for esperado in default_layout().keys():
-		if not layout.has(esperado):
-			faltando.append(esperado)
-	if not faltando.is_empty():
-		push_warning("[ARENA] Faltando slots %s, usando grade padrão para eles." % str(faltando))
-		print("[ARENA] Faltando %d slots, completando com grade padrão." % faltando.size())
+	valida_arena_oficial(layout)
 	var hand := parse_hand(dados)
 	if not dados.has("hand"):
-		print("[ARENA] Sem 'hand' no JSON, usando fallback p0(1240,980,95)/p1(1240,20,60).")
+		push_warning("[ARENA] A arena oficial não tem 'hand': a mão cai no padrão do contrato.")
+		print("[ARENA] Sem 'hand' no JSON, usando o padrão p0(1240,980,95)/p1(1240,20,60).")
 	return {"slots": layout, "hand": hand}
 
 
 ## Lê a arena do disco -> Dict slot_id -> Vector2 (legado, mantido p/ compat).
 ## É só o ["slots"] de load_arena_data. Quem precisa da mão usa
-## load_arena_data + get_hand. Nunca quebra: volta vazio + aviso,
-## e quem desenha completa com a grade padrão.
+## load_arena_data + get_hand. Sem arena, volta vazio + aviso.
 static func load_arena(path: String) -> Dictionary:
 	return (load_arena_data(path).get("slots", {}) as Dictionary)
