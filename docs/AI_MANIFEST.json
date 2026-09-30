@@ -1,6 +1,6 @@
 {
   "project": "Astralis",
-  "docs_version": "2.5",
+  "docs_version": "2.6",
   "entrypoint": "AGENTS.md",
   "bootstrap_read_order": [
     "docs/AI_MANIFEST.json",

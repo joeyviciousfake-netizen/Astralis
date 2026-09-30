@@ -803,4 +803,74 @@ inimigo aparecem na minha rodada"), e a posição e o tamanho batem exatamente.
   D45 (altura na linha da fileira + 5 px, z 12,7, passo 1,08, X no centro do
   campo, mão de cima inteira na tela) passam com as mesmas tolerâncias.
 
+## 16.18 A D53 — UM DESENHO QUE SE MOVE SEM PRECISAR (2026-09-30)
+
+### O relato
+
+> "quando eu estou navegando pelas cartas da minha mão eu vejo que as cartas da
+> mão do inimigo que estão no outro lado do campo parece que se movimentam junto
+> e isso fica estranho, quando está na vez dele e ele movimenta as cartas também
+> dá esse efeito estranho na minha mão do outro lado do campo"
+
+### O que foi medido ANTES de mexer (e não se mexe)
+
+Navegar na mão (esquerda/direita) **não move** a mão de cima: a foto antes ×
+depois de um passo de navegação dá **0 pixel** de diferença na região da mão do
+rival, e a posição de tela dela (846,6 / 95,9, caixa y 24,3..167,4) é
+**idêntica** depois de 8 ações diferentes (direita, direita, esquerda, levantar,
+levantar, abaixar, abaixar, direita). O efeito, então, não era a navegação.
+
+### Os três defeitos que produzem isso
+
+1. **A compra animada estava na MÃO ERRADA.** O tween da compra estava **fixo**
+   na `mao0` (a do jogador) em vez de ser da mão que comprou. Com a D52 (as mãos
+   trocam de lugar), na vez do RIVAL a compra **dele** arrastava a **SUA** mão —
+   que na tela dele é o **lugar de cima** — pelo meio do campo: as cartas saíam
+   do baralho no meio da mesa e atravessavam a tela voando. E o caminho inverso
+   também estava errado: `_terminar_jogada_mao` (a invocação) animava a mão sem
+   ter comprado nada (a carta **desce** da mão para o campo).
+   Agora: `_redesenhar(com_efeito, dono_efeito)` + `_animar_compra(...)` — a
+   compra é da mão que comprou, e a invocação não anima.
+2. **A chacoalhada da fusão sacudia a MESA INTEIRA.** Era
+   `_sacudir(_no_cartas)`, e `_no_cartas` é o guarda-chuva das 20+ cartas (as 4
+   fileiras e as **duas mãos**): na falha da fusão a mesa tremia e as cartas
+   andavam **juntas** — que é literalmente o "as cartas se movimentam junto" do
+   relato. Agora a chacoalhada é da carta do **slot** onde ela desceu, e a
+   trava está **dentro** da `_sacudir` (`no == _no_cartas` não sacode), para
+   nenhum ponto novo do código reintroduzir o tremor da mesa inteira.
+3. **Andar na mão redesenhava a tela 3D INTEIRA** a cada passo de cursor:
+   `_redesenhar` destrói e recria as 20+ cartas com `queue_free` (medido: os
+   filhos de `Cartas` iam de **10 para 20** no mesmo passo), e o que muda ao
+   andar é só o cursor e o painel da esquerda. Agora o ramo da mão chama só
+   `_posicionar_cursor()` + `_atualizar_painel_foco()`.
+
+### Efeito colateral bom (e uma lição)
+
+As duas animações que sobraram (`_sacudir` e `_animar_compra`) perderam a trava
+de `_sem_render` **de propósito**: são tweens de 0,22 e 0,35 s que não dependem
+de render, e assim o GUT passa a **ver quem animou**. Antes elas eram puladas em
+headless — ou seja, o defeito era invisível para o teste, que é como ele passou
+tanto tempo na tela.
+
+### A prova
+
+- **GUT**: `astralis/testing/test_volta_mesa.gd` **13 testes**, suíte
+  **182/182, 3836 asserts, 0 SCRIPT ERROR, 0 orphans**. A trava nova
+  (`test_andar_na_mao_nao_move_a_mao_do_outro_lado`) mede as três coisas: andar
+  na mão não cria nem destrói carta nenhuma e a carta da mão do rival é **o
+  mesmo nó** (mesmo `instance_id` — é o que prova que o desenho não foi
+  refeito) e não mudou de lugar; na compra do RIVAL a mão **dele** é que nasce no
+  baralho **dele** e a sua fica no lugar dela (e vice-versa), medido na hora,
+  antes do tween correr; e a mesa inteira nunca sacode, nem por chamada direta.
+- **Foto**: na visão do rival, durante a vez dele, o quadro 240 pegou a mão de
+  cima **deslocada 3 px** (o voo da compra errada, no meio) antes e
+  **exatamente no lugar** (y 24..162) depois.
+
+### O que continua aberto
+
+Se o sintoma continuar depois da D53, é preciso um vídeo ou uma captura do
+exato momento: a navegação em si foi medida como não movendo nada, e chutar em
+código de desenho sem ver o efeito é exatamente o que a D46 custou caro.
+
+
 
