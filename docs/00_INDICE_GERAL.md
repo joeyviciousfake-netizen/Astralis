@@ -1,6 +1,6 @@
 # ASTRALIS — ÍNDICE GERAL
 
-VERSION: 2.0
+VERSION: 2.1
 STATUS: AUTHORITATIVE (split de `Documentação.md` v1.1 + decisões v1.2/v1.3)
 AUDIENCE: AI AGENTS
 LANGUAGE: PT-BR
@@ -48,6 +48,7 @@ docs/
 9. **Escopo V1 enxuto**: adiados `State Diff completo, Trace rico, Breakpoints, Recording, Debug Console completo`. V1 mantém: `Play Project + Validação humana + State Inspector simples`.
 10. **Exportação protegida v1.3** (`12_DISTRIBUICAO_EXPORTACAO.md`): pasta JSON de trabalho vs `.astralis` binário de distribuição; cadeado por jogo gerado no Exportar com chave embutida no player; bundles `exe + .astralis` (win/linux) e `apk + .astralis` com importação (android V1, fundido só V2); versionamento vai junto e acaba mismatch.
 11. **Ponto de vista da mesa (v2.0, D47, `16_PERSPECTIVA_CAMPO.md` §16.15)**: a tela passa a ser a visao de **quem esta jogando** como no Forbidden Memories, e agora e EXATO: a **camera da a volta** de 180 graus em torno do centro do campo (ela e filha de um pivo, que e o unico numero da volta, `_giro_campo`). **As cartas nao se mexem**: cada uma fica no seu lugar do mundo e e a camera que vai para o outro lado da mesa. Isso da de graca a fileira de cima de cabeca para baixo, a coluna de tela invertida (o espelho do rival no dado, D18, e a volta se cancelam: cada um ve a propria fileira na ordem normal) e cada mao do lado do seu dono. A lente continua no eixo e o centro do campo no mesmo x (doc 15 §15.4 intacto). O **HUD 2D nao gira**: ele vira de carta (`|cos(graus)|`, zero nos 90) e o conteudo troca nos 90 graus, quando a largura e zero - invertem os retratos, as plaquinhas de nome/LP e a ordem das 7 celulas da faixa; a barra de fases NAO inverte de proposito (ela mostra a fase real de quem joga, e espelhar dado de regra seria a tela mentir). O tempo e uma constante so (`VOLTA_DURACAO`, 1,0 s) e nao existe pular. **R1 inteiro**: motor e dado intocados, so desenho.
+12. **UMA arena so (v2.1, D48, `13_TABULEIRO_DUELO.md` §13.10.1)**: a arena oficial e o `schemas/examples/arenas/arena_starter.json` (X `632→1684` de 263 em 263; Y `p0 monstro 695 / p0 magia 995 / p1 monstro 305 / p1 magia 10`). A grade embutida em `core/board_layout.gd`, que entra quando o projeto nao tem `arenas/`, **deixou de ser uma segunda arena**: passou a ser os MESMOS numeros da oficial. Antes havia duas telas (a larga com o arquivo, a estreita sem ele, e a estreita com a mao em cima da fileira de baixo) porque a grade embutida, a descricao do JSON, o schema e dois testes ainda falavam de uma grade antiga que sobrou de teste. A igualdade virou trava de teste (`test_grade_embutida_igual_arena_oficial`): 20/20 slots, `SLOT + GAP == 263` e as constantes do 2D legado iguais as do `BoardLayout`.
 
 ## Regras que NÃO mudaram
 

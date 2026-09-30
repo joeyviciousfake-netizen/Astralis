@@ -13,8 +13,8 @@ que o jogo usa. Não existe cópia "fake" de nada (regra **R2**).
 | | |
 |---|---|
 | Arquivos de teste | **20** (+ 1 base de helpers) |
-| Testes | **177** |
-| Asserções | **3781** |
+| Testes | **178** |
+| Asserções | **3835** |
 | Tempo (headless) | **~160 s** (~10 s deles são 2 testes que esperam a IA real) |
 | Conteúdo oficial usado | **722 cartas / 39 duelistas / 39 decks / 25081 receitas de fusão** |
 | Framework | **GUT 9.7.1** (`astralis/addons/gut/`) |
@@ -47,7 +47,7 @@ importe `astralis/`, aba **GUT** → **Run**.
 |---|---:|---|
 | `test_duel_core.gd` | 16 | O motor de duelo: mão 5/5 sem carta extra + refill até 5 nos 2 lados, ordem das fases, 1 invocação por MAIN, 1 ataque por monstro, D17 (jogador 0 não ataca no 1º turno, só virado em Ataque ataca, a virada desvira ao ser atacada), dano e cura com teto no LP inicial, LP zerado declara vencedor, deck out, duelo automático termina em até 20 turnos, mesma seed = mesmo resultado, empate Ataque×Defesa e Ataque×Ataque, ATK/DEF limitados a 9999, e a carta real `fm_0001` (Blue-eyes 3000) causando 3000 de dano. |
 | `test_loader_validator.gd` | 5 | O conteúdo e o contrato: 722 cartas `fm_*`, 39 duelistas, 39 decks de 40 cartas, duelo de abertura (Simon Muran × Jono, 8000 LP), `fm_0001` dentro do schema, customs preservados no `starter_backup`, validação sem nenhum erro, e as 25081 receitas de fusão com a receita explícita `fm_0002 + fm_0008 = fm_0638` e 0 regras genéricas. |
-| `test_board_layout.gd` | 14 | O desenho da arena: 20 slots com ID fixo, XY do JSON só move o desenho (a carta continua indo pelo índice), arquivo ausente/ruído cai na grade padrão, espelho do rival no X e nas fileiras (D25), mão p0/p1 com fallback para arena antiga, rival desenhado só com a **quantidade** (nunca id nem nome), mão centralizada, e criar/liberar a mesa 2× sem erro. |
+| `test_board_layout.gd` | 15 | O desenho da arena: 20 slots com ID fixo, XY do JSON só move o desenho (a carta continua indo pelo índice), arquivo ausente/ruído cai na grade padrão, espelho do rival no X e nas fileiras (D25), mão p0/p1 com fallback para arena antiga, rival desenhado só com a **quantidade** (nunca id nem nome), mão centralizada, criar/liberar a mesa 2× sem erro, e **`test_grade_embutida_igual_arena_oficial` (D48)**: a grade embutida tem que ser a arena oficial slot por slot (20/20), com `SLOT + GAP == 263` e as constantes do 2D legado iguais às do `BoardLayout` — sem arena e com arena é a mesma tela. |
 | `test_compra_fila.gd` | 5 | A compra fiel FM: início 5/5 sem extra, refill até 5 nos 2 lados depois de jogar, deck out só na hora de completar (mão cheia com deck vazio **não** perde), e a animação da fila de fusão que é só visual (não mexe no estado, funciona headless). |
 | `test_fusao_fiel.gd` | 16 | Mão reta + fusão fiel: mão sempre reta e centralizada, levantar/abaixar com selo que renumera sozinho, 0 levantadas = avulsa e 1 = bloqueia com aviso, receita que ignora a ordem, regra genérica por prioridade, equip pendente, cadeia par a par que descarta a acumulada na falha, resultado descendo face para cima em Ataque, slot escolhido **antes** da fusão, e o slot ocupado (avulsa e combinação encontram o campo pelo `FusionSystem` real). |
 | `test_fluxo_fiel.gd` | 5 | O fluxo da mesa: na fase da mão o cursor nunca sai da mão, a carta desce sempre em Ataque com a face e a estrela escolhidas, RB/LB travado depois do ataque, e START que não passa na fase da mão mas passa na de campo. |

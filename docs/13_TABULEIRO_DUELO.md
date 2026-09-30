@@ -116,6 +116,14 @@ Dano, compra, descarte, quem venceu, resultado fusão, alvo válido, fase atual.
 - Jogador escolhe slot livre (de 5) ao descer da mão, pelo controle. Rival usa o primeiro livre.
 - O fallback embutido tem exatamente os mesmos números do `arena_starter.json` — logo um projeto sem arena vê a mesma tela.
 
+## 13.10.1 UMA arena só (D48)
+
+- **A arena oficial é `schemas/examples/arenas/arena_starter.json`** (a "grade larga"): X `632 → 1684` de 263 em 263, Y `p0 monstro 695 / p0 magia 995 / p1 monstro 305 / p1 magia 10`. Passo horizontal 263. Mão p0(1240,980,95) e p1(1240,20,60).
+- A grade embutida em `core/board_layout.gd` (usada quando o projeto não tem `arenas/`) **não é uma segunda arena**: são os MESMOS números, escritos nas constantes `GRID_X/GAP/Y_*`. E `duel_legacy2d/duel_board.gd` repete essa grade só para o 2D legado.
+- **O que era errado (D48):** o JSON já usava a grade larga, mas a grade embutida, a descrição do próprio JSON, o schema e dois testes ainda falavam da grade antiga e estreita (X `780 → 1536`, Y `600/789/317/128`, passo 189). Resultado: quem tinha `arenas/arena_starter.json` via a grade larga, e quem não tinha (projeto novo do Studio) via a grade estreita — **duas telas diferentes**, e a estreita com a mão invadindo a fileira de baixo. Só a larga é a que a câmera da D47 foi calibrada.
+- **Travado em teste:** `test_board_layout.gd::test_grade_embutida_igual_arena_oficial` compara os 20 slots embutidos com os 20 do JSON, trava `SLOT + GAP == 263` e compara as constantes do 2D legado com as do `BoardLayout`. Se alguém mexer num lado só, a suíte quebra. `test_project_arg.gd` refaz a comparação slot a slot pelo caminho de projeto sem arena.
+- Regra para o futuro: **um número de arena vive em dois lugares por necessidade técnica (JSON + fallback), então a igualdade é obrigatória e testada.** Mover a arena = mudar o JSON **e** as constantes, no mesmo commit.
+
 ## 13.11 Mão D25 (posição editável + rival de costas)
 
 - Posição mora na arena: `hand.p0{x,y,step}` (você, aberta) + `hand.p1{x,y,step}` (rival, de costas). Mover esq/dir = mudar `x` no JSON, sem quebrar regra.
