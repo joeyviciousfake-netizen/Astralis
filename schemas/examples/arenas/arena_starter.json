@@ -2,7 +2,7 @@
  "schema_version": 1,
  "id": "arena_starter",
  "name": "Arena Inicial",
- "description": "Arena Inicial 1920x1080 em ESPELHO (D24/R3: só desenho, IDs e lógica intactos). p0 = você/baixo: monstros y=600, magias y=789, x crescente 780→1536 (m0 à esquerda). p1 = rival/cima ESPELHADO: fileiras trocadas (monstro embaixo/perto do centro y=317, magia em cima/longe y=128) + X invertido (m0/s0 à direita x=1536, m4/s4 à esquerda x=780). Mão: p0 x=1240 y=980 aberta, p1 x=1240 y=20 de costas.",
+ "description": "ARENA OFICIAL (D48: uma arena só). 1920x1080 em ESPELHO (D24/R3: só desenho, IDs e lógica intactos). p0 = você/baixo: monstros y=695, magias y=995, x crescente 632→1684 (m0 à esquerda). p1 = rival/cima ESPELHADO: fileiras trocadas (monstro embaixo/perto do centro y=305, magia em cima/longe y=10) + X invertido (m0/s0 à direita x=1684, m4/s4 à esquerda x=632). Passo horizontal 263. Mão: p0 x=1240 y=980 aberta, p1 x=1240 y=20 de costas. Estes números são os mesmos da grade embutida em core/board_layout.gd (fallback sem arena).",
  "background": "assets/backgrounds/arena_starter.png",
  "slots": [
   {
