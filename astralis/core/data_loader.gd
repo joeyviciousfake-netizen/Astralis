@@ -153,7 +153,9 @@ static func _dev_preparar() -> String:
 	if FileAccess.file_exists(carimbo):
 		var l := FileAccess.open(carimbo, FileAccess.READ)
 		if l != null and l.get_as_text().strip_edges() == stamp:
-			pronto = DirAccess.dir_exists_absolute(dev.path_join("cards")) and FileAccess.file_exists(dev.path_join("arenas/arena_starter.json"))
+			# D50: o projeto NAO tem mais arenas/ (a mesa e o dado do jogo, uma
+			# so), entao o marcador do unpack e so a pasta de cartas.
+			pronto = DirAccess.dir_exists_absolute(dev.path_join("cards"))
 		if l != null:
 			l.close()
 	var dados_pack: Dictionary = {}
@@ -196,17 +198,6 @@ static func _dev_preparar() -> String:
 				_dev_gravar_json(dev.path_join("decks/%s.json" % str((k as Dictionary).get("id", ""))), k)
 		_dev_gravar_json(dev.path_join("fusions.json"), dados_pack.get("fusoes", {"schema_version": 1, "recipes": [], "rules": []}))
 		_dev_gravar_json(dev.path_join("effects.json"), {"schema_version": 1, "effects": []})
-		# Arena padrão junto (o pack não traz arenas/): igual ao examples/.
-		var arena_src := starter_kit_dir().path_join("arenas/arena_starter.json")
-		if FileAccess.file_exists(arena_src):
-			DirAccess.make_dir_recursive_absolute(dev.path_join("arenas"))
-			var al := FileAccess.open(arena_src, FileAccess.READ)
-			if al != null:
-				var w0 := FileAccess.open(dev.path_join("arenas/arena_starter.json"), FileAccess.WRITE)
-				if w0 != null:
-					w0.store_string(al.get_as_text())
-					w0.close()
-				al.close()
 		for n in nomes:
 			var s := str(n)
 			if s.begins_with("assets/"):
@@ -279,7 +270,7 @@ static func pasta_projeto_valida(p: String) -> bool:
 	var abs := _resolver_abs(p)
 	if abs.is_empty() or not DirAccess.dir_exists_absolute(abs):
 		return false
-	for sub in ["cards", "duelists", "decks", "arenas"]:
+	for sub in ["cards", "duelists", "decks"]:
 		if DirAccess.dir_exists_absolute(abs.path_join(sub)):
 			return true
 	for arq in ["duel_setup.json", "fusions.json", "effects.json"]:
@@ -381,18 +372,19 @@ static func load_starter_kit() -> Dictionary:
 	else:
 		load_errors.append(String(rs.get("error", "")))
 
-	# Arenas (só DADO p/ o desenho, nunca regra — D24/R3).
-	# Pasta arenas/ ausente = silêncio (a mesa usa a grade padrão);
-	# só arquivo quebrado vira erro. Sem mudar regra/schema.
-	# ATENÇÃO: hoje o dict "arenas" (abaixo) NÃO é consumido por ninguém —
-	# a mesa lê a arena por CAMINHO (BoardLayout.project_arena_path), não
-	# pelo dict. Fica carregado p/ o contrato e p/ o QA olhar; não é
-	# duplicata de leitura, é só um campo não usado ainda.
-	var ra: Dictionary = _load_folder(base.path_join("arenas"))
-	arenas = ra.get("items", {})
-	for e in ra.get("erros", []):
-		if not String(e).begins_with("Pasta não encontrada"):
-			load_errors.append(String(e))
+	# D50: NÃO HÁ MAIS `arenas/` NO PROJETO. A mesa é o dado do JOGO e há só
+	# uma (a oficial). Se alguém largar uma pasta `arenas/` num projeto de
+	# verdade, ela é IGNORADA de propósito, com aviso — é a "segunda arena" que
+	# o usuário mandou remover. A base EMBUTIDA (schemas/examples, quando o jogo
+	# roda sem --project) não conta: é de onde mora a arena oficial.
+	# `arenas` continua no dicionário de dados (vazio) só para o contrato não
+	# mudar de forma.
+	if base != starter_kit_dir() and DirAccess.dir_exists_absolute(base.path_join("arenas")):
+		var _resto := _load_folder(base.path_join("arenas"))
+		if not _resto.get("items", {}).is_empty():
+			push_warning("[ARENA] Este projeto tem uma pasta arenas/ com %d arquivo(s), e ela foi IGNORADA: o jogo tem UMA arena só (D50), a oficial do jogo." % (_resto.get("items", {}) as Dictionary).size())
+			print("[ARENA] AVISO: a pasta arenas/ do projeto foi IGNORADA (D50: uma arena só). A mesa usa a arena oficial do jogo.")
+	arenas = {}
 
 	# Override via CLI p/ o Studio lançar duelos sem sobrescrever o starter.
 	# Se --setup foi passado e o arquivo existe e é um objeto válido, usa-o;

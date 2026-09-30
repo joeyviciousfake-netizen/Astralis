@@ -515,13 +515,22 @@ func _ready() -> void:
 	_duel = DuelManagerScript.new_duel(data.get("duel_setup", {}), data.get("decks", {}), data.get("cards", {}))
 	_st = _duel.get_state()
 	_cartas = data.get("cards", {})
-	# Arena REAL do projeto: desenho segue o layout, IDs intactos.
+	# D50: A MESA É O DADO, E HÁ SÓ UM. Não existe mais override por projeto
+	# nem grade no código: a posição de cada slot vem do arquivo da arena
+	# oficial. O `arena_id` do setup é lido só para dizer no log que ele foi
+	# ignorado (o dado FM traz `arena_starter`, que é essa mesma).
 	var arena_id := str((data.get("duel_setup", {}) as Dictionary).get("arena_id", "arena_starter"))
 	_arena_data = BoardLayoutScript.load_arena_data(BoardLayoutScript.project_arena_path(arena_id))
 	_arena_layout = (_arena_data.get("slots", {}) as Dictionary)
+	var _faltando: Array = BoardLayoutScript.valida_arena_oficial(_arena_layout)
+	if not _faltando.is_empty():
+		# Sem os 20 slots não dá para desenhar o campo, e D50 proíbe inventar
+		# posição: a mesa fica sem os painéis e o log explica por quê.
+		_avisar_arena()
+		print("[MESA3D] ERRO: a arena oficial não tem os 20 slots, então o campo NÃO foi desenhado (D50: uma arena só, e ela é o dado).")
+		return
 	_avisar_arena()
-	# Campo DEPOIS da arena (os painéis nascem no XZ real; antes nasciam
-	# na grade padrão e a carta no layout — bug silencioso).
+	# Campo DEPOIS da arena (os painéis nascem no XZ real do dado).
 	_construir_campo()
 	# D45 (item 2): a faixa do meio é 2D e vive no HUD, no vão entre as duas
 	# fileiras de monstro (que ela mede do dado + da câmera, não chuta).
@@ -1140,8 +1149,13 @@ func _pos_slot(lado: int, tipo: String, indice: int) -> Vector3:
 	# deslocamento do conjunto): a composição e o espelho do DADO ficam
 	# intactos, só o tamanho/posição do campo na tela mudam.
 	var sid := BoardLayoutScript.slot_id(lado, tipo, indice)
-	var padrao := BoardLayoutScript.default_pos(sid)
-	var p2 := BoardLayoutScript.get_pos(_arena_layout, sid, padrao)
+	# D50: a posição vem SÓ do arquivo da arena oficial. Sem ela, o jogo já
+	# avisou no boot e não desenhou o campo — aqui devolve o centro como
+	# último recurso, para nunca multiplicar uma posição inventada.
+	var p2 := BoardLayoutScript.get_pos(_arena_layout, sid)
+	if p2 == BoardLayoutScript.NULO:
+		push_warning("[MESA3D] Slot '%s' sem posição na arena oficial (D50: sem grade no código)." % sid)
+		p2 = Vector2(BoardLayoutScript.NULO.x, BoardLayoutScript.NULO.y)
 	# D49: a conversão é PURA e igual para os 4 tipos de slot (monstro/magia,
 	# jogador/rival). O vão vertical monstro->magia é o do DADO (263 = o mesmo
 	# do passo horizontal) e a fileira de monstro fica exatamente onde o dado
