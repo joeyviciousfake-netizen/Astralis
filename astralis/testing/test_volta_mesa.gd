@@ -241,6 +241,90 @@ func test_a_vista_do_rival_e_o_espelho_exato_da_do_jogador() -> void:
 				lado, r.y, j.y])
 
 
+## (11) D53 — ANDAR NA MÃO NÃO MOVE NADA QUE NÃO SEJA O CURSOR. O bug que o
+## usuário reportou: "quando eu estou navegando pelas cartas da minha mão eu vejo
+## que as cartas da mão do inimigo que estão no outro lado do campo parece que se
+## movimentam junto". São TRÊS defeitos da mesma família (um desenho que se mexe
+## sem precisar), e os três são travados aqui:
+##
+## (a) A COMPRA ANIMADA ESTAVA NA MÃO ERRADA. O tween da compra estava fixo na
+##     `mao0` (a do jogador), então na vez do RIVAL — quando, com a D52, a mão
+##     do jogador é o LUGAR DE CIMA da tela — a compra DELE arrastava a SUA mão
+##     pelo meio do campo. E a invocação (`_terminar_jogada_mao`) animava a mão
+##     sem ter comprado nada (a carta DESCE da mão para o campo).
+## (b) A CHACOALHADA DA FUSÃO SACUDIA A MESA INTEIRA: era
+##     `_sacudir(_no_cartas)`, e `_no_cartas` é o guarda-chuva das 20+ cartas
+##     (as 4 fileiras e as DUAS mãos) — as cartas se moviam JUNTAS.
+## (c) ANDAR NA MÃO REDESENHAVA A TELA 3D INTEIRA a cada passo: `_redesenhar`
+##     destrói e recria todas as cartas (`queue_free`), e o que muda ao andar é
+##     só o cursor e o painel da esquerda.
+func test_andar_na_mao_nao_move_a_mao_do_outro_lado() -> void:
+	var mesa: Node = await _mesa3d_nova()
+	var st = mesa.get("_st")
+	var cartas := mesa.get_node(CARTAS) as Node3D
+	var no_cartas := mesa.get("_no_cartas") as Node3D
+	st.set("current_player", 0)
+	st.set("phase", "MAIN")
+	mesa.set("_fase_jogador", 0) # FASE_MAO
+	mesa.set("_fileira", 0)     # FILEIRA_MAO
+	mesa.set("_sub_mao", 0)     # SUB_MAO_ESCOLHA
+	mesa.set("_col", 0)
+	await wait_process_frames(2)
+	# Preparo: tem que estar NA FASE DA MÃO de verdade, senão o `_mover` cai
+	# noutro ramo e o teste mede outra coisa (foi o que aconteceu na 1ª vez).
+	assert_eq(int(mesa.get("_fase_jogador")), 0, "D53: preparo: estamos na FASE_MAO.")
+	assert_eq(int(mesa.get("_fileira")), 0, "D53: preparo: o cursor está na fileira da MÃO.")
+	var n0: int = ((st.players[0] as Dictionary)["hand"] as Array).size()
+	var n1: int = ((st.players[1] as Dictionary)["hand"] as Array).size()
+	var n_antes: int = cartas.get_child_count()
+	var rival_antes := _carta_da_mao(mesa, 0, 1)
+	assert_true(rival_antes != null, "D53: preparo: a carta 0 da mao do rival esta desenhada.")
+	var id_antes: int = (rival_antes as Node).get_instance_id() if rival_antes != null else 0
+	var x_rival_antes: float = (rival_antes as Node3D).position.x if rival_antes != null else 0.0
+	# --- (c) andar na mao NAO recria as cartas ---
+	mesa.call("_mover", 1, 0)
+	await wait_process_frames(2)
+	assert_eq(cartas.get_child_count(), n_antes,
+		"D53: andar na mao nao cria nem destroy carta nenhuma (filhos %d -> %d)." % [
+			n_antes, cartas.get_child_count()])
+	var rival_depois := _carta_da_mao(mesa, 0, 1)
+	var id_depois: int = (rival_depois as Node).get_instance_id() if rival_depois != null else 0
+	assert_eq(id_depois, id_antes,
+		"D53: a carta da mao do rival e o MESMO no (o desenho nao foi refeito).")
+	assert_almost_eq((rival_depois as Node3D).position.x, x_rival_antes, 0.0001,
+		"D53: e a mao do outro lado nao mudou de lugar (%.3f -> %.3f)." % [
+			x_rival_antes, (rival_depois as Node3D).position.x])
+	assert_eq(int(mesa.get("_col")), 1, "D53: o cursor andou uma carta para a direita.")
+	# --- (a) a compra animada e da mao que COMPROU (medido na hora, sem esperar
+	#     o tween correr, que em headless anda na velocidade do process) ---
+	var deck: Array = mesa.get("_deck_pos")
+	mesa.call("_redesenhar", true, 1) # compra do RIVAL
+	var dele := _carta_da_mao(mesa, 0, 1) as Node3D
+	var eu := _carta_da_mao(mesa, 0, 0) as Node3D
+	assert_almost_eq(dele.position.x, float(deck[1].x), 0.001,
+		"D53: na compra do RIVAL a mao DELE e que sai do baralho DELE (x %.2f)." % float(deck[1].x))
+	assert_almost_eq(eu.position.x, (mesa.call("_pos_mao_arco", 0, n0, 0) as Vector3).x, 0.0001,
+		"D53: e a SUA mao fica no lugar dela (x %.3f) - antes ela era a que animava, e na tela do rival ela e o LUGAR DE CIMA." % eu.position.x)
+	mesa.call("_redesenhar", true, 0) # compra do JOGADOR
+	dele = _carta_da_mao(mesa, 0, 1) as Node3D
+	eu = _carta_da_mao(mesa, 0, 0) as Node3D
+	assert_almost_eq(eu.position.x, float(deck[0].x), 0.001,
+		"D53: na compra do JOGADOR a mao DELE e que sai do baralho dele (x %.2f)." % float(deck[0].x))
+	assert_almost_eq(dele.position.x, (mesa.call("_pos_mao_arco", 0, n1, 1) as Vector3).x, 0.0001,
+		"D53: e a mao do rival nao mexe.")
+	# --- (b) a chacoalhada NUNCA e da mesa inteira (trava dentro do `_sacudir`) ---
+	var x_mesa: float = no_cartas.position.x
+	mesa.call("_sacudir", no_cartas)
+	await wait_process_frames(4)
+	assert_almost_eq(no_cartas.position.x, x_mesa, 0.0001,
+		"D53: a mesa inteira (o guarda-chuva das 20+ cartas) NUNCA sacode - era o que movia as DUAS maos juntas (x %.4f)." % no_cartas.position.x)
+	assert_almost_eq((_carta_da_mao(mesa, 0, 1) as Node3D).position.x, x_rival_antes, 0.0001,
+		"D53: e a mao do outro lado continua no lugar depois da chacoalhada.")
+	# --- e nada disso encostou no DADO (R1) ---
+	assert_eq(((st.players[0] as Dictionary)["hand"] as Array).size(), n0,
+		"D53: nada disso encostou na mao do dado (so desenho).")
+
+
 ## Retângulo de tela (topo, base) de uma fileira de monstro, sem depender de
 ## qual lado a câmera está: as DUAS bordas do ladrilho, e a menor/maior y.
 func _fileira_de_monstro(mesa: Node, lado: int) -> Vector2:

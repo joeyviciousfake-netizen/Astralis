@@ -2115,7 +2115,15 @@ func _espelhar_faixa() -> void:
 		_faixa_linha.add_child(c2 as Node)
 
 
-func _redesenhar(com_efeito: bool) -> void:
+## Redesenha as cartas 3D do estado real.
+## `com_efeito` = a compra deve ANIMAR (a carta nova voa do baralho para a mão).
+## `dono_efeito` = de QUEM é a compra (0 = você, 1 = rival): a animação é da
+## MÃO QUE COMPROU, e só dela. Bug corrigido aqui (D53): ela estava fixa na
+## mão do JOGADOR, então na vez do RIVAL a animação da compra dele mexia na SUA
+## mão — que, com a D52, está no LUGAR DE CIMA da tela dele, e saía voando pelo
+## meio do campo. E `_terminar_jogada_mao` (a invocação) também usava
+## `com_efeito = true` sem ter comprado nada: a mão só PERDEU uma carta.
+func _redesenhar(com_efeito: bool, dono_efeito: int = 0) -> void:
 	# D47: o desenho do campo é SEMPRE o mesmo — lado do dado = lado do mundo.
 	# Quem muda o ponto de vista é a câmera (a volta da mesa), então aqui não há
 	# nenhum "lado visual" para decidir: cada carta fica onde o DADO manda.
@@ -2175,11 +2183,7 @@ func _redesenhar(com_efeito: bool) -> void:
 		c.set_meta("mao_dono", 0)
 		_no_cartas.add_child(c)
 		_pose_da_carta_da_mao(c, 0)
-		if com_efeito and not _sem_render():
-			var alvo: Vector3 = c.position
-			c.position = _deck_pos[0]
-			var tw := c.create_tween().set_parallel(true)
-			tw.tween_property(c, "position", alvo, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		_animar_compra(c, 0, com_efeito, dono_efeito)
 	var mao1: Array = (_st.players[1] as Dictionary)["hand"]
 	for j in range(mao1.size()):
 		var v := _fazer_carta({}, true, 1, false)
@@ -2188,8 +2192,26 @@ func _redesenhar(com_efeito: bool) -> void:
 		v.set_meta("mao_dono", 1)
 		_no_cartas.add_child(v)
 		_pose_da_carta_da_mao(v, 1)
+		_animar_compra(v, 1, com_efeito, dono_efeito)
 	_atualizar_hud()
 	_posicionar_cursor()
+
+
+## D53: A COMPRA ANIMADA É DA MÃO QUE COMPROU, e só dela. A carta nasce no
+## baralho do dono e voa (0,35 s) para o lugar dela na mão. Antes disso estava
+## fixo na `mao0` (a do jogador), então na vez do RIVAL a compra dele animava a
+## SUA mão — que, com a D52, é o LUGAR DE CIMA da tela dele: as cartas dela
+## saíam do baralho no meio do campo e atravessavam a tela voando, que é
+## exatamente o "a minha mão se mexe do outro lado" que o usuário reportou.
+func _animar_compra(carta: Node3D, dono: int, com_efeito: bool, dono_efeito: int) -> void:
+	# Sem trava de `_sem_render` de propósito (mesmo motivo do `_sacudir`): o
+	# tween é de 0,35 s e não depende de render, e assim o GUT vê QUEM animou.
+	if not com_efeito or dono != dono_efeito or carta == null or not is_instance_valid(carta):
+		return
+	var alvo: Vector3 = carta.position
+	carta.position = _deck_pos[dono]
+	var tw := carta.create_tween().set_parallel(true)
+	tw.tween_property(carta, "position", alvo, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 
 ## D52: aplica na carta da mão a POSE do lugar que ela ocupa na vista atual
@@ -3572,7 +3594,14 @@ func _flash_efeito() -> void:
 
 
 func _sacudir(no: Node3D) -> void:
-	if _sem_render() or no == null or not is_instance_valid(no):
+	# D53: NUNCA a mesa inteira. `_no_cartas` é o guarda-chuva das 20+ cartas (as
+	# 4 fileiras e as DUAS mãos), então sacudi-lo movia as duas mãos e as fileiras
+	# JUNTAS — que é o "as cartas se movimentam junto" que o usuário reportou. A
+	# trava é AQUI dentro, e não no chamador, para nenhum ponto novo do código
+	# reintroduzir o tremor da mesa inteira. E nunca um nó que não existe.
+	# Sem a trava de `_sem_render` de propósito: é um tween de 0,22 s que não
+	# depende de render, e assim o GUT consegue ver se alguma coisa sacudiu.
+	if no == null or not is_instance_valid(no) or no == _no_cartas:
 		return
 	var x0: float = no.position.x
 	var tw := no.create_tween()
@@ -3800,7 +3829,10 @@ func _terminar_jogada_mao(slot_n: int) -> void:
 	_sel_atk = -1
 	_fileira = FILEIRA_MEU_M
 	_col = clampi(slot_n, 0, 4)
-	_redesenhar(true)
+	# D53: aqui não houve compra nenhuma (a carta DESCEU da mão para o campo), e
+	# sim a mão ficou com uma carta a menos — então nada anima. Antes isto era
+	# `com_efeito = true` e a mão do jogador saía voando do baralho sozinha.
+	_redesenhar(false)
 	_flash_efeito()
 
 
@@ -3881,7 +3913,7 @@ func _fluxo_escolher_slot_fusao() -> void:
 		_redesenhar(false)
 		return
 	_fusao_animando = true
-	await _animar_fila_fusao(em_ordem, previa.get("passos", []) as Array, ordem)
+	await _animar_fila_fusao(em_ordem, previa.get("passos", []) as Array, ordem, slot)
 	if bool(_st.over) or int(_st.current_player) != 0 or String(_st.phase) != "MAIN":
 		_fusao_animando = false
 		_combinando = false
@@ -4015,13 +4047,18 @@ func _executar_fusao_fiel(estrela: String) -> void:
 	_fase_jogador = FASE_CAMPO
 	_fileira = FILEIRA_MEU_M
 	_col = clampi(slot_n, 0, 4)
-	_redesenhar(true)
+	_redesenhar(false) # D53: descida da carta, não é compra -> não anima.
 	_flash_efeito()
 
 
 ## Fila da fusão (só visual + som, sem regra): mostra cada passo no HUD
 ## com flash no sucesso e chacoalhada na falha. Headless: só prints.
-func _animar_fila_fusao(_em_ordem: Array, passos: Array, _indices_mao: Array) -> void:
+## D53: a chacoalhada é do SLOT onde a carta desceu, e não da mesa inteira.
+## Antes era `_sacudir(_no_cartas)`, e `_no_cartas` é o guarda-chuva de TODAS as
+## cartas (as 4 fileiras e as DUAS mãos): na falha da fusão a mesa inteira
+## tremia e as duas mãos andavam juntas, que é o "as cartas se movimentam junto"
+## que o usuário reportou.
+func _animar_fila_fusao(_em_ordem: Array, passos: Array, _indices_mao: Array, slot_n: int) -> void:
 	_fusao_passos = (passos as Array).duplicate()
 	_redesenhar(false)
 	if _sem_render():
@@ -4037,7 +4074,8 @@ func _animar_fila_fusao(_em_ordem: Array, passos: Array, _indices_mao: Array) ->
 		if str(pd.get("tipo", "")) == "receita" or str(pd.get("tipo", "")) == "regra":
 			_flash_efeito()
 		else:
-			_sacudir(_no_cartas)
+			# D53: só a carta do slot treme (e `_sacudir` já ignora o vazio).
+			_sacudir(_achar_carta_campo(0, "monstro", slot_n))
 		await get_tree().create_timer(0.45).timeout
 		if not is_inside_tree():
 			return
@@ -4120,7 +4158,11 @@ func _rival_auto() -> void:
 		_fala("Rival está com a mão vazia neste turno.")
 	else:
 		_fala("Rival não tem monstro na mão para invocar.")
-	_redesenhar(true)
+	# D53: a compra do turno é DELE, então a animação da compra é da mão DELE
+	# (que, com a D52, é o lugar de baixo da tela dele). Antes esta chamada
+	# animava a MÃO DO JOGADOR, que na tela do rival é o lugar de cima: as
+	# cartas dela saíam do baralho e atravessavam o campo voando.
+	_redesenhar(true, 1)
 	await get_tree().create_timer(0.7).timeout
 	if not is_inside_tree() or bool(_st.over):
 		_rival_rodando = false
@@ -4209,7 +4251,7 @@ func _levar_vez_para_o_jogador() -> void:
 	_esconder_centro3d()
 	_fileira = FILEIRA_MAO
 	_col = 0
-	_redesenhar(true)
+	_redesenhar(true, 0) # D53: a compra do turno é a SUA, então a animação é da sua mão.
 	_atualizar_hud()
 
 
@@ -4386,8 +4428,14 @@ func _mover(dx: int, dy: int) -> void:
 					var larg := _larg_fileira(_fileira)
 					if larg > 1:
 						_col = posmod(_col + dx, larg)
+						# D53: andar na mão NÃO é redesenho. `_redesenhar`
+						# destrói e recria as 20+ cartas 3D (com `queue_free`),
+						# e o que muda aqui é só o cursor e o painel da esquerda.
+						# Redesenhar tudo por passo de cursor é o que fazia a
+						# mão do outro lado da mesa "se mexer junto" (o desenho
+						# inteiro é refeito a cada tecla) e custava caro.
 						_posicionar_cursor()
-						_redesenhar(false)
+						_atualizar_painel_foco()
 				return
 	# FASE DE CAMPO (seu turno): SÓ os 20 slots (igual ao 2D: sem LP e sem mão).
 	if _fase_jogador == FASE_CAMPO and meu_turno:
