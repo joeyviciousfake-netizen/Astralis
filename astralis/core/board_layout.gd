@@ -4,22 +4,29 @@ extends RefCounted
 ## BoardLayout — lê a arena (só DESENHO, nunca regra — D24/R3).
 ## Slot tem ID fixo (lado+tipo+índice); a lógica só usa o índice,
 ## o desenho usa o XY do layout com fallback p/ grade padrão.
+## D48: o fallback NÃO é uma segunda arena — é a MESMA arena oficial
+## (arena_starter.json) escrita nos números abaixo. Uma arena só.
 ## Mover XY no JSON nunca muda para qual índice a carta vai.
 ## ESPELHO do rival (só DESENHO, IDs/lógica intactos): lado 1 tem X
 ## invertido (índice 0 à direita) e fileiras trocadas (monstro perto
 ## do centro, magia longe), espelhando o lado 0.
 
+## Grade embutida = A ARENA OFICIAL (D48: uma arena só). Estes números são
+## os MESMOS do schemas/examples/arenas/arena_starter.json, na mesma ordem.
+## D48 travou isso em teste (test_grade_embutida_igual_arena_oficial): se um
+## mudar, o outro tem que mudar junto, senão o jogo cai numa grade fantasma.
 const SLOT := 165.0
-const GAP := 24.0
-const GRID_X := 780.0
+## GAP não é estética: SLOT + GAP = 263 = o PASSO oficial da arena (632→1684).
+const GAP := 98.0
+const GRID_X := 632.0
 ## Fileiras em ESPELHO (só desenho): monstro sempre perto do centro,
-## magia sempre longe. Rival/cima: monstro 317 (embaixo/perto),
-## magia 128 (cima/longe). Você/baixo: monstro 600 (cima/perto),
-## magia 789 (baixo/longe).
-const Y_RIVAL_MONSTRO := 317.0
-const Y_RIVAL_MAGIA := 128.0
-const Y_VOCE_MONSTRO := 600.0
-const Y_VOCE_MAGIA := 789.0
+## magia sempre longe. Rival/cima: monstro 305 (embaixo/perto),
+## magia 10 (cima/longe). Você/baixo: monstro 695 (cima/perto),
+## magia 995 (baixo/longe).
+const Y_RIVAL_MONSTRO := 305.0
+const Y_RIVAL_MAGIA := 10.0
+const Y_VOCE_MONSTRO := 695.0
+const Y_VOCE_MAGIA := 995.0
 
 const NULO := Vector2(-99999, -99999)
 
@@ -141,10 +148,11 @@ static func eh_slot_valido(slot: String) -> bool:
 	return true
 
 
-## Grade padrão em ESPELHO (a mesma do duel_board.gd). Volta (-1,-1) se ID inválido.
-## Lado 0 (você/baixo): X crescente 780→1536 (índice 0 à esquerda).
-## Lado 1 (rival/cima): X ESPELHADO 1536→780 (índice 0 à direita) +
-## fileiras trocadas (monstro 317 perto do centro, magia 128 longe).
+## Grade embutida em ESPELHO (a mesma do arena_starter.json e do
+## duel_board.gd). Volta (-1,-1) se ID inválido.
+## Lado 0 (você/baixo): X crescente 632→1684 (índice 0 à esquerda).
+## Lado 1 (rival/cima): X ESPELHADO 1684→632 (índice 0 à direita) +
+## fileiras trocadas (monstro 305 perto do centro, magia 10 longe).
 ## Só DESENHO: IDs/lógica continuam no índice.
 static func default_pos(slot: String) -> Vector2:
 	if not eh_slot_valido(slot):
@@ -189,7 +197,7 @@ static func starter_arena_path() -> String:
 ## D29: schemas/examples/ é SÓ TESTE. Com base de PROJETO (--project) e a
 ## arena ausente lá, NÃO lê de examples/ — devolve "" e a mesa usa a grade
 ## padrão embutida (default_layout/default_hand), que tem os MESMOS números
-## do arena_starter.json (x 780/969/1158/1347/1536, y 600/789/317/128,
+## do arena_starter.json (x 632/895/1158/1421/1684, y 695/995/305/10,
 ## mão p0 1240/980/95 e p1 1240/20/60). Só DESENHO: nenhuma regra muda.
 static func project_arena_path(arena_id: String = "arena_starter") -> String:
 	var aid := arena_id.strip_edges()

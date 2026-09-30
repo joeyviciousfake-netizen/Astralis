@@ -7,23 +7,25 @@ extends Control
 ## e emblema central. Sem regra aqui (R1): só mostra.
 ## Posições prontas p/ colocar as cartas depois via slot_rect().
 ## ESPELHO do rival (só DESENHO, IDs/lógica intactos): lado 1 com X
-## invertido (índice 0 à direita) + monstro perto do centro (317) e
-## magia longe (128), espelhando você (600/789).
+## invertido (índice 0 à direita) + monstro perto do centro (305) e
+## magia longe (10), espelhando você (695/995).
 
+## Mesmos números da arena oficial (D48: uma arena só, igual ao
+## BoardLayout e ao arena_starter.json). SLOT + GAP = 263 = passo oficial.
 const SLOT := 165.0
-const GAP := 24.0
-const GRID_X := 780.0
+const GAP := 98.0
+const GRID_X := 632.0
 const COL_DECK_X := 1728.0
 const DECK_W := 105.0
 const DECK_H := 165.0
 
 ## Fileiras em ESPELHO (só desenho, igual ao BoardLayout):
 ## monstro sempre perto do centro, magia sempre longe.
-const Y_RIVAL_MONSTRO := 317.0
-const Y_RIVAL_MAGIA := 128.0
+const Y_RIVAL_MONSTRO := 305.0
+const Y_RIVAL_MAGIA := 10.0
 const Y_DIVISORIA := 540.0
-const Y_VOCE_MONSTRO := 600.0
-const Y_VOCE_MAGIA := 789.0
+const Y_VOCE_MONSTRO := 695.0
+const Y_VOCE_MAGIA := 995.0
 
 const COR_FUNDO := Color(0.03, 0.03, 0.07)
 const COR_DOURADO := Color(0.78, 0.64, 0.32)

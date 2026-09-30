@@ -95,7 +95,7 @@ const FILEIRA_MAO := 3
 const FILEIRA_RIVAL_MAGIA := 4
 const FILEIRA_MEU_MAGIA := 5
 ## Ordem visual de cima p/ baixo só com os 20 slots do campo (bug 3+5):
-## magia rival (128) -> monstro rival (317) -> meu monstro (600) -> minha magia (789).
+## magia rival (10) -> monstro rival (305) -> meu monstro (695) -> minha magia (995).
 const ORDEM_CAMPO := [4, 1, 2, 5]
 ## Ordem livre p/ observar na vez do rival (LP + 20 slots + mão).
 const ORDEM_LIVRE := [0, 4, 1, 2, 5, 3]
