@@ -27,7 +27,7 @@ schemas/
                                (SEM texto/imagem FM no repo, por decisão)
   examples/                <- conteúdo OFICIAL FM (D20), jogável
     layouts/card_layout_monster_default.json <- ÚNICO molde V1: monstro padrão medido do scan real (doc 04.8)
-    arenas/arena_starter.json  <- A ARENA OFICIAL (D48): 20 slots XY (x 632-1684 passo 263, y 10/305/695/995) + hand p0 1240/980/95 e p1 1240/20/60 (D24). Mesmos números da grade embutida em core/board_layout.gd
+    arenas/arena_starter.json  <- A ARENA OFICIAL (D48: uma arena so; D49: grade PERFEITA, um valor so = 263): 20 slots XY (x 632-1684 de 263 em 263; y p0 695/958 e p1 305/42, ou seja 263 vertical monstro->magia dos 2 lados) + hand p0 1240/980/95 e p1 1240/20/60 (D24). A distancia entre as fileiras de monstro dos 2 lados (390) e CONGELADA. Mesmos numeros da grade embutida em core/board_layout.gd
     cards/                 <- 722 cartas fm_0001..fm_0722 (621 monstros, 34 equip, 33 spell, 24 ritual, 10 trap)
     duelists/              <- 39 duelistas fm_duelist_01..39 (starting_lp 8000, ai_preset normal)
     decks/                 <- 39 decks fm_deck_01..39 (40 cartas cada, máx 3 cópias, seed 42)

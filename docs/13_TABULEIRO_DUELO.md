@@ -118,11 +118,62 @@ Dano, compra, descarte, quem venceu, resultado fusão, alvo válido, fase atual.
 
 ## 13.10.1 UMA arena só (D48)
 
-- **A arena oficial é `schemas/examples/arenas/arena_starter.json`** (a "grade larga"): X `632 → 1684` de 263 em 263, Y `p0 monstro 695 / p0 magia 995 / p1 monstro 305 / p1 magia 10`. Passo horizontal 263. Mão p0(1240,980,95) e p1(1240,20,60).
+- **A arena oficial é `schemas/examples/arenas/arena_starter.json`** (a "grade larga"): X `632 → 1684` de 263 em 263, Y `p0 monstro 695 / p0 magia 958 / p1 monstro 305 / p1 magia 42`. Mão p0(1240,980,95) e p1(1240,20,60).
 - A grade embutida em `core/board_layout.gd` (usada quando o projeto não tem `arenas/`) **não é uma segunda arena**: são os MESMOS números, escritos nas constantes `GRID_X/GAP/Y_*`. E `duel_legacy2d/duel_board.gd` repete essa grade só para o 2D legado.
 - **O que era errado (D48):** o JSON já usava a grade larga, mas a grade embutida, a descrição do próprio JSON, o schema e dois testes ainda falavam da grade antiga e estreita (X `780 → 1536`, Y `600/789/317/128`, passo 189). Resultado: quem tinha `arenas/arena_starter.json` via a grade larga, e quem não tinha (projeto novo do Studio) via a grade estreita — **duas telas diferentes**, e a estreita com a mão invadindo a fileira de baixo. Só a larga é a que a câmera da D47 foi calibrada.
 - **Travado em teste:** `test_board_layout.gd::test_grade_embutida_igual_arena_oficial` compara os 20 slots embutidos com os 20 do JSON, trava `SLOT + GAP == 263` e compara as constantes do 2D legado com as do `BoardLayout`. Se alguém mexer num lado só, a suíte quebra. `test_project_arg.gd` refaz a comparação slot a slot pelo caminho de projeto sem arena.
 - Regra para o futuro: **um número de arena vive em dois lugares por necessidade técnica (JSON + fallback), então a igualdade é obrigatória e testada.** Mover a arena = mudar o JSON **e** as constantes, no mesmo commit.
+
+## 13.10.2 A grade PERFEITA (D49) — um valor só, 263
+
+O usuário pediu para "corrigir a distância entre os slots, eles têm que ficar
+PERFEITOS", com duas regras explícitas: **(1)** não mexer na distância entre a
+fileira de monstros do jogador e a do rival, e **(2)** o valor da distância
+horizontal entre slots de monstro é o mesmo em todo o campo.
+
+**A regra que vale agora: UM valor só, `263`, nas SEIS direções do campo.**
+
+| Distância | Antes | Agora |
+|---|---|---|
+| horizontal, monstro→monstro (2 fileiras) | 263 | **263** |
+| horizontal, magia→magia (2 fileiras) | 263 | **263** |
+| vertical monstro→magia, jogador | 300 | **263** |
+| vertical monstro→magia, rival | 295 | **263** |
+| **vertical monstro do jogador ↔ monstro do rival** | 390 | **390 (congelado, regra 1)** |
+| horizontal, jogador ↔ rival (mesma coluna) | espelho | espelho |
+
+No dado, então: `p0` monstro 695 / magia 958 (263 abaixo) e `p1` monstro 305 /
+magia 42 (263 acima). O 305 e o 695 **não se mexem** — é por isso que só as
+fileiras de magia foram movidas.
+
+**O que estava estragando (e por que a tela nunca ficava perfeita).** A
+`_pos_slot` do `mesa_3d.gd` tinha, por cima do dado, dois números chutados por
+iteração de **calibração de tela** do D44 (`APROXIMA_MAGIA_VOCE = 0.22` e
+`APROXIMA_MAGIA_RIVAL = 0.05`) que deslocavam a fileira de magia no Z para
+"igualar o vão na tela". Medido em unidades de mundo, o resultado era:
+
+| | horizontal | monstro→magia jogador | monstro→magia rival |
+|---|---|---|---|
+| antes | 2,1566 | **2,2400** (+4%) | **2,3690** (+10%) |
+| agora | 2,1566 | **2,1566** | **2,1566** |
+
+Ou seja: o dado dizia uma coisa e o código deslocava de novo. **O D49 removeu os
+dois números.** Não existe mais nenhum desvio por tipo de slot em `_pos_slot`: a
+conversão é a mesma para os 4 tipos. Se o vão ficar feio de novo, o dado é que
+se muda — nunca um número escondido no código.
+
+**Por que a medida é POR CÓDIGO e não por foto.** O jogo tem a volta da mesa
+(D47), então a mesma fileira é vista de lados opostos; e mesmo com a câmera
+parada, a perspectiva faz o **mesmo** intervalo de mundo aparecer com **276 px**
+na fileira da frente, **257 px** no meio e **220 px** no fundo. Isso é
+projeção, não erro do dado — e a lente não pode ser mexida (doc 15 §15.4). Por
+isso a trava é em unidades de mundo, e por isso os helpers que mediam o vão em
+pixels foram removidos.
+
+**Travas de teste:**
+- `test_mesa_3d_oficial.gd::test_d49_grade_perfeita_um_valor_so_e_mao_vem_para_a_camera` — os 20 slots são o dado puro (tolerância 1e-6), o passo horizontal das 4 fileiras é o mesmo número, o vão vertical monstro→magia dos 2 lados é **igual a ele**, a ordem das fileiras continua a do dado, e a distância entre as fileiras de monstros dos 2 lados continua **390** (com um `assert_ne` que impede alguém de "harmonizar" os 390 para 263).
+- `test_board_layout.gd::test_espelho_p1_fileiras_perto_longe` — as mesmas três distâncias no `BoardLayout` (dado, sem câmera).
+- `test_grade_embutida_igual_arena_oficial` (D48) continua guaranteeing que o fallback é o JSON slot por slot.
 
 ## 13.11 Mão D25 (posição editável + rival de costas)
 
