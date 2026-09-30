@@ -341,16 +341,18 @@ func test_arena_ausente_no_projeto_usa_grade_padrao_com_espelho() -> void:
 	assert_eq(BoardLayoutScript.default_pos("p1_s0").x, BoardLayoutScript.default_pos("p1_m0").x, "Magia do rival na mesma coluna do monstro.")
 	assert_eq(BoardLayoutScript.default_pos("p1_s4").x, BoardLayoutScript.default_pos("p1_m4").x, "Magia do rival espelha a coluna do monstro.")
 	assert_eq(BoardLayoutScript.default_pos("p1_m2").x, BoardLayoutScript.default_pos("p0_m2").x, "Meio espelha no mesmo X.")
-	assert_eq(BoardLayoutScript.default_pos("p1_m0").y, 317.0, "Monstro do rival perto do centro (y=317).")
-	assert_eq(BoardLayoutScript.default_pos("p1_s0").y, 128.0, "Magia do rival longe (y=128).")
-	assert_eq(BoardLayoutScript.default_pos("p0_m0").y, 600.0, "Seu monstro perto (y=600).")
-	assert_eq(BoardLayoutScript.default_pos("p0_s0").y, 789.0, "Sua magia longe (y=789).")
+	assert_eq(BoardLayoutScript.default_pos("p1_m0").y, 305.0, "Monstro do rival perto do centro (y=305).")
+	assert_eq(BoardLayoutScript.default_pos("p1_s0").y, 10.0, "Magia do rival longe (y=10).")
+	assert_eq(BoardLayoutScript.default_pos("p0_m0").y, 695.0, "Seu monstro perto (y=695).")
+	assert_eq(BoardLayoutScript.default_pos("p0_s0").y, 995.0, "Sua magia longe (y=995).")
 	# A mão também cai no fallback embutido (nada quebra sem arena).
 	assert_eq(BoardLayoutScript.get_hand(arena, 0), BoardLayoutScript.default_hand(0), "Mão p0 no fallback embutido (1240/980/95).")
 	assert_eq(BoardLayoutScript.get_hand(arena, 1), BoardLayoutScript.default_hand(1), "Mão p1 no fallback embutido (1240/20/60).")
-	# E a grade padrão tem grade PRÓPRIA (slots quadrados usam a arena
-	# larga; sem arena o desenho cai no fallback, sem quebrar nada).
+	# E a grade embutida É a arena oficial (D48: uma arena só, sem grade
+	# fantasma): com ou sem arquivo de arena, a tela é a mesma.
 	var starter_slots: Dictionary = BoardLayoutScript.load_arena(BoardLayoutScript.starter_arena_path())
 	assert_eq(starter_slots.size(), 20, "arena_starter (pasta de teste) também tem 20 slots.")
-	assert_eq(starter_slots["p1_m0"] as Vector2, Vector2(1684, 305), "Starter usa a grade larga (slots quadrados).")
-	assert_eq(starter_slots["p0_s0"] as Vector2, Vector2(632, 995), "Starter usa a grade larga (slots quadrados).")
+	assert_eq(starter_slots["p1_m0"] as Vector2, Vector2(1684, 305), "Starter: p1_m0 na arena oficial.")
+	assert_eq(starter_slots["p0_s0"] as Vector2, Vector2(632, 995), "Starter: p0_s0 na arena oficial.")
+	for sid in starter_slots.keys():
+		assert_eq(BoardLayoutScript.default_pos(str(sid)), starter_slots[sid] as Vector2, "Slot '%s': sem arena = com arena (mesma arena)." % str(sid))

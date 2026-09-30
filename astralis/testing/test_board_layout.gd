@@ -115,24 +115,24 @@ func test_espelho_p1_x_invertido() -> void:
 
 func test_espelho_p1_fileiras_perto_longe() -> void:
 	# D25 ESPELHO (só desenho): monstro perto do centro, magia longe.
+	# D48: fileiras da arena OFICIAL (mesmas do arena_starter.json).
 	var m: Vector2 = BoardLayoutScript.default_pos("p1_m0")
 	var s: Vector2 = BoardLayoutScript.default_pos("p1_s0")
 	assert_eq(m.y, BoardLayoutScript.Y_RIVAL_MONSTRO, "Fileira rival monstro = Y_RIVAL_MONSTRO.")
 	assert_eq(s.y, BoardLayoutScript.Y_RIVAL_MAGIA, "Fileira rival magia = Y_RIVAL_MAGIA.")
-	assert_eq(m.y, 317.0, "Rival monstro y=317 (embaixo/perto do centro).")
-	assert_eq(s.y, 128.0, "Rival magia y=128 (cima/longe do centro).")
+	assert_eq(m.y, 305.0, "Rival monstro y=305 (embaixo/perto do centro).")
+	assert_eq(s.y, 10.0, "Rival magia y=10 (cima/longe do centro).")
 	assert_true(m.y > s.y, "Rival monstro fica abaixo da magia (perto do centro).")
 	for i in range(5):
-		assert_eq(BoardLayoutScript.default_pos("p1_m%d" % i).y, 317.0, "Rival monstro %d na fileira 317." % i)
-		assert_eq(BoardLayoutScript.default_pos("p1_s%d" % i).y, 128.0, "Rival magia %d na fileira 128." % i)
-	# Você continua intacto (monstro 600 perto, magia 789 longe).
-	assert_eq(BoardLayoutScript.default_pos("p0_m0").y, 600.0, "Você monstro y=600 (cima/perto).")
-	assert_eq(BoardLayoutScript.default_pos("p0_s0").y, 789.0, "Você magia y=789 (baixo/longe).")
+		assert_eq(BoardLayoutScript.default_pos("p1_m%d" % i).y, 305.0, "Rival monstro %d na fileira 305." % i)
+		assert_eq(BoardLayoutScript.default_pos("p1_s%d" % i).y, 10.0, "Rival magia %d na fileira 10." % i)
+	# Você continua intacto (monstro 695 perto, magia 995 longe).
+	assert_eq(BoardLayoutScript.default_pos("p0_m0").y, 695.0, "Você monstro y=695 (cima/perto).")
+	assert_eq(BoardLayoutScript.default_pos("p0_s0").y, 995.0, "Você magia y=995 (baixo/longe).")
 
 
 func test_espelho_arena_starter_igual_fallback() -> void:
-	# Arena starter com grade LARGA (slots quadrados 1,46): espelho e
-	# fileiras valem, números diferem do fallback (por design).
+	# Arena starter = a arena OFICIAL (D48). O espelho e as fileiras valem.
 	var arena: Dictionary = BoardLayoutScript.load_arena_data(BoardLayoutScript.starter_arena_path())
 	assert_true(arena.has("slots"), "Arena completa traz 'slots'.")
 	var slots: Dictionary = arena.get("slots", {})
@@ -143,12 +143,47 @@ func test_espelho_arena_starter_igual_fallback() -> void:
 	var p0_m4: Vector2 = BoardLayoutScript.get_pos(slots, "p0_m4")
 	assert_true(p1_m0.x > p1_m4.x, "Starter: p1_m0 à direita de p1_m4.")
 	assert_eq(p1_m0.x, p0_m4.x, "Starter: p1_m0.x == p0_m4.x (espelho).")
-	assert_eq(p1_m0, Vector2(1684, 305), "Starter: p1_m0 na grade larga.")
-	assert_eq(BoardLayoutScript.get_pos(slots, "p1_s0"), Vector2(1684, 10), "Starter: p1_s0 na grade larga.")
-	assert_eq(BoardLayoutScript.get_pos(slots, "p0_m0"), Vector2(632, 695), "Starter: p0_m0 na grade larga.")
-	assert_eq(BoardLayoutScript.get_pos(slots, "p0_s0"), Vector2(632, 995), "Starter: p0_s0 na grade larga.")
+	assert_eq(p1_m0, Vector2(1684, 305), "Starter: p1_m0 na grade oficial.")
+	assert_eq(BoardLayoutScript.get_pos(slots, "p1_s0"), Vector2(1684, 10), "Starter: p1_s0 na grade oficial.")
+	assert_eq(BoardLayoutScript.get_pos(slots, "p0_m0"), Vector2(632, 695), "Starter: p0_m0 na grade oficial.")
+	assert_eq(BoardLayoutScript.get_pos(slots, "p0_s0"), Vector2(632, 995), "Starter: p0_s0 na grade oficial.")
 	var r: Rect2 = BoardScript.slot_rect(1, "monstro", 0, slots)
 	assert_eq(r.position, Vector2(1684, 305), "slot_rect usa o XY da arena.")
+
+
+func test_grade_embutida_igual_arena_oficial() -> void:
+	# D48: UMA ARENA SÓ. O fallback embutido (projeto sem arena) tem que ser
+	# a MESMA arena do arena_starter.json, slot por slot. Antes desta trava o
+	# código tinha uma grade fantasma (780→1536, y 128/317/600/789) que só
+	# aparecia quando o projeto não tinha arena - dava uma tela diferente da
+	# que a câmera foi calibrada. Se um dos dois mudar, este teste quebra.
+	var slots: Dictionary = BoardLayoutScript.load_arena(BoardLayoutScript.starter_arena_path())
+	assert_eq(slots.size(), 20, "Starter tem 20 slots para comparar.")
+	for lado in [0, 1]:
+		for i in range(5):
+			for letra in ["m", "s"]:
+				var sid := "p%d_%s%d" % [lado, letra, i]
+				var embutida: Vector2 = BoardLayoutScript.default_pos(sid)
+				var do_json: Vector2 = slots.get(sid, Vector2(-1, -1))
+				assert_eq(embutida, do_json, "Slot '%s': grade embutida = arena oficial." % sid)
+	# O 2D legado tem a MESMA grade (duas cópias dos números, uma regra).
+	assert_eq(BoardScript.SLOT, BoardLayoutScript.SLOT, "2D legado: SLOT igual.")
+	assert_eq(BoardScript.GAP, BoardLayoutScript.GAP, "2D legado: GAP igual.")
+	assert_eq(BoardScript.GRID_X, BoardLayoutScript.GRID_X, "2D legado: GRID_X igual.")
+	assert_eq(BoardScript.Y_VOCE_MONSTRO, BoardLayoutScript.Y_VOCE_MONSTRO, "2D legado: Y_VOCE_MONSTRO igual.")
+	assert_eq(BoardScript.Y_VOCE_MAGIA, BoardLayoutScript.Y_VOCE_MAGIA, "2D legado: Y_VOCE_MAGIA igual.")
+	assert_eq(BoardScript.Y_RIVAL_MONSTRO, BoardLayoutScript.Y_RIVAL_MONSTRO, "2D legado: Y_RIVAL_MONSTRO igual.")
+	assert_eq(BoardScript.Y_RIVAL_MAGIA, BoardLayoutScript.Y_RIVAL_MAGIA, "2D legado: Y_RIVAL_MAGIA igual.")
+	# Passo oficial da arena: 632 + 4*263 = 1684.
+	assert_eq(BoardLayoutScript.SLOT + BoardLayoutScript.GAP, 263.0, "Passo da arena oficial = 263.")
+	var passo: float = BoardLayoutScript.default_pos("p0_m4").x - BoardLayoutScript.default_pos("p0_m0").x
+	assert_eq(passo, 4.0 * 263.0, "Grade embutida anda 263 por slot, igual ao JSON.")
+	# Espelho: p1_m0 é a coluna direita, p0_m0 a esquerda. O par espelhado do
+	# índice i de p1 é o índice 4-i de p0 (mesma coluna de tela).
+	assert_eq(BoardLayoutScript.default_pos("p1_m0").x, BoardLayoutScript.default_pos("p0_m4").x, "Espelho: p1_m0.x == p0_m4.x.")
+	assert_eq(BoardLayoutScript.default_pos("p1_s0").x, BoardLayoutScript.default_pos("p0_s4").x, "Espelho: p1_s0.x == p0_s4.x.")
+	assert_eq(BoardLayoutScript.default_pos("p1_s0").x, BoardLayoutScript.default_pos("p1_m0").x, "Mesma coluna: p1_s0.x == p1_m0.x.")
+	assert_true(BoardLayoutScript.default_pos("p0_s0").x < BoardLayoutScript.default_pos("p1_s0").x, "Espelho: p0_s0 fica à esquerda, p1_s0 à direita.")
 
 
 func test_logica_por_indice_intacta_xy_nao_muda_slot() -> void:
@@ -238,7 +273,7 @@ func test_hand_fallback_sem_hand() -> void:
 	assert_eq(float(f1.get("step", 0.0)), 60.0, "Fallback p1.step=60.")
 	assert_eq(BoardLayoutScript.get_hand({}, 0), f0, "Dict vazio volta fallback p0.")
 	assert_eq(BoardLayoutScript.get_hand({}, 1), f1, "Dict vazio volta fallback p1.")
-	var so_slots := {"p0_m0": Vector2(780, 600)}
+	var so_slots := {"p0_m0": Vector2(632, 695)}
 	assert_eq(BoardLayoutScript.get_hand(so_slots, 0), f0, "Slots-only legado volta fallback p0.")
 	assert_eq(BoardLayoutScript.get_hand(so_slots, 1), f1, "Slots-only legado volta fallback p1.")
 	var sem_hand: Dictionary = BoardLayoutScript.parse_hand({})
