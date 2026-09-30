@@ -278,40 +278,49 @@ const COR_FOCO_AZUL := Color(0.35, 0.70, 1.0, 1.0)
 ## achatada em 57% da altura e não dá pra ler).
 const TILT_MAO_LIVRE := -35.0
 ## Arco da MÃO (só desenho). Passo = distância entre cartas; Z = profundidade.
-## D45 (itens 4, 5 e 6): quem decide a ALTURA (Y) de cada mão é a CÂMERA REAL
+## D52: estes números são dos **LUGARES** da mão, não dos lados: `PERTO` é o
+## lugar de BAIXO (quem está jogando, cartas grandes, passo aberto) e `LONGE` é
+## o de CIMA (a outra mão, de costas, pequena, colada). Antes eles se chamavam
+## `MAO_P0_*`/`MAO_P1_*` e eram do JOGADOR e do RIVAL — o que parou de valer
+## quando as mãos passaram a TROCAR de lugar na volta (a mão do jogador usa o
+## lugar de baixo na sua visão e o de cima na do rival). O nome agora diz o que
+## é: lugar.
+##
+## D45 (itens 4, 5 e 6): quem decide a ALTURA (Y) de cada lugar é a CÂMERA REAL
 ## (mesma matemática de `_x_centro_da_mao`, que já centraliza o X no centro do
 ## campo), porque o usuário pediu ALTURAS DE LINHA, não números:
-##   - a SUA mão fica COLADA na linha de baixo da sua fileira de magia
-##     (item 5: "perto da linha de baixo dos slots das cartas magias minhas");
-##   - a mão do RIVAL fica CENTRADA entre o topo da tela e a linha de cima dos
-##     slots de magia dele (item 4: "perfeitamente entre a parte de cima da
+##   - o lugar PERTO fica COLADO na linha de baixo da fileira de magia de quem
+##     está jogando (item 5: "perto da linha de baixo dos slots das cartas
+##     magias minhas");
+##   - o lugar LONGE fica CENTRADO entre o topo da tela e a linha de cima dos
+##     slots de magia do outro (item 4: "perfeitamente entre a parte de cima da
 ##     tela e a parte de cima dos slots de cartas magicas dele").
-## `_y_da_mao` resolve os dois Y por secante e memoriza por câmera. O Y que
-## está no Vector2 abaixo é só o FALLBACK para quando não há câmera (o desenho
-## não quebra, ele só sai no lugar antigo).
-const MAO_P0_YZ := Vector2(7.6, 12.7)   # Vector2(y fallback, z): sua mao
-## Mão do RIVAL (longe, ATRÁS do campo). Medido: a fileira de magia do
+## `_y_da_mao` resolve os dois Y por bisseção e memoriza. O Y que está no
+## Vector2 abaixo é só o FALLBACK para quando não há câmera (o desenho não
+## quebra, ele só sai no lugar antigo).
+const LUGAR_PERTO_YZ := Vector2(7.6, 12.7)   # Vector2(y fallback, z): lugar de baixo
+## Lugar LONGE (atrás de toda a pegada do campo). Medido: a fileira de magia do
 ## rival (p1_s) fica em z = -4,37 e o ladrilho dela avança até z = -5,34;
 ## com a mão mais perto disso ela ficava DENTRO desse ladrilho e o vidro
 ## escuro dele (alpha 0,72) cobria a metade de baixo das cartas viradas (D3).
-## A mão é jogada para trás de toda a pegada do campo (z = -6,45).
-const MAO_P1_YZ := Vector2(-0.35, -6.45)
-## D45 (item 5): folga entre o topo da carta da sua mão e a linha de baixo da
-## sua fileira de magia. 5 px = "bem próxima" sem encostar no ladrilho.
-const MAO_P0_FOLGA_PX := 5.0
+## O lugar é jogado para trás de toda a pegada do campo (z = -6,45).
+const LUGAR_LONGE_YZ := Vector2(-0.35, -6.45)
+## D45 (item 5): folga entre o topo da carta do lugar de baixo e a linha de
+## baixo da fileira de magia de quem joga. 5 px = "bem próxima" sem encostar.
+const LUGAR_PERTO_FOLGA_PX := 5.0
 ## D45 (item 6): "minhas cartas estão muito juntas, tem uma passando por
 ## dentro das outras" — a carta tem 1,0 de largura, então PASSO MAIOR que 1,0
 ## é o que abre o vão. 1,08 = 8% de carta de espaço entre elas (medido: 21 px
 ## de vão com a mão na profundidade de baixo). Com a mão lotando (6+ cartas) o
 ## passo cede para o arco caber na janela do campo (teto de largura), senão a
 ## carta da ponta sairia da tela.
-const MAO_P0_PASSO := 1.08
-const MAO_P0_PASSO_MIN := 0.55
-const MAO_P0_LARG_ARCO := 4.32
-const MAO_P1_PASSO := 0.86
+const LUGAR_PERTO_PASSO := 1.08
+const LUGAR_PERTO_PASSO_MIN := 0.55
+const LUGAR_PERTO_LARG_ARCO := 4.32
+const LUGAR_LONGE_PASSO := 0.86
 ## X de mundo do centro do arco SEM câmera (fallback: só não quebra o desenho).
-const MAO_P0_X_SEM_CAM := 0.3
-const MAO_P1_X_SEM_CAM := -2.8
+const LUGAR_PERTO_X_SEM_CAM := 0.3
+const LUGAR_LONGE_X_SEM_CAM := -2.8
 ## Proporção exata da carta real 59x86mm (0,6860). Tudo que é carta, slot
 ## ou pilha usa essa proporção — nenhuma carta fica de tamanho diferente.
 const ALT_CARTA := 86.0 / 59.0
@@ -545,6 +554,11 @@ func _ready() -> void:
 	_aplicar_vista_3d()
 	# Campo DEPOIS da arena (os painéis nascem no XZ real do dado).
 	_construir_campo()
+	# D52: resolve a altura e o X dos DOIS lugares da mão AGORA, com a tela na
+	# vista do jogador, antes de qualquer carta ser desenhada. Sem isto o cache
+	# seria resolvido na primeira mão que aparecesse — e se o rival começar o
+	# duelo (D42, sorteado pelo motor) isso viria com a câmera do lado errado.
+	_aquecer_a_mao()
 	# D45 (item 2): a faixa do meio é 2D e vive no HUD, no vão entre as duas
 	# fileiras de monstro (que ela mede do dado + da câmera, não chuta).
 	_construir_faixa_2d(get_node_or_null(NodePath("HUD")) as Control)
@@ -745,7 +759,7 @@ func _calib_visual(hud: Control) -> void:
 		["base do monstro rival", _borda_da_fileira_px(1, "monstro", true)],
 		["topo do monstro rival", _borda_da_fileira_px(1, "monstro", false)],
 		["base da magia sua", _borda_da_fileira_px(0, "magia", true)],
-		["topo da mao (sua)", _borda_da_fileira_px(0, "magia", true) + MAO_P0_FOLGA_PX],
+		["topo da mao (lugar de baixo)", _borda_da_fileira_px(0, "magia", true) + LUGAR_PERTO_FOLGA_PX],
 	]
 	var y := 0.0
 	for par in pares:
@@ -1553,63 +1567,132 @@ func _fantasia(inst: Dictionary) -> Dictionary:
 
 # ---- DESENHO A PARTIR DO ESTADO REAL (só leitura, sem regra) ----
 
+## D52: QUEM OCUPA O LUGAR DE BAIXO (o perto) na vista em que a tela está.
+## É a mão de QUEM ESTÁ JOGANDO: 0 (você) na sua visão, 1 (o rival) na dele.
+## Sai do mesmo número que manda a volta inteira (`_giro_campo`, pelos 90°,
+## D47) — nada guardado em outro lugar, e o mesmo número que a tela 3D usa.
+func _dono_do_lugar_perto() -> int:
+	return 1 if _vista_invertida() else 0
+
+
+## D52: A POSE DE UM LUGAR DA MÃO na vista em que a tela está. `perto` = o
+## lugar de baixo (quem joga, cartas grandes, de frente na sua visão), longe =
+## o de cima (a outra mão, pequena e de costas).
+## Chave: `x` (centro do arco), `y`, `z`, `tilt` (graus no eixo X) e `verso`
+## (a carta mostra o VERSO = tapada). É o DONO ÚNICO desses valores: quem
+## posiciona e quem desenha leem daqui, para a carta nunca ter uma pose no
+## lugar e outra no desenho.
+##
+## NA VISTA DO RIVAL o lugar é o ESPELHO do lugar da sua vista (D51 deixou as
+## duas vistas espelhadas uma da outra): o Z espelha em torno do plano de
+## simetria do campo e a inclinação espelha. O Y e o X NÃO mudam, e não é
+## milagre: a câmera do rival é o espelho exato da sua, então o mesmo ponto de
+## mundo aparece na MESMA linha de tela dos dois lados (por isso `_y_da_mao` e
+## `_x_centro_da_mao`, resolvidos uma vez na sua visão, valem para as duas).
+##
+## A CARA: na vista do rival as DUAS mãos mostram o VERSO, e as duas ficam de
+## pé (mesma inclinação). Não é gosto, é geometria: o verso de uma carta não é
+## o espelho da frente dela, então uma carta vista por trás não pode ser a
+## imagem espelhada de uma carta vista pela frente. A alternativa (virada de
+## cabeça para baixo, como a mão do rival aparece na sua visão) mostraria a
+## ARTE da carta do jogador em vez do verso — e o usuário pediu "as cartas da
+## minha mão aparecendo do outro lado igual as do inimigo aparecem na minha
+## rodada", que é o verso.
+func _pose_da_mao(perto: bool) -> Dictionary:
+	var c := _x_centro_da_mao()
+	var z := LUGAR_PERTO_YZ.y if perto else LUGAR_LONGE_YZ.y
+	var tilt := TILT_MAO_LIVRE if perto else 180.0 + TILT_MAO_LIVRE
+	var verso := not perto
+	if _vista_invertida():
+		z = 2.0 * _z_simetria - z
+		tilt = -TILT_MAO_LIVRE
+		verso = true
+	return {
+		"x": c.x if perto else c.y,
+		"y": _y_da_mao(perto),
+		"z": z,
+		"tilt": tilt,
+		"verso": verso,
+	}
+
+
 func _pos_mao_arco(i: int, n: int, lado: int) -> Vector3:
 	# Mão em arco SIMÉTRICO (t=0 no meio: 1ª e última equidistantes do centro),
 	# CENTRALIZADO NA TELA e na ALTURA DE LINHA pedida — o X e o Y saem da
 	# CÂMERA REAL (bug do usuário 2026-09-28: o X era chutado "no olho" e a
 	# mão saía torta; D45: o Y idem, porque ele pediu altura, não número).
-	# D45 (item 8): a ordem do arco do RIVAL é ESPELHADA. Ele joga do outro
-	# lado da mesa, então a 5ª carta DA MÃO DELE é a que aparece na ESQUERDA
-	# da tela. A compra entra sempre na última posição do dado (o
+	# D52: `lado` é o DONO da carta no DADO (0 = você, 1 = rival) e quem decide
+	# o LUGAR é a vista (quem joga fica embaixo). Na sua vista os dois coincidem,
+	# que é por isso que a vista do jogador não muda um milímetro.
+	# D45 (item 8): a ordem do arco do lugar LONGE é ESPELHADA. Ele joga do
+	# outro lado da mesa, então a 5ª carta DA MÃO DELE é a que aparece na
+	# ESQUERDA da tela. A compra entra sempre na última posição do dado (o
 	# `TurnManager` compra pro fim), então: você vê a comprada na DIREITA
 	# (5ª posição sua) e o rival vê a dele na ESQUERDA (5ª posição dele).
 	var t := float(i) - float(maxi(n - 1, 0)) / 2.0
-	var c := _x_centro_da_mao()
-	var y := _y_da_mao(lado)
-	if lado == 0:
-		return Vector3(c.x + t * _passo_mao(n, 0), y, MAO_P0_YZ.y)
-	return Vector3(c.y - t * _passo_mao(n, 1), y, MAO_P1_YZ.y)
+	var perto := lado == _dono_do_lugar_perto()
+	var pose := _pose_da_mao(perto)
+	var passo := _passo_mao(n, perto)
+	# D52: o SENTIDO do arco é o da VISTA, não o do lugar. A câmera do rival
+	# espelha o X do mundo (por isso o índice 0 do dado cairia na DIREITA da
+	# tela dele), e quem joga tem que ver a PRÓPRIA mão na ordem normal nas DUAS
+	# vistas (D45 item 8 + o cancelamento do D18). Logo: índice 0 sempre à
+	# esquerda da tela, e o lugar de cima sempre espelhado — que é a regra do
+	# D45, agora valendo dos dois lados.
+	var s := 1.0 if not _vista_invertida() else -1.0
+	var x := float(pose["x"]) + (s * t * passo if perto else -s * t * passo)
+	return Vector3(x, float(pose["y"]), float(pose["z"]))
 
 
-## Passo entre cartas da mão. D45 (item 6): o passo do JOGADOR é MAIOR que a
-## largura da carta (1,0), então abre um VÃO de verdade entre elas; só cede
-## quando a mão lota e o arco não caberia na janela do campo (aí o que
-## encolhe é o passo, nunca a carta). O do RIVAL é o de sempre: cartas de
-## costas, pequenas, coladas.
-func _passo_mao(n: int, lado: int) -> float:
-	if lado == 1:
-		return MAO_P1_PASSO
-	return clampf(MAO_P0_LARG_ARCO / float(maxi(n - 1, 1)),
-		MAO_P0_PASSO_MIN, MAO_P0_PASSO)
+## Passo entre cartas da mão. D45 (item 6): o passo do lugar de BAIXO é MAIOR
+## que a largura da carta (1,0), então abre um VÃO de verdade entre elas; só
+## cede quando a mão lota e o arco não caberia na janela do campo (aí o que
+## encolhe é o passo, nunca a carta). O do lugar de CIMA é o de sempre: cartas
+## de costas, pequenas, coladas. D52: é do LUGAR, não do lado — quem joga usa o
+## passo largo nas DUAS vistas (é o que o usuário pediu: as cartas dele
+## aparecendo "exatamente como as minhas aparecem pra mim").
+func _passo_mao(n: int, perto: bool) -> float:
+	if not perto:
+		return LUGAR_LONGE_PASSO
+	return clampf(LUGAR_PERTO_LARG_ARCO / float(maxi(n - 1, 1)),
+		LUGAR_PERTO_PASSO_MIN, LUGAR_PERTO_PASSO)
 
 
-## ALTURA (Y de mundo) de cada mão, resolvida da CÂMERA REAL para as LINHAS
-## que o usuário pediu (D45, itens 4 e 5):
-##   p0 — o TOPO da carta na linha de baixo da sua fileira de magia, mais a
-##        folga de MAO_P0_FOLGA_PX (a mão não cobre a fileira nem fica
-##        pendurada no vazio embaixo dela);
-##   p1 — o CENTRO da carta no meio entre o topo da tela e a linha de cima
-##        dos slots de magia do rival.
+## ALTURA (Y de mundo) de cada LUGAR da mão, resolvida da CÂMERA REAL para as
+## LINHAS que o usuário pediu (D45, itens 4 e 5):
+##   perto — o TOPO da carta na linha de baixo da fileira de magia de quem
+##           joga, mais a folga de LUGAR_PERTO_FOLGA_PX (a mão não cobre a
+##           fileira nem fica pendurada no vazio embaixo dela);
+##   longe — o CENTRO da carta no meio entre o topo da tela e a linha de cima
+##           dos slots de magia do outro.
 ## As DUAS linhas saem do dado real (posição dos ladrilhos) + da projeção da
-## câmera. Sem câmera, cai no Y antigo do const (o desenho não quebra). A
-## câmera é FIXA, então isto roda UMA vez e fica memorizado por
-## `instance_id` — no redesenho vira a leitura de 1 float.
-func _y_da_mao(lado: int) -> float:
+## câmera. Sem câmera, cai no Y antigo do const (o desenho não quebra).
+##
+## D52: isto é resolvido na VISTA DO JOGADOR e vale para as DUAS. Não é
+## otimização, é consequência da D51: as duas vistas são espelhos uma da
+## outra, então o mesmo Y de mundo põe a carta na MESMA linha de tela nas duas.
+## E é por isso que o `_borda_da_fileira_px` aqui é chamado com o sentido de
+## "perto/longe" DA VISTA DO JOGADOR (ele se INVERTE quando a câmera vira, e
+## medir com a câmera do lado errado guardaria a altura errada para sempre).
+## Por isso o `_ready` chama `_aquecer_a_mao()` antes de qualquer desenho, e o
+## `_ready` também roda antes da volta: o cache nunca é resolvido na vista do
+## rival. No redesenho isto vira a leitura de 1 float.
+func _y_da_mao(perto: bool) -> float:
 	var id_cam := 0
 	if _cam != null and is_instance_valid(_cam):
 		id_cam = _cam.get_instance_id()
 	if id_cam != 0 and id_cam == _y_mao_cam:
-		return _y_mao_cache[lado]
-	var y0 := MAO_P0_YZ.x
-	var y1 := MAO_P1_YZ.x
+		return _y_mao_cache[0 if perto else 1]
+	var y0 := LUGAR_PERTO_YZ.x
+	var y1 := LUGAR_LONGE_YZ.x
 	if id_cam != 0:
-		y0 = _y_mao_na_linha(MAO_P0_YZ.y, TILT_MAO_LIVRE,
-			_borda_da_fileira_px(0, "magia", true) + MAO_P0_FOLGA_PX, false)
-		y1 = _y_mao_na_linha(MAO_P1_YZ.y, 180.0 + TILT_MAO_LIVRE,
+		y0 = _y_mao_na_linha(LUGAR_PERTO_YZ.y, TILT_MAO_LIVRE,
+			_borda_da_fileira_px(0, "magia", true) + LUGAR_PERTO_FOLGA_PX, false)
+		y1 = _y_mao_na_linha(LUGAR_LONGE_YZ.y, 180.0 + TILT_MAO_LIVRE,
 			_borda_da_fileira_px(1, "magia", false) * 0.5, true)
 	_y_mao_cache = Vector2(y0, y1)
 	_y_mao_cam = id_cam
-	return _y_mao_cache[lado]
+	return _y_mao_cache[0 if perto else 1]
 
 
 ## Y de mundo (com o Z travado) que põe a carta da mão — de pé, na inclinação
@@ -1678,10 +1761,12 @@ func _borda_da_fileira_px(lado: int, tipo: String, perto: bool) -> float:
 	return linha
 
 
-## X de mundo do centro do arco de CADA lado, calculado para o centro do arco
+## X de mundo do centro do arco de CADA LUGAR, calculado para o centro do arco
 ## cair no MESMO X de tela do centro do campo (as DUAS mãos centralizadas).
-## A câmera é FIXA, então isto roda UMA vez e fica memorizado: no redesenho
-## vira só a leitura de 2 floats. Sem câmera = X antigo, o desenho não quebra.
+## D52: resolvido na vista do jogador e válido nas duas (mesma razão do
+## `_y_da_mao`: as vistas são espelhos, e o X nem é espelhado). Roda UMA vez e
+## fica memorizado: no redesenho vira só a leitura de 2 floats. Sem câmera = X
+## antigo, o desenho não quebra.
 func _x_centro_da_mao() -> Vector2:
 	var id_cam := 0
 	if _cam != null and is_instance_valid(_cam):
@@ -1689,15 +1774,26 @@ func _x_centro_da_mao() -> Vector2:
 	if id_cam != 0 and id_cam == _x_centro_mao_cam:
 		return _x_centro_mao
 	if id_cam == 0:
-		_x_centro_mao = Vector2(MAO_P0_X_SEM_CAM, MAO_P1_X_SEM_CAM)
+		_x_centro_mao = Vector2(LUGAR_PERTO_X_SEM_CAM, LUGAR_LONGE_X_SEM_CAM)
 	else:
 		# Alvo = X de tela onde o centro do campo cai (o próprio ponto (0,*,0)).
 		var alvo := _cam.unproject_position(Vector3(0.0, TOPO, 0.0)).x
 		_x_centro_mao = Vector2(
-			_x_mao_no_alvo(_y_da_mao(0), MAO_P0_YZ.y, alvo),
-			_x_mao_no_alvo(_y_da_mao(1), MAO_P1_YZ.y, alvo))
+			_x_mao_no_alvo(_y_da_mao(true), LUGAR_PERTO_YZ.y, alvo),
+			_x_mao_no_alvo(_y_da_mao(false), LUGAR_LONGE_YZ.y, alvo))
 	_x_centro_mao_cam = id_cam
 	return _x_centro_mao
+
+
+## D52: resolve o Y e o X dos DOIS lugares AGORA, na vista do jogador, e
+## memoriza. Chama no boot antes de qualquer desenho: sem isto o cache seria
+## resolvido na primeira mão que aparecesse, e se o RIVAL começar o duelo (D42,
+## sorteado pelo motor) isso aconteceria com a câmera do lado errado — com o
+## `_borda_da_fileira_px` invertido e uma altura guardada para sempre.
+func _aquecer_a_mao() -> void:
+	_y_da_mao(true)
+	_y_da_mao(false)
+	_x_centro_da_mao()
 
 
 ## X de mundo (com Y e Z travados) que faz o ponto cair em `alvo_x` na tela.
@@ -1724,7 +1820,7 @@ func _x_mao_no_alvo(y: float, z: float, alvo_x: float) -> float:
 ## PIXELS de tela, o quanto o centro do arco de cada mão sai do centro do
 ## campo. Os dois `erro` em ~0.00 = as DUAS mãos centralizadas. `escala` diz
 ## quantos pixels vale 1 unidade de mundo na mão (para mexer em
-## MAO_P0_PASSO/MAO_P1_PASSO) e `arco` é a largura que o arco ocupa na tela.
+## LUGAR_PERTO_PASSO/LUGAR_LONGE_PASSO) e `arco` é a largura que o arco ocupa na tela.
 ## Texto só-ASCII de propósito: a saída do jogo lido como processo filho vem
 ## no code page do Windows (ver test_project_arg).
 func _calibrar_mao() -> void:
@@ -1756,7 +1852,10 @@ func _calibrar_mao() -> void:
 			_cam.unproject_position(_pos_mao_arco(maxi(q - 1, 0), q, lado)).x])
 		var cx := _cam.unproject_position(centro).x
 		var dx_ := absf(_cam.unproject_position(centro + Vector3(LARG_CARTA, 0, 0)).x - cx)
-		var caixa := _caixa_carta_tela(centro, TILT_MAO_LIVRE if lado == 0 else 180.0 + TILT_MAO_LIVRE)
+		# D52: a inclinação vem do LUGAR que a mão ocupa na vista atual (é o
+		# `_pose_da_mao` que manda), não do lado.
+		var tilt_ := float(_pose_da_mao(lado == _dono_do_lugar_perto())["tilt"])
+		var caixa := _caixa_carta_tela(centro, tilt_)
 		print("[MESA3D] Calib:   p%d carta_na_tela: x=[%.0f..%.0f] y=[%.0f..%.0f] px | largura=%.0fpx (%.1f%% da tela) | em%% da altura: %.1f..%.1f" % [
 			lado, caixa.x + JANELA_CAMPO_X, caixa.z + JANELA_CAMPO_X,
 			caixa.y, caixa.w, dx_, dx_ / float(TELA_L) * 100.0,
@@ -1887,6 +1986,7 @@ func _girar_campo(alvo: float) -> void:
 		# dois jeitos, então vai direto e aplica a vista final.
 		_giro_campo = alvo
 		_aplicar_vista_3d()
+		_aplicar_vista_da_mao()
 		_girando = false
 		_aplicar_vista_hud()
 		return
@@ -1899,11 +1999,13 @@ func _girar_campo(alvo: float) -> void:
 
 
 ## Um passo da volta (0..1 do caminho). O pivô gira na MESMA proporção, a
-## câmera recua junto (D51) e o HUD 2D acompanha pelo `_escala_do_virar`.
+## câmera recua junto (D51), as MÃOS trocam de lugar nos 90° (D52) e o HUD 2D
+## acompanha pelo `_escala_do_virar`.
 func _girar_para(t: float, alvo: float) -> void:
 	var de := _giro_de_onde()
 	_giro_campo = lerpf(de, alvo, clampf(t, 0.0, 1.0))
 	_aplicar_vista_3d()
+	_aplicar_vista_da_mao()
 	_aplicar_vista_hud()
 
 
@@ -2041,21 +2143,25 @@ func _redesenhar(com_efeito: bool) -> void:
 				carta.set_meta("slot_id", "p%d_%s%d" % [lado, ("m" if zona_nome == "monster" else "s"), i])
 				carta.set_meta("card_id", str(m.get("card_id", "")))
 				_no_cartas.add_child(carta)
-	# Mãos em arco: a SUA embaixo (aberta, perto da câmera), a do RIVAL em cima
-	# (de costas, mini e longe). D47: isto NÃO depende de quem está jogando —
-	# cada mão fica sempre do lado do seu dono no MUNDO, e quem muda de ponto de
-	# vista é a câmera. Na volta de 180° a sua mão vai para o topo da tela (pelas
-	# costas, que é o que o usuário pediu) e a dele vem para baixo. Efeito
-	#-bônus que o dado já dava: o espelho do rival (D18) + a volta se cancelam, e
-	# cada um vê a PRÓPRIA mão na ordem normal.
+	# Mãos em arco: DUAS na tela, uma embaixo e outra em cima, e QUEM ESTÁ
+	# JOGANDO é a de baixo (D52, decisão do usuário: "as duas cartas da minha mão
+	# aparecendo do outro lado igual as do inimigo aparecem na minha rodada").
+	# O que decide o lugar é a VISTA (`_giro_campo`, pelos 90°), e a troca
+	# acontece com a tela sem mostrar nada: nos 90° as mãos estão a 32,7° do
+	# eixo (o FOV é de 20°) e o HUD 2D está com largura zero. A mão do rival é
+	# sempre um VERSO genérico (você nunca lê a mão do adversário); na vista do
+	# rival as DUAS mãos mostram o verso, porque o verso de uma carta não é o
+	# espelho da frente dela.
+	# Efeito-bônus que o dado já dava: o espelho do rival (D18) + a troca dos
+	# lugares se cancelam, e cada um vê a PRÓPRIA mão na ordem normal.
 	# Rotação LIVRE (ordem do usuário): valor fixo editável, sem nenhum
 	# cálculo da câmera. Mude TILT_MAO_LIVRE à vontade (graus no eixo X).
 	var mao0: Array = (_st.players[0] as Dictionary)["hand"]
 	for i in range(mao0.size()):
 		var c := _fazer_carta(mao0[i] as Dictionary, false, 0, false)
 		# Mão PEQUENA no rodapé (fase 2/doc 15 §15.3): o X acompanha o
-		# centro do campo (calculado da câmera) e o Y/Z é o da const
-		# MAO_P0_YZ — a carta nasce cortada pela borda de baixo.
+		# centro do campo (calculado da câmera) e o Y/Z é o do LUGAR perto
+		# (LUGAR_PERTO_YZ) — a carta nasce cortada pela borda de baixo.
 		c.position = _pos_mao_arco(i, mao0.size(), 0)
 		# Levantada p/ fusão: só o selo na etiqueta (posição não muda). A
 		# etiqueta nasce escondida (o ATK/DEF já é impresso na carta): o
@@ -2066,8 +2172,9 @@ func _redesenhar(com_efeito: bool) -> void:
 			tag.text = "SELO %d" % selo
 			tag.visible = true
 		c.set_meta("mao_idx", i)
+		c.set_meta("mao_dono", 0)
 		_no_cartas.add_child(c)
-		c.rotation_degrees = Vector3(TILT_MAO_LIVRE, 0, 0)
+		_pose_da_carta_da_mao(c, 0)
 		if com_efeito and not _sem_render():
 			var alvo: Vector3 = c.position
 			c.position = _deck_pos[0]
@@ -2077,38 +2184,93 @@ func _redesenhar(com_efeito: bool) -> void:
 	for j in range(mao1.size()):
 		var v := _fazer_carta({}, true, 1, false)
 		v.position = _pos_mao_arco(j, mao1.size(), 1)
+		v.set_meta("mao_idx", j)
+		v.set_meta("mao_dono", 1)
 		_no_cartas.add_child(v)
-		# D3: a mão do RIVAL é uma camada de MÃO — sempre desenhada por
-		# cima do campo. Sem isso, o ladrilho de magia do rival (o vidro
-		# escuro, alpha 0,72) ficava NA FRENTE dela na tela e pintava a
-		# metade de baixo das cartas viradas, que na ref não tem nada
-		# atrás. A mão não é mais profunda que o campo, então a correção é
-		# de DESENHO (ordem de pintura), não de posição.
-		_sempre_na_frente(v)
-		v.rotation_degrees = Vector3(180.0 + TILT_MAO_LIVRE, 0, 0)
+		_pose_da_carta_da_mao(v, 1)
 	_atualizar_hud()
 	_posicionar_cursor()
 
 
-## Pinta a carta SEM teste de profundidade, como camada de mão (D3): a
-## carta do rival é mais distante que o campo, e o vidro escuro do ladrilho
-## apareceria na frente dela. É SÓ ordem de desenho — não muda posição,
-## tamanho, cor nem dado.
-func _sempre_na_frente(no: Node) -> void:
+## D52: aplica na carta da mão a POSE do lugar que ela ocupa na vista atual
+## (rotação + cara). O dono único é `_pose_da_mao`: quem posiciona e quem
+## desenha leem o mesmo número, então a carta não pode ter uma pose no lugar e
+## outra no desenho. `dono` = 0 (você) ou 1 (rival) no DADO.
+##
+## D3: as DUAS mãos são uma camada de MÃO — sempre desenhada por cima do
+## campo. Sem isso, o ladrilho de magia (o vidro escuro, alpha 0,72) ficava NA
+## FRENTE da mão de cima na tela e pintava a metade de baixo das cartas
+## viradas, que na ref não tem nada atrás. No lugar de baixo o `no_depth_test`
+## é inofensivo (ele já é a coisa mais perto da câmera), e assim a troca dos
+## 90° não precisa mexer em material de nada.
+func _pose_da_carta_da_mao(carta: Node3D, dono: int) -> void:
+	var perto := dono == _dono_do_lugar_perto()
+	var pose := _pose_da_mao(perto)
+	carta.rotation_degrees = Vector3(float(pose["tilt"]), 0.0, 0.0)
+	# D3: o LUGAR DE CIMA é uma camada de mão (o vidro do campo o pintaria por
+	# cima). O de baixo é a coisa mais perto da câmera e fica com sombra e
+	# profundidade normais — é o que garante que a SUA visão não muda nada.
+	_camada_da_mao(carta, not perto)
+	# A CARA: carta virada não mostra nome nem ATK/DEF. Não é vaidade: os
+	# rótulos são filhos da carta 0,002 à frente do quad do verso, e sem esta
+	# linha eles apareceriam ESPELHADOS em cima do verso. O SELO de fusão
+	# some na vista do rival pelo mesmo motivo (ele denunciaria a carta que
+	# você está combinando); na vista do jogador ele é o que o `_redesenhar`
+	# já decided, então aqui não é mexido.
+	var verso := bool(pose["verso"])
+	for nome_filho in ["Nome", "Stats"]:
+		var l := carta.get_node_or_null(nome_filho) as Label3D
+		if l != null:
+			l.visible = not verso
+	if verso:
+		var tag := carta.get_node_or_null("TagPos") as Label3D
+		if tag != null:
+			tag.visible = false
+
+
+## D52: a vista do rival TAMBÉM é a mão: quem joga embaixo, o outro em cima, o
+## Z de cada lugar espelhado e as duas de costas. Aplica nas cartas já
+## desenhadas (sem redesenhar tudo), e é o que roda na troca dos 90°. some com
+## o cursor junto, porque o cursor fica preso na carta da sua mão e, com as
+## mãos trocadas, ele ficaria em cima da mão do rival denunciando a sua
+## escolha (decisão do usuário).
+func _aplicar_vista_da_mao() -> void:
+	if _no_cartas == null or _st == null:
+		return
+	for f in _no_cartas.get_children():
+		var carta := f as Node3D
+		if carta == null or not carta.has_meta("mao_dono"):
+			continue
+		var dono := int(carta.get_meta("mao_dono"))
+		var mao: Array = ((_st.players[dono] as Dictionary)["hand"] as Array)
+		carta.position = _pos_mao_arco(int(carta.get_meta("mao_idx")), mao.size(), dono)
+		_pose_da_carta_da_mao(carta, dono)
+	if _cursor3d != null:
+		_cursor3d.visible = not _vista_invertida()
+
+
+## Pinta a carta SEM teste de profundidade, como camada de MÃO (D3): a mão de
+## CIMA é mais distante que o campo, e o vidro escuro do ladrilho apareceria na
+## frente dela. É SÓ ordem de desenho — não muda posição, tamanho, cor nem dado.
+## D52: isto é do LUGAR (o de cima), e por isso tem uma chave liga/desliga: a
+## carta que vai para o lugar de baixo volta a ter sombra e profundidade de
+## verdade, senão a SUA visão mudaria (a sombra da sua mão sumiria).
+func _camada_da_mao(no: Node, sem_profundidade: bool) -> void:
 	for f in no.get_children():
 		if f is GeometryInstance3D:
 			var gi := f as GeometryInstance3D
-			gi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			gi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF if sem_profundidade \
+				else GeometryInstance3D.SHADOW_CASTING_SETTING_ON
 			var m := gi.material_override
 			if m is BaseMaterial3D:
-				(m as BaseMaterial3D).no_depth_test = true
-				(m as BaseMaterial3D).render_priority = 4
+				(m as BaseMaterial3D).no_depth_test = sem_profundidade
+				(m as BaseMaterial3D).render_priority = 4 if sem_profundidade else 0
 		elif f is Label3D:
 			var l := f as Label3D
-			l.no_depth_test = true
-			l.render_priority = 4
+			l.no_depth_test = sem_profundidade
+			l.render_priority = 4 if sem_profundidade else 0
 		elif f is Node3D:
-			_sempre_na_frente(f)
+			_camada_da_mao(f, sem_profundidade)
 
 
 func _posicionar_cursor() -> void:

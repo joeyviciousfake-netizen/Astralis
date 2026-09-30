@@ -28,8 +28,8 @@ const ALT_CARTA_TESTE := 86.0 / 59.0
 func _inicial(nome: String) -> String:
 	var limpo := nome.strip_edges()
 	return "?" if limpo.is_empty() else limpo.substr(0, 1).to_upper()
-const MAO_P1_YZ_TESTE := Vector2(-0.35, -6.45)
-const MAO_P1_PASSO_TESTE := 0.86
+const LUGAR_LONGE_YZ_TESTE := Vector2(-0.35, -6.45)
+const LUGAR_LONGE_PASSO_TESTE := 0.86
 
 
 ## Procura um nó do MUNDO 3D (dentro da janela do campo).
@@ -472,13 +472,13 @@ func test_maos_centralizadas_no_x_do_campo() -> void:
 	##        dos slots de magia do rival.
 	var tilt := float(mesa.get("TILT_MAO_LIVRE"))
 	var base_magia_meu := float(mesa.call("_borda_da_fileira_px", 0, "magia", true))
-	var folga := float(mesa.get("MAO_P0_FOLGA_PX"))
+	var folga := float(mesa.get("LUGAR_PERTO_FOLGA_PX"))
 	var cima_mao := cam.unproject_position(p0_m + Vector3(0.0, cos(deg_to_rad(tilt)),
 		sin(deg_to_rad(tilt))) * (ALT_CARTA_TESTE * 0.5))
 	assert_almost_eq(cima_mao.y, base_magia_meu + folga, 1.0,
 		"D45 (item 5): a sua mão é COLADA na linha de baixo da sua fileira de magia (%.1f vs %.1f)." % [
 			cima_mao.y, base_magia_meu + folga])
-	var yz_p0: Vector2 = mesa.get("MAO_P0_YZ")
+	var yz_p0: Vector2 = mesa.get("LUGAR_PERTO_YZ")
 	assert_almost_eq(p0_m.z, yz_p0.y, 0.0001,
 		"A profundidade da sua mão é a do const (a ALTURA é resolvida, o z não).")
 	var p1_1: Vector3 = mesa.call("_pos_mao_arco", 0, n1, 1)
@@ -537,13 +537,14 @@ func test_maos_centralizadas_no_x_do_campo() -> void:
 		"A carta da ponta esquerda da mão não invade o painel (%.0f px)." % esq_mao)
 	assert_true(dir_mao <= float(mesa.get("TELA_L")),
 		"A carta da ponta direita da mão não sai da tela (%.0f px)." % dir_mao)
-	assert_almost_eq(absf(passo1), MAO_P1_PASSO_TESTE, 0.001, "Passo por carta da mão do rival = MAO_P1_PASSO (espelhado em D45).")
+	assert_almost_eq(absf(passo1), LUGAR_LONGE_PASSO_TESTE, 0.001, "Passo por carta do lugar de cima = LUGAR_LONGE_PASSO (espelhado em D45).")
 	# A carta DESENHADA tem que estar no ponto que a função devolveu.
-	# D46 etapa 3: as DUAS mãos têm `mao_idx`; a de BAIXO (`mao_lado` 0) é a
-	# de quem joga, que aqui é o jogador — é a que este teste mede.
+	# D52: as DUAS mãos têm `mao_idx` (o índice no dado do SEU dono) e
+	# `mao_dono` (0 = você, 1 = rival) — o `mao_dono` é quem diz de quem é a
+	# carta, porque as duas mãos trocam de lugar na volta.
 	var vistas := 0
 	for f in (_n3d(mesa, "Cartas") as Node3D).get_children():
-		if not (f as Node).has_meta("mao_idx"):
+		if not (f as Node).has_meta("mao_dono") or int((f as Node).get_meta("mao_dono")) != 0:
 			continue
 		vistas += 1
 		var i: int = int((f as Node).get_meta("mao_idx"))

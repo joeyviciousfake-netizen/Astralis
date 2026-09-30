@@ -249,6 +249,161 @@ func _fileira_de_monstro(mesa: Node, lado: int) -> Vector2:
 	return Vector2(minf(a, b), maxf(a, b))
 
 
+## (10) D52 — AS DUAS MÃOS, UMA EM CADA LUGAR, NAS DUAS VISÕES. É o pedido do
+## usuário na conversa de 2026-09-30 (itens 1, 2 e 3 dele): na visão do rival a
+## SUA mão tem que aparecer do outro lado da tela "igual as cartas do inimigo
+## aparecem na minha rodada", e as cartas do rival "posicionadas exatamente como
+## aparecem pra mim, mas tapadas". A regra: QUEM ESTÁ JOGANDO ocupa o lugar de
+## BAIXO e o outro o de CIMA, e na vista do rival cada lugar é o ESPELHO do
+## lugar da sua vista (a D51 já deixou as duas vistas espelhadas).
+##
+## Antes: a sua mão ficava a 23,6° do eixo da câmera do rival (FOV de 20°, metade
+## 10°) e NÃO APARECIA, e a do rival aparecia cortada embaixo. Agora as duas
+## aparecem nas duas vistas, e a de baixo do rival é a mesma caixa de tela da de
+## baixo do jogador — que é literalmente o "exatamente como aparecem pra mim".
+func test_as_duas_maos_trocam_de_lugar_e_as_duas_aparecem() -> void:
+	var mesa: Node = await _mesa3d_nova()
+	var st = mesa.get("_st")
+	var n0: int = ((st.players[0] as Dictionary)["hand"] as Array).size()
+	var n1: int = ((st.players[1] as Dictionary)["hand"] as Array).size()
+	assert_true(n0 > 0 and n1 > 0, "Preparo: as DUAS mãos têm cartas (se uma estiver vazia não há o que provar).")
+	if n0 <= 0 or n1 <= 0:
+		return
+	var sim: float = float(mesa.get("_z_simetria"))
+	# --- SUA VISTA: quem joga embaixo, o outro em cima, e as DUAS na tela ---
+	assert_eq(int(mesa.call("_dono_do_lugar_perto")), 0,
+		"D52: na sua visão o lugar de baixo é a SUA mão (quem está jogando).")
+	var baixo_jogador := _lugar_na_tela(mesa, 0, n0, 0)
+	var cima_jogador := _lugar_na_tela(mesa, 0, n1, 1)
+	var x_mundo_rival_0 := (mesa.call("_pos_mao_arco", 0, n1, 1) as Vector3).x
+	assert_true(baixo_jogador["y"] > 0.0 and baixo_jogador["y"] < float(mesa.get("TELA_A")),
+		"D52: na sua visão o topo da carta da sua mão está NA TELA (y %.0f) - ela aparece." % baixo_jogador["y"])
+	assert_true(cima_jogador["y"] > 0.0 and cima_jogador["w"] < float(mesa.get("TELA_A")),
+		"D52: na sua visão a mão de cima está INTEIRA na tela (%.0f..%.0f)." % [cima_jogador["y"], cima_jogador["w"]])
+	# --- VISTA DO RIVAL: as DUAS na tela, e os lugares espelhados ---
+	mesa.call("_girar_campo", 180.0)
+	await wait_process_frames(2)
+	assert_eq(int(mesa.call("_dono_do_lugar_perto")), 1,
+		"D52: na visão do rival o lugar de baixo é a MÃO DELE (quem está jogando).")
+	var baixo_rival := _lugar_na_tela(mesa, 0, n1, 1)
+	var cima_rival := _lugar_na_tela(mesa, 0, n0, 0)
+	assert_true(baixo_rival["y"] > 0.0 and baixo_rival["y"] < float(mesa.get("TELA_A")),
+		"D52: na visão do RIVAL a mão DELE aparece embaixo, com o topo na tela (y %.0f)." % baixo_rival["y"])
+	assert_true(cima_rival["y"] > 0.0 and cima_rival["w"] < float(mesa.get("TELA_A")),
+		"D52: na visão do RIVAL a SUA mão aparece em cima, INTEIRA (%.0f..%.0f) - antes ela nao aparecia." % [
+			cima_rival["y"], cima_rival["w"]])
+	# E o lugar de baixo do rival é o MESMO LUGAR DE TELHA do de baixo do jogador:
+	# mesmo X, mesma altura, mesma base (é o "exatamente como as minhas aparecem
+	# pra mim" — e o tamanho também, porque a profundidade é a mesma: 8,2 unidades
+	# da câmera dos dois).
+	assert_almost_eq(baixo_rival["cx"], baixo_jogador["cx"], 1.0,
+		"D52: o lugar de baixo do rival cai no mesmo X de tela do seu (%.0f vs %.0f)." % [
+			baixo_rival["cx"], baixo_jogador["cx"]])
+	assert_almost_eq(baixo_rival["cy"], baixo_jogador["cy"], 1.0,
+		"D52: e na mesma ALTURA (%.0f vs %.0f) - as cartas dele têm o tamanho e a linha das suas." % [
+			baixo_rival["cy"], baixo_jogador["cy"]])
+	assert_almost_eq(baixo_rival["y"], baixo_jogador["y"], 1.0,
+		"D52: o topo da carta cai na mesma linha (%.0f vs %.0f) - a de baixo é cortada embaixo nas DUAS vistas." % [
+			baixo_rival["y"], baixo_jogador["y"]])
+	assert_almost_eq(baixo_rival["w"], baixo_jogador["w"], 1.0,
+		"D52: e a base também (%.0f vs %.0f)." % [baixo_rival["w"], baixo_jogador["w"]])
+	assert_almost_eq(cima_rival["cx"], cima_jogador["cx"], 1.0,
+		"D52: o lugar de cima do rival cai no mesmo X do seu (%.0f vs %.0f)." % [
+			cima_rival["cx"], cima_jogador["cx"]])
+	assert_almost_eq(cima_rival["y"], cima_jogador["y"], 1.0,
+		"D52: o lugar de cima do rival cai na mesma ALTURA do seu (%.0f vs %.0f)." % [
+			cima_rival["y"], cima_jogador["y"]])
+	# E o arco: no MUNDO o X espelha (a câmera do rival está do outro lado da
+	# mesa), mas na TELHA o índice 0 continua à ESQUERDA — que é a mão do rival
+	# vista por ele (D45 item 8 + D18). A trava é no X de mundo: o índice 0 da
+	# mão DELE, que na sua vista estava em +1,72 (lugar de cima, espelhado), está
+	# em -1,72 na de baixo espelhada do lugar de cima... e o índice 0 da SUA mão
+	# na visão do rival é o MESMO número da mão do rival na sua visão (as duas
+	# estão no lugar de cima, que é espelhado).
+	assert_almost_eq((mesa.call("_pos_mao_arco", 0, n0, 0) as Vector3).x, -1.72, 0.0001,
+		"D52: na visão do rival a SUA mão (lugar de cima, espelhado) tem o índice 0 no X de %.2f." % -1.72)
+	assert_almost_eq(x_mundo_rival_0, 1.72, 0.0001,
+		"D52: na SUA visão a mão do rival (lugar de cima, espelhado) tem o índice 0 no X de %.2f." % 1.72)
+	# --- O Z DE CADA LUGAR É O ESPELHO EXATO (2 x z_simetria - z) ---
+	var z_baixo := float(mesa.get("LUGAR_PERTO_YZ").y)
+	var z_cima := float(mesa.get("LUGAR_LONGE_YZ").y)
+	assert_almost_eq((mesa.call("_pos_mao_arco", 0, n1, 1) as Vector3).z, 2.0 * sim - z_baixo, 0.0001,
+		"D52: na visão do rival o lugar de baixo está no Z espelhado (%.3f)." % (2.0 * sim - z_baixo))
+	assert_almost_eq((mesa.call("_pos_mao_arco", 0, n0, 0) as Vector3).z, 2.0 * sim - z_cima, 0.0001,
+		"D52: na visão do rival o lugar de cima está no Z espelhado (%.3f)." % (2.0 * sim - z_cima))
+	# --- AS DUAS MÃOS DO RIVAL MOSTRAM O VERSO (nada de nome/ATK por cima) ---
+	for dono in [0, 1]:
+		var carta := _carta_da_mao(mesa, 0, dono)
+		assert_true(carta != null, "D52: a carta 0 da mão do dono %d está desenhada na vista do rival." % dono)
+		if carta == null:
+			continue
+		var nome := carta.get_node_or_null("Nome") as Label3D
+		var stats := carta.get_node_or_null("Stats") as Label3D
+		var tag := carta.get_node_or_null("TagPos") as Label3D
+		assert_true(nome == null or not nome.visible,
+			"D52: carta tapada = sem o nome em cima do verso (mão do dono %d)." % dono)
+		assert_true(stats == null or not stats.visible,
+			"D52: carta tapada = sem ATK/DEF em cima do verso (mão do dono %d)." % dono)
+		assert_true(tag == null or not tag.visible,
+			"D52: na vista do rival não vaza o selo de fusão da sua mão (dono %d)." % dono)
+	# E a inclinação: as duas de pé (o verso de uma carta não é o espelho da
+	# frente dela, então na vista do rival as DUAS ficam com a mesma).
+	var tilt_perto := float((mesa.call("_pose_da_mao", true) as Dictionary)["tilt"])
+	var tilt_longe := float((mesa.call("_pose_da_mao", false) as Dictionary)["tilt"])
+	assert_almost_eq(tilt_longe, tilt_perto, 0.0001,
+		"D52: na vista do rival as DUAS mãos ficam de pé (a do rival %.1f, a sua %.1f)." % [tilt_longe, tilt_perto])
+	assert_true(float(mesa.get("TILT_MAO_LIVRE")) < 0.0 and tilt_perto > 0.0,
+		"D52: a inclinação do rival é a da sua espelhada (sua %.0f, rival %.0f)." % [
+			float(mesa.get("TILT_MAO_LIVRE")), tilt_perto])
+	# --- O CURSOR SOME NA VISTA DO RIVAL (ele ficaria em cima da mão dele) ---
+	assert_false((mesa.get("_cursor3d") as Node3D).visible,
+		"D52: na vista do rival o cursor some (senão ficaria em cima da mão dele).")
+	mesa.call("_girar_campo", 0.0)
+	await wait_process_frames(2)
+	assert_true((mesa.get("_cursor3d") as Node3D).visible,
+		"D52: na sua volta o cursor volta.")
+	# --- A TROCA ACONTECE NOS 90 GRAUS (e não antes) ---
+	# 89 graus ainda é a sua vista (a sua mão embaixo, o Z de baixo = 12,7) e 91
+	# já é a do rival (a sua mão em cima, no Z espelhado). É o instante em que
+	# a tela não mostra nada: as mãos estão a 32,7 graus do eixo.
+	mesa.call("_girar_para", 89.0 / 180.0, 180.0)
+	await wait_process_frames(2)
+	assert_eq(int(mesa.call("_dono_do_lugar_perto")), 0,
+		"D52: em 89 graus ainda é a vista do jogador (a troca é nos 90).")
+	assert_almost_eq((mesa.call("_pos_mao_arco", 0, n0, 0) as Vector3).z, z_baixo, 0.0001,
+		"D52: em 89 graus a sua mão ainda está no lugar de baixo do jogador.")
+	mesa.call("_girar_para", 91.0 / 180.0, 180.0)
+	await wait_process_frames(2)
+	assert_eq(int(mesa.call("_dono_do_lugar_perto")), 1,
+		"D52: em 91 graus já é a vista do rival (a troca foi nos 90).")
+	assert_almost_eq((mesa.call("_pos_mao_arco", 0, n0, 0) as Vector3).z, 2.0 * sim - z_cima, 0.0001,
+		"D52: em 91 graus a sua mão já está no lugar de cima espelhado.")
+	# --- E O DADO NAO SE MEXE (R1): as duas mãos são as mesmas cartas, na mesma
+	# ordem, dos mesmos donos. A volta é ponto de vista + lugar, nunca regra.
+	var antes0: Array = ((st.players[0] as Dictionary)["hand"] as Array).duplicate(true)
+	var antes1: Array = ((st.players[1] as Dictionary)["hand"] as Array).duplicate(true)
+	mesa.call("_girar_campo", 0.0)
+	await wait_process_frames(2)
+	assert_eq(((st.players[0] as Dictionary)["hand"] as Array), antes0,
+		"D52: a sua mão no DADO é a mesma depois de ir ao rival e voltar (R1).")
+	assert_eq(((st.players[1] as Dictionary)["hand"] as Array), antes1,
+		"D52: a mão do rival no DADO é a mesma depois da volta (R1).")
+
+
+## Onde o LUGAR de uma mão cai na tela: `cx`/`cy` = o centro da carta projetado,
+## `y`/`w` = o topo e a base da carta na tela. Compara o CENTRO (e não a borda)
+## porque a câmera do rival espelha o X do mundo: a borda esquerda de uma vista
+## é a direita da outra, e o que tem que bater é o miolinho.
+func _lugar_na_tela(mesa: Node, idx: int, n: int, dono: int) -> Dictionary:
+	var cam := mesa.get_node(CAMERA) as Camera3D
+	var perto: bool = dono == int(mesa.call("_dono_do_lugar_perto"))
+	var centro: Vector3 = mesa.call("_pos_mao_arco", idx, n, dono)
+	var tilt := float((mesa.call("_pose_da_mao", perto) as Dictionary)["tilt"])
+	var caixa: Vector4 = mesa.call("_caixa_carta_tela", centro, tilt)
+	var q := cam.unproject_position(centro)
+	return {"cx": q.x, "cy": q.y, "y": caixa.y, "w": caixa.w}
+
+
 ## O vão entre as DUAS fileiras de monstro, na vista em que a câmera está: a
 ## base da fileira que está em cima e o topo da que está embaixo.
 func _vao_das_fileiras(mesa: Node) -> Vector2:
@@ -304,22 +459,39 @@ func test_as_cartas_do_campo_nao_se_mexem_na_volta() -> void:
 		assert_almost_eq(b.x, a.x, 0.0001, "A carta %s nao mudou de X no mundo." % sid)
 		assert_almost_eq(b.y, a.y, 0.0001, "A carta %s nao mudou de Y no mundo." % sid)
 		assert_almost_eq(b.z, a.z, 0.0001, "A carta %s nao mudou de Z no mundo (viajou ZERO)." % sid)
-	# E a mao tambem: a sua mao continua no mesmo lugar do mundo (o que muda e
-	# que ela passa a ser vista pelas costas, que e a camera fazendo o trabalho).
-	var mao0 := _carta_da_mao(mesa, 0)
-	var mao1 := _carta_da_mao(mesa, 1)
-	assert_true(mao0 != null and mao1 != null, "As duas maos estao desenhadas.")
-	if mao0 != null and mao1 != null:
-		var p0 := mao0.position
-		var p1 := mao1.position
+	# E as MAOS: ate a D52 elas tambem ficavam paradas no mundo, e a volta
+	# so mudava de que lado elas eram vistas. O usuario trocou isso (decisao
+	# D52): na visao do rival a mao de quem JOGA tem que estar embaixo, grande
+	# e tapada, e a outra em cima — as duas trocam de LUGAR. O que continua
+	# travado e que nada disso encosta no DADO: as duas maos continuam as
+	# mesmas cartas dos mesmos donos, no mesmo indice, e a ida e volta devolve
+	# cada uma ao seu lugar (a troca e feita nos 90 graus, com a tela virada).
+	var m0 := _carta_da_mao(mesa, 0, 0)
+	var m1 := _carta_da_mao(mesa, 0, 1)
+	assert_true(m0 != null and m1 != null, "As duas maos estao desenhadas.")
+	if m0 != null and m1 != null:
+		# Na visao do RIVAL a mao do RIVAL e a que esta embaixo (perto da
+		# camera dele) e a do jogador a que esta em cima (longe).
+		assert_true(m1.position.z < m0.position.z,
+			"D52: na visao do rival a mao do RIVAL e a de baixo (z %.2f < z %.2f)." % [
+				m1.position.z, m0.position.z])
+		assert_almost_eq(m1.position.x, 2.16, 0.0001,
+			"D52: na visao do rival a mao DELE e a de baixo, com o indice 0 no X de mundo ESPELHADO (+2,16) - na TELHA ele ve a propria mao na ordem normal.")
+		assert_almost_eq(m0.position.x, -1.72, 0.0001,
+			"D52: na visao do rival a sua mao e a de cima (indice 0 no X de -1,72, o lugar espelhado).")
 		mesa.call("_girar_campo", 0.0)
 		await wait_process_frames(2)
-		var m0 := _carta_da_mao(mesa, 0)
-		var m1 := _carta_da_mao(mesa, 1)
-		assert_true(m0 != null and m1 != null, "As maos continuam desenhadas depois de voltar.")
-		if m0 != null and m1 != null:
-			assert_almost_eq(m0.position.x, p0.x, 0.0001, "A sua mao nao mudou de X.")
-			assert_almost_eq(m1.position.x, p1.x, 0.0001, "A mao do rival nao mudou de X.")
+		var v0 := _carta_da_mao(mesa, 0, 0)
+		var v1 := _carta_da_mao(mesa, 0, 1)
+		assert_true(v0 != null and v1 != null, "As maos continuam desenhadas depois de voltar.")
+		if v0 != null and v1 != null:
+			assert_true(v0.position.z > v1.position.z,
+				"D52: voltou a visao do jogador e a mao do jogador e a de baixo (z %.2f > z %.2f)." % [
+					v0.position.z, v1.position.z])
+			assert_almost_eq(v0.position.x, -2.16, 0.0001,
+				"D52: a sua mao voltou EXATAMENTE onde estava (indice 0 do arco de baixo).")
+			assert_almost_eq(v1.position.x, 1.72, 0.0001,
+				"D52: a mao do rival voltou EXATAMENTE onde estava (indice 0 do arco de cima espelhado).")
 
 
 ## (5) O GameState nao se mexe: a carta continua no mesmo indice (R1).
@@ -479,15 +651,14 @@ func test_o_controle_fica_travado_enquanto_a_mesa_gira() -> void:
 		"A tela continua viva (o bloqueio e so do controle, nao da tela).")
 
 
-## A carta da mao no indice pedido, pelo meta `mao_idx`.
-func _carta_da_mao(mesa: Node, idx: int) -> Node3D:
+## A carta da mao no indice pedido, pelo meta `mao_dono` + `mao_idx` (D52: as
+## DUAS maos tem `mao_idx`, entao quem diz de quem e a carta e o DONO; e elas
+## trocam de lugar na volta, entao o "Nome visivel" nao serve mais como filtro).
+func _carta_da_mao(mesa: Node, idx: int, dono: int = 0) -> Node3D:
 	var cartas: Node = mesa.get_node(CARTAS)
 	var achada: Node3D = null
 	for f in cartas.get_children():
-		if (f as Node).has_meta("mao_idx") and int((f as Node).get_meta("mao_idx")) == idx:
-			# D47: a mao de baixo e a do JOGADOR (a unica aberta).
-			if (f as Node).get_node_or_null("Nome") != null:
-				var nome := (f as Node).get_node("Nome") as Label3D
-				if nome != null and nome.visible:
-					achada = f as Node3D
+		if (f as Node).has_meta("mao_dono") and int((f as Node).get_meta("mao_dono")) == dono \
+				and int((f as Node).get_meta("mao_idx")) == idx:
+			achada = f as Node3D
 	return achada
