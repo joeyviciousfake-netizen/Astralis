@@ -2,7 +2,7 @@
  "schema_version": 1,
  "id": "arena_starter",
  "name": "Arena Inicial",
- "description": "ARENA OFICIAL (D48: uma arena só). 1920x1080 em ESPELHO (D24/R3: só desenho, IDs e lógica intactos). p0 = você/baixo: monstros y=695, magias y=995, x crescente 632→1684 (m0 à esquerda). p1 = rival/cima ESPELHADO: fileiras trocadas (monstro embaixo/perto do centro y=305, magia em cima/longe y=10) + X invertido (m0/s0 à direita x=1684, m4/s4 à esquerda x=632). Passo horizontal 263. Mão: p0 x=1240 y=980 aberta, p1 x=1240 y=20 de costas. Estes números são os mesmos da grade embutida em core/board_layout.gd (fallback sem arena).",
+ "description": "ARENA OFICIAL (D48: uma arena so; D49: a grade PERFEITA). 1920x1080 em ESPELHO (D24/R3: so desenho, IDs e logica intactos). UM UNICO VALOR de distancia em todo o campo: 263. p0 = voce/baixo: monstros y=695, magias y=958 (263 abaixo do monstro). p1 = rival/cima ESPELHADO: monstros y=305, magias y=42 (263 acima do monstro), com X invertido (m0/s0 a direita x=1684, m4/s4 a esquerda x=632). X de 632 a 1684 de 263 em 263, nos DOIS lados e nos DOIS tipos de slot. A distancia entre a fileira de monstros do jogador e a do rival e 390 e NAO faz parte da grade (fica congelada). Mao: p0 x=1240 y=980 aberta, p1 x=1240 y=20 de costas. Estes numeros sao os mesmos da grade embutida em core/board_layout.gd (fallback sem arena).",
  "background": "assets/backgrounds/arena_starter.png",
  "slots": [
   {
@@ -33,27 +33,27 @@
   {
    "slot_id": "p1_s0",
    "x": 1684,
-   "y": 10
+   "y": 42
   },
   {
    "slot_id": "p1_s1",
    "x": 1421,
-   "y": 10
+   "y": 42
   },
   {
    "slot_id": "p1_s2",
    "x": 1158,
-   "y": 10
+   "y": 42
   },
   {
    "slot_id": "p1_s3",
    "x": 895,
-   "y": 10
+   "y": 42
   },
   {
    "slot_id": "p1_s4",
    "x": 632,
-   "y": 10
+   "y": 42
   },
   {
    "slot_id": "p0_m0",
@@ -83,27 +83,27 @@
   {
    "slot_id": "p0_s0",
    "x": 632,
-   "y": 995
+   "y": 958
   },
   {
    "slot_id": "p0_s1",
    "x": 895,
-   "y": 995
+   "y": 958
   },
   {
    "slot_id": "p0_s2",
    "x": 1158,
-   "y": 995
+   "y": 958
   },
   {
    "slot_id": "p0_s3",
    "x": 1421,
-   "y": 995
+   "y": 958
   },
   {
    "slot_id": "p0_s4",
    "x": 1684,
-   "y": 995
+   "y": 958
   }
  ],
  "hand": {
