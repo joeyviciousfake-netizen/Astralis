@@ -186,7 +186,7 @@ func test_a_vista_do_rival_e_o_espelho_exato_da_do_jogador() -> void:
 	# medida do vão da vista do jogador — então é isso que garante que ela
 	# caia entre os slots de monstro dos dois lados.
 	var vao_jogador := _vao_das_fileiras(mesa)
-	var faixa := mesa.get("_faixa2d") as Control
+	var faixa: Control = mesa.get("_faixa") as Control
 	mesa.call("_girar_campo", 0.0)
 	await wait_process_frames(2)
 	var vao_rival := _vao_das_fileiras(mesa)
@@ -628,7 +628,7 @@ func test_cada_jogador_ve_a_propria_fileira_na_ordem_normal() -> void:
 ## (invisivel) em 90 - que e onde o conteudo troca, entao ninguem ve a troca.
 func test_o_hud_vira_de_carta_e_troca_nos_90_graus() -> void:
 	var mesa: Node = await _mesa3d_nova()
-	var faixa := mesa.get("_faixa2d") as Control
+	var faixa: Control = mesa.get("_faixa") as Control
 	assert_true(faixa != null, "A faixa do meio existe (e vira de carta).")
 	if faixa == null:
 		return
@@ -653,7 +653,11 @@ func test_o_hud_vira_de_carta_e_troca_nos_90_graus() -> void:
 ## do lado que agora e o seu na tela, e a cor viaja com o numero.
 func test_a_faixa_do_meio_se_espelha_na_volta() -> void:
 	var mesa: Node = await _mesa3d_nova()
-	var linha := mesa.get("_faixa_linha") as Node
+	var faixa: Control = mesa.get("_faixa") as Control
+	assert_true(faixa != null, "A faixa do meio existe.")
+	var linha: Node = null
+	if faixa != null:
+		linha = faixa.get_node_or_null(NodePath("Celulas"))
 	assert_true(linha != null, "A linha de celulas da faixa existe.")
 	if linha == null:
 		return

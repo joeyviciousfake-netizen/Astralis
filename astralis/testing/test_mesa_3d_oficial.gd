@@ -1132,25 +1132,26 @@ func test_d45_cemiterio_mostra_a_foto_quadrada_da_ultima_carta() -> void:
 	# assets no headless (o jogo embute só as 17 peças da carta, não as 722
 	# artes que moram no PROJETO), a arte volta vazia e o bloco fica só com a
 	# contagem — o que também é a trava do "nunca uma imagem inventada".
-	var escolhida := mesa.call("_carta_do_cemiterio", 0) as Dictionary
+	var faixa: Node = mesa.get("_faixa")
+	var escolhida := faixa.call("_carta_do_cemiterio", 0) as Dictionary
 	assert_eq(str(escolhida.get("id", "")), primeiro,
 		"O bloco do seu cemitério aponta para a ÚLTIMA carta do dado.")
-	var esperada: Texture2D = mesa.call("_arte_real", escolhida)
+	var esperada: Texture2D = faixa.call("_arte_real", escolhida)
 	assert_eq(_assinatura_tex(meu_arte.texture), _assinatura_tex(esperada),
 		"A foto do seu cemitério é a arte REAL da carta que foi para lá.")
 	assert_eq(_assinatura_tex(rival_arte.texture), _assinatura_tex(esperada),
 		"A foto do cemitério do rival é a arte da carta DELE.")
 	assert_eq(meu_arte.visible, esperada != null,
 		"Foto visível só quando o dado tem arte (sem imagem inventada).")
-	var rival_escolhida := mesa.call("_carta_do_cemiterio", 1) as Dictionary
+	var rival_escolhida := faixa.call("_carta_do_cemiterio", 1) as Dictionary
 	assert_eq(str(rival_escolhida.get("id", "")), primeiro,
 		"O cemitério do rival lê o dado DELE, não o seu.")
 	# A última do dado é a que fica: põe outra carta depois e a foto muda.
 	if not segundo.is_empty():
 		cem0.append(str(segundo.get("id", "")))
 		mesa.call("_atualizar_faixa")
-		var esperada2: Texture2D = mesa.call("_arte_real", segundo)
-		assert_eq(str((mesa.call("_carta_do_cemiterio", 0) as Dictionary).get("id", "")),
+		var esperada2: Texture2D = faixa.call("_arte_real", segundo)
+		assert_eq(str((faixa.call("_carta_do_cemiterio", 0) as Dictionary).get("id", "")),
 			str(segundo.get("id", "")), "Com uma segunda carta, a escolhida passa a ser a ÚLTIMA (a mais recente).")
 		assert_eq(_assinatura_tex(meu_arte.texture), _assinatura_tex(esperada2),
 			"A foto do cemitério acompanha a última carta.")

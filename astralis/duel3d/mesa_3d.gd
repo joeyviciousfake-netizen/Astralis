@@ -20,6 +20,7 @@ const BattleSystem := preload("res://duel/battle_system.gd")
 const PositionSystem := preload("res://duel/position_system.gd")
 const FusionSystem := preload("res://duel/fusion_system.gd")
 const BoardLayoutScript := preload("res://core/board_layout.gd")
+const Faixa2D := preload("res://duel3d/faixa_2d.gd")
 
 ## Conversão desenho 2D->3D (só desenho): campo 2D centrado em x=1158.
 ## Composição ref nova (céu azul GX, SEM MESA): câmera FIXA atrás/acima do
@@ -146,49 +147,17 @@ const JANELA_ART_Y1 := 0.7099
 ## de tela das fileiras (`_borda_da_fileira_px`) e a faixa 2D medem a partir
 ## daqui, então "a linha dos slots" é UM número, não três.
 const TOPO_PISO := TOPO - 0.005
-## ---- D45: A FAIXA DO MEIO, AGORA EM 2D -----------------------------------
-## D44 colocou baralho, cemitério, LP e turno no vao entre as duas fileiras
-## de monstro, mas em 3D (caixas deitadas no chao). D45 (item 2 do usuario):
-## "vai continuar essa faixa no meio mas agora em 2d, assim fica mais facil,
-## podemos fazer algo bonito que mostre isso e tambem tenha um contador de
-## cartas ainda no deck e contador de cartas no cemiterio".
-## POR QUE 2D E MAIS FACIL (e nao e gambiarra): em 3D, a posicao de um objeto
-## no chao e a soma de TRES numeros que precisam concordar — o z da fileira,
-## metade da profundidade do ladrilho e a profundidade do proprio objeto — e a
-## "altura do chao" na tela e uma FAIXA (o ladrilho e um plano visto de
-## lado), nao uma linha. Em 2D a posicao e o pixel: uma linha, um numero, e
-## da para fazer bonito de verdade. A faixa 3D foi REMOVIDA por inteiro
-## (pilhas, placas, fatias, `_construir_faixa`).
-## A ORDEM das 7 celulas e a que o usuario ditou (D44, travada):
-##   MeuDeck, MeuCemiterio, LpVoce, Turno, LpRival, CemRival, DeckRival
-## As alturas/larguras sao do DADO e da CAMERA (as bordas reais das fileiras
-## em `_borda_da_fileira_px` e a largura real da fileira em
-## `_extensao_da_fileira_px`), entao a faixa acompanha o campo em qualquer
-## enquadramento. Zero regra: so leitura (R1/R3).
-const FAIXA2D_ALT := 64              # altura da barra (o vao entre as fileiras tem 87 px)
-const FAIXA2D_GAP := 6               # vao entre as celulas
-const FAIXA2D_MARGEM_L := 10.0        # folga da faixa ate a borda da fileira
-const FAIXA2D_FONDO := Color(0.043, 0.063, 0.145, 0.86)
-const FAIXA2D_ARO := Color(0.36, 0.52, 0.92, 0.95)
-## D45: TRÊS conjuntos de cor, cada um com BORDA escura e INTERIOR mais claro,
-## e o MESMO conjunto vale para o bloco do nome (topo) e para o bloco do LP
-## daquele lado — foi o que o usuário pediu ("no bloco do meu nome, borda azul
-## mais escura e dentro azul mais claro... faça o mesmo no bloco do meu LP").
-##   azul     = você (deck, LP e o turno quando é sua vez)
-##   vermelho = rival (deck, LP e o turno quando é a vez dele)
-##   preto    = os dois cemitérios (borda preta que não é preta escura, dentro
-##              um preto mais claro)
+## Cores de identidade da tela (D45b): azul = voce, vermelho = rival, e o
+## PRETO (borda preta que nao e preta escura, dentro um preto mais claro) nos
+## DOIS cemiterios. Cada conjunto e BORDA escura + INTERIOR mais claro, e o
+## MESMO conjunto vale no bloco do nome (topo) e no do LP daquele lado.
+## Dono: a mesa. A faixa do meio e os retratos recebem daqui.
 const COR_AZUL_BORDA := Color(0.07, 0.17, 0.40, 0.98)
 const COR_AZUL_FUNDO := Color(0.16, 0.40, 0.76, 0.96)
 const COR_VERM_BORDA := Color(0.40, 0.06, 0.09, 0.98)
 const COR_VERM_FUNDO := Color(0.74, 0.17, 0.20, 0.96)
 const COR_PRETO_BORDA := Color(0.07, 0.07, 0.08, 0.98)
 const COR_PRETO_FUNDO := Color(0.21, 0.21, 0.25, 0.96)
-## Todo NÚMERO da faixa é branco (D45, itens 4 e 7): LP, turno e as contagens
-## de cartas. Não há mais nome/"rótulo" em cima de nada (item 3).
-const FAIXA2D_COR_NUM := Color(1, 1, 1, 1)
-const FAIXA2D_FONTE_NUM := 34
-const FAIXA2D_FONTE_CONT := 30
 
 ## ---- HUD 2D (doc 15 §15.3 — TUDO medido na referência, em px do canvas
 ## 1920x1080; a referência é 1024x583 e o §15.3 traz os %) ----------------
@@ -413,21 +382,7 @@ var _lbl_slot: Label = null
 var _lbl_fila: Label = null
 ## D45 (item 2): a FAIXA DO MEIO agora é 2D (filha do HUD), com os 7 itens
 ## na ordem do usuário e o VALOR sempre do GameState real. `_cel_*` é o
-## guarda-chuva ("Faixa2D") e `_num_*` os 7 números que `_atualizar_faixa`
-## reescreve (contagem de cartas do deck/cemitério + LP + turno).
-var _faixa2d: Control = null
-## Célula do TURNO (a que muda de cor com quem está jogando, D45 item 7) e as
-## duas fotos de CEMITÉRIO (a última carta que foi para lá, D45 item 6).
-var _turno_cel: PanelContainer = null
-var _arte_meu_cem: TextureRect = null
-var _arte_cem_rival: TextureRect = null
-var _num_meu_deck: Label = null
-var _num_meu_cem: Label = null
-var _num_lp_voce: Label = null
-var _num_turno: Label = null
-var _num_lp_rival: Label = null
-var _num_cem_rival: Label = null
-var _num_deck_rival: Label = null
+## Retratos do topo e o painel da carta focada (o resto do HUD 2D).
 var _retrato_rival_foto: TextureRect = null
 var _retrato_rival_silhueta: Label = null
 var _retrato_voce_foto: TextureRect = null
@@ -441,14 +396,16 @@ var _tex_foco_moldura: TextureRect = null
 var _tex_foco_orbe: TextureRect = null
 var _caixa_foco_estrelas: HBoxContainer = null
 var _lbl_foco_nome_molde: Label = null
+## Cache de textura da sessao (a moldura/orbe/estrela se repetem; o que for
+## lido do disco e guardado aqui, entao a tela nao relê a imagem a cada uso).
 var _cache_tex: Dictionary = {}
 var _lbl_foco_nome: Label = null
 var _lbl_foco_estrelas: Label = null
 var _lbl_foco_stats: Label = null
-
 var _cor_foco_attr: ColorRect = null
 var _lbl_foco_tipo: Label = null
 var _lbl_foco_desc: Label = null
+
 ## Identidade real do duelo (só leitura do dado): nomes + retratos dos
 ## duelistas vindos de duel_setup.duelist1/2 + duelists (nome/portrait).
 ## Sem foto no dado = silhueta com a inicial do nome (igual à ref).
@@ -547,7 +504,7 @@ func _ready() -> void:
 	_aquecer_a_mao()
 	# D45 (item 2): a faixa do meio é 2D e vive no HUD, no vão entre as duas
 	# fileiras de monstro (que ela mede do dado + da câmera, não chuta).
-	_construir_faixa_2d(get_node_or_null(NodePath("HUD")) as Control)
+	_construir_faixa()
 	if _quer_calib_visual():
 		_calib_visual(get_node_or_null(NodePath("HUD")) as Control)
 	_fusions_data = _fusoes_do_data(data)
@@ -584,6 +541,8 @@ func _avisar_arena() -> void:
 
 ## Diagnóstico: só sai com `--debug` (medidas, câmera, calibração, fila de
 ## fusão, foto). Sem ela o jogo só imprime o log de boot.
+## A faixa do meio (D45): o no e o arquivo `faixa_2d.gd`.
+var _faixa: PanelContainer = null
 var _debug := _quer_debug()
 
 
@@ -985,7 +944,7 @@ func _construir_campo() -> void:
 	# D44 (itens 3, 4, 6 e 11): as pilhas de baralho/cemitério e os
 	# contadores SAÍRAM dos cantos (o usuário: "estão muito no canto e está
 	# ruim de visualizar"). D45 (item 2): eles passaram também para 2D, na
-	# faixa do meio do HUD (`_construir_faixa_2d`) — o 3D do meio ficou
+	# faixa do meio do HUD (`_construir_faixa`) — o 3D do meio ficou
 	# VAZIO de propósito, que é o que o usuário pediu ("agora em 2d, assim
 	# fica mais facil"). `Laterais` também: é o guarda-chuva que o resto da
 	# cena já usava, e some qualquer desenho solto do canto.
@@ -1977,7 +1936,6 @@ func _giro_de_onde() -> float:
 ## no boot; o resto da volta só lê.
 var _blocos_voce: Array[Control] = []
 var _blocos_rival: Array[Control] = []
-var _faixa_linha: HBoxContainer = null
 var _vista_trocada := false
 
 
@@ -2000,9 +1958,8 @@ var _vista_trocada := false
 func _aplicar_vista_hud() -> void:
 	var esc := _escala_do_virar()
 	var invertido := _vista_invertida()
-	if _faixa2d != null:
-		_faixa2d.pivot_offset = _faixa2d.size * 0.5
-		_faixa2d.scale = Vector2(esc, 1.0)
+	if _faixa != null:
+		_faixa.virar(esc)
 	for b in _blocos_voce:
 		_virar_bloco(b, esc)
 	for b in _blocos_rival:
@@ -2010,7 +1967,8 @@ func _aplicar_vista_hud() -> void:
 	if invertido != _vista_trocada:
 		_vista_trocada = invertido
 		_trocar_lado_das_blocos()
-		_espelhar_faixa()
+		if _faixa != null and is_instance_valid(_faixa):
+			_faixa.espelhar()
 
 
 ## Um bloco do HUD que vira de carta: pivô no meio dele (para encolher para os
@@ -2051,27 +2009,6 @@ func _trocar_lado_das_blocos() -> void:
 ## HBoxContainer, a ordem dos filhos É a ordem na tela: espelhar é reordenar.
 ## O turno fica no meio (é o único que não tem dono) e a cor viaja com o
 ## número, então o azul continua sendo "você" — só muda de lado na tela.
-func _espelhar_faixa() -> void:
-	if _faixa_linha == null or not is_instance_valid(_faixa_linha):
-		return
-	var celulas := _faixa_linha.get_children()
-	if celulas.is_empty():
-		return
-	# A ESPELHADA é reverter a lista. Só isso: com 7 células (ímpar) a do meio
-	# continua no meio, que é o Turno (o único que não tem dono). E reverter não
-	# duplica nada — importante, porque `add_child` de um nó que JÁ é filho
-	# remexe ele para o fim em vez de copiar (era o que acontecia montando a
-	# lista na mão: o `add_child` repetido jogava fora metade das células).
-	# `move_child` dentro do laço também não serve (cada movimento empurra os
-	# outros). Então: tira todas, devolve na ordem nova — são os MESMOS nós.
-	var nova := celulas.duplicate()
-	nova.reverse()
-	for c in celulas:
-		_faixa_linha.remove_child(c as Node)
-	for c2 in nova:
-		_faixa_linha.add_child(c2 as Node)
-
-
 ## Redesenha as cartas 3D do estado real.
 ## `com_efeito` = a compra deve ANIMAR (a carta nova voa do baralho para a mão).
 ## `dono_efeito` = de QUEM é a compra (0 = você, 1 = rival): a animação é da
@@ -2585,9 +2522,10 @@ func _placa_nome_retrato(hud: Control, nome: String, x: float, y: float, larg: f
 ##   TURNO      -> número do GameState
 ## Nada aqui calcula regra: é só leitura (R1/R3), como toda a tela.
 
-## Extensão (x de tela) de uma fileira de ladrilhos: da coluna 0 até a 4,
-## já em pixel do canvas (a janela do campo começa em PAINEL_ESQ_L).
-## Serve à faixa do meio, que é sempre o painel do jogador (D8/doc 16), então
+## Extensão (x de tela) de uma fileira de ladrilhos: da coluna 0 até a 4, já em
+## pixel do canvas (a janela do campo começa em PAINEL_ESQ_L). É MEDIÇÃO (câmera
+## + layout da arena), então mora aqui; quem usa é a faixa do meio
+## (`faixa_2d.gd`), que é sempre o painel do jogador (D8/doc 16) e por isso
 ## mede a fileira como ela está desenhada agora.
 func _extensao_da_fileira_px(lado: int, tipo: String) -> Vector2:
 	var x0 := 1e9
@@ -2604,238 +2542,43 @@ func _extensao_da_fileira_px(lado: int, tipo: String) -> Vector2:
 	return Vector2(x0 + float(PAINEL_ESQ_L), x1 + float(PAINEL_ESQ_L))
 
 
-## Monta a faixa 2D dentro do HUD (por cima do campo 3D). Cada célula é um nó
-## com o nome do seu lugar na ordem, para a trava do teste ler a ordem e os
-## valores direto da tela.
-func _construir_faixa_2d(hud: Control) -> void:
-	if hud == null:
-		return
-	# O vão: entre a base da fileira de monstro do RIVAL e o topo da SUA.
-	var y_topo := _borda_da_fileira_px(1, "monstro", true)
-	var y_base := _borda_da_fileira_px(0, "monstro", false)
-	var alt := clampf(y_base - y_topo - 10.0, 40.0, float(FAIXA2D_ALT))
-	var y := y_topo + ((y_base - y_topo) - alt) * 0.5
-	var ex := _extensao_da_fileira_px(0, "monstro")
-	var x0 := ex.x + FAIXA2D_MARGEM_L
-	var x1 := ex.y - FAIXA2D_MARGEM_L
-	var larg := maxf(x1 - x0, 200.0)
-
-	var barra := PanelContainer.new()
-	barra.name = "Faixa2D"
-	barra.add_theme_stylebox_override("panel", _estilo_faixa2d())
-	barra.position = Vector2(x0, y)
-	barra.size = Vector2(larg, alt)
-	barra.custom_minimum_size = Vector2(larg, alt)
-	barra.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hud.add_child(barra)
-	_faixa2d = barra
-
-	var linha := HBoxContainer.new()
-	linha.name = "Celulas"
-	linha.add_theme_constant_override("separation", int(FAIXA2D_GAP))
-	linha.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	linha.set_anchors_preset(Control.PRESET_FULL_RECT)
-	linha.offset_left = 6.0
-	linha.offset_right = -6.0
-	linha.offset_top = 5.0
-	linha.offset_bottom = -5.0
-	barra.add_child(linha)
-
-	var larg_cel: float = (larg - 12.0 - FAIXA2D_GAP * 6.0) / 7.0
-	var alt_cel := alt - 10.0
-	# A ORDEM que o usuário ditou (D45, item 1: cemitério e deck trocaram de
-	# lugar): MeuCemiterio, MeuDeck, LpVoce, Turno, LpRival, DeckRival,
-	# CemRival. Três conjuntos de cor, um por lado + o preto dos cemitérios
-	# (item 2 e 5), e o turno no MEIO, com a cor de quem está jogando (item 7).
-	var cel_meu_cem := _celula_faixa_2d(linha, "MeuCemiterio", larg_cel, alt_cel,
-		COR_PRETO_BORDA, COR_PRETO_FUNDO, "arte_esq")
-	var cel_meu_deck := _celula_faixa_2d(linha, "MeuDeck", larg_cel, alt_cel,
-		COR_AZUL_BORDA, COR_AZUL_FUNDO, "numero")
-	var cel_lp_voce := _celula_faixa_2d(linha, "LpVoce", larg_cel, alt_cel,
-		COR_AZUL_BORDA, COR_AZUL_FUNDO, "numero")
-	var cel_turno := _celula_faixa_2d(linha, "Turno", larg_cel, alt_cel,
-		COR_AZUL_BORDA, COR_AZUL_FUNDO, "numero")
-	var cel_lp_rival := _celula_faixa_2d(linha, "LpRival", larg_cel, alt_cel,
-		COR_VERM_BORDA, COR_VERM_FUNDO, "numero")
-	var cel_deck_rival := _celula_faixa_2d(linha, "DeckRival", larg_cel, alt_cel,
-		COR_VERM_BORDA, COR_VERM_FUNDO, "numero")
-	var cel_cem_rival := _celula_faixa_2d(linha, "CemRival", larg_cel, alt_cel,
-		COR_PRETO_BORDA, COR_PRETO_FUNDO, "arte_dir")
-	_arte_meu_cem = cel_meu_cem.get_node("Caixa/Arte") as TextureRect
-	_num_meu_cem = cel_meu_cem.get_node("Caixa/Numero") as Label
-	_num_meu_deck = cel_meu_deck.get_node("Caixa/Numero") as Label
-	_num_lp_voce = cel_lp_voce.get_node("Caixa/Numero") as Label
-	_turno_cel = cel_turno as PanelContainer
-	_num_turno = cel_turno.get_node("Caixa/Numero") as Label
-	_num_lp_rival = cel_lp_rival.get_node("Caixa/Numero") as Label
-	_num_deck_rival = cel_deck_rival.get_node("Caixa/Numero") as Label
-	_arte_cem_rival = cel_cem_rival.get_node("Caixa/Arte") as TextureRect
-	_num_cem_rival = cel_cem_rival.get_node("Caixa/Numero") as Label
-	# D47: a linha da faixa é o que se espelha na volta da mesa (a ordem dos
-	# filhos do HBox É a ordem na tela).
-	_faixa_linha = linha
-	_atualizar_faixa()
-	_diag("Faixa 2D: 7 celulas em x=%.0f..%.0f y=%.0f..%.0f (vao das fileiras %.0f..%.0f px)." % [
-		x0, x0 + larg, y, y + alt, y_topo, y_base])
+## Cria a FAIXA DO MEIO (D45) como o no `faixa_2d.gd` dentro do HUD. Ela e um
+## assunto so - posicao, celulas, cores, numeros do estado e o espelhamento da
+## volta - e por isso mora no arquivo dela, nao aqui.
+func _construir_faixa() -> void:
+	var hud := get_node_or_null(NodePath("HUD")) as Control
+	_faixa = Faixa2D.new()
+	_faixa.estado = Callable(self, "_pegar_estado")
+	_faixa.cartas_de = Callable(self, "_pegar_cartas")
+	_faixa.medir_borda = Callable(self, "_borda_da_fileira_px")
+	_faixa.medir_extensao = Callable(self, "_extensao_da_fileira_px")
+	_faixa.tex_cache = Callable(self, "_tex_cache")
+	_faixa.avisar = Callable(self, "_diag")
+	_faixa.cor_azul_borda = COR_AZUL_BORDA
+	_faixa.cor_azul_fundo = COR_AZUL_FUNDO
+	_faixa.cor_verm_borda = COR_VERM_BORDA
+	_faixa.cor_verm_fundo = COR_VERM_FUNDO
+	_faixa.cor_preto_borda = COR_PRETO_BORDA
+	_faixa.cor_preto_fundo = COR_PRETO_FUNDO
+	_faixa.construir(hud)
 
 
-## Estilo da barra: vidro escuro com aro metálico e um brilho fino de cima —
-## o mesmo "metal com bisel" da referência, em vez de chapa.
-func _estilo_faixa2d() -> StyleBoxFlat:
-	var s := StyleBoxFlat.new()
-	s.bg_color = FAIXA2D_FONDO
-	s.border_color = FAIXA2D_ARO
-	s.set_border_width_all(2)
-	s.set_corner_radius_all(6)
-	s.shadow_color = Color(0, 0, 0, 0.45)
-	s.shadow_size = 4
-	return s
+## O GameState e o dicionario de cartas, do jeito que a tela inteira le: por
+## funcao, e nao por copia. A faixa pergunta aqui a cada atualizacao, entao
+## trocar o duelo em tempo de execucao (D42) nao deixa numero velho na tela.
+func _pegar_estado():
+	return _st
 
 
-## Uma célula da faixa. Só DUAS formas, porque o usuário pediu bloco limpo
-## (item 3: sem palavra e sem ícone):
-##   "numero"  — só o NÚMERO, branco, grande e centralizado (deck, LP, turno);
-##   "arte_esq" / "arte_dir" — a FOTO quadrada da última carta do CEMITÉRIO
-##   preenchendo a ponta ESQUERDA (a sua) ou DIREITA (a do rival), com a
-##   contagem de cartas do lado oposto.
-## A cor vem do par (borda escura, interior mais claro) que o chamador passou.
-func _celula_faixa_2d(pai: Control, nome: String, larg: float, alt: float, cor_borda: Color,
-		cor_fundo: Color, tipo: String) -> Control:
-	var cel := PanelContainer.new()
-	cel.name = nome
-	cel.add_theme_stylebox_override("panel", _estilo_celula_faixa(cor_borda, cor_fundo))
-	cel.custom_minimum_size = Vector2(larg, alt)
-	cel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	cel.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	cel.clip_contents = true
-	cel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	pai.add_child(cel)
-
-	var h := HBoxContainer.new()
-	h.name = "Caixa"
-	h.add_theme_constant_override("separation", 4)
-	h.alignment = BoxContainer.ALIGNMENT_CENTER
-	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	cel.add_child(h)
-
-	var num := _rotulo_placa_clara("Numero", "0",
-		FAIXA2D_FONTE_CONT if tipo != "numero" else FAIXA2D_FONTE_NUM)
-	num.add_theme_color_override("font_color", FAIXA2D_COR_NUM)
-	num.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	num.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	num.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	num.mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	if tipo == "numero":
-		num.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		h.add_child(num)
-		return cel
-
-	# Cemitério: a foto QUADRADA da última carta que foi para lá, na ponta que
-	# o usuário pediu (esquerda no seu, direita no do rival), e a contagem do
-	# lado oposto. A arte é um CORTE quadrado da imagem real (nunca esticada).
-	var arte := TextureRect.new()
-	arte.name = "Arte"
-	arte.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	arte.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-	arte.size_flags_vertical = Control.SIZE_FILL
-	var lado_art: float = alt
-	arte.custom_minimum_size = Vector2(lado_art, lado_art)
-	arte.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN if tipo == "arte_esq" else Control.SIZE_SHRINK_END
-	arte.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	arte.visible = false
-	num.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	if tipo == "arte_esq":
-		h.add_child(arte)
-		h.add_child(num)
-	else:
-		h.add_child(num)
-		h.add_child(arte)
-	return cel
+func _pegar_cartas() -> Dictionary:
+	return _cartas
 
 
-func _estilo_celula_faixa(cor_borda: Color, cor_fundo: Color) -> StyleBoxFlat:
-	var s := StyleBoxFlat.new()
-	s.bg_color = cor_fundo
-	s.border_color = cor_borda
-	s.set_border_width_all(2)
-	s.set_corner_radius_all(4)
-	return s
-
-
-## Carta REAL do topo do cemitério de um lado: a ÚLTIMA do dado (a que foi
-## para lá por último), com a roupa do dado (nome, atributo, arte). Vazio do
-## cemitério = {} — nunca uma carta inventada (R3).
-func _carta_do_cemiterio(lado: int) -> Dictionary:
-	var cem := _lista_do_jogador(lado, "graveyard")
-	if cem.is_empty():
-		return {}
-	var cid := str(cem[cem.size() - 1])
-	if cid.is_empty() or not _cartas.has(cid):
-		return {}
-	return _cartas[cid] as Dictionary
-
-
-## Arte REAL da carta para a foto do cemitério (D45, item 6). Passa pelo
-## CACHE de textura (`_tex_cache`), então a faixa não relê a imagem do disco a
-## cada atualização, e devolve nulo quando o dado não tem arte (o bloco fica
-## só com a contagem — nunca uma imagem inventada, R3).
-func _arte_real(carta: Dictionary) -> Texture2D:
-	var rel := str(carta.get("artwork", "")).strip_edges()
-	if rel.is_empty():
-		return null
-	return _tex_cache(rel)
-
-
-## D45: escreve na faixa 2D o que o estado REAL manda — a contagem de cartas
-## do baralho e do cemitério dos dois lados, o LP de cada um, o turno atual e
-## a FOTO da última carta que foi para cada cemitério. A COR da célula do
-## turno alterna com quem está jogando (azul = você, vermelho = rival, o mesmo
-## conjunto de cores do LP daquele lado). Só leitura, zero regra (R1/R3).
+## A faixa escreve o estado real na tela (D45). Delegado: quem sabe escrever
+## na faixa e o arquivo dela.
 func _atualizar_faixa() -> void:
-	if _st == null or _faixa2d == null:
-		return
-	if _num_meu_deck != null:
-		_num_meu_deck.text = "%d" % (_lista_do_jogador(0, "deck") as Array).size()
-	if _num_meu_cem != null:
-		_num_meu_cem.text = "%d" % (_lista_do_jogador(0, "graveyard") as Array).size()
-	if _num_deck_rival != null:
-		_num_deck_rival.text = "%d" % (_lista_do_jogador(1, "deck") as Array).size()
-	if _num_cem_rival != null:
-		_num_cem_rival.text = "%d" % (_lista_do_jogador(1, "graveyard") as Array).size()
-	# A foto do cemitério: a arte REAL da última carta que foi para lá (ou
-	# nada, se estiver vazio — nunca uma imagem inventada).
-	for par in [[0, _arte_meu_cem], [1, _arte_cem_rival]]:
-		var arte := par[1] as TextureRect
-		if arte == null:
-			continue
-		var carta := _carta_do_cemiterio(int(par[0]))
-		var tex := _arte_real(carta)
-		arte.texture = tex
-		arte.visible = tex != null
-	if _num_lp_voce != null:
-		_num_lp_voce.text = "%d" % _int_do_jogador(0, "lp")
-	if _num_lp_rival != null:
-		_num_lp_rival.text = "%d" % _int_do_jogador(1, "lp")
-	if _num_turno != null:
-		if bool(_st.over):
-			_num_turno.text = "VITORIA!" if int(_st.winner) == 0 else "DERROTA"
-		else:
-			_num_turno.text = "%d" % int(_st.turn_number)
-	_tingir_turno()
-
-
-## D45 (item 7): a célula do TURNO muda de cor com quem está jogando — azul
-## (o mesmo conjunto do seu LP) na sua vez, vermelho (o mesmo do LP do rival)
-## na vez dele. A cor vem do `current_player` do motor, nunca de um contador
-## solto (R3), e o número é branco.
-func _tingir_turno() -> void:
-	if _turno_cel == null or not is_instance_valid(_turno_cel):
-		return
-	var meu := int(_st.current_player) == 0
-	_turno_cel.add_theme_stylebox_override("panel", _estilo_celula_faixa(
-		COR_AZUL_BORDA if meu else COR_VERM_BORDA,
-		COR_AZUL_FUNDO if meu else COR_VERM_FUNDO))
+	if _faixa != null and is_instance_valid(_faixa):
+		_faixa.atualizar()
 
 
 func _construir_hud() -> void:
@@ -2902,7 +2645,7 @@ func _construir_fundo_painel(hud: Control) -> void:
 ## vermelha com o LP do rival) foram REMOVIDAS da tela por ordem do usuário:
 ## "na parte de cima da tela remova todas as informações pois troquei elas de
 ## lugar". O LP e o turno agora vivem na FAIXA DO MEIO — que em D45 (item 2)
-## virou 2D (`_construir_faixa_2d`) — e no topo ficou só a foto + o nome de
+## virou 2D (`_construir_faixa`) — e no topo ficou só a foto + o nome de
 ## cada duelista (`_construir_retratos`).
 
 ## D44 (item 6): a BARRA DE FASES (DRAW/MAIN/BATTLE/END) saiu da tela inteira
