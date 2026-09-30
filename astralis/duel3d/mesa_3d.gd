@@ -21,6 +21,7 @@ const PositionSystem := preload("res://duel/position_system.gd")
 const FusionSystem := preload("res://duel/fusion_system.gd")
 const BoardLayoutScript := preload("res://core/board_layout.gd")
 const Faixa2D := preload("res://duel3d/faixa_2d.gd")
+const Menus3D := preload("res://duel3d/menus_3d.gd")
 
 ## Conversão desenho 2D->3D (só desenho): campo 2D centrado em x=1158.
 ## Composição ref nova (céu azul GX, SEM MESA): câmera FIXA atrás/acima do
@@ -432,13 +433,6 @@ var _fusao_final: Dictionary = {}
 var _fusao_descartes: Array = []
 var _fusao_passos: Array = []
 var _fusao_animando := false
-var _popup_modo := "estrela"
-var _pad_popup_idx := 0
-var _painel_centro: PanelContainer = null
-var _lbl_centro: Label = null
-var _popup: PanelContainer = null
-var _popup_titulo: Label = null
-var _popup_ops: Array = []
 
 var _fileira := FILEIRA_MAO
 var _col := 0
@@ -464,7 +458,8 @@ func _ready() -> void:
 	_construir_janela_campo()
 	_construir_ambiente()
 	_construir_hud()
-	_construir_menus()
+	_menus = Menus3D.new()
+	add_child(_menus)
 	# Duelo REAL (motor de verdade): ProjectLoader + DuelManager.
 	var state: Dictionary = ProjectLoaderScript.load_initial_state()
 	var data: Dictionary = state.get("data", {})
@@ -543,6 +538,9 @@ func _avisar_arena() -> void:
 ## fusão, foto). Sem ela o jogo só imprime o log de boot.
 ## A faixa do meio (D45): o no e o arquivo `faixa_2d.gd`.
 var _faixa: PanelContainer = null
+## Os menus sobre a cena (carta do centro + popup da estrela/alvo): o no e o
+## arquivo `menus_3d.gd`.
+var _menus: CanvasLayer = null
 var _debug := _quer_debug()
 
 
@@ -2811,75 +2809,74 @@ func _construir_painel_foco(hud: Control) -> void:
 	bloco.add_child(barra)
 
 
-## Menus 2D sobre a cena 3D (só desenho + controle, D19: tudo IGNORE, sem
-## botão e sem clique). Menu da estrela (2 guardian stars do dado real) e
-## menu de alvo (LP rival no direto), igual ao popup do 2D. A carta no
-## centro mostra a escolha atual (nome + face + slot).
-func _construir_menus() -> void:
-	var camada := CanvasLayer.new()
-	camada.name = "MenuLayer"
-	add_child(camada)
-	_painel_centro = PanelContainer.new()
-	_painel_centro.name = "CentroCarta"
-	var est_c := StyleBoxFlat.new()
-	est_c.bg_color = Color(0.02, 0.02, 0.06, 0.92)
-	est_c.border_color = Color(1.0, 0.9, 0.4)
-	est_c.set_border_width_all(3)
-	est_c.set_corner_radius_all(10)
-	est_c.content_margin_left = 18
-	est_c.content_margin_right = 18
-	est_c.content_margin_top = 12
-	est_c.content_margin_bottom = 12
-	_painel_centro.add_theme_stylebox_override("panel", est_c)
-	_painel_centro.position = Vector2(700, 300)
-	_painel_centro.size = Vector2(520, 120)
-	_painel_centro.visible = false
-	_painel_centro.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_lbl_centro = Label.new()
-	_lbl_centro.name = "TextoCentro"
-	_lbl_centro.add_theme_font_size_override("font_size", 26)
-	_lbl_centro.add_theme_color_override("font_color", Color(1, 0.95, 0.8))
-	_lbl_centro.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_painel_centro.add_child(_lbl_centro)
-	camada.add_child(_painel_centro)
-	_popup = PanelContainer.new()
-	_popup.name = "MenuEstrela"
-	var est_p := StyleBoxFlat.new()
-	est_p.bg_color = Color(0.03, 0.03, 0.08, 0.95)
-	est_p.border_color = Color(1.0, 0.9, 0.4)
-	est_p.set_border_width_all(3)
-	est_p.set_corner_radius_all(10)
-	est_p.content_margin_left = 18
-	est_p.content_margin_right = 18
-	est_p.content_margin_top = 12
-	est_p.content_margin_bottom = 12
-	_popup.add_theme_stylebox_override("panel", est_p)
-	_popup.position = Vector2(700, 440)
-	_popup.size = Vector2(520, 220)
-	_popup.visible = false
-	_popup.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var caixa := VBoxContainer.new()
-	caixa.name = "Caixa"
-	caixa.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_popup.add_child(caixa)
-	_popup_titulo = Label.new()
-	_popup_titulo.name = "Titulo"
-	_popup_titulo.text = "Escolha a estrela guardiã"
-	_popup_titulo.add_theme_font_size_override("font_size", 28)
-	_popup_titulo.add_theme_color_override("font_color", Color(1, 1, 1))
-	_popup_titulo.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	caixa.add_child(_popup_titulo)
-	_popup_ops = []
-	for i in range(3):
-		var b := Label.new()
-		b.name = "Op%d" % i
-		b.add_theme_font_size_override("font_size", 26)
-		b.add_theme_color_override("font_color", Color(1.0, 0.95, 0.8))
-		b.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		caixa.add_child(b)
-		_popup_ops.append(b)
-	camada.add_child(_popup)
-	_atualizar_menus()
+## Os menus (carta do centro + popup) estao no no `menus_3d.gd`; a mesa so
+## MANDA o que eles mostram. Quem sabe escrever no menu e o arquivo dele, e o
+## menu nunca guarda regra: as opcoes e os textos chegam prontos.
+func _mostrar_centro3d(face_baixo: bool) -> void:
+	if _menus != null and is_instance_valid(_menus):
+		_menus.mostrar_centro(_texto_do_centro(face_baixo))
+
+
+## O texto da carta do centro. O NOME vem do cursor (logo, da mesa) e o menu
+## so escreve o que a mesa montou.
+func _texto_do_centro(face_baixo: bool) -> String:
+	return "Centro: %s (%s)" % [_nome_carta_mao(_mao_idx), ("face p/ baixo" if face_baixo else "face p/ cima")]
+
+
+func _atualizar_centro_face() -> void:
+	if _menus != null and is_instance_valid(_menus):
+		_menus.mostrar_centro(_texto_do_centro(_face_baixo))
+
+
+func _esconder_centro3d() -> void:
+	if _menus != null and is_instance_valid(_menus):
+		_menus.esconder_centro()
+
+
+func _mostrar_popup_estrela() -> void:
+	if _menus != null and is_instance_valid(_menus):
+		_menus.mostrar_estrela(_estrela_ops)
+
+
+func _mostrar_popup_alvo() -> void:
+	if _menus != null and is_instance_valid(_menus):
+		_menus.mostrar_alvo()
+
+
+func _esconder_popup() -> void:
+	if _menus != null and is_instance_valid(_menus):
+		_menus.esconder_popup()
+
+
+## O popup esta aberto? A mesa usa para travar o controle (D47).
+func _popup_aberto() -> bool:
+	return _menus != null and is_instance_valid(_menus) and _menus.popup_aberto()
+
+
+## O "> " do popup: a opcao sob o cursor. E estado do MENU, e o menu e o dono -
+## a mesa le e escreve por aqui e nao guarda uma copia (D59).
+func _pad_popup_idx() -> int:
+	return _menus.idx if _menus != null and is_instance_valid(_menus) else 0
+
+
+func _set_pad_popup_idx(v: int) -> void:
+	if _menus != null and is_instance_valid(_menus):
+		_menus.idx = v
+
+
+## O modo do popup ("estrela" ou "alvo"), pelo mesmo motivo do indice.
+func _popup_modo() -> String:
+	return _menus.modo if _menus != null and is_instance_valid(_menus) else "estrela"
+
+
+func _set_popup_modo(m: String) -> void:
+	if _menus != null and is_instance_valid(_menus):
+		_menus.modo = m
+
+
+func _atualizar_menus() -> void:
+	if _menus != null and is_instance_valid(_menus):
+		_menus.atualizar()
 
 
 func _fala(texto: String) -> void:
@@ -3184,79 +3181,6 @@ func _carta_completa_do_campo(inst: Dictionary) -> Dictionary:
 	return base
 
 
-func _mostrar_centro3d(face_baixo: bool) -> void:
-	if _painel_centro == null or _lbl_centro == null:
-		return
-	_lbl_centro.text = "Centro: %s (%s)" % [_nome_carta_mao(_mao_idx), ("face p/ baixo" if face_baixo else "face p/ cima")]
-	_painel_centro.visible = true
-	_atualizar_menus()
-
-
-func _atualizar_centro_face() -> void:
-	if _painel_centro == null or _lbl_centro == null:
-		return
-	_lbl_centro.text = "Centro: %s (%s)" % [_nome_carta_mao(_mao_idx), ("face p/ baixo" if _face_baixo else "face p/ cima")]
-	_atualizar_menus()
-
-
-func _esconder_centro3d() -> void:
-	if _painel_centro != null:
-		_painel_centro.visible = false
-
-
-func _mostrar_popup_estrela() -> void:
-	_popup_modo = "estrela"
-	if _popup_titulo != null:
-		_popup_titulo.text = "Escolha a estrela guardiã"
-	_atualizar_menus()
-	if _popup != null:
-		_popup.visible = true
-
-
-func _mostrar_popup_alvo() -> void:
-	_popup_modo = "alvo"
-	if _popup_titulo != null:
-		_popup_titulo.text = "Alvo: rival sem monstros"
-	_pad_popup_idx = 0
-	_atualizar_menus()
-	if _popup != null:
-		_popup.visible = true
-
-
-func _esconder_popup() -> void:
-	if _popup != null:
-		_popup.visible = false
-	_popup_modo = "estrela"
-	_pad_popup_idx = 0
-	_atualizar_menus()
-
-
-## Desenha as opções do menu ("> " marca a atual). Só desenho.
-func _atualizar_menus() -> void:
-	if _popup == null or _popup_ops.size() < 3:
-		return
-	if _popup_modo == "alvo":
-		(_popup_ops[0] as Label).text = ("▶ " if _pad_popup_idx == 0 else "   ") + "Atacar LP rival (direto)"
-		(_popup_ops[0] as Label).visible = true
-		(_popup_ops[1] as Label).text = ("▶ " if _pad_popup_idx == 1 else "   ") + "Cancelar"
-		(_popup_ops[1] as Label).visible = true
-		(_popup_ops[2] as Label).visible = false
-	else:
-		var n_ops := clampi(_estrela_ops.size(), 0, 2)
-		for i in range(3):
-			var b := _popup_ops[i] as Label
-			if i < n_ops:
-				b.text = ("▶ " if _pad_popup_idx == i else "   ") + str(_estrela_ops[i])
-				b.visible = true
-			elif i == 2:
-				b.text = ("▶ " if _pad_popup_idx == 2 else "   ") + "Cancelar"
-				b.visible = true
-			else:
-				b.visible = false
-
-
-# ---- EFEITOS VISUAIS (só visual: flash + solavanco + voo) ----
-
 func _flash_efeito() -> void:
 	if _sem_render() or _flash_tela == null:
 		return
@@ -3366,7 +3290,7 @@ func _fluxo_escolher_slot() -> void:
 		_redesenhar(false)
 		return
 	_estrela_ops = _estrelas_da_carta(mao[_mao_idx] as Dictionary)
-	_pad_popup_idx = 0
+	_set_pad_popup_idx(0)
 	_sub_mao = SUB_ESTRELA
 	_mostrar_popup_estrela()
 	if zona[slot] != null:
@@ -3390,7 +3314,7 @@ func _confirmar_estrela() -> void:
 	if not _combinando and _mao_idx < 0:
 		_esconder_popup()
 		return
-	if _pad_popup_idx == 2:
+	if _pad_popup_idx() == 2:
 		_esconder_popup()
 		_sub_mao = SUB_SLOT
 		_fileira = FILEIRA_MEU_M
@@ -3398,7 +3322,7 @@ func _confirmar_estrela() -> void:
 		_fala("Escolha 1 dos 5 slots (%s)." % _resumo_slots())
 		_redesenhar(false)
 		return
-	var estrela := str(_estrela_ops[clampi(_pad_popup_idx, 0, 1)])
+	var estrela := str(_estrela_ops[clampi(_pad_popup_idx(), 0, 1)])
 	if _combinando:
 		_executar_fusao_fiel(estrela)
 	else:
@@ -3622,7 +3546,7 @@ func _fluxo_escolher_slot_fusao() -> void:
 		_fala("%d acumulada(s) ao cemitério." % _fusao_descartes.size())
 	_fusao_animando = false
 	_estrela_ops = _estrelas_da_carta(_fusao_final)
-	_pad_popup_idx = 0
+	_set_pad_popup_idx(0)
 	_sub_mao = SUB_ESTRELA
 	_mostrar_popup_estrela()
 	if zona[slot] != null:
@@ -3948,7 +3872,7 @@ func _passar_turno() -> void:
 	if _fase_jogador == FASE_MAO and String(_st.phase) == "MAIN":
 		_fala("Desça 1 carta antes de passar (START bloqueado na fase da mão).")
 		return
-	if _popup != null and _popup.visible:
+	if _popup_aberto():
 		_fala("Feche o menu antes de passar.")
 		return
 	_sel_atk = -1
@@ -4052,16 +3976,16 @@ func _mover(dx: int, dy: int) -> void:
 	if _st == null or bool(_st.over):
 		return
 	# Menu central (estrela ou alvo): só cima/baixo troca a opção.
-	if _popup != null and _popup.visible:
+	if _popup_aberto():
 		if dy != 0:
 			var max_idx := 1
-			if _popup_modo == "estrela":
+			if _popup_modo() == "estrela":
 				max_idx = 2
 				if _estrela_ops.size() < 2:
 					max_idx = 1
 			else:
 				max_idx = 1
-			_pad_popup_idx = posmod(_pad_popup_idx + dy, max_idx + 1)
+			_set_pad_popup_idx(posmod(_pad_popup_idx() + dy, max_idx + 1))
 			_atualizar_menus()
 			_redesenhar(false)
 		return
@@ -4188,8 +4112,8 @@ func _confirmar() -> void:
 	if bool(_st.over):
 		get_tree().reload_current_scene()
 		return
-	if _popup != null and _popup.visible:
-		if _popup_modo == "alvo":
+	if _popup_aberto():
+		if _popup_modo() == "alvo":
 			_confirmar_alvo_menu()
 		else:
 			_confirmar_estrela()
@@ -4310,9 +4234,9 @@ func _confirmar_alvo_rival_magia3d() -> void:
 
 
 func _confirmar_alvo_menu() -> void:
-	if _popup_modo != "alvo":
+	if _popup_modo() != "alvo":
 		return
-	if _pad_popup_idx == 1:
+	if _pad_popup_idx() == 1:
 		_esconder_popup()
 		_fala("Ataque direto cancelado. Mire de novo.")
 		_redesenhar(false)
@@ -4336,8 +4260,8 @@ func _cancelar() -> void:
 	if _fusao_animando:
 		_fala("Aguarde a fusão terminar.")
 		return
-	if _popup != null and _popup.visible:
-		if _popup_modo == "alvo":
+	if _popup_aberto():
+		if _popup_modo() == "alvo":
 			_esconder_popup()
 			_fala("Ataque direto cancelado. Mire de novo.")
 			_redesenhar(false)

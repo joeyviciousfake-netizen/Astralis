@@ -102,6 +102,12 @@ func _n3d(mesa: Node, caminho: String) -> Node:
 	return mesa.get_node_or_null(NodePath(JANELA + "/" + caminho))
 
 
+# Os menus sobre a cena (carta do centro + popup): o no e `menus_3d.gd`, filho
+# da mesa com o nome "MenuLayer".
+func _menus(mesa: Node) -> Node:
+	return mesa.get("_menus") as Node
+
+
 # Todas as cartas 3D desenhadas (as 4 fileiras + as DUAS mãos).
 func _cartas3d(mesa: Node) -> Array:
 	var cartas := _n3d(mesa, "Cartas")
@@ -172,14 +178,14 @@ func _fluxo3d_ate_campo(mesa: Node, face_baixo: bool, estrela_idx: int) -> Dicti
 	mesa.call("_confirmar")
 	Input.action_release("confirmar")
 	assert_eq(int(mesa.get("_sub_mao")), 3, "Slot escolhido, abre o menu da estrela.") # SUB_ESTRELA
-	assert_true((mesa.get("_popup") as Control).visible, "Menu da estrela abriu no centro.")
+	assert_true((_menus(mesa).get("_popup") as Control).visible, "Menu da estrela abriu no centro.")
 	var ops: Array = mesa.get("_estrela_ops")
 	assert_eq(ops.size(), 2, "Menu traz as 2 guardian stars do dado.")
 	if estrela_idx == 1:
 		Input.action_press("mover_baixo")
 		mesa.call("_mover", 0, 1)
 		Input.action_release("mover_baixo")
-	assert_eq(int(mesa.get("_pad_popup_idx")), estrela_idx, "Cursor do menu na estrela %d." % (estrela_idx + 1))
+	assert_eq(int(mesa.call("_pad_popup_idx")), estrela_idx, "Cursor do menu na estrela %d." % (estrela_idx + 1))
 	var esperada := str(ops[estrela_idx])
 	Input.action_press("confirmar")
 	mesa.call("_confirmar")

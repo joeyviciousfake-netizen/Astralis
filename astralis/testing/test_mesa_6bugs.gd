@@ -55,13 +55,13 @@ func test_bug2_popup_estrela_acima_da_carta_central() -> void:
 	mesa.call("_confirmar")
 	Input.action_release("confirmar")
 	assert_eq(int(mesa.get("_sub_mao")), SUB_ESTRELA, "Preparo: menu da estrela aberto.")
-	var popup: Control = mesa.get("_popup")
-	var centro: Control = mesa.get("_painel_centro")
+	var popup: Control = _menus(mesa).get("_popup") as Control
+	var centro: Control = _menus(mesa).get("_painel_centro") as Control
 	assert_true(popup.visible, "Menu da estrela visivel.")
 	assert_true(centro != null and centro.visible, "Carta central existe e aparece atras do menu.")
 	assert_true(centro.get_index() < popup.get_index(),
 		"Popup por CIMA da carta central (centro %d, popup %d)." % [centro.get_index(), popup.get_index()])
-	assert_true(str((mesa.get("_lbl_centro") as Label).text).contains("Centro"), "A carta central diz o que e.")
+	assert_true(str((_menus(mesa).get("_lbl_centro") as Label).text).contains("Centro"), "A carta central diz o que e.")
 	# O menu sobrevive a navegar dentro dele (nao some nem volta atras).
 	Input.action_press("mover_baixo")
 	mesa.call("_mover", 0, 1)
@@ -190,14 +190,14 @@ func test_bug6_rival_vazio_menu_LP_dano_ATK_cheio_e_IA_direta() -> void:
 	Input.action_press("confirmar")
 	mesa.call("_confirmar")
 	Input.action_release("confirmar")
-	var popup: Control = mesa.get("_popup")
+	var popup: Control = _menus(mesa).get("_popup") as Control
 	assert_true(popup.visible, "Rival vazio: menu de alvo abriu.")
-	assert_eq(str(mesa.get("_popup_modo")), "alvo", "Menu esta no modo alvo (LP).")
-	var ops: Array = mesa.get("_popup_ops")
+	assert_eq(str(mesa.call("_popup_modo")), "alvo", "Menu esta no modo alvo (LP).")
+	var ops: Array = _menus(mesa).get("_popup_ops") as Array
 	assert_true(ops.size() > 0, "O menu de alvo tem opcoes.")
-	assert_true((mesa.get("_popup") as Control).get_child_count() > 0, "O menu de alvo desenha as opcoes.")
+	assert_true((_menus(mesa).get("_popup") as Control).get_child_count() > 0, "O menu de alvo desenha as opcoes.")
 	# Cancelar fecha o menu de alvo.
-	mesa.set("_pad_popup_idx", 1)
+	mesa.call("_set_pad_popup_idx", 1)
 	Input.action_press("confirmar")
 	mesa.call("_confirmar")
 	Input.action_release("confirmar")
@@ -209,8 +209,8 @@ func test_bug6_rival_vazio_menu_LP_dano_ATK_cheio_e_IA_direta() -> void:
 	mesa.call("_confirmar")
 	Input.action_release("confirmar")
 	assert_true(popup.visible, "Magia rival vazia tambem oferece o direto.")
-	assert_eq(str(mesa.get("_popup_modo")), "alvo", "Magia: menu tambem e de alvo (LP).")
-	mesa.set("_pad_popup_idx", 0)
+	assert_eq(str(mesa.call("_popup_modo")), "alvo", "Magia: menu tambem e de alvo (LP).")
+	mesa.call("_set_pad_popup_idx", 0)
 	var inst_atk: Dictionary = (st.players[0] as Dictionary)["monster"][slot_atk] as Dictionary
 	var atk_esperado: int = int(inst_atk.get("atk", 0))
 	assert_true(atk_esperado > 0, "Preparo: atacante tem ATK %d." % atk_esperado)
