@@ -161,13 +161,14 @@ func _ready() -> void:
 	_criar_cursor()
 	var state: Dictionary = ProjectLoaderScript.load_initial_state()
 	var data: Dictionary = state.get("data", {})
-	# Arena do duel_setup (só DESENHO): com --project válido sai da pasta
-	# informada; sem o argumento (ou pasta inválida), da embutida.
+	# D50: a arena é o DADO e há só uma (a oficial do jogo). O `arena_id` do
+	# setup é ignorado de propósito, com aviso.
 	var arena_id := str((data.get("duel_setup", {}) as Dictionary).get("arena_id", "arena_starter"))
 	_arena_data = BoardLayoutScript.load_arena_data(BoardLayoutScript.project_arena_path(arena_id))
 	_arena_layout = (_arena_data.get("slots", {}) as Dictionary)
+	BoardLayoutScript.valida_arena_oficial(_arena_layout)
 	if _arena_layout.is_empty():
-		print("[TABLE] Aviso: arena não carregou, usando grade padrão.")
+		print("[TABLE] ERRO: a arena oficial nao carregou. Sem ela o campo nao e desenhado (D50, nao ha grade no codigo).")
 	else:
 		var h0: Dictionary = BoardLayoutScript.get_hand(_arena_data, 0)
 		var h1: Dictionary = BoardLayoutScript.get_hand(_arena_data, 1)
