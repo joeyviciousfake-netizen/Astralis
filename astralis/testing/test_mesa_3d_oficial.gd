@@ -242,20 +242,20 @@ func test_posicao_carta_exatamente_no_painel() -> void:
 	var p1_4: Vector3 = mesa.call("_pos_slot", 1, "monstro", 4)
 	assert_almost_eq(p0_0.x, -p1_0.x, 0.001, "Espelho do rival: p1_m0 é o oposto de p0_m0 (x).")
 	assert_almost_eq(absf(p0_4.x - p0_0.x), absf(p1_0.x - p1_4.x), 0.001, "Distância do espelho é a mesma dos 2 lados.")
-	# A ESCALA é uniforme: a mesma escala vale no eixo X e no Z do dado.
-	# D44: a fileira de MAGIA andou no eixo Z (item 5 do usuário: aproximá-la
-	# do monstro), então a medida do eixo Z desconta o D44. Fora isso a trava
-	# é a MESMA, com a mesma tolerância: o que não pode é a escala do campo
-	# diferir entre X e Z.
+	# A ESCALA é uniforme: a mesma escala vale no eixo X e no Z do dado. E
+	# como a arena tem UM valor só (D49: 263 no passo horizontal E no vão
+	# vertical monstro->magia), a comparação é agora EXATA, sem nenhum
+	# desconto: o que não pode é a escala do campo diferir entre X e Z, nem a
+	# fileira de magia andar fora do dado (o D44 que fazia isso foi removido).
 	var x0: Vector3 = mesa.call("_pos_slot", 0, "monstro", 0)
 	var x1: Vector3 = mesa.call("_pos_slot", 0, "monstro", 1)
 	var z0: Vector3 = mesa.call("_pos_slot", 0, "monstro", 0)
 	var z1: Vector3 = mesa.call("_pos_slot", 0, "magia", 0)
 	var px_arena: float = BoardLayout.get_pos(mesa.get("_arena_layout"), BoardLayout.slot_id(0, "monstro", 1), Vector2(0, 0)).x - BoardLayout.get_pos(mesa.get("_arena_layout"), BoardLayout.slot_id(0, "monstro", 0), Vector2(0, 0)).x
 	var pz_arena: float = BoardLayout.get_pos(mesa.get("_arena_layout"), BoardLayout.slot_id(0, "magia", 0), Vector2(0, 0)).y - BoardLayout.get_pos(mesa.get("_arena_layout"), BoardLayout.slot_id(0, "monstro", 0), Vector2(0, 0)).y
-	var d44: float = float(mesa.get("APROXIMA_MAGIA_VOCE"))
-	assert_almost_eq(absf(x1.x - x0.x) / px_arena, (absf(z1.z - z0.z) + d44) / pz_arena, 0.0001,
-		"A escala é a mesma nos 2 eixos (uniforme), descontando o D44 da magia.")
+	assert_eq(px_arena, pz_arena, "D49: o passo horizontal e o vão vertical monstro->magia são o MESMO valor no dado.")
+	assert_almost_eq(absf(x1.x - x0.x) / px_arena, absf(z1.z - z0.z) / pz_arena, 0.0001,
+		"A escala é a mesma nos 2 eixos (uniforme), sem nenhum desvio por tipo de slot.")
 
 
 func test_menu_estrela_lista_guardians_reais() -> void:
@@ -558,14 +558,15 @@ func test_maos_centralizadas_no_x_do_campo() -> void:
 	assert_almost_eq(cur.x, p0_m.x, 0.001, "Cursor da mão bate com a carta centralizada.")
 
 
-func test_d44_magia_aproxima_e_mao_vem_para_a_camera() -> void:
-	# D44, dois pedidos do usuário na MESMA leva:
-	#   item 5  — a fileira de MAGIA se aproxima da de MONSTRO até o vão
-	#             vertical ficar igual ao vão horizontal entre dois slots
-	#             vizinhos. A fileira de MONSTRO NÃO SE MEXE (nem X nem Z).
-	#   item 10 — a carta da sua mão NÃO CRESCE (a proporção real 59x86
-	#             fica intocada): a mão é que vem mais PERTO DA CÂMERA.
-	# Tudo medido no jogo de verdade (1920x1080), com a câmera real.
+func test_d49_grade_perfeita_um_valor_so_e_mao_vem_para_a_camera() -> void:
+	# D49 (pedido do usuário: "corrija a distância entre os slots, eles têm que
+	# ficar PERFEITOS", com duas regras: NÃO mexer na distância entre a fileira
+	# de monstros do jogador e a do rival, e usar a distância horizontal dos
+	# monstros como valor único em todo o campo) + D44 item 10, que continua
+	# valendo: a carta da sua mão NÃO CRESCE, a mão é que vem mais PERTO DA
+	# CÂMERA. Tudo medido POR CÓDIGO (posição de mundo), nunca por foto: a
+	# perspectiva faz o mesmo intervalo aparecer com 276 px na fileira da
+	# frente e 220 px no fundo, e isso é projeção, não erro (doc 15 §15.4).
 	var mesa: Node = await _mesa3d_nova()
 	var cam := _n3d(mesa, "PivoMesa/Camera3D") as Camera3D
 	var lay = mesa.get("_arena_layout")
@@ -576,61 +577,56 @@ func test_d44_magia_aproxima_e_mao_vem_para_a_camera() -> void:
 	var c_y: float = float(mesa.get("CENTRO_Y"))
 	var div: float = float(mesa.get("DIV"))
 	var topo: float = float(mesa.get("TOPO"))
-	var ap_v: float = float(mesa.get("APROXIMA_MAGIA_VOCE"))
-	var ap_r: float = float(mesa.get("APROXIMA_MAGIA_RIVAL"))
 
-	# --- 1. A fileira de MONSTRO é a composição pura do dado, sem nudge ------
+	# --- 1. Os 20 slots são o DADO PURO: nenhum desvio por tipo de slot ------
 	# O teste recalcula o transform ESCALA_CAMPO/DESLOC_CAMPO do jeito que o
-	# jogo faz e exige igualdade EXATA: se um dia alguém mexer no monstro,
-	# esta trava quebra junto.
+	# jogo faz e exige igualdade EXATA nos 20 (o D44 deslocava a fileira de
+	# magia com dois números chutados; não existe mais nada disso).
 	for lado in [0, 1]:
-		for i in range(5):
-			var sid := BoardLayout.slot_id(lado, "monstro", i)
-			var p2: Vector2 = BoardLayout.get_pos(lay, sid, BoardLayout.default_pos(sid))
-			var puro := Vector3((p2.x - c_x) / div * escala + desl.x, topo,
-				(p2.y - c_y) / div * escala + desl.y)
-			var real: Vector3 = mesa.call("_pos_slot", lado, "monstro", i)
-			assert_almost_eq(real.x, puro.x, 0.000001,
-				"Monstro p%d_%d no X puro do dado (não encostado no D44)." % [lado, i])
-			assert_almost_eq(real.z, puro.z, 0.000001,
-				"Monstro p%d_%d no Z puro do dado (NÃO se mexeu no D44)." % [lado, i])
+		for tipo in ["monstro", "magia"]:
+			for i in range(5):
+				var sid := BoardLayout.slot_id(lado, tipo, i)
+				var p2: Vector2 = BoardLayout.get_pos(lay, sid, BoardLayout.default_pos(sid))
+				var puro := Vector3((p2.x - c_x) / div * escala + desl.x, topo,
+					(p2.y - c_y) / div * escala + desl.y)
+				var real: Vector3 = mesa.call("_pos_slot", lado, tipo, i)
+				assert_almost_eq(real.x, puro.x, 0.000001,
+					"%s p%d_%d no X puro do dado." % [tipo, lado, i])
+				assert_almost_eq(real.z, puro.z, 0.000001,
+					"%s p%d_%d no Z puro do dado (sem desvio escondido)." % [tipo, lado, i])
 
-	# --- 2. Só a MAGIA se mexe, e no sentido certo de cada lado --------------
-	# A SUA sobe (z MENOR = mais longe da câmera, aproximando do monstro) e a
-	# do RIVAL desce (z MAIOR = mais perto). A referência é o z PURO da própria
-	# linha de magia: o D44 é uma/presentation de afastamento, não um pitch
-	# novo entre as fileiras.
+	# --- 2. UM VALOR SÓ: o mesmo intervalo nas 6 direções do campo -----------
+	# O valor de referência é o passo horizontal entre dois monstros vizinhos
+	# do MESMO lado. Ele tem que ser idêntico (a) nos 4 passos de cada fileira,
+	# (b) na fileira de magia dos dois lados, e (c) no vão vertical
+	# monstro->magia dos dois lados. Se qualquer um desses differ, o campo não
+	# está com a grade perfeita e o teste diz qual.
+	var ref: float = absf(float(mesa.call("_pos_slot", 0, "monstro", 1).x) - float(mesa.call("_pos_slot", 0, "monstro", 0).x))
 	for lado in [0, 1]:
-		# O sinal é o do lado: a SUA magia tem z MENOR (afasta do monstro, que
-		# fica mais perto da câmera), a do RIVAL tem z MAIOR.
-		var off: float = -ap_v if lado == 0 else ap_r
-		for i in range(5):
-			var sid_s := BoardLayout.slot_id(lado, "magia", i)
-			var p2s: Vector2 = BoardLayout.get_pos(lay, sid_s, BoardLayout.default_pos(sid_s))
-			var puro_s := Vector3((p2s.x - c_x) / div * escala + desl.x, topo,
-				(p2s.y - c_y) / div * escala + desl.y)
-			var zm: Vector3 = mesa.call("_pos_slot", lado, "monstro", i)
-			var zs: Vector3 = mesa.call("_pos_slot", lado, "magia", i)
-			assert_almost_eq(zs.z, puro_s.z + off, 0.000001,
-				"Magia p%d_%d afastou EXATAMENTE o D44 em z." % [lado, i])
-			assert_almost_eq(zs.x, puro_s.x, 0.000001,
-				"Magia p%d_%d não mexeu no X (só a distância vertical muda)." % [lado, i])
-			if lado == 0:
-				assert_true(zs.z < puro_s.z, "Sua magia %d subiu (mais longe da câmera)." % i)
-				assert_true(zs.z > zm.z, "Sua magia %d continua ABAIXO do monstro %d." % [i, i])
-			else:
-				assert_true(zs.z > puro_s.z, "Magia do rival %d desceu (mais perto da câmera)." % i)
-				assert_true(zs.z < zm.z, "Magia do rival %d continua ACIMA do monstro %d." % [i, i])
+		for tipo in ["monstro", "magia"]:
+			for i in range(4):
+				var a: Vector3 = mesa.call("_pos_slot", lado, tipo, i)
+				var b: Vector3 = mesa.call("_pos_slot", lado, tipo, i + 1)
+				assert_almost_eq(absf(b.x - a.x), ref, 0.000001,
+					"Passo horizontal %s p%d entre %d e %d = %.4f (ref %.4f)." % [tipo, lado, i, i + 1, absf(b.x - a.x), ref])
+		var zm: Vector3 = mesa.call("_pos_slot", lado, "monstro", 2)
+		var zs: Vector3 = mesa.call("_pos_slot", lado, "magia", 2)
+		assert_almost_eq(absf(zs.z - zm.z), ref, 0.000001,
+			"Vão vertical monstro->magia de p%d = %.4f = o passo horizontal (%.4f)." % [lado, absf(zs.z - zm.z), ref])
+		# E a ordem das fileiras continua a do dado: magia de p0 ABAIXO do
+		# monstro dele, magia de p1 ACIMA do monstro dele.
+		if lado == 0:
+			assert_true(zs.z > zm.z, "Sua magia continua ABAIXO do seu monstro.")
+		else:
+			assert_true(zs.z < zm.z, "A magia do rival continua ACIMA do monstro dele.")
 
-	# --- 3. O vão VERTICAL bate com o vão HORIZONTAL, medido em pixels ------
-	# O usuário pediu "o mesmo espaçamento dos slots que são um lado do outro".
-	# Tolerância de 4 px: é a diferença entre o ladrilho ser visto de cima
-	# (perspectiva) e de lado — não dá para ser 0.
-	var vh := _vao_horizontal_px(mesa, cam, 0, peca)
-	for lado in [0, 1]:
-		var vv := _vao_vertical_px(mesa, cam, lado, peca)
-		assert_almost_eq(vv, vh, 4.0,
-			"Vão vertical de p%d (%.1f px) = vão horizontal (%.1f px)." % [lado, vv, vh])
+	# --- 3. A fileira de monstros do JOGADOR e a do RIVAL: INTOCADAS ---------
+	# Regra 1 do usuário: esta distância (390 no dado) fica congelada. Ela não
+	# faz parte da grade de 263 e nenhuma mudança deste D49 pode mexer nela.
+	var p0m: Vector2 = BoardLayout.get_pos(lay, BoardLayout.slot_id(0, "monstro", 2), Vector2(0, 0))
+	var p1m: Vector2 = BoardLayout.get_pos(lay, BoardLayout.slot_id(1, "monstro", 2), Vector2(0, 0))
+	assert_eq(p0m.y - p1m.y, 390.0, "A distância entre as fileiras de monstro dos 2 lados continua 390 (congelada).")
+	assert_ne(absf(p0m.y - p1m.y), 263.0, "A distância dos monstros NÃO virou o valor da grade (263).")
 
 	# --- 4. A carta da mão NÃO cresceu de verdade: o mundo é o mesmo -------
 	var st = mesa.get("_st")
@@ -693,24 +689,11 @@ func _faixa_px(mesa: Node, cam: Camera3D, lado: int, tipo: String, peca: float) 
 				b = maxf(b, q.y)
 	return Vector2(t, b)
 
-## Vão entre a fileira de monstro e a de magia, borda a borda, em pixels.
-func _vao_vertical_px(mesa: Node, cam: Camera3D, lado: int, peca: float) -> float:
-	var m := _faixa_px(mesa, cam, lado, "monstro", peca)
-	var s := _faixa_px(mesa, cam, lado, "magia", peca)
-	if lado == 1:
-		return m.x - s.y
-	return s.x - m.y
-
-
-## Vão entre dois slots vizinhos de uma fileira, borda a borda, em pixels: a
-## borda de uma coluna até a borda da vizinha, no mesmo Z do meio do ladrilho.
-func _vao_horizontal_px(mesa: Node, cam: Camera3D, lado: int, peca: float) -> float:
-	var a := _n3d(mesa, "Campo/Slots/Painel_p%d_m4" % lado) as Node3D
-	var b := _n3d(mesa, "Campo/Slots/Painel_p%d_m3" % lado) as Node3D
-	var dir := 1.0 if a.position.x < b.position.x else -1.0
-	var ba := cam.unproject_position(a.position + Vector3(dir * peca * 0.5, 0.02, 0.0))
-	var bb := cam.unproject_position(b.position + Vector3(-dir * peca * 0.5, 0.02, 0.0))
-	return absf(bb.x - ba.x)
+## D49: os helpers de vão em PIXEL (_vao_vertical_px / _vao_horizontal_px)
+## foram removidos de propósito. Eles mediam o vão na tela para tentar igualar
+## monstro->magia com o horizontal, e isso não dá para judging: a perspectiva
+## faz o mesmo intervalo de mundo aparecer com 276 px na fileira da frente e
+## 220 px no fundo. A trava agora é em MUNDO (no teste da grade perfeita).
 
 
 func test_topo_so_retratos_com_nome_e_nada_mais() -> void:

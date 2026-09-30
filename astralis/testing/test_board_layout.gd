@@ -115,20 +115,28 @@ func test_espelho_p1_x_invertido() -> void:
 
 func test_espelho_p1_fileiras_perto_longe() -> void:
 	# D25 ESPELHO (só desenho): monstro perto do centro, magia longe.
-	# D48: fileiras da arena OFICIAL (mesmas do arena_starter.json).
+	# D49: fileiras da arena OFICIAL, com UM valor só (263) no vão monstro->magia.
 	var m: Vector2 = BoardLayoutScript.default_pos("p1_m0")
 	var s: Vector2 = BoardLayoutScript.default_pos("p1_s0")
 	assert_eq(m.y, BoardLayoutScript.Y_RIVAL_MONSTRO, "Fileira rival monstro = Y_RIVAL_MONSTRO.")
 	assert_eq(s.y, BoardLayoutScript.Y_RIVAL_MAGIA, "Fileira rival magia = Y_RIVAL_MAGIA.")
 	assert_eq(m.y, 305.0, "Rival monstro y=305 (embaixo/perto do centro).")
-	assert_eq(s.y, 10.0, "Rival magia y=10 (cima/longe do centro).")
+	assert_eq(s.y, 42.0, "Rival magia y=42 (cima/longe do centro).")
 	assert_true(m.y > s.y, "Rival monstro fica abaixo da magia (perto do centro).")
 	for i in range(5):
 		assert_eq(BoardLayoutScript.default_pos("p1_m%d" % i).y, 305.0, "Rival monstro %d na fileira 305." % i)
-		assert_eq(BoardLayoutScript.default_pos("p1_s%d" % i).y, 10.0, "Rival magia %d na fileira 10." % i)
-	# Você continua intacto (monstro 695 perto, magia 995 longe).
+		assert_eq(BoardLayoutScript.default_pos("p1_s%d" % i).y, 42.0, "Rival magia %d na fileira 42." % i)
+	# Você continua intacto (monstro 695 perto, magia 958 longe).
 	assert_eq(BoardLayoutScript.default_pos("p0_m0").y, 695.0, "Você monstro y=695 (cima/perto).")
-	assert_eq(BoardLayoutScript.default_pos("p0_s0").y, 995.0, "Você magia y=995 (baixo/longe).")
+	assert_eq(BoardLayoutScript.default_pos("p0_s0").y, 958.0, "Você magia y=958 (baixo/longe).")
+	# D49: o vão monstro->magia é o MESMO valor dos dois lados, e é o mesmo do
+	# passo horizontal. Uma distância só em todo o campo.
+	var passo: float = BoardLayoutScript.default_pos("p0_m1").x - BoardLayoutScript.default_pos("p0_m0").x
+	assert_eq(absf(BoardLayoutScript.default_pos("p0_s0").y - BoardLayoutScript.default_pos("p0_m0").y), passo, "D49: vão monstro->magia do jogador = passo horizontal.")
+	assert_eq(absf(BoardLayoutScript.default_pos("p1_m0").y - BoardLayoutScript.default_pos("p1_s0").y), passo, "D49: vão monstro->magia do rival = passo horizontal.")
+	# E a distância entre as fileiras de monstro dos 2 lados segue CONGELADA
+	# em 390: o usuário pediu para não mexer nela (não faz parte da grade).
+	assert_eq(BoardLayoutScript.default_pos("p0_m0").y - BoardLayoutScript.default_pos("p1_m0").y, 390.0, "D49: distância entre as fileiras de monstro dos 2 lados continua 390.")
 
 
 func test_espelho_arena_starter_igual_fallback() -> void:
@@ -144,9 +152,9 @@ func test_espelho_arena_starter_igual_fallback() -> void:
 	assert_true(p1_m0.x > p1_m4.x, "Starter: p1_m0 à direita de p1_m4.")
 	assert_eq(p1_m0.x, p0_m4.x, "Starter: p1_m0.x == p0_m4.x (espelho).")
 	assert_eq(p1_m0, Vector2(1684, 305), "Starter: p1_m0 na grade oficial.")
-	assert_eq(BoardLayoutScript.get_pos(slots, "p1_s0"), Vector2(1684, 10), "Starter: p1_s0 na grade oficial.")
+	assert_eq(BoardLayoutScript.get_pos(slots, "p1_s0"), Vector2(1684, 42), "Starter: p1_s0 na grade oficial.")
 	assert_eq(BoardLayoutScript.get_pos(slots, "p0_m0"), Vector2(632, 695), "Starter: p0_m0 na grade oficial.")
-	assert_eq(BoardLayoutScript.get_pos(slots, "p0_s0"), Vector2(632, 995), "Starter: p0_s0 na grade oficial.")
+	assert_eq(BoardLayoutScript.get_pos(slots, "p0_s0"), Vector2(632, 958), "Starter: p0_s0 na grade oficial.")
 	var r: Rect2 = BoardScript.slot_rect(1, "monstro", 0, slots)
 	assert_eq(r.position, Vector2(1684, 305), "slot_rect usa o XY da arena.")
 

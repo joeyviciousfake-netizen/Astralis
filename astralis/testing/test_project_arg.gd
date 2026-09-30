@@ -342,9 +342,9 @@ func test_arena_ausente_no_projeto_usa_grade_padrao_com_espelho() -> void:
 	assert_eq(BoardLayoutScript.default_pos("p1_s4").x, BoardLayoutScript.default_pos("p1_m4").x, "Magia do rival espelha a coluna do monstro.")
 	assert_eq(BoardLayoutScript.default_pos("p1_m2").x, BoardLayoutScript.default_pos("p0_m2").x, "Meio espelha no mesmo X.")
 	assert_eq(BoardLayoutScript.default_pos("p1_m0").y, 305.0, "Monstro do rival perto do centro (y=305).")
-	assert_eq(BoardLayoutScript.default_pos("p1_s0").y, 10.0, "Magia do rival longe (y=10).")
+	assert_eq(BoardLayoutScript.default_pos("p1_s0").y, 42.0, "Magia do rival longe (y=42).")
 	assert_eq(BoardLayoutScript.default_pos("p0_m0").y, 695.0, "Seu monstro perto (y=695).")
-	assert_eq(BoardLayoutScript.default_pos("p0_s0").y, 995.0, "Sua magia longe (y=995).")
+	assert_eq(BoardLayoutScript.default_pos("p0_s0").y, 958.0, "Sua magia longe (y=958).")
 	# A mão também cai no fallback embutido (nada quebra sem arena).
 	assert_eq(BoardLayoutScript.get_hand(arena, 0), BoardLayoutScript.default_hand(0), "Mão p0 no fallback embutido (1240/980/95).")
 	assert_eq(BoardLayoutScript.get_hand(arena, 1), BoardLayoutScript.default_hand(1), "Mão p1 no fallback embutido (1240/20/60).")
@@ -353,6 +353,6 @@ func test_arena_ausente_no_projeto_usa_grade_padrao_com_espelho() -> void:
 	var starter_slots: Dictionary = BoardLayoutScript.load_arena(BoardLayoutScript.starter_arena_path())
 	assert_eq(starter_slots.size(), 20, "arena_starter (pasta de teste) também tem 20 slots.")
 	assert_eq(starter_slots["p1_m0"] as Vector2, Vector2(1684, 305), "Starter: p1_m0 na arena oficial.")
-	assert_eq(starter_slots["p0_s0"] as Vector2, Vector2(632, 995), "Starter: p0_s0 na arena oficial.")
+	assert_eq(starter_slots["p0_s0"] as Vector2, Vector2(632, 958), "Starter: p0_s0 na arena oficial.")
 	for sid in starter_slots.keys():
 		assert_eq(BoardLayoutScript.default_pos(str(sid)), starter_slots[sid] as Vector2, "Slot '%s': sem arena = com arena (mesma arena)." % str(sid))
