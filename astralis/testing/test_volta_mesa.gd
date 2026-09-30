@@ -121,7 +121,6 @@ func test_a_camera_e_filha_do_pivo_e_nao_se_move() -> void:
 func test_a_lente_continua_no_eixo_e_o_centro_do_campo_no_lugar() -> void:
 	var mesa: Node = await _mesa3d_nova()
 	var cam := mesa.get_node(CAMERA) as Camera3D
-	var pivo := mesa.get_node(PIVO) as Node3D
 	assert_eq(cam.frustum_offset, Vector2.ZERO,
 		"D47: a lente continua NO EIXO (frustum_offset = 0) - nada de torto na volta.")
 	# Tudo medido na MESMA passagem, antes e depois: y de tela do centro da
@@ -131,10 +130,9 @@ func test_a_lente_continua_no_eixo_e_o_centro_do_campo_no_lugar() -> void:
 	var x_meu_0: float = cam.unproject_position(mesa.call("_pos_slot", 0, "monstro", 2)).x
 	# Na visão do JOGADOR a fileira dele é a de baixo (y MAIOR = mais embaixo).
 	assert_true(y_meu_0 > y_rival_0,
-		"Visão do jogador: a fileira dele é a de BAIXO (y dele %.0f > y do rival %.0f)." % [
+		"Visão do jogador: a fileira dele é de BAIXO (y dele %.0f > y do rival %.0f)." % [
 			y_meu_0, y_rival_0])
-	mesa.set("_giro_campo", 180.0)
-	pivo.rotation_degrees = Vector3(0.0, 180.0, 0.0)
+	mesa.call("_girar_campo", 180.0)
 	await wait_process_frames(2)
 	var y_meu_180: float = cam.unproject_position(mesa.call("_pos_slot", 0, "monstro", 2)).y
 	var y_rival_180: float = cam.unproject_position(mesa.call("_pos_slot", 1, "monstro", 2)).y
@@ -151,8 +149,115 @@ func test_a_lente_continua_no_eixo_e_o_centro_do_campo_no_lugar() -> void:
 	# perspectiva, então a distância na tela não é linear na vertical — as duas
 	# fileiras estão a distâncias diferentes da câmera. O que vale é a ordem,
 	# que é a de cima/baixo, e ela é a que os dois asserts acima cravam.)
-	mesa.set("_giro_campo", 0.0)
-	pivo.rotation_degrees = Vector3.ZERO
+	mesa.call("_girar_campo", 0.0)
+	await wait_process_frames(2)
+
+
+## (2b) D51 — A VISTA DO RIVAL É O ESPELHO EXATO DA DO JOGADOR. A trava que
+## garante que a faixa 2D do meio (que NÃO se mexe, nunca) caia no vão entre
+## as duas fileiras de monstro nas DUAS perspectivas, sem gambiarra nenhuma.
+## O que a D47 deixou torto: o pivô da volta está na origem (0,0,0) e o campo
+## NÃO é simétrico em relação a ela — o plano de simetria do campo (a média
+## das duas fileiras de monstro da arena oficial) está em outro Z. Girando em
+## torno da origem, a câmera do rival chega perto demais da mesa, o campo
+## aparece mais para baixo e a faixa sai do vão. Aqui a trava: a câmera do
+## jogador é a de sempre (byte a byte) e a do rival cai no MESMO vão, com as
+## mesmas margens.
+func test_a_vista_do_rival_e_o_espelho_exato_da_do_jogador() -> void:
+	var mesa: Node = await _mesa3d_nova()
+	var cam := mesa.get_node(CAMERA) as Camera3D
+	var pos_0 := cam.position
+	# (a) A VISTA DO JOGADOR NÃO MUDA: a câmera local é a de sempre, e a
+	# correção do ângulo do rival vale 0 em 0 graus.
+	var z0: float = float(mesa.call("_z_local_da_camera", 0.0))
+	assert_almost_eq(z0, pos_0.z, 0.0001,
+		"D51: em 0 graus a câmera do jogador é a de sempre (nada muda na sua vez).")
+	# (b) O PLANO DE SIMETRIA VEM DO DADO: a média das duas fileiras de monstro
+	# da arena oficial (a de cima e a de baixo da tela, na vista do jogador).
+	var sim: float = float(mesa.get("_z_simetria"))
+	var z_p1 := (mesa.call("_pos_slot", 1, "monstro", 2) as Vector3).z
+	var z_p0 := (mesa.call("_pos_slot", 0, "monstro", 2) as Vector3).z
+	assert_almost_eq(sim, (z_p1 + z_p0) * 0.5, 0.0001,
+		"D51: o plano de simetria do campo é a média das duas fileiras de monstro do DADO.")
+	# (c) A CÂMERA DO RIVAL VAI AO ESPELHO: 2x o desvio do pivô para o lado de
+	# dentro, para a distância em relação ao plano do campo ser a mesma dos
+	# dois lados.
+	var z180: float = float(mesa.call("_z_local_da_camera", 180.0))
+	assert_almost_eq(z180, pos_0.z - 2.0 * sim, 0.0001,
+		"D51: em 180 graus a câmera recua exatamente o desvio do pivô (o espelho).")
+	mesa.call("_girar_campo", 180.0)
+	await wait_process_frames(2)
+	assert_almost_eq(cam.position.z, z180, 0.0001,
+		"D51: depois da volta a câmera está no ponto do espelho.")
+	# (d) A TRAVA DE VERDADE: o VÃO entre as duas fileiras de monstro é o MESMO
+	# nas duas vistas. A faixa do meio é 2D, não se mexe, e foi montada com a
+	# medida do vão da vista do jogador — então é isso que garante que ela
+	# caia entre os slots de monstro dos dois lados.
+	var vao_jogador := _vao_das_fileiras(mesa)
+	var faixa := mesa.get("_faixa2d") as Control
+	mesa.call("_girar_campo", 0.0)
+	await wait_process_frames(2)
+	var vao_rival := _vao_das_fileiras(mesa)
+	assert_almost_eq(vao_rival.x, vao_jogador.x, 1.0,
+		"D51: o topo do vão entre as fileiras é o MESMO nas duas vistas (%.1f vs %.1f)." % [
+			vao_rival.x, vao_jogador.x])
+	assert_almost_eq(vao_rival.y, vao_jogador.y, 1.0,
+		"D51: a base do vão entre as fileiras é a MESMA nas duas vistas (%.1f vs %.1f)." % [
+			vao_rival.y, vao_jogador.y])
+	# E a ida e volta devolve a SUA câmera exatamente onde estava.
+	assert_eq(cam.position, pos_0,
+		"D51: depois de ir ao rival e voltar, a câmera do jogador está no mesmo lugar (byte a byte).")
+	# (e) E a faixa do meio cai DENTRO do vão, com a mesma folga em cima e em
+	# baixo — que é o "exatamente certa entre os slots de monstro" do usuário.
+	if faixa != null:
+		var folga_cima := faixa.position.y - vao_rival.x
+		var folga_baixo := vao_rival.y - (faixa.position.y + faixa.size.y)
+		assert_true(folga_cima > 0.0 and folga_baixo > 0.0,
+			"D51: a faixa do meio está DENTRO do vão na vista do rival (folgas %.1f / %.1f)." % [
+				folga_cima, folga_baixo])
+		assert_almost_eq(folga_cima, folga_baixo, 1.0,
+			"D51: a faixa fica CENTRADA no vão da vista do rival (folgas %.1f / %.1f)." % [
+				folga_cima, folga_baixo])
+		var folga_cima_j := faixa.position.y - vao_jogador.x
+		var folga_baixo_j := vao_jogador.y - (faixa.position.y + faixa.size.y)
+		assert_almost_eq(folga_cima, folga_cima_j, 1.0,
+			"D51: a folga de cima é a mesma nas duas vistas (a faixa não se mexe).")
+		assert_almost_eq(folga_baixo, folga_baixo_j, 1.0,
+			"D51: a folga de baixo é a mesma nas duas vistas (a faixa não se mexe).")
+	# (f) E a fileira de cada jogador cai no MESMO retângulo de tela que a do
+	# jogador na outra vista (é o espelho, não um redimensionamento).
+	for lado in [0, 1]:
+		var j := _fileira_de_monstro(mesa, lado)
+		mesa.call("_girar_campo", 180.0)
+		await wait_process_frames(2)
+		var r := _fileira_de_monstro(mesa, 1 - lado)
+		mesa.call("_girar_campo", 0.0)
+		await wait_process_frames(2)
+		assert_almost_eq(r.x, j.x, 1.0,
+			"D51: a fileira p%d ocupa o MESMO retângulo de tela nas duas vistas (topo %.1f vs %.1f)." % [
+				lado, r.x, j.x])
+		assert_almost_eq(r.y, j.y, 1.0,
+			"D51: a fileira p%d ocupa o MESMO retângulo de tela nas duas vistas (base %.1f vs %.1f)." % [
+				lado, r.y, j.y])
+
+
+## Retângulo de tela (topo, base) de uma fileira de monstro, sem depender de
+## qual lado a câmera está: as DUAS bordas do ladrilho, e a menor/maior y.
+func _fileira_de_monstro(mesa: Node, lado: int) -> Vector2:
+	var a := float(mesa.call("_borda_da_fileira_px", lado, "monstro", true))
+	var b := float(mesa.call("_borda_da_fileira_px", lado, "monstro", false))
+	return Vector2(minf(a, b), maxf(a, b))
+
+
+## O vão entre as DUAS fileiras de monstro, na vista em que a câmera está: a
+## base da fileira que está em cima e o topo da que está embaixo.
+func _vao_das_fileiras(mesa: Node) -> Vector2:
+	var f0 := _fileira_de_monstro(mesa, 0)
+	var f1 := _fileira_de_monstro(mesa, 1)
+	var cima := f0 if f0.x < f1.x else f1
+	var baixo := f1 if f0.x < f1.x else f0
+	return Vector2(cima.y, baixo.x)
+
 
 
 ## (3) A volta vai a 180 e VOLTA a 0, e o resultado e o mesmo com e sem render
@@ -250,8 +355,7 @@ func test_cada_jogador_ve_a_propria_fileira_na_ordem_normal() -> void:
 	await _campo_cheio(mesa, st)
 	var cam := mesa.get_node(CAMERA) as Camera3D
 	for giro in [0.0, 180.0]:
-		mesa.set("_giro_campo", giro)
-		(mesa.get("_pivo") as Node3D).rotation_degrees = Vector3(0.0, giro, 0.0)
+		mesa.call("_girar_campo", giro)
 		await wait_process_frames(2)
 		for lado in [0, 1]:
 			var x0: float = cam.unproject_position(mesa.call("_pos_slot", lado, "monstro", 0)).x
@@ -268,8 +372,8 @@ func test_cada_jogador_ve_a_propria_fileira_na_ordem_normal() -> void:
 				assert_true(x0 > x4,
 					"Volta %.0f: a fileira do outro ve o indice 0 a DIREITA (%.0f > %.0f) - e o espelho, de proposito." % [
 						giro, x0, x4])
-	mesa.set("_giro_campo", 0.0)
-	(mesa.get("_pivo") as Node3D).rotation_degrees = Vector3.ZERO
+	mesa.call("_girar_campo", 0.0)
+	await wait_process_frames(2)
 
 
 ## (7) O HUD 2D NAO gira: ele vira de carta. A escala e 1 em 0 e em 180, e 0
