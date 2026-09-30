@@ -15,18 +15,23 @@ extends RefCounted
 ## os MESMOS do schemas/examples/arenas/arena_starter.json, na mesma ordem.
 ## D48 travou isso em teste (test_grade_embutida_igual_arena_oficial): se um
 ## mudar, o outro tem que mudar junto, senão o jogo cai numa grade fantasma.
+## D49: a grade é PERFEITA — UM valor só (263) em TODO o campo: o passo
+## horizontal entre slots vizinhos E o vão vertical monstro->magia, nos dois
+## lados e nos dois tipos. Os 305/695 dos monstros ficam CONGELADOS de propósito
+## (a distância entre a fileira do jogador e a do rival, 390, não faz parte da
+## grade e o usuário pediu para não mexer nela).
 const SLOT := 165.0
 ## GAP não é estética: SLOT + GAP = 263 = o PASSO oficial da arena (632→1684).
 const GAP := 98.0
 const GRID_X := 632.0
 ## Fileiras em ESPELHO (só desenho): monstro sempre perto do centro,
-## magia sempre longe. Rival/cima: monstro 305 (embaixo/perto),
-## magia 10 (cima/longe). Você/baixo: monstro 695 (cima/perto),
-## magia 995 (baixo/longe).
+## magia sempre longe, e sempre a 263 do monstro do MESMO lado.
+## Rival/cima: monstro 305, magia 42 (263 acima). Você/baixo: monstro 695,
+## magia 958 (263 abaixo).
 const Y_RIVAL_MONSTRO := 305.0
-const Y_RIVAL_MAGIA := 10.0
+const Y_RIVAL_MAGIA := 42.0
 const Y_VOCE_MONSTRO := 695.0
-const Y_VOCE_MAGIA := 995.0
+const Y_VOCE_MAGIA := 958.0
 
 const NULO := Vector2(-99999, -99999)
 
@@ -152,7 +157,7 @@ static func eh_slot_valido(slot: String) -> bool:
 ## duel_board.gd). Volta (-1,-1) se ID inválido.
 ## Lado 0 (você/baixo): X crescente 632→1684 (índice 0 à esquerda).
 ## Lado 1 (rival/cima): X ESPELHADO 1684→632 (índice 0 à direita) +
-## fileiras trocadas (monstro 305 perto do centro, magia 10 longe).
+## fileiras trocadas (monstro 305 perto do centro, magia 42 longe).
 ## Só DESENHO: IDs/lógica continuam no índice.
 static func default_pos(slot: String) -> Vector2:
 	if not eh_slot_valido(slot):
@@ -197,7 +202,7 @@ static func starter_arena_path() -> String:
 ## D29: schemas/examples/ é SÓ TESTE. Com base de PROJETO (--project) e a
 ## arena ausente lá, NÃO lê de examples/ — devolve "" e a mesa usa a grade
 ## padrão embutida (default_layout/default_hand), que tem os MESMOS números
-## do arena_starter.json (x 632/895/1158/1421/1684, y 695/995/305/10,
+## do arena_starter.json (x 632/895/1158/1421/1684, y 695/958/305/42,
 ## mão p0 1240/980/95 e p1 1240/20/60). Só DESENHO: nenhuma regra muda.
 static func project_arena_path(arena_id: String = "arena_starter") -> String:
 	var aid := arena_id.strip_edges()
