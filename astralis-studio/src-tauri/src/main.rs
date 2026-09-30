@@ -205,8 +205,10 @@ fn pasta_projeto() -> Result<PathBuf, String> {
 // molde da carta é CONTEÚDO do usuário como cards/*.json — ignorado no git
 // em .gitignore — mas a PASTA precisa existir, senão o 1º Salvar do molde
 // não acha onde gravar).
-const PASTAS_ESQUELETO: [&str; 9] = [
-    "cards", "duelists", "decks", "arenas", "scenes", "layouts",
+const PASTAS_ESQUELETO: [&str; 8] = [
+    // D50: a pasta "arenas" SUMIU do esqueleto. A mesa é o dado do JOGO e há
+    // só uma (a oficial); um projeto não pode ter outra mesa.
+    "cards", "duelists", "decks", "scenes", "layouts",
     "assets/cards", "assets/portraits", "assets/backgrounds",
 ];
 
@@ -262,7 +264,7 @@ fn pasta_cartas() -> Result<PathBuf, String> {
 
 // ---- GATE DE CATÁLOGO (R4) ----
 // O que a carta / o deck / o duelista / a fusão pode citar = o que o PROJETO
-// tem de verdade (efeitos em effects.json; cartas/decks/arenas nas pastas).
+// tem de verdade (efeitos em effects.json; cartas/decks nas pastas).
 // Antes CADA ponto fazia `if !lista.is_empty() && !lista.contains(id)` —
 // fail-open: como o projeto nasce VAZIO (D29), a lista ficava sempre vazia e
 // a checamento INTEIRA pulava (qualquer id inventado passava). Agora o
@@ -1639,29 +1641,32 @@ struct PedidoDuelo {
     test_state: Option<serde_json::Value>,
 }
 
+/// D50: o jogo tem UMA arena só (a oficial dele). A lista não vem mais do
+/// projeto: `arena_starter` é o único id possível, e o campo `arena` do
+/// Duelo existe só porque o contrato `duel_setup` tem `arena_id` (o dado FM
+/// traz esse valor) — o runtime o ignora de propósito.
 #[tauri::command]
 fn listar_arenas() -> Vec<String> {
-    let mut v: Vec<String> = arenas_ids().into_iter().collect();
-    v.sort();
-    if v.is_empty() {
-        v.push("arena_starter".to_string());
-    }
-    v
+    vec!["arena_starter".to_string()]
 }
 
 /// Gate da arena do duelo rápido (R4) — o gate único com os textos da arena.
-/// Fica em função própria porque `jogar_duelo` é o único gate que devolve
-/// Result<…, String> (erro x aviso, e não lista de níveis), e assim os dois
-/// lados são testáveis sem abrir o jogo.
-fn checar_arena_do_duelo(catalogo: &Catalogo, arena: &str) -> Option<ErroValidacao> {
-    checar_catalogo(
-        catalogo,
-        arena,
-        "Arena",
-        "field-arena",
-        &format!("Arena \"{arena}\" não existe neste projeto. Clique em Duelo, aperte Avançado e escolha uma arena da lista."),
-        &format!("Este projeto ainda não tem arena própria: o Astralis vai usar a arena padrão dele ({arena}). Para usar a sua, coloque um arquivo .json em projects/default/arenas/."),
-    )
+/// D50: a mesa é do jogo, então NUNCA é erro o projeto não ter arena. O
+/// `arena_id` precisa ser o da arena oficial, e qualquer outro id é recusado
+/// com texto PT-BR (seria tentar trocar a mesa, e não existe outra).
+fn checar_arena_do_duelo(_catalogo: &Catalogo, arena: &str) -> Option<ErroValidacao> {
+    if arena.trim().is_empty() || arena.trim() == "arena_starter" {
+        return None;
+    }
+    Some(ErroValidacao {
+        nivel: "erro".to_string(),
+        campo: "arena_id".to_string(),
+        campo_id: "arena_starter".to_string(),
+        mensagem: format!(
+            "Arena \"{arena}\" nao existe: o jogo tem UMA mesa so (D50), a arena oficial. \
+             Em Duelo > Avancado a arena e a oficial do jogo; nao ha como trocar a mesa."
+        ),
+    })
 }
 
 /// Gate do Campo de Testes (contrato systems `duel_setup.test_state` V1) —
@@ -2320,13 +2325,10 @@ fn jogar_duelo(pedido: PedidoDuelo) -> Result<ResultadoOk, String> {
         }
     }
     let arena = if pedido.arena.trim().is_empty() { "arena_starter".to_string() } else { pedido.arena.trim().to_string() };
-    // Gate único (R4) também na arena — com uma diferença real: aqui não pode
-    // ser só erro. O projeto do editor NUNCA traz arena (o pack não tem) e a
-    // própria lista de arenas oferece "arena_starter" quando não há nenhuma
-    // (listar_arenas). Então: projeto COM arenas e id fora = erro; projeto
-    // SEM arena nenhuma = aviso que viaja na mensagem de sucesso do duelo —
-    // o jogo usa a arena padrão dele. Barra-error aqui deixaria ninguém jogar
-    // depois do D29.
+    // D50: a arena é do JOGO e há uma só. O projeto não tem mais `arenas/`,
+    // então o `arena_id` do setup só pode ser o da oficial — qualquer outro id
+    // é erro (seria tentar trocar a mesa, e não existe outra). Isso substitui
+    // o gate antigo do D29, em que projeto sem arena dava aviso.
     let arenas = Catalogo::de_set(&arenas_ids());
     let checagem_arena = checar_arena_do_duelo(&arenas, &arena);
     if let Some(e) = &checagem_arena {
@@ -3734,7 +3736,7 @@ fn json_tem_lista(caminho: &std::path::Path, chave: &str) -> bool {
 }
 
 fn projeto_tem_conteudo(proj: &std::path::Path) -> bool {
-    for sub in ["cards", "duelists", "decks", "arenas", "scenes", "layouts"] {
+    for sub in ["cards", "duelists", "decks", "scenes", "layouts"] {
         if pasta_tem_json(&proj.join(sub)) {
             return true;
         }
@@ -3794,7 +3796,7 @@ fn preparar_boot_para(proj: &std::path::Path) -> Result<ResultadoBoot, String> {
         });
     }
     let mut apagados = 0;
-    for sub in ["cards", "duelists", "decks", "arenas", "scenes", "layouts"] {
+    for sub in ["cards", "duelists", "decks", "scenes", "layouts"] {
         apagados += apagar_json_da_pasta(&proj.join(sub));
     }
     for sub in ["assets/cards", "assets/portraits", "assets/backgrounds"] {
@@ -3830,7 +3832,7 @@ static BOOT_JA_FEITO: AtomicBool = AtomicBool::new(false);
 
 fn contar_arquivos_projeto(proj: &std::path::Path) -> usize {
     let mut n = 0;
-    for sub in ["cards", "duelists", "decks", "arenas", "scenes", "layouts"] {
+    for sub in ["cards", "duelists", "decks", "scenes", "layouts"] {
         if let Ok(entries) = std::fs::read_dir(proj.join(sub)) {
             n += entries
                 .flatten()
@@ -4005,7 +4007,7 @@ mod testes {
         catalogo(ids)
     }
 
-    // Catálogo de QUALQUER pasta do projeto (cartas/decks/arenas/efeitos):
+    // Catálogo de QUALQUER pasta do projeto (cartas/decks/efeitos):
     // vazio = projeto zerado (D29), com ids = projeto com conteúdo.
     fn catalogo(ids: &[&str]) -> Catalogo {
         Catalogo::de_ids(ids.iter().map(|s| s.to_string()))
@@ -4454,21 +4456,19 @@ mod testes {
         assert!(checar_fusoes(&regra, &catalogo(&["card_fantasma"])).is_empty());
     }
 
-    // Ponto 6: arena do duelo rápido (o gate que NÃO pode virar erro sozinho:
-    // o projeto nunca traz arena e a lista oferece arena_starter).
+    // Ponto 6: arena do duelo rápido. D50: a mesa é do JOGO e há UMA só, então
+    // o id da arena oficial NUNCA é erro (não existe mais projeto sem arena, nem
+    // projeto com outra arena), e qualquer OUTRO id é erro.
     #[test]
     fn gate_arena_do_duelo() {
-        let vazio = checar_arena_do_duelo(&catalogo(&[]), "arena_starter").expect("sem arena = aviso");
-        assert!(!eh_erro(&vazio), "projeto sem arena não pode travar o duelo: {vazio:?}");
-        assert!(vazio.mensagem.contains("arena_starter"), "{}", vazio.mensagem);
-        assert!(vazio.mensagem.contains("projects/default/arenas/"), "{}", vazio.mensagem);
+        assert!(checar_arena_do_duelo(&catalogo(&[]), "arena_starter").is_none());
+        assert!(checar_arena_do_duelo(&catalogo(&["arena_x"]), "arena_starter").is_none());
+        assert!(checar_arena_do_duelo(&catalogo(&[]), "").is_none());
 
-        let fora = checar_arena_do_duelo(&catalogo(&["arena_x"]), "arena_y").expect("fora da lista = erro");
-        assert!(eh_erro(&fora), "projeto COM arenas e id errado tem que barrar: {fora:?}");
+        let fora = checar_arena_do_duelo(&catalogo(&["arena_x"]), "arena_y").expect("id fora = erro");
+        assert!(eh_erro(&fora), "id de arena que não é a oficial tem que barrar: {fora:?}");
         assert!(fora.mensagem.contains("arena_y"), "{}", fora.mensagem);
-        assert!(fora.mensagem.contains("Avançado"), "{}", fora.mensagem);
-
-        assert!(checar_arena_do_duelo(&catalogo(&["arena_x"]), "arena_x").is_none());
+        assert!(fora.mensagem.contains("UMA mesa"), "{}", fora.mensagem);
     }
 
     #[test]
@@ -5252,7 +5252,7 @@ mod testes {
     fn projeto_mora_em_projects_default() {
         let p = pasta_projeto().unwrap();
         assert!(p.ends_with("projects/default"), "projeto fora do lugar: {}", p.display());
-        for sub in ["cards", "duelists", "decks", "arenas"] {
+        for sub in ["cards", "duelists", "decks"] {
             assert!(p.join(sub).is_dir(), "faltou projects/default/{sub}");
         }
     }
@@ -5382,6 +5382,10 @@ mod testes {
         escrever_json_valor(&base.join("duelists").join("duelist_x.json"), &duelista_pack_valido("duelist_x", "deck_x"), "base").unwrap();
         let velhas: Vec<serde_json::Value> = (0..20).map(|_| serde_json::json!("card_x")).collect();
         escrever_json_valor(&base.join("decks").join("deck_x.json"), &serde_json::json!({"schema_version": 1, "id": "deck_x", "name": "X", "cards": velhas}), "base").unwrap();
+        // D50: `arenas/` não existe mais no esqueleto, mas um projeto velho
+        // pode ter a pasta — e ela tem que sumir no boot também (o jogo tem
+        // UMA mesa, e não é a do projeto).
+        std::fs::create_dir_all(base.join("arenas")).unwrap();
         escrever_json_valor(&base.join("arenas").join("arena_x.json"), &serde_json::json!({"schema_version": 1, "id": "arena_x", "name": "X"}), "base").unwrap();
         escrever_json_valor(&base.join("scenes").join("scene_x.json"), &serde_json::json!({"schema_version": 1, "id": "scene_x", "name": "X", "lines": [{"character": "A", "text": "Oi"}]}), "base").unwrap();
         escrever_json_valor(&base.join("fusions.json"), &serde_json::json!({"schema_version": 1, "recipes": [{"id": "fusion_x", "input": {"card_a": "card_x", "card_b": "card_y"}, "result": "card_x"}], "rules": []}), "base").unwrap();
@@ -5397,7 +5401,7 @@ mod testes {
         assert!(r.mensagem.contains("zerado"), "mensagem devia dizer que zerou: {}", r.mensagem);
         assert!(r.mensagem.contains("sem backup"), "mensagem devia dizer sem backup: {}", r.mensagem);
         // Esqueleto vazio recriado (pastas sem json + fusions/effects válidos).
-        for sub in ["cards", "duelists", "decks", "arenas", "scenes"] {
+        for sub in ["cards", "duelists", "decks", "scenes"] {
             assert!(!pasta_tem_json(&base.join(sub)), "{sub} devia voltar vazio");
         }
         let f: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(base.join("fusions.json")).unwrap()).unwrap();
@@ -5471,7 +5475,7 @@ mod testes {
         // devolve — de propósito NÃO é a constante PASTAS_ESQUELETO: se alguém
         // tirar uma pasta de lá, este teste quebra. É o contrato com o repo.
         let com_gitkeep = [
-            "arenas", "assets/backgrounds", "assets/cards", "assets/portraits",
+            "assets/backgrounds", "assets/cards", "assets/portraits",
             "cards", "decks", "duelists", "scenes",
         ];
         let base = projeto_boot_teste("gitkeep");
