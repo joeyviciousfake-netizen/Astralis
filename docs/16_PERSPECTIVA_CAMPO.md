@@ -572,15 +572,17 @@ usuario preferir o contrário.)
   - `d47_90.png` mostra o meio da volta: o campo visivelmente atravessado, a
     sua mão já do outro lado, e o HUD no meio do virar (placas estreitas, faixa
     com ~65% da largura).
-- **GUT**: `astralis/testing/test_volta_mesa.gd`, **10 testes / 96 asserts**, no
-  lugar do `test_perspectiva_campo.gd` (que foi apagado junto com a D46). Trava:
+- **GUT**: `astralis/testing/test_volta_mesa.gd`, **11 testes / 149 asserts**
+  (era 10/96 antes da D51, que acrescentou a trava do espelho), no lugar do
+  `test_perspectiva_campo.gd` (que foi apagado junto com a D46). Trava:
   a câmera é filha do pivô e não se move; a lente no eixo e o centro do campo no
   lugar; a volta vai a 180 e volta a 0 (e é idempotente); **as cartas do campo
   e as duas mãos não se mexem um milímetro**; o `GameState` não se mexe; cada
-  jogador vê a própria fileira na ordem normal; o HUD vira de carta e troca nos
-  90°; a faixa se espelha e volta; o painel continua neutro (D46b); e o
-  controle trava enquanto gira. Suíte inteira **177/177, 3781 asserts, 0
-  SCRIPT ERROR, 0 orphans**.
+  jogador vê a própria fileira na ordem normal; **a vista do rival é o espelho
+  exato da sua e a faixa do meio cai no mesmo vão nas duas** (D51, §16.16); o
+  HUD vira de carta e troca nos 90°; a faixa se espelha e volta; o painel
+  continua neutro (D46b); e o controle trava enquanto gira. Suíte inteira
+  **180/180, 3783 asserts, 0 SCRIPT ERROR, 0 orphans**.
 
 ### O que ficou em aberto (e é decisão do usuário, não do Lead)
 
@@ -590,7 +592,105 @@ a 23,5° do eixo da câmera, e o FOV é de 20° (10° para cada lado), então el
 sai **acima da tela**. Nenhuma posição de mão resolve isso sem colocar a mão
 do lado do rival no mundo. É o mesmo comportamento do jogo original, e o
 usuário tinha dito que a mão dele apareceria "virada de costas" — o resultado
-real é que ela fica atrás da câmera. As saídas possíveis (todas decisão dele):
-(a) deixar assim (é o original); (b) desenhar a sua mão como uma faixa de
-cartas viradas no alto do HUD, fora do 3D; (c) puxar as duas mãos para perto
-do centro da mesa, o que muda o desenho da mão que o D45 calibrou.
+real é que ela fica atrás da câmera.
+
+## 16.16 A D51 — A VISTA DO RIVAL É O ESPELHO EXATO DA SUA (2026-09-30)
+
+### O que o usuário viu e o que ele mandou
+
+Ele olhou a tela na visão do rival e viu que **a faixa do meio saía do vão**:
+na sua vez ela fica exatamente entre as fileiras de monstros, e na do rival
+ela subia, encostava na fileira de cima e deixava um buraco embaixo. E ele
+mandou o caminho, com duas travas:
+
+> "não vamos reposicionar a faixa 2d pois isso ficaria feio parecido com uma
+> gambiarra, vamos arrumar o problema [...] o problema parece ser é que a camera
+> quando esta na vez do inimigo ou ela esta na altura errada, ou esta na
+> rotação errada e com isso o campo esta aparecendo mais para baixo. faça
+> testes mexendo na altura e rotação da camera e só vai estar certo quando a
+> faixa ficar exatamente certa entre os slots de monstros igual é na minha
+> perspectiva quando é minha rodada."
+
+Ou seja: **a faixa 2D não se mexe** (ela é do jogador, D8/D45) e **a visão
+dele não muda em nada**. O que tinha de estar errado era a câmera.
+
+### A causa (medida, não estimada)
+
+O pivô da volta está na **origem** `(0, 0, 0)` — o centro do *eixo* do mundo.
+Mas o campo **não é simétrico em relação a ela**: o plano de simetria do
+campo é a média das duas fileiras de monstro da arena oficial, e ela está em
+`z = -0,398` (as fileiras da arena são simétricas em torno de `y = 500`, e
+`CENTRO_Y` é 540). Girando 180° em torno da origem, a câmera do rival chega
+`2 × 0,398 = 0,796` unidade **perto demais** da mesa do que a do jogador, e a
+projeção sai enviesada: o campo aparece mais para baixo e a faixa 2D, que é
+parada, deixa de cair no vão.
+
+Medido no jogo (`_borda_da_fileira_px` nas duas fileiras, projeção real):
+
+| vista | vão entre as fileiras de monstro (px de tela) |
+|---|---|
+| jogador (0°) | 438,1 … 525,5 (altura 87,3) |
+| rival (180°), antes | 492,8 … 584,3 (altura 91,5) — **57 px mais baixo** |
+| rival (180°), depois | 438,1 … 525,5 (altura 87,3) — **igual ao do jogador** |
+
+### A correção (uma conta, tirada do dado)
+
+`_medir_plano_de_simetria()` mede o plano do campo **do dado** (a média das
+duas fileiras de monstro da arena oficial, `_z_simetria = -0,398`) e
+`_z_local_da_camera(giro)` devolve onde a câmera fica dentro do pivô:
+
+```
+z_local = CAM_POS.z - 2 * z_simetria * (giro / 180)
+```
+
+Em 0° isso é `CAM_POS.z` **exatamente** — a visão do jogador é a de sempre,
+byte a byte. Em 180° a câmera recua os 0,796 e cai no **espelho exato** da
+câmera do jogador em relação ao plano do campo: as duas fileiras ocupam o
+mesmo retângulo de tela, com as de cima e de baixo trocadas de lugar, e o vão
+é o mesmo número. A rotação local da câmera **não é tocada** (o que define a
+inclinação continua sendo `CAM_POS`), e o HUD 2D continua igual (D47).
+
+`_aplicar_vista_3d()` é o único dono do 3D na volta: pivo **e** câmera saem do
+mesmo `_giro_campo`. Antes, quem ajustava o pivo por conta própria podia
+deixar a câmera num ângulo com a distância de outro.
+
+### O que NÃO foi feito (e por quê)
+
+- **A faixa 2D não ganhou nenhum código de reposicionamento** — ela continua
+  sendo montada uma vez, no boot, com a medida do vão da visão do jogador.
+  Reposicionar por vista seria a gambiarra que o usuário proibiu.
+- **A visão do jogador não mudou**: `CAM_POS` intacto, rotação intacta,
+  `frustum_offset` intacto, e a foto A/B antes/depois na sua vez dá
+  **100,0000% de pixels iguais** na região do campo.
+- **Nada de altura nem de FOV novos**: a varredura mediu 8 alturas × 6
+  distâncias × 6 pontos de mira e o melhor resultado é o espelho exato
+  (erro 0,00 px). Mudar a altura da câmera era a outra hipótese do usuário, e
+  ela mexe na altura dele — não foi preciso.
+
+### A prova
+
+- **GUT**: `astralis/testing/test_volta_mesa.gd`, **11 testes / 149 asserts**,
+  suíte inteira **180/180, 3783 asserts, 0 SCRIPT ERROR, 0 orphans**. A trava
+  nova (`test_a_vista_do_rival_e_o_espelho_exato_da_do_jogador`) crava: a
+  câmera do jogador intacta em 0°, o plano de simetria vindo do dado, a
+  câmera do rival no espelho, o **vão igual nas duas vistas**, a faixa dentro
+  do vão e **centrada**, a folga igual nas duas vistas, e cada fileira no
+  mesmo retângulo de tela nas duas vistas.
+- **Fotos** (pasta de temp, fora do repo — R8): `ab_antes_rival.png` e
+  `ab_d51_rival.png` (a vista do rival antes e depois) e a comparação
+  `d51_COMPARA_rival.png`, onde a faixa passa de encostada na fileira de
+  cima para **centrada** entre as duas. `ab_antes_sua_vez.png` x
+  `ab_d51_sua_vez.png`: **100,0000% dos pixels iguais** na região do campo.
+
+### O que continua em aberto
+
+**As duas mãos.** O usuário já pediu o desenho delas: as duas visíveis, de
+simétrico, com a posição e a rotação **trocadas aos 90°** (que é o instante em
+que o HUD está com largura zero, então ninguém vê a troca). Continua valendo
+o que a D47 deixou escrito acima: a mão do jogador, no mundo, fica a 34,8
+unidades da câmera na visão do rival (23,5° fora do eixo, FOV de 20°), então
+**trocar só a rotação não resolve** — a posição também precisa ser trocada por
+uma espelhada, ou seja a mão do jogador no ponto "longe" e a do rival no
+"perto", com a altura preservada. É a próxima etapa, e a decisão do desenho é
+dele.
+

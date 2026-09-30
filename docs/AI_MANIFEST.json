@@ -1,6 +1,6 @@
 {
   "project": "Astralis",
-  "docs_version": "2.3",
+  "docs_version": "2.4",
   "entrypoint": "AGENTS.md",
   "bootstrap_read_order": [
     "docs/AI_MANIFEST.json",
@@ -29,7 +29,7 @@
     { "file": "docs/13_TABULEIRO_DUELO.md", "owner": "lead", "purpose": "zonas 5+5, fases, mao, LP, win/lose + duel_setup + a arena oficial (D50 §13.10.3: UMA arena, e ela e do jogo)", "depends_on": ["02", "04", "05"] },
     { "file": "docs/14_EXPERIENCIA_USUARIO.md", "owner": "lead", "purpose": "padrao Simples/Avancado, galeria, erros PT-BR, guia 5min", "depends_on": ["01", "05", "06", "07", "08", "09", "10"] },
     { "file": "docs/15_VISUAL_DUELO.md", "owner": "lead", "purpose": "contrato visual da mesa: medida da ref, SubViewport (sem perspectiva torta), fonte de cada imagem", "depends_on": ["02", "04", "05", "13", "14"] },
-    { "file": "docs/16_PERSPECTIVA_CAMPO.md", "owner": "lead", "purpose": "o ponto de vista da mesa: a tela e a visao de quem esta jogando GIRANDO A CAMERA em volta do campo (D47, §16.15 e o que esta no jogo; §16.1-16.14 e o plano da D46 que ele substituiu, historico). Ler ANTES de mexer na mesa", "depends_on": ["13", "14", "15"] }
+    { "file": "docs/16_PERSPECTIVA_CAMPO.md", "owner": "lead", "purpose": "o ponto de vista da mesa: a tela e a visao de quem esta jogando GIRANDO A CAMERA em volta do campo (D47, §16.15 e o que esta no jogo; §16.16 e a D51 (a vista do rival como espelho exato da sua); §16.1-16.14 e o plano da D46 que ele substituiu, historico). Ler ANTES de mexer na mesa", "depends_on": ["13", "14", "15"] }
   ],
   "contract_files": {
     "owner": "systems",
