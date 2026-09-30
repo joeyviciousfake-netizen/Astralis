@@ -101,13 +101,13 @@ func test_sem_mesa_nenhum_no_de_mesa() -> void:
 
 func test_nos_chave_3d_existem() -> void:
 	var mesa: Node = await _mesa3d_nova()
-	for caminho in ["Camera3D", "WorldEnvironment",
+	for caminho in ["PivoMesa/Camera3D", "WorldEnvironment",
 			"Campo", "Campo/Slots", "Campo/Laterais",
 			"Cartas", "Cursor3D", "Ceu"]:
 		assert_true(_n3d(mesa, caminho) != null, "Nó-chave 3D existe: " + caminho)
 	for lbl in ["HUD", "HUD/FlashTela", "HUD/Faixa2D", "Camada3D", "Camada3D/JanelaCampo"]:
 		assert_true(mesa.get_node_or_null(NodePath(lbl)) != null, "Nó-chave existe: " + lbl)
-	assert_true((_n3d(mesa, "Camera3D") as Camera3D).current, "Camera3D é a atual.")
+	assert_true((_n3d(mesa, "PivoMesa/Camera3D") as Camera3D).current, "Camera3D é a atual.")
 	# 20 painéis flutuantes (5+5 por lado), cada um com base escura + borda.
 	var paineis := (_n3d(mesa, "Campo/Slots") as Node3D).get_children()
 	assert_eq(paineis.size(), 20, "20 painéis de slot (5+5 por lado, espelho do 2D).")
@@ -188,13 +188,13 @@ func test_posicao_carta_exatamente_no_painel() -> void:
 			if zona[i] == null:
 				continue
 			var sid := "p%d_m%d" % [lado, i]
-			var pv: Vector2i = mesa.call("_vis", lado, i) as Vector2i
+			var pv: Vector2i = Vector2i(lado, i)
 			var painel := slots.get_node_or_null(NodePath("Painel_p%d_m%d" % [pv.x, pv.y])) as Node3D
 			var carta: Node3D = null
 			for f in (_n3d(mesa, "Cartas") as Node3D).get_children():
 				if (f as Node).has_meta("slot_id") and str((f as Node).get_meta("slot_id")) == sid:
 					carta = f as Node3D
-			assert_true(painel != null, "Painel existe: p%d_m%d (visual de %s)." % [pv.x, pv.y, sid])
+			assert_true(painel != null, "Painel existe: " + sid)
 			assert_true(carta != null, "Carta desenhada no slot: " + sid)
 			if painel == null or carta == null:
 				continue
@@ -205,15 +205,15 @@ func test_posicao_carta_exatamente_no_painel() -> void:
 			assert_eq(str(carta.get_meta("slot_id")), sid,
 				"A carta continua sendo a do DADO %s (identidade; a troca é só desenho)." % sid)
 			assert_almost_eq(carta.position.x, painel.position.x, 0.001,
-				"Carta XZ no painel %s (x, ladrilho visual %d_m%d)." % [sid, pv.x, pv.y])
+				"Carta XZ no painel %s (x)." % sid)
 			assert_almost_eq(carta.position.z, painel.position.z, 0.001,
-				"Carta XZ no painel %s (z, ladrilho visual %d_m%d)." % [sid, pv.x, pv.y])
+				"Carta XZ no painel %s (z)." % sid)
 			# O 3D tem de ser a ARENA (dado) transformada por ESCALA uniforme +
 			# DESLOC (doc 15 §15.5) — o assert prova o TRANSFORM, não a
 			# identidade: a composição e o espelho do rival (D17/D18) vêm do
 			# dado, e escala/deslocamento são apresentação. E o painel é o do
 			# ladrilho VISUAL, então a arena que ele segue é a desse ladrilho.
-			var id_visual := BoardLayout.slot_id(pv.x, "monstro", pv.y)
+			var id_visual := BoardLayout.slot_id(lado, "monstro", i)
 			var p2: Vector2 = BoardLayout.get_pos(mesa.get("_arena_layout"), id_visual, BoardLayout.default_pos(id_visual))
 			var esc: float = mesa.get("ESCALA_CAMPO")
 			var desl: Vector2 = mesa.get("DESLOC_CAMPO")
@@ -377,12 +377,12 @@ func test_camera_fixa_sem_orbita() -> void:
 	# Ref GX: câmera FIXA (posição/FOV medidos contra a referência, doc 15
 	# §15.5), sem órbita e sem deslocamento em X.
 	var mesa: Node = await _mesa3d_nova()
-	var cam := _n3d(mesa, "Camera3D") as Camera3D
+	var cam := _n3d(mesa, "PivoMesa/Camera3D") as Camera3D
 	assert_true(cam != null, "Camera3D existe.")
 	assert_eq(cam.position, Vector3(0, 16.8, 20.9), "Câmera fixa (posição medida).")
 	assert_eq(cam.fov, 20.0, "FOV fixo medido contra a referência.")
 	await wait_process_frames(10)
-	assert_eq((_n3d(mesa, "Camera3D") as Camera3D).position, Vector3(0, 16.8, 20.9), "Câmera não deriva (sem órbita).")
+	assert_eq((_n3d(mesa, "PivoMesa/Camera3D") as Camera3D).position, Vector3(0, 16.8, 20.9), "Câmera não deriva (sem órbita).")
 
 
 func test_campo_a_direita_sem_perspectiva_torta() -> void:
@@ -411,7 +411,7 @@ func test_campo_a_direita_sem_perspectiva_torta() -> void:
 	# A LENTE: no EIXO (X = 0, sem frustum_offset) e apontada para o centro.
 	# A altura/Z/FOV podem mudar (doc 15 §15.5, alavanca de desenho), mas a
 	# tríade que garante a perspectiva simétrica é intocável.
-	var cam := _n3d(mesa, "Camera3D") as Camera3D
+	var cam := _n3d(mesa, "PivoMesa/Camera3D") as Camera3D
 	assert_eq(cam.frustum_offset, Vector2.ZERO, "Lente no eixo: frustum_offset = 0 (nada de torto).")
 	assert_eq(cam.position.x, 0.0, "Câmera sem deslocamento em X (a lente fica no eixo).")
 	assert_eq(cam.position, Vector3(0, 16.8, 20.9), "Câmera na altura/Z medidos contra a referência.")
@@ -442,7 +442,7 @@ func test_maos_centralizadas_no_x_do_campo() -> void:
 	# mesmo X de tela do centro do campo. Medido em PIXELS, como o usuário vê.
 	var mesa: Node = await _mesa3d_nova()
 	var st = mesa.get("_st")
-	var cam := _n3d(mesa, "Camera3D") as Camera3D
+	var cam := _n3d(mesa, "PivoMesa/Camera3D") as Camera3D
 	var n0: int = ((st.players[0] as Dictionary)["hand"] as Array).size()
 	var n1: int = ((st.players[1] as Dictionary)["hand"] as Array).size()
 	var alvo: float = cam.unproject_position(Vector3(0.0, 0.35, 0.0)).x
@@ -543,9 +543,7 @@ func test_maos_centralizadas_no_x_do_campo() -> void:
 	# de quem joga, que aqui é o jogador — é a que este teste mede.
 	var vistas := 0
 	for f in (_n3d(mesa, "Cartas") as Node3D).get_children():
-		if not (f as Node).has_meta("mao_idx") or not (f as Node).has_meta("mao_lado"):
-			continue
-		if int((f as Node).get_meta("mao_lado")) != 0:
+		if not (f as Node).has_meta("mao_idx"):
 			continue
 		vistas += 1
 		var i: int = int((f as Node).get_meta("mao_idx"))
@@ -569,7 +567,7 @@ func test_d44_magia_aproxima_e_mao_vem_para_a_camera() -> void:
 	#             fica intocada): a mão é que vem mais PERTO DA CÂMERA.
 	# Tudo medido no jogo de verdade (1920x1080), com a câmera real.
 	var mesa: Node = await _mesa3d_nova()
-	var cam := _n3d(mesa, "Camera3D") as Camera3D
+	var cam := _n3d(mesa, "PivoMesa/Camera3D") as Camera3D
 	var lay = mesa.get("_arena_layout")
 	var peca: float = float(mesa.call("_peca_prof_carta"))
 	var escala: float = float(mesa.get("ESCALA_CAMPO"))
@@ -980,7 +978,7 @@ func test_d45_faixa_2d_no_vao_entre_as_fileiras_na_ordem_do_usuario() -> void:
 	# cemitério do rival, baralho do rival) e fica NO VÃO entre as duas
 	# fileiras de monstro — sem cobrir nenhuma delas e sem sair da janela.
 	var mesa: Node = await _mesa3d_nova()
-	var cam := _n3d(mesa, "Camera3D") as Camera3D
+	var cam := _n3d(mesa, "PivoMesa/Camera3D") as Camera3D
 	var barra := mesa.get_node_or_null(NodePath("HUD/Faixa2D")) as Control
 	assert_true(barra != null, "A faixa do meio existe em 2D (HUD/Faixa2D).")
 	var cels := _celulas_faixa2d(mesa)
@@ -1334,7 +1332,7 @@ func test_d45_mao_comprada_entra_na_quinta_posicao_dos_dois_lados() -> void:
 	# ESQUERDA para o rival, porque ele está do outro lado da mesa.
 	var mesa: Node = await _mesa3d_nova()
 	var st = mesa.get("_st")
-	var cam := _n3d(mesa, "Camera3D") as Camera3D
+	var cam := _n3d(mesa, "PivoMesa/Camera3D") as Camera3D
 	var xj := float(mesa.get("PAINEL_ESQ_L"))
 	for lado in [0, 1]:
 		var mao: Array = (st.players[lado] as Dictionary)["hand"] as Array

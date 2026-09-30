@@ -1,11 +1,17 @@
-# 16 — PERSPECTIVA DO CAMPO (plano da próxima leva)
+# 16 — PERSPECTIVA DO CAMPO (o ponto de vista da mesa)
 
-VERSION: 1.2
-STATUS: **ETAPAS 1 E 2 IMPLEMENTADAS, O RESTO NÃO.** O usuário desenhou o
-plano com o Lead em 2026-09-28; a etapa 1 (a camada de perspectiva, com a tela
-igual à de hoje) e a etapa 2 (a troca do campo) foram feitas em 2026-09-29 —
-ver §16.12. As perguntas §16.7 1 e 3 foram respondidas pelo usuário (D46b). A
-execução continua pela etapa 3 (as mãos), com o aval do usuário.
+VERSION: 2.0
+STATUS: **A D46 FOI SUBSTITUÍDA PELA D47 (2026-29).** O usuário mudou de
+ideia depois de ver a foto: a tela passa a ser o ponto de vista de quem joga
+**girando a CÂMERA em volta do campo**, e as cartas **não se mexem mais**. As
+etapas 1 a 3 da D46 (a camada de perspectiva, o esmaecer cruzado e a troca das
+mãos) foram **deletadas** — o que está no jogo hoje é a D47, descrita no §16.15.
+Este arquivo continua sendo o dono do assunto ("de que lado a tela está olhando
+a mesa"); o texto abaixo das §§16.1 a 16.14 é o **histórico** do plano que a
+D47 substituiu, e está lá porque foi o que motivou a mudança (não apagar o
+raciocínio: a foto que fez o usuário mudar de ideia está described no §16.13).
+OWNER: lead (a implementação é do runtime: `duel3d/mesa_3d.gd`)
+REFERÊNCIA: conversa de 2026-09-28 (D46, plano) e 2026-09-29 (D47, a volta)
 OWNER: lead (a implementação é do runtime: `duel3d/mesa_3d.gd`)
 ORIGEM: conversa de 2026-09-28, depois de ver a faixa 2D (D45/D45b, já no git)
 DEPENDES: `13_TABULEIRO_DUELO.md`, `14_EXPERIENCIA_USUARIO.md`,
@@ -467,3 +473,124 @@ de 180° que `_fazer_carta` põe na carta virada. Antes isso não aparecia porqu
 a mão de baixo nunca era virada (ela era sempre a do jogador, aberta); com a
 etapa 3 ela passa a poder ser a do rival. Corrigido colocando a virada dentro
 da mesma expressão da inclinação.
+
+---
+
+## 16.15 A D47 — A VOLTA DA MESA (2026-09-29, o que está no jogo)
+
+O usuário mudou de ideia depois de ver a foto da D46: *"eu quero que seja
+exatamente igual yugioh forbidden memories e não mais do jeito que estávamos
+fazendo [...] as cartas não vão ficar mais teleportando de um lado pelo outro,
+pois a câmera indo de um lado para o outro do campo vai fazer eu ter a minha
+visão do campo e depois a visão do inimigo do campo."*
+
+### A decisão, e por que ela é MAIS SIMPLES
+
+A D46 fingia a perspectiva **movendo as cartas**. A D47 **anda com a câmera**:
+
+```
+PivôMesa (no centro do campo)
+   └── Camera3D (a mesma de sempre: mesma altura, distância, ângulo e FOV)
+```
+
+A câmera não se move nem gira; **quem gira 180° é o pivô**. E o único número
+da volta é `_giro_campo` (0 = visão do jogador, 180 = do rival).
+
+O que sai de graça, porque é geometria e não código:
+
+| O que a D46 fazia na mão | O que a D47 faz |
+|---|---|
+| a carta ia para o ladrilho "visual" do outro lado | ela **fica onde está** e aparece no topo, de cabeça para baixo |
+| esmaecer cruzado (fantasma + alfa) | **nada esmaece** — não há mais nada para esmaecer |
+| a mão de baixo trocava de dono | cada mão fica **do lado do seu dono no mundo** |
+| a coluna de tela invertida (D46c) | o espelho do rival no dado (D18) + a volta de 180 **se cancelam** — cada um vê a própria fileira na ordem normal |
+
+Ou seja: a D47 **apagou** as etapas 1 a 3 (≈400 linhas) e o desenho do campo
+voltou a ser exatamente o do dado (`_pos_slot(lado, tipo, indice)`), como
+antes de 2026-09-28.
+
+### O que a D47 NÃO quebra (o porquê de ser segura)
+
+- A lente continua **no eixo**: `frustum_offset = Vector2.ZERO` e a câmera com
+  x = 0 (doc 15 §15.4 intacto). Por simetria, o campo tem **a mesma cara dos
+  dois lados**, só espelhado — e o centro do campo continua no mesmo x da tela
+  (64,6%). As travas do D41/D42 seguem valendo.
+- O `look_at` de todo quadro **saiu**: ele brigaria com o giro. A inclinação
+  virou a rotação **local** da câmera dentro do pivô, que é o mesmo ângulo de
+  antes (38,8° para baixo).
+- O estado do `GameState` **não se mexe** (R1): a volta é só ponto de vista.
+
+### O HUD 2D: não gira, vira de carta
+
+O usuário não quer o HUD girando com a câmera. A resposta foi **virar de
+carta**, e é uma conta só para tudo que tem nome ou número:
+
+```
+escala do X = |cos(graus)|      1 em 0°  →  0 em 90°  →  1 em 180°
+```
+
+O conteúdo troca **exatamente nos 90°**, quando o bloco está com largura
+zero — ou seja, o instante da troca é invisível. Invertem:
+
+- **retratos e plaquinhas** de nome/LP (a sua foto vai para a direita, a dele
+  para a esquerda — "invertidas as posições", do jeito que ele pediu);
+- **a ordem das 7 células da faixa do meio** (a ordem dos filhos do `HBox` É a
+  ordem na tela, então espelhar é reverter). A cor viaja com o número, então
+  azul continua sendo "você" — só muda de lado na tela.
+
+**Não** invertem, de propósito: **a barra de fases**. Ela mostra a fase REAL de
+quem está jogando (D13/doc 13), e espelhar um dado de regra seria a tela
+mentir. Fica como âncora visual do meio da mesa. (Uma linha para mudar, se o
+usuario preferir o contrário.)
+
+### O resto do contrato
+
+- **Tempo**: uma constante só, `VOLTA_DURACAO` (1,0 s), com o convite no
+  comentário para o usuário ir mexendo. Curva `TRANS_CUBIC`/`EASE_IN_OUT`,
+  igual aos outros movimentos da tela.
+- **Não existe pular** (continua valendo o que o usuário já tinha dito): a
+  volta roda sempre inteira. O START **espera** a volta antes de o rival jogar,
+  e a volta de volta acontece antes de o fluxo do jogador reabrir.
+- **Controle travado** enquanto a mesa gira (`_girando`): sem isso a carta
+  focada andaria de um lado para o outro no meio do giro.
+- **D46b sobreviveu**: na vez do rival o painel esquerdo continua sem nenhum
+  dado da carta, só a imagem padronizada (o verso).
+- **O rival começou o duelo**: a volta acontece antes dele jogar, então a
+  primeira coisa que o jogador vê é a mesa já na visão do rival.
+
+### A prova
+
+- **Fotos**: `d47_0.png` (visão do jogador), `d47_90.png` (o meio da volta, 49°
+  no log) e `d47_180.png` (visão do rival, com `volta 180 graus` no log).
+  - `d47_0.png` é **idêntica** à foto da sua vez de antes da D47: 179 px
+    diferentes em 2.001.046 (0,009%), que é o ruído do cursor que pulsa. A
+    câmera no pivô reproduz a imagem de antes.
+  - `d47_180.png` mostra a fileira do jogador no topo de cabeça para baixo, a
+    do rival embaixo de frente, os retratos/nomes trocados de lado, a faixa com
+    a ordem e os valores invertidos (a cor com o número) e o painel só com o
+    verso.
+  - `d47_90.png` mostra o meio da volta: o campo visivelmente atravessado, a
+    sua mão já do outro lado, e o HUD no meio do virar (placas estreitas, faixa
+    com ~65% da largura).
+- **GUT**: `astralis/testing/test_volta_mesa.gd`, **10 testes / 96 asserts**, no
+  lugar do `test_perspectiva_campo.gd` (que foi apagado junto com a D46). Trava:
+  a câmera é filha do pivô e não se move; a lente no eixo e o centro do campo no
+  lugar; a volta vai a 180 e volta a 0 (e é idempotente); **as cartas do campo
+  e as duas mãos não se mexem um milímetro**; o `GameState` não se mexe; cada
+  jogador vê a própria fileira na ordem normal; o HUD vira de carta e troca nos
+  90°; a faixa se espelha e volta; o painel continua neutro (D46b); e o
+  controle trava enquanto gira. Suíte inteira **177/177, 3781 asserts, 0
+  SCRIPT ERROR, 0 orphans**.
+
+### O que ficou em aberto (e é decisão do usuário, não do Lead)
+
+**A sua própria mão não aparece na visão do rival.** Não é bug: é geometria.
+A mão fica perto da câmera na sua visão (12,4 unidades) e a 34,8 na do rival —
+a 23,5° do eixo da câmera, e o FOV é de 20° (10° para cada lado), então ela
+sai **acima da tela**. Nenhuma posição de mão resolve isso sem colocar a mão
+do lado do rival no mundo. É o mesmo comportamento do jogo original, e o
+usuário tinha dito que a mão dele apareceria "virada de costas" — o resultado
+real é que ela fica atrás da câmera. As saídas possíveis (todas decisão dele):
+(a) deixar assim (é o original); (b) desenhar a sua mão como uma faixa de
+cartas viradas no alto do HUD, fora do 3D; (c) puxar as duas mãos para perto
+do centro da mesa, o que muda o desenho da mão que o D45 calibrou.

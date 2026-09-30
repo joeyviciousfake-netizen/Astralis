@@ -1,6 +1,6 @@
 # ASTRALIS — ÍNDICE GERAL
 
-VERSION: 1.9
+VERSION: 2.0
 STATUS: AUTHORITATIVE (split de `Documentação.md` v1.1 + decisões v1.2/v1.3)
 AUDIENCE: AI AGENTS
 LANGUAGE: PT-BR
@@ -29,7 +29,7 @@ docs/
    13_TABULEIRO_DUELO.md <- zonas[5+5], fases DRAW/MAIN/BATTLE/END, mão 5/refill, LP dado, win LP+deckout [NOVO v1.4]
     14_EXPERIENCIA_USUARIO.md <- Simples/Avançado em tudo, galeria, erro PT-BR, Play verde, guia 5min [NOVO v1.5]
     15_VISUAL_DUELO.md       <- contrato VISUAL da mesa: medida da referência, SubViewport (campo à direita SEM perspectiva torta), de onde vem cada imagem [NOVO v1.8]
-    16_PERSPECTIVA_CAMPO.md  <- PLANO (nao implementado, v1.9): a tela passa a ser a visao de quem esta jogando, SEM girar nada — a carta do campo esmaece e troca de lado, a mao desliza. Ler antes de mexer na mesa
+    16_PERSPECTIVA_CAMPO.md  <- o PONTO DE VISTA DA MESA (v2.0, D47): a tela e a visao de quem esta jogando GIRANDO A CAMERA em volta do centro do campo - as cartas NAO se mexem, nada esmaece, nada teleporta. O HUD 2D nao gira: vira de carta e o conteudo troca nos 90 graus. O texto da D46 (a versao que fingia a perspectiva movendo as cartas) ficou como historico nas §§16.1-16.14. Ler antes de mexer na mesa
   AI_MANIFEST.json          <- mapa máquina (owner, depends, read_order)
   SESSAO_ATUAL.md           <- OPS mutável: onde paramos + próximo passo (ler sempre)
   DECISOES.md               <- OPS append-only: travas D01-D13, não reabrir
@@ -47,7 +47,7 @@ docs/
 8. **Test Lab mínimo junto do Effect Builder** (`10_PREVIEW_TESTE_DEBUG.md`): botão `Testar agora` com setup auto-sugerido + expected vs actual. UI completa depois.
 9. **Escopo V1 enxuto**: adiados `State Diff completo, Trace rico, Breakpoints, Recording, Debug Console completo`. V1 mantém: `Play Project + Validação humana + State Inspector simples`.
 10. **Exportação protegida v1.3** (`12_DISTRIBUICAO_EXPORTACAO.md`): pasta JSON de trabalho vs `.astralis` binário de distribuição; cadeado por jogo gerado no Exportar com chave embutida no player; bundles `exe + .astralis` (win/linux) e `apk + .astralis` com importação (android V1, fundido só V2); versionamento vai junto e acaba mismatch.
-11. **Perspectiva do campo (v1.9 — PLANO, `16_PERSPECTIVA_CAMPO.md`)**: a tela passa a ser a visão de **quem está jogando**, como no Forbidden Memories, mas **sem girar nada**. A carta do campo não viaja: ela **esmaece** e troca de lado (coluna espelhada; a de cima de cabeça para baixo). A mão é a única coisa que desliza: a sua desce e some, a dele sobe virada. A faixa do meio e as placas de nome não espelham. O ganho: **o espelho do rival (D18) e o espelho da mão dele (D45 item 8) deixam de existir** — a fileira de cima passa a ser só a fileira de baixo vista do outro lado. É desenho puro (R1): motor, dado e câmera não mudam. **Nada implementado ainda** — a execução começa pela etapa 1 do doc 16, com o aval do usuário.
+11. **Ponto de vista da mesa (v2.0, D47, `16_PERSPECTIVA_CAMPO.md` §16.15)**: a tela passa a ser a visao de **quem esta jogando** como no Forbidden Memories, e agora e EXATO: a **camera da a volta** de 180 graus em torno do centro do campo (ela e filha de um pivo, que e o unico numero da volta, `_giro_campo`). **As cartas nao se mexem**: cada uma fica no seu lugar do mundo e e a camera que vai para o outro lado da mesa. Isso da de graca a fileira de cima de cabeca para baixo, a coluna de tela invertida (o espelho do rival no dado, D18, e a volta se cancelam: cada um ve a propria fileira na ordem normal) e cada mao do lado do seu dono. A lente continua no eixo e o centro do campo no mesmo x (doc 15 §15.4 intacto). O **HUD 2D nao gira**: ele vira de carta (`|cos(graus)|`, zero nos 90) e o conteudo troca nos 90 graus, quando a largura e zero - invertem os retratos, as plaquinhas de nome/LP e a ordem das 7 celulas da faixa; a barra de fases NAO inverte de proposito (ela mostra a fase real de quem joga, e espelhar dado de regra seria a tela mentir). O tempo e uma constante so (`VOLTA_DURACAO`, 1,0 s) e nao existe pular. **R1 inteiro**: motor e dado intocados, so desenho.
 
 ## Regras que NÃO mudaram
 

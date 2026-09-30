@@ -126,10 +126,13 @@ const APROXIMA_MAGIA_RIVAL := 0.05
 ## `GameState` e do `arena.schema.json`). Vive aqui porque a perspectiva
 ## (doc 16) espelha a COLUNA: coluna 0 <-> coluna 4, e o meio fica.
 const COLUNAS_CAMPO := 5
-## D46: duração da troca de perspectiva (o esmaecer do campo). O START NÃO
-## pula (D46b): a troca roda sempre, inteira. 0,5 s é o padrão do doc 16
-## §16.7 — o usuário pode mudar aqui a qualquer momento (D23).
-const TROCA_DURACAO := 0.5
+## D47: TEMPO DA VOLTA DA MESA, em segundos (180°). MUDE AQUI À VONTADE e
+## rode o jogo: é o único número que manda no ritmo do giro. 1,0 s é o que o
+## usuário achou bom na primeira conta (nem curto demais para virar um corte,
+## nem longo demais para atrasar o duelo). A curva é a mesma dos outros
+## movimentos da tela (TRANS_CUBIC/EASE_IN_OUT) e não pula: passar a vez
+## sempre gira a mesa inteira.
+const VOLTA_DURACAO := 1.0
 ## Janela de arte da MOLDURA REAL (medida no JPG do usuário, D38 — o JPG
 ## é 832x1248 e a janela fica em x 11,90%..89,18% e y 18,27%..70,99%).
 ## Usada no 3D e no painel 2D: a arte preenche a janela sem sobra, seja a
@@ -348,10 +351,18 @@ var _cam: Camera3D = null
 ## região do campo (dentro de Camada3D/JanelaCampo), com a câmera dentro.
 var _vp: SubViewport = null
 var _no_cartas: Node3D = null
-## D46: as cartas do campo que estão ESMAECENDO na troca de perspectiva. Mesmo
-## lugar no mundo, então elas não viajam (D3) — só se apagam.
-var _no_fantasmas: Node3D = null
 var _no_slots: Node3D = null
+## D47: o pivô da volta da mesa. A câmera é filha dele e nunca se move; quem
+## gira 180° em torno do centro do campo é o pivô.
+var _pivo: Node3D = null
+## Onde a mesa está virada, em GRAUS: 0 = visão do jogador (como sempre foi),
+## 180 = visão do rival. É o ÚNICO número da volta (doc 17): a câmera, o HUD
+## e as animações leem ele daqui. Nunca é adivinhado nem guardado em dois
+## lugares.
+var _giro_campo := 0.0
+## A mesa está girando agora: trava o controle do jogador (sem isso a carta
+## focada voaria de um lado para o outro no meio do giro).
+var _girando := false
 var _cursor3d: Node3D = null
 ## Grupo que gira com a coisa focada (a moldura e a mão são filhas dele).
 var _cursor_grupo: Node3D = null
@@ -366,10 +377,6 @@ var _rival_rodando := false
 var _cursor_escala := 1.0
 var _flash_tela: ColorRect = null
 var _deck_pos := [Vector3(4.9, 0.6, 1.6), Vector3(-4.9, 0.6, -2.2)]
-## D46: onde a tela ESTAVA desenhando (0 = o jogador, 1 = o rival). Não é
-## estado do desenho — é só para saber que a vez TROCOU e rodar a troca uma
-## vez. A verdade é `_perspectiva()`, que lê o motor.
-var _perspectiva_antiga := 0
 ## D46 (prova): em qual QUADRO a foto sai (90 = o de sempre) e em quantos
 ## segundos a vez passa sozinha. Zero = desligado. Ver `_ver_autoquit`.
 var _foto_frame_alvo := 90
@@ -519,9 +526,6 @@ func _ready() -> void:
 		_calib_visual(get_node_or_null(NodePath("HUD")) as Control)
 	_fusions_data = _fusoes_do_data(data)
 	_fala("Mesa 3D: duelo real carregado.")
-	# D46: a 1ª tela NÃO troca de perspectiva (não há nada na tela para
-	# esmaecer ainda), então o valor de partida é o do motor neste momento.
-	_perspectiva_antiga = _perspectiva()
 	_redesenhar(false)
 	_atualizar_hud()
 	_iniciar_turno_do_duelo()
@@ -534,7 +538,7 @@ func _ready() -> void:
 		_conta_assets_embutidos()])
 	if _cam != null:
 		print("[MESA3D] Cam: pos=%s fov=%s alvo=%s." % [str(_cam.global_position), str(_cam.fov), str(CAM_ALVO)])
-		var px := _cam.unproject_position(_pos_slot_do_dado(0, "monstro", 2))
+		var px := _cam.unproject_position(_pos_slot(0, "monstro", 2))
 		print("[MESA3D] Slot p0_m2 na tela: janela=%s tela_x=%.1f." % [str(px), JANELA_CAMPO_X + px.x])
 		_calibrar_mao()
 	_ver_autoquit()
@@ -819,20 +823,37 @@ func _construir_ambiente() -> void:
 	_construir_cenario_ceu()
 	# SEM LUZES (ordem do usuário): tudo é UNSHADED, luz não faz nada —
 	# nem sol nem omnis. Só o flash de tela (overlay 2D, ver HUD).
+	#
+	# D47 — A VOLTA DA MESA: a câmera NÃO se move e NÃO gira. Ela é pendurada
+	# num PIVÔ no centro do campo, e quem dá a volta de 180° é o pivô. Assim a
+	# tela passa a ser a visão de QUEM ESTA JOGANDO do jeito do Forbidden
+	# Memories, e — o ponto que muda tudo — **as cartas não saem do lugar**: a
+	# sua fileira continua embaixo no mundo, só que quando a câmera vai para o
+	# outro lado você passa a vê-la no topo e de cabeça para baixo, de graça.
+	# A lente continua NO EIXO e o `frustum_offset` continua ZERO (doc 15
+	# §15.4), então a perspectiva é simétrica e o campo tem a MESMA cara dos
+	# dois lados, só espelhado.
+	_pivo = Node3D.new()
+	_pivo.name = "PivoMesa"
+	_pivo.position = CAM_ALVO
+	_vp.add_child(_pivo)
 	_cam = Camera3D.new()
 	_cam.name = "Camera3D"
-	# CÂMERA FIXA da ref: atrás/acima do seu campo, tilt p/ o rival longe.
-	# Sem órbita/balanço (removido do _process): mesma imagem todo frame.
+	# CÂMERA FIXA da ref: atrás/acima do SEU campo, tilt p/ o rival longe.
+	# `position` aqui é LOCAL (a filha do pivô), então continua sendo CAM_POS —
+	# com o pivô em 0° a imagem é byte a byte a de antes.
 	_cam.position = CAM_POS
 	_cam.fov = CAM_FOV
 	_cam.current = true
-	_vp.add_child(_cam)
-	_cam.look_at(CAM_ALVO)
+	_pivo.add_child(_cam)
+	# O olhar para o centro é a inclinação local do pivô (o `look_at` de todo
+	# frame saía: com o pivô girando, ele brigaria com a volta).
+	_cam.rotation_degrees = Vector3(-rad_to_deg(atan2(CAM_POS.y, CAM_POS.z)), 0.0, 0.0)
 	# LENTE NO EIXO (doc 15 §15.4): deslocar o frustum deforma a imagem
 	# (um lado estica, o outro comprime) e o campo fica torto. Quem joga o
 	# campo p/ a direita é a JANELA do campo, criada acima.
 	_cam.frustum_offset = Vector2.ZERO
-	print("[MESA3D] Ambiente: céu azul + neblina + pilares + Camera3D FIXA (sem luzes: tudo unshaded).")
+	print("[MESA3D] Ambiente: céu azul + neblina + pilares + câmera no PIVÔ da mesa (a volta da mesa, D47).")
 
 
 ## Cenário do céu da ref (só desenho): pilares altos de vidro azulado ao
@@ -947,13 +968,6 @@ func _construir_campo() -> void:
 	_no_cartas = Node3D.new()
 	_no_cartas.name = "Cartas"
 	_vp.add_child(_no_cartas)
-	# D46: os FANTASMAS da troca de perspectiva. É o mesmo lugar no mundo
-	# (irmão de `Cartas`, sem transformação), então uma carta que sai daqui
-	# continua EXATAMENTE onde estava na tela — ela esmaece onde está, não
-	# viaja (D3). some do jogo quando o esmaecer acaba.
-	_no_fantasmas = Node3D.new()
-	_no_fantasmas.name = "Fantasmas"
-	_vp.add_child(_no_fantasmas)
 	# Cursor = retângulo AZUL BRILHANTE que ABRAÇA a coisa focada (doc 15
 	# §15.3) + a MÃO BRANCA no centro dela. `_cursor_grupo` gira junto com a
 	# focada, então a moldura é desenhada no PLANO DA CARTA (XY local) e
@@ -1081,75 +1095,43 @@ func _painel_slot(lado: int, tipo: String, indice: int) -> Node3D:
 	return no
 
 
-# ---- DOC 16 / D46: A CAMADA DE PERSPECTIVA ----
+# ---- D47: A VOLTA DA MESA (a camera da a volta, as cartas NAO se mexem) ----
 #
-# A tela do duelo passa a ser a perspectiva de QUEM ESTA JOGANDO, como no
-# Forbidden Memories. NADA GIRA: nem a câmera (D41), nem o campo, nem o céu,
-# nem os ladrilhos. O que muda é PARA ONDE cada carta é desenhada.
+# A tela do duelo e a perspectiva de QUEM ESTA JOGANDO, como no Forbidden
+# Memories: quando a vez passa, a CAMERA da 180 graus em torno do centro do
+# campo. A camera e filha do `_pivo` e nunca se move nem gira (o `_pivo` e que
+# gira), entao:
+#   * a sua fileira continua embaixo NO MUNDO, e a do rival continua no topo;
+#   * quando a camera vai para o outro lado, voce passa a ver a SUA fileira no
+#     topo da tela e de cabeca para baixo, e a DELE vem para baixo de frente;
+#   * nada teleporta, nada esmaece, nenhuma carta troca de lugar.
+# E o estado nao se mexe: `players[lado]["monster"][i]` e a MESMA carta antes e
+# depois da volta (R1) - a volta e so o ponto de vista.
 #
-# Uma decisão, um lugar: `_vis`. Todo desenho e toda animação perguntam a ela
-# "de que lado, em que coluna eu desenho a carta do dado (lado, i)?". Se cada
-# animação decidir por si, volta a mesma bagunça que o espelho do D18 criou
-# (doc 16 §16.10).
+# O numero que manda em TUDO e `_giro_campo` (0 = seu, 180 = do rival). Nao ha
+# segunda copia dele: a camera, o HUD e as animacoes leem dele daqui.
 #
-# Regra (doc 16 §16.5): perspectiva do jogador 0 = cada coisa onde está;
-# perspectiva do jogador 1 = cada coisa no lado OPOSTO, na MESMA coluna. O
-# "lado oposto" é o arranjo virado, e ele sai de graça do próprio dado: o
-# lado 1 da arena JÁ é espelhado no X e com as fileiras trocadas
-# (`core/board_layout.gd` `default_pos`). E porque esse espelho de X já
-# existe, a coluna NÃO é espelhada aqui — senão os dois se anulam e a carta
-# volta para o mesmo lugar da tela (foi o que o usuário viu na foto da etapa
-# 2; a regra dele, em colunas de tela: slot 1 vira slot 5, nos dois lados).
-#
-# O ESTADO NÃO SE MEXE: `players[lado]["monster"][i]` é a MESMA carta antes e
-# depois da troca. A troca é só de desenho (doc 16 §16.5, regra 4).
-
-## De que lado a tela está desenhando o dado agora. ÚNICO lugar que decide.
-## É o `current_player` do MOTOR (D42/D46), lido na hora: nunca uma variável
-## guardada, senão o desenho mente (R1). Sem estado ainda = jogador 0.
-func _perspectiva() -> int:
-	if _st == null:
-		return 0
-	return 1 if int(_st.current_player) == 1 else 0
+# Onde a "coluna espelhada" da etapa 2 do doc 16 foi parar: ela nao existe mais
+# como regra, porque sai de graca. O lado 1 da arena ja vem espelhado no X
+# (D18) e a volta de 180 graus espelha de novo, entao cada jogador ve a PROPRIA
+# fileira na ordem normal (indice 0 a esquerda). Era isso que o usuario pedia.
 
 
-## ONDE a carta do DADO (lado `lado`, coluna `i`) é desenhada agora.
-## Devolve (lado visual, coluna visual). `lado` e `i` do DADO entram; o que
-## sai é sempre o lugar na TELA.
-##
-## COLUNA: NÃO espelha, e isso é o ponto (correção do usuário 2026-09-29,
-## depois da foto da etapa 2). Trocar de LADO já espelha o X por causa do
-## espelho do rival no dado (D18: o lado 1 da arena tem o índice 0 à
-## direita), então espelhar a coluna TAMBÉM fazia os dois se anular e a carta
-## voltava para o mesmo lado da tela. A regra é a do usuário, em colunas de
-## TELA: a carta que estava no slot 1 (esquerda->direita) aparece no slot 5,
-## e vale para as cartas dos DOIS lados.
-func _vis(lado: int, i: int) -> Vector2i:
-	return Vector2i(lado, clampi(i, 0, COLUNAS_CAMPO - 1)) if _perspectiva() == 0 else Vector2i(1 - lado, clampi(i, 0, COLUNAS_CAMPO - 1))
-
-
-## Posição de mundo do slot do DADO (lado, i) como ele é desenhado AGORA.
-## É o `_pos_slot` já passando pela perspectiva — use este nos lugares que
-## pensam em "a carta do dado (lado, i)", que é a maioria.
-func _pos_slot_do_dado(lado: int, tipo: String, i: int) -> Vector3:
-	var v := _vis(lado, i)
-	return _pos_slot(v.x, tipo, v.y)
-
-
-## X de mundo do slot do DADO (lado, i) como ele é desenhado agora. Para quem
-## anda pela POSIÇÃO visível (vizinho pela direita/esquerda, troca de fileira
-## preservando a coluna da tela) e não pelo índice.
-func _x_do_slot(lado: int, tipo: String, i: int) -> float:
-	return _pos_slot_do_dado(lado, tipo, i).x
+## X de mundo de um slot do DADO. Para quem anda pela POSIÇÃO visível (o
+## vizinho pela direita/esquerda, a troca de fileira preservando a coluna da
+## tela) e não pelo índice. É o X do `_pos_slot`: como a câmera é que muda de
+## lado (D47), este número é o mesmo nos dois pontos de vista — e é por isso
+## que o cursor "anda para a direita que se vê" nos dois lados sem nenhum
+## código de espelho.
+func _pos_slotx(lado: int, tipo: String, i: int) -> float:
+	return _pos_slot(lado, tipo, i).x
 
 
 func _pos_slot(lado: int, tipo: String, indice: int) -> Vector3:
-	# ATENÇÃO: `lado`/`indice` aqui são do DESENHO (lado visual, coluna
-	# visual), não do dado. Quem tem o lado/coluna do DADO usa `_vis` (direto)
-	# ou `_pos_slot_do_dado`/`_x_do_slot` (prontos). Lê o XY oficial
-	# (BoardLayout real + layout da arena, com espelho do rival) e converte
-	# p/ XZ. Marca E carta usam este ponto: a carta fica EXATAMENTE na marca
-	# (mesmo XZ, só o Y muda).
+	# Lê o XY oficial (BoardLayout real + layout da arena, com espelho do
+	# rival) e converte p/ XZ. `lado`/`indice` são do DADO e valem sempre: quem
+	# muda de ponto de vista é a câmera (D47), não o desenho. Marca E carta usam
+	# este ponto: a carta fica EXATAMENTE na marca (mesmo XZ, só o Y muda).
 	# A conversão passa pelo TRANSFORM DE APRESENTAÇÃO (escala uniforme +
 	# deslocamento do conjunto): a composição e o espelho do DADO ficam
 	# intactos, só o tamanho/posição do campo na tela mudam.
@@ -1804,138 +1786,177 @@ func _deitar_carta(carta: Node3D, face_down: bool, em_defesa: bool, lado: int) -
 	carta.rotation_degrees = Vector3(-90.0, giro, 0.0)
 
 
-## As cartas do CAMPO que estão desenhadas agora (as da mão não contam: elas
-## são da etapa 3 do doc 16 e não trocam de lado ainda).
-func _cartas_do_campo() -> Array:
-	var out: Array = []
-	if _no_cartas == null:
-		return out
-	for f in _no_cartas.get_children():
-		if (f as Node).has_meta("slot_id"):
-			out.append(f as Node3D)
-	return out
+# ---- D47: A VOLTA DA MESA ----
+
+## A ESCALA DO VIRAR: 1 em 0° e em 180°, 0 (invisível) em 90°. É a mesma
+## conta para TUDO que tem nome ou número (retratos, plaquinhas, faixa do
+## meio): o bloco encolhe no eixo X até sumir, e o conteúdo troca nos 90°,
+## quando está com largura zero — então ninguém vê a troca. Um número, uma
+## regra, o mesmo efeito em toda parte (D47, pedido do usuário: "sumindo até
+## quando chegar no ângulo de 90 graus e sumir completamente, e nos mesmos 90
+## graus vai aparecendo de novo, só que invertidas as posições").
+func _escala_do_virar() -> float:
+	return absf(cos(deg_to_rad(_giro_campo)))
 
 
-## ALFA de uma carta 3D inteira (0 = invisível, 1 = normal). Só DESENHO: mexe
-## no `albedo_color`/`modulate` das peças, nunca no dado nem no estado.
-## A transparência é ligada só enquanto ela está acesa e volta a opaca em 1,0 —
-## carta transparente o tempo todo mudaria a ordem de pintura das peças da
-## carta (frente/arte/orbe/estrelas ficam em camadas quase coplanares).
-func _alfa_da_carta(a: float, no: Node3D) -> void:
-	if no == null or not is_instance_valid(no):
+## A tela já passou dos 90°? Aí o conteúdo 2D está do outro lado (é o que troca
+## os números e as posições). Nos 90° exatos o bloco tem largura ZERO, então
+## o instante da troca é invisível.
+func _vista_invertida() -> bool:
+	return absf(_giro_campo) >= 90.0
+
+
+## Dá a volta na mesa: `alvo` em GRAUS (0 = visão do jogador, 180 = do rival).
+## Uma rotina para as DUAS direções, porque é a mesma coisa. Só o pivô gira —
+## as cartas NÃO se mexem (é o que o usuário pediu: nada teleporta).
+## Espera a volta terminar, então quem chama (o START) só segue depois.
+func _girar_campo(alvo: float) -> void:
+	if _pivo == null or is_equal_approx(_giro_campo, alvo):
 		return
-	var opaco := a >= 0.999
-	for f in no.get_children():
-		if f is MeshInstance3D:
-			var mat = (f as MeshInstance3D).material_override
-			if mat is BaseMaterial3D:
-				var bm := mat as BaseMaterial3D
-				bm.transparency = BaseMaterial3D.TRANSPARENCY_DISABLED if opaco else BaseMaterial3D.TRANSPARENCY_ALPHA
-				var cor := bm.albedo_color
-				cor.a = a
-				bm.albedo_color = cor
-		elif f is Label3D:
-			(f as Label3D).modulate.a = a
-		elif f is Node3D:
-			_alfa_da_carta(a, f as Node3D)
+	if _girando:
+		return
+	_girando = true
+	if _sem_render():
+		# Sem desenho (teste/headless): o estado final tem que ser o mesmo dos
+		# dois jeitos, então vai direto e aplica a vista final.
+		_giro_campo = alvo
+		_pivo.rotation_degrees = Vector3(0.0, _giro_campo, 0.0)
+		_girando = false
+		_aplicar_vista_hud()
+		return
+	var tw := create_tween()
+	tw.tween_method(Callable(self, "_girar_para").bind(alvo), 0.0, 1.0, VOLTA_DURACAO) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	await tw.finished
+	_girando = false
+	_aplicar_vista_hud()
 
 
-## Some com um fantasma depois do esmaecer (D3/D4).
-func _soltar_fantasma(no: Node3D) -> void:
-	if no != null and is_instance_valid(no):
-		_alfa_da_carta(1.0, no)
-		no.queue_free()
+## Um passo da volta (0..1 do caminho). O pivô gira na MESMA proporção, e o
+## HUD 2D acompanha pelo `_escala_do_virar`.
+func _girar_para(t: float, alvo: float) -> void:
+	var de := _giro_de_onde()
+	_giro_campo = lerpf(de, alvo, clampf(t, 0.0, 1.0))
+	if _pivo != null:
+		_pivo.rotation_degrees = Vector3(0.0, _giro_campo, 0.0)
+	_aplicar_vista_hud()
 
 
-## A TROCA DE PERSPECTIVA (doc 16 §16.5, D3/D4/D9/D46) — uma rotina só, para as
-## DUAS direções, porque a troca é a mesma coisa: de 0 para 1 e de 1 para 0.
-##   1. as cartas do CAMPO que estão na tela viram FANTASMAS e ficam no MESMO
-##      lugar: elas ESMAECEM onde estão (nada viaja, nada atravessa a tela);
-##   2. as cartas da MÃO viram fantasma e DESLIZAM para o outro lugar — a mão
-##      é a única coisa que se desloca (D9);
-##   3. a tela nova é desenhada por baixo, no lugar novo, e as cartas APARECEM
-##      esmaecendo;
-##   4. tudo no mesmo baque (D4: não é fila uma a uma).
-## O ESTADO não se mexe: é o mesmo `GameState`, só mudou de onde cada carta é
-## desenhada (R1).
-func _trocar_perspectiva(com_efeito: bool) -> void:
-	# Quem estava jogando ANTES: a mão dele estava embaixo e é a do passive
-	# depois, então é a que sobe para o topo. A do outro desce para baixo.
-	var baixo_antigo := _perspectiva_antiga
-	var fantasmas: Array = []
-	for f in _no_cartas.get_children():
-		fantasmas.append(f)
-	for g in fantasmas:
-		_no_cartas.remove_child(g as Node)
-		_no_fantasmas.add_child(g)
-	# A tela nova. `_perspectiva_antiga` já está atualizada, então esta
-	# chamada não entra na troca de novo.
-	_redesenhar(com_efeito)
-	if com_efeito and not _sem_render():
-		for g in fantasmas:
-			var no := g as Node3D
-			_alfa_da_carta(1.0, no)
-			var tw := no.create_tween()
-			tw.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-			var destino := _destino_na_troca(no, baixo_antigo)
-			if destino != no.position:
-				# MÃO: desliza para o outro lugar (D9).
-				tw.tween_property(no, "position", destino, TROCA_DURACAO)
-			else:
-				# CAMPO: não viaja, só esmaece (D3).
-				tw.tween_method(Callable(self, "_alfa_da_carta").bind(no), 1.0, 0.0, TROCA_DURACAO)
-			tw.parallel().tween_method(Callable(self, "_alfa_da_carta").bind(no), 1.0, 0.0, TROCA_DURACAO)
-			tw.tween_callback(Callable(self, "_soltar_fantasma").bind(no))
-		for c in _no_cartas.get_children():
-			var nc := c as Node3D
-			_alfa_da_carta(0.0, nc)
-			var tw2 := nc.create_tween()
-			tw2.tween_method(Callable(self, "_alfa_da_carta").bind(nc), 0.0, 1.0, TROCA_DURACAO) \
-				.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-	else:
-		# Sem render (teste/headless) ou sem nada na tela: a troca é um pulo,
-		# e o estado final tem que ser o mesmo dos dois jeitos.
-		for g in fantasmas:
-			_soltar_fantasma(g as Node3D)
+## De onde a volta começou (0 se a mesa nunca girou, senão o 0 ou o 180 mais
+## próximo do alvo) — é o que permite a mesma rotina ir e voltar sem estado
+## guardado em outro lugar.
+func _giro_de_onde() -> float:
+	return 0.0 if _giro_campo < 90.0 else 180.0
 
 
-## ONDE a carta que está na tela tem que estar DEPOIS da troca (D9). A carta do
-## CAMPO fica onde está (só esmaece, D3). A carta da MÃO troca de lugar: a mão
-## que estava embaixo era a de quem jogava, então ela sobe para o topo, e a
-## mão de cima desce para baixo — cada uma no arco do dono, no mesmo índice.
-func _destino_na_troca(no: Node3D, baixo_antigo: int) -> Vector3:
-	if no == null or not is_instance_valid(no) or not (no as Node).has_meta("mao_lado"):
-		return no.position if no != null else Vector3.ZERO
-	var era_baixo := int((no as Node).get_meta("mao_lado")) == 0
-	# O dono da carta: embaixo estava quem jogava; em cima estava o outro.
-	var dono := baixo_antigo if era_baixo else 1 - baixo_antigo
-	var idx: int = int((no as Node).get_meta("mao_idx"))
-	if _st == null:
-		return no.position
-	var mao: Array = ((_st.players[dono] as Dictionary)["hand"]) as Array
-	var idx_real := clampi(idx, 0, maxi(mao.size() - 1, 0))
-	# Se a mão encolheu (o dono do turno jogou uma carta), o arco é o novo.
-	return _pos_mao_arco(idx_real, maxi(mao.size(), 1), 1 if era_baixo else 0)
+## Onde o HUD 2D guarda o que é "de um lado" e o que é "do outro". Preenchido
+## no boot; o resto da volta só lê.
+var _blocos_voce: Array[Control] = []
+var _blocos_rival: Array[Control] = []
+var _faixa_linha: HBoxContainer = null
+var _vista_trocada := false
+
+
+## APlica a "vista" no HUD 2D (D47). A tela 3D gira com a câmera; o HUD NÃO
+## gira (o usuário não quer isso), então o que ele faz é VIRAR DE CARTA:
+## encolhe no eixo X até sumir nos 90° e volta crescendo do outro lado, com o
+## conteúdo do outro jogador. Uma regra só (`_escala_do_virar`) para tudo que
+## tem nome ou número, e a troca acontece exatamente na largura ZERO — ou
+## seja, ninguém vê o instante em que o conteúdo muda.
+##
+## O que inverte e o que NÃO inverte, e por quê:
+##   * retratos e plaquinhas de nome/LP: invertem as POSIÇÕES (o seu vai para
+##     a direita, o dele para a esquerda) — é o que o usuário pediu;
+##   * a faixa do meio: a ORDEM das 7 células se espelha, então o seu deck e o
+##     seu LP ficam do lado que agora é o seu na tela, e a cor viaja com o
+##     número (azul = você, sempre);
+##   * a barra de fases: NÃO inverte, de propósito. Ela mostra a fase REAL de
+##     quem está jogando (D13/doc 13), e espelhar um dado de regra seria a tela
+##     mentir. Fica como âncora visual do meio da mesa.
+func _aplicar_vista_hud() -> void:
+	var esc := _escala_do_virar()
+	var invertido := _vista_invertida()
+	if _faixa2d != null:
+		_faixa2d.pivot_offset = _faixa2d.size * 0.5
+		_faixa2d.scale = Vector2(esc, 1.0)
+	for b in _blocos_voce:
+		_virar_bloco(b, esc, invertido)
+	for b in _blocos_rival:
+		_virar_bloco(b, esc, invertido)
+	if invertido != _vista_trocada:
+		_vista_trocada = invertido
+		_trocar_lado_das_blocos()
+		_espelhar_faixa()
+
+
+## Um bloco do HUD que vira de carta: pivô no meio dele (para encolher para os
+## dois lados, como uma carta virando) e a escala do giro.
+func _virar_bloco(b: Control, esc: float, _invertido: bool) -> void:
+	if b == null or not is_instance_valid(b):
+		return
+	b.pivot_offset = Vector2(b.size.x * 0.5, b.size.y * 0.5)
+	b.scale = Vector2(esc, 1.0)
+
+
+## Nos 90°, as posições dos blocos trocam de lado (a sua foto vai para a direita
+## e a dele para a esquerda). As posições originais ficam em meta no primeiro
+## giro, então isto é idempotente e não depende de nada guardado fora.
+func _trocar_lado_das_blocos() -> void:
+	for grupo in [_blocos_voce, _blocos_rival]:
+		for b in grupo:
+			if b == null or not is_instance_valid(b):
+				continue
+			if not b.has_meta("x_normal"):
+				b.set_meta("x_normal", b.position.x)
+	for i in range(mini(_blocos_voce.size(), _blocos_rival.size())):
+		var a: Control = _blocos_voce[i]
+		var b2: Control = _blocos_rival[i]
+		if a == null or b2 == null or not is_instance_valid(a) or not is_instance_valid(b2):
+			continue
+		var xa := float(a.get_meta("x_normal"))
+		var xb := float(b2.get_meta("x_normal"))
+		if _vista_invertida():
+			a.position.x = xb
+			b2.position.x = xa
+		else:
+			a.position.x = xa
+			b2.position.x = xb
+
+
+## A ORDEM das 7 células da faixa se espelha na virada. Como o `Celulas` é um
+## HBoxContainer, a ordem dos filhos É a ordem na tela: espelhar é reordenar.
+## O turno fica no meio (é o único que não tem dono) e a cor viaja com o
+## número, então o azul continua sendo "você" — só muda de lado na tela.
+func _espelhar_faixa() -> void:
+	if _faixa_linha == null or not is_instance_valid(_faixa_linha):
+		return
+	var celulas := _faixa_linha.get_children()
+	if celulas.is_empty():
+		return
+	# A ESPELHADA é reverter a lista. Só isso: com 7 células (ímpar) a do meio
+	# continua no meio, que é o Turno (o único que não tem dono). E reverter não
+	# duplica nada — importante, porque `add_child` de um nó que JÁ é filho
+	# remexe ele para o fim em vez de copiar (era o que acontecia montando a
+	# lista na mão: o `add_child` repetido jogava fora metade das células).
+	# `move_child` dentro do laço também não serve (cada movimento empurra os
+	# outros). Então: tira todas, devolve na ordem nova — são os MESMOS nós.
+	var nova := celulas.duplicate()
+	nova.reverse()
+	for c in celulas:
+		_faixa_linha.remove_child(c as Node)
+	for c2 in nova:
+		_faixa_linha.add_child(c2 as Node)
 
 
 func _redesenhar(com_efeito: bool) -> void:
-	# D46: a tela é a perspectiva de QUEM ESTA JOGANDO. Se a vez trocou desde
-	# o último desenho, a troca acontece AQUI — `_redesenhar` é o funil por
-	# onde o motor entrega a vez, então não há outro lugar que precise saber.
-	var agora := _perspectiva()
-	if agora != _perspectiva_antiga and not _cartas_do_campo().is_empty():
-		_perspectiva_antiga = agora
-		_trocar_perspectiva(com_efeito)
-		return
-	_perspectiva_antiga = agora
+	# D47: o desenho do campo é SEMPRE o mesmo — lado do dado = lado do mundo.
+	# Quem muda o ponto de vista é a câmera (a volta da mesa), então aqui não há
+	# nenhum "lado visual" para decidir: cada carta fica onde o DADO manda.
 	_limpar_cartas()
 	if _st == null:
 		return
 	_artes_ok = 0
 	# Campo: 5+5 monstros + magias (se houver, ex. test_state) por lado.
-	# `v` é o lugar NA TELA desta carta do dado (doc 16 §16.5): posição e
-	# rotação saem dele, nunca do lado do dado. Na etapa 1 (perspectiva
-	# travada no p0) `v` é o próprio (lado, i) — a tela não muda.
 	for lado in [0, 1]:
 		for zona_nome in ["monster", "spell"]:
 			var zona := _zona_do_jogador(lado, zona_nome)
@@ -1946,71 +1967,54 @@ func _redesenhar(com_efeito: bool) -> void:
 				var tipo := "monstro" if zona_nome == "monster" else "magia"
 				var virada := bool(m.get("face_down", false))
 				var em_defesa := str(m.get("position", "ATK")) == "DEF"
-				var v := _vis(lado, i)
-				var carta := _fazer_carta(_fantasia(m), virada, v.x, em_defesa)
+				var carta := _fazer_carta(_fantasia(m), virada, lado, em_defesa)
 				# A carta do campo cresce com o campo (mesma proporção dentro
 				# do vidro) e fica apoiada na peça, não flutuando.
 				carta.scale = Vector3.ONE * ESCALA_CAMPO
-				carta.position = _pos_slot(v.x, tipo, v.y) + Vector3(0, 0.015 * ESCALA_CAMPO, 0)
-				# O giro de 180° (a carta de cima é lida de cabeça baixa, D6)
-				# decide o LADO VISUAL, não o lado do dado.
-				_deitar_carta(carta, virada, em_defesa, v.x)
+				carta.position = _pos_slot(lado, tipo, i) + Vector3(0, 0.015 * ESCALA_CAMPO, 0)
+				_deitar_carta(carta, virada, em_defesa, lado)
 				carta.set_meta("slot_id", "p%d_%s%d" % [lado, ("m" if zona_nome == "monster" else "s"), i])
 				carta.set_meta("card_id", str(m.get("card_id", "")))
 				_no_cartas.add_child(carta)
-	# Mãos em arco (doc 16 D7, etapa 3): a de BAIXO é a de QUEM ESTÁ JOGANDO e
-	# a de CIMA é a do PASSIVE, SEMPRE virada. `lado_visual` da mão é 0 = baixo
-	# (arcão grande, perto da câmera) e 1 = cima (mini, longe). A sua só sai
-	# ABERTA; a do rival é sempre de costas, como antes.
-	# Efeito: a mão é a ÚNICA coisa que troca de lugar (D9), e com a de cima
-	# sempre virada some o caso especial do D45 item 8 (a 5ª posição espelhada
-	# do rival) — a ordem da mão de cima não vaza informação.
+	# Mãos em arco: a SUA embaixo (aberta, perto da câmera), a do RIVAL em cima
+	# (de costas, mini e longe). D47: isto NÃO depende de quem está jogando —
+	# cada mão fica sempre do lado do seu dono no MUNDO, e quem muda de ponto de
+	# vista é a câmera. Na volta de 180° a sua mão vai para o topo da tela (pelas
+	# costas, que é o que o usuário pediu) e a dele vem para baixo. Efeito
+	#-bônus que o dado já dava: o espelho do rival (D18) + a volta se cancelam, e
+	# cada um vê a PRÓPRIA mão na ordem normal.
 	# Rotação LIVRE (ordem do usuário): valor fixo editável, sem nenhum
 	# cálculo da câmera. Mude TILT_MAO_LIVRE à vontade (graus no eixo X).
-	var lado_baixo := _perspectiva()
-	var lado_cima := 1 - lado_baixo
-	var mao_baixo: Array = ((_st.players[lado_baixo] as Dictionary)["hand"]) as Array
-	var mao_baixo_aberta := lado_baixo == 0
-	for i in range(mao_baixo.size()):
-		var dado := (mao_baixo[i] as Dictionary) if mao_baixo_aberta else {}
-		var c := _fazer_carta(dado, not mao_baixo_aberta, lado_baixo, false)
+	var mao0: Array = (_st.players[0] as Dictionary)["hand"]
+	for i in range(mao0.size()):
+		var c := _fazer_carta(mao0[i] as Dictionary, false, 0, false)
 		# Mão PEQUENA no rodapé (fase 2/doc 15 §15.3): o X acompanha o
 		# centro do campo (calculado da câmera) e o Y/Z é o da const
 		# MAO_P0_YZ — a carta nasce cortada pela borda de baixo.
-		c.position = _pos_mao_arco(i, mao_baixo.size(), 0)
+		c.position = _pos_mao_arco(i, mao0.size(), 0)
 		# Levantada p/ fusão: só o selo na etiqueta (posição não muda). A
 		# etiqueta nasce escondida (o ATK/DEF já é impresso na carta): o
-		# selo é a única coisa que precisa aparecer flutuando. É sempre a
-		# SUA mão (o jogador é o único que combina carta).
-		if lado_baixo == 0:
-			var selo := _levantadas.find(i) + 1
-			if selo > 0:
-				var tag := c.get_node("TagPos") as Label3D
-				tag.text = "SELO %d" % selo
-				tag.visible = true
+		# selo é a única coisa que precisa aparecer flutuando.
+		var selo := _levantadas.find(i) + 1
+		if selo > 0:
+			var tag := c.get_node("TagPos") as Label3D
+			tag.text = "SELO %d" % selo
+			tag.visible = true
 		c.set_meta("mao_idx", i)
-		c.set_meta("mao_lado", 0)
 		_no_cartas.add_child(c)
-		# A pose da mão: ABERTA (a sua) ou DE COSTAS (a do rival, que joga
-		# de baixo mas não pode ser vista). `rotation_degrees` substitui os
-		# três eixos, então o giro de virada que `_fazer_carta` põe tem que
-		# entrar AQUI junto com a inclinação — senão a carta virada aparece
-		# de frente (foi o bug da 1a foto da etapa 3).
-		c.rotation_degrees = Vector3(TILT_MAO_LIVRE if mao_baixo_aberta else 180.0 + TILT_MAO_LIVRE, 0, 0)
+		c.rotation_degrees = Vector3(TILT_MAO_LIVRE, 0, 0)
 		if com_efeito and not _sem_render():
 			var alvo: Vector3 = c.position
-			c.position = _deck_pos[lado_baixo]
+			c.position = _deck_pos[0]
 			var tw := c.create_tween().set_parallel(true)
 			tw.tween_property(c, "position", alvo, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	var mao_topo: Array = ((_st.players[lado_cima] as Dictionary)["hand"]) as Array
-	for j in range(mao_topo.size()):
-		var v := _fazer_carta({}, true, lado_cima, false)
-		v.position = _pos_mao_arco(j, mao_topo.size(), 1)
-		v.set_meta("mao_idx", j)
-		v.set_meta("mao_lado", 1)
+	var mao1: Array = (_st.players[1] as Dictionary)["hand"]
+	for j in range(mao1.size()):
+		var v := _fazer_carta({}, true, 1, false)
+		v.position = _pos_mao_arco(j, mao1.size(), 1)
 		_no_cartas.add_child(v)
-		# D3: a mão de CIMA é uma camada de MÃO — sempre desenhada por
-		# cima do campo. Sem isso, o ladrilho de magia de cima (o vidro
+		# D3: a mão do RIVAL é uma camada de MÃO — sempre desenhada por
+		# cima do campo. Sem isso, o ladrilho de magia do rival (o vidro
 		# escuro, alpha 0,72) ficava NA FRENTE dela na tela e pintava a
 		# metade de baixo das cartas viradas, que na ref não tem nada
 		# atrás. A mão não é mais profunda que o campo, então a correção é
@@ -2062,21 +2066,17 @@ func _posicionar_cursor() -> void:
 				alvo = _pos_mao_arco(clampi(_col, 0, n - 1), n, 0)
 				_moldar_foco(LARG_CARTA, ALT_CARTA, Vector3(TILT_MAO_LIVRE, 0, 0), LARG_CARTA)
 		FILEIRA_MEU_M:
-			var vm := _vis(0, clampi(_col, 0, 4))
-			alvo = _pos_slot(vm.x, "monstro", vm.y)
-			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, vm.x, 0), _peca_prof_carta())
+			alvo = _pos_slot(0, "monstro", clampi(_col, 0, 4))
+			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, 0, 0), _peca_prof_carta())
 		FILEIRA_MEU_S:
-			var vs := _vis(0, clampi(_col, 0, 4))
-			alvo = _pos_slot(vs.x, "magia", vs.y)
-			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, vs.x, 0), _peca_prof_carta())
+			alvo = _pos_slot(0, "magia", clampi(_col, 0, 4))
+			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, 0, 0), _peca_prof_carta())
 		FILEIRA_RIVAL_M:
-			var vr := _vis(1, clampi(_col, 0, 4))
-			alvo = _pos_slot(vr.x, "monstro", vr.y)
-			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, vr.x, _em_defesa(1, "monstro", clampi(_col, 0, 4))), _peca_prof_carta())
+			alvo = _pos_slot(1, "monstro", clampi(_col, 0, 4))
+			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, 1, _em_defesa(1, "monstro", clampi(_col, 0, 4))), _peca_prof_carta())
 		FILEIRA_RIVAL_S:
-			var vt := _vis(1, clampi(_col, 0, 4))
-			alvo = _pos_slot(vt.x, "magia", vt.y)
-			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, vt.x, _em_defesa(1, "magia", clampi(_col, 0, 4))), _peca_prof_carta())
+			alvo = _pos_slot(1, "magia", clampi(_col, 0, 4))
+			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, 1, _em_defesa(1, "magia", clampi(_col, 0, 4))), _peca_prof_carta())
 		_:
 			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, 0, 0), _peca_prof_carta())
 	_foco = alvo
@@ -2318,8 +2318,12 @@ func _construir_retratos(hud: Control) -> void:
 	_retrato_rival_silhueta.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	ret_rival.add_child(_retrato_rival_silhueta)
 	hud.add_child(ret_rival)
+	_blocos_rival.append(ret_rival)
+	# D47: a placa de nome e o retrato sao blocos que viram de carta na volta.
 	_lbl_placa_nome_rival = _placa_nome_retrato(hud, "NomeRival", RETRATO_NOME_RIVAL_X, RETRATO_RIVAL_Y,
 		RETRATO_NOME_L, RETRATO_NOME_A, HORIZONTAL_ALIGNMENT_RIGHT, COR_VERM_BORDA, COR_VERM_FUNDO)
+	if _lbl_placa_nome_rival != null and _lbl_placa_nome_rival.get_parent() != null:
+		_blocos_rival.append(_lbl_placa_nome_rival.get_parent() as Control)
 	# VOCÊ: foto na esquerda (x 578) e nome à DIREITA dela, alinhado à
 	# esquerda (espelho do rival).
 	var ret_voce := PanelContainer.new()
@@ -2347,8 +2351,12 @@ func _construir_retratos(hud: Control) -> void:
 	_retrato_voce_silhueta.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	ret_voce.add_child(_retrato_voce_silhueta)
 	hud.add_child(ret_voce)
+	_blocos_voce.append(ret_voce)
 	_lbl_placa_nome_voce = _placa_nome_retrato(hud, "NomeVoce", RETRATO_NOME_VOCE_X, RETRATO_VOCE_Y,
 		RETRATO_NOME_L, RETRATO_NOME_A, HORIZONTAL_ALIGNMENT_LEFT, COR_AZUL_BORDA, COR_AZUL_FUNDO)
+	# D47: a placa de nome e o retrato sao blocos que viram de carta na volta.
+	if _lbl_placa_nome_voce != null and _lbl_placa_nome_voce.get_parent() != null:
+		_blocos_voce.append(_lbl_placa_nome_voce.get_parent() as Control)
 
 
 ## Placa de NOME ao lado do retrato (D44, item 8; cores em D45, item 2): o MESMO
@@ -2486,6 +2494,9 @@ func _construir_faixa_2d(hud: Control) -> void:
 	_num_deck_rival = cel_deck_rival.get_node("Caixa/Numero") as Label
 	_arte_cem_rival = cel_cem_rival.get_node("Caixa/Arte") as TextureRect
 	_num_cem_rival = cel_cem_rival.get_node("Caixa/Numero") as Label
+	# D47: a linha da faixa é o que se espelha na volta da mesa (a ordem dos
+	# filhos do HBox É a ordem na tela).
+	_faixa_linha = linha
 	_atualizar_faixa()
 	print("[MESA3D] Faixa 2D: 7 celulas em x=%.0f..%.0f y=%.0f..%.0f (vao das fileiras %.0f..%.0f px)." % [
 		x0, x0 + larg, y, y + alt, y_topo, y_base])
@@ -3853,6 +3864,13 @@ func _rival_auto() -> void:
 	if _rival_rodando:
 		return
 	_rival_rodando = true
+	# D47: se a mesa ainda está na SUA visão (o caso do RIVAL COMEÇAR o duelo),
+	# dá a volta antes dele jogar. No caminho normal (START) a volta já foi
+	# feita, então aqui não acontece nada.
+	await _girar_campo(180.0)
+	if not is_inside_tree():
+		_rival_rodando = false
+		return
 	await get_tree().create_timer(0.7).timeout
 	if not is_inside_tree() or bool(_st.over):
 		_rival_rodando = false
@@ -3917,6 +3935,13 @@ func _rival_auto() -> void:
 		return
 	_duel.advance_phase() # BATTLE -> END
 	_redesenhar(false)
+	# D47: a volta DE VOLTA, para a tela voltar a ser a do jogador. Entra
+	# ANTES de abrir o fluxo dele, para o primeiro cardápio já nascer na tela
+	# certa e o jogador não ver a mão dele de lado nenhum.
+	await _girar_campo(0.0)
+	if not is_inside_tree():
+		_rival_rodando = false
+		return
 	_levar_vez_para_o_jogador()
 	_rival_rodando = false
 
@@ -4007,6 +4032,13 @@ func _passar_turno() -> void:
 		return
 	_fala("Turno do rival... (START)")
 	_redesenhar(false)
+	# D47: A VOLTA DA MESA. A câmera dá a volta de 180° em torno do centro do
+	# campo e a tela passa a ser a visão DO RIVAL. As cartas não se mexem (é a
+	# câmera que anda), e o START só segue depois que a volta acaba — o giro
+	# não pula (D46b: não existe pular a volta).
+	await _girar_campo(180.0)
+	if not is_inside_tree():
+		return
 	_rival_auto()
 
 
@@ -4029,14 +4061,14 @@ func _larg_fileira(f: int) -> int:
 ## do D18 e a troca de perspectiva do doc 16 viram a ordem visível, e quem
 ## decide isso tem que ser a MESMA função que desenha.
 func _vizinho3d(lado: int, tipo: String, col_atual: int, dx: int) -> int:
-	var atual := _x_do_slot(lado, tipo, clampi(col_atual, 0, 4))
+	var atual := _pos_slotx(lado, tipo, clampi(col_atual, 0, 4))
 	var melhor := clampi(col_atual, 0, 4)
 	var melhor_dist := 1e20
 	var achou := false
 	for i in range(5):
 		if i == clampi(col_atual, 0, 4):
 			continue
-		var delta := _x_do_slot(lado, tipo, i) - atual
+		var delta := _pos_slotx(lado, tipo, i) - atual
 		if dx > 0 and delta > 0.001 and absf(delta) < melhor_dist:
 			melhor_dist = absf(delta)
 			melhor = i
@@ -4051,7 +4083,7 @@ func _vizinho3d(lado: int, tipo: String, col_atual: int, dx: int) -> int:
 		var minx := 1e20
 		var mini_idx := clampi(col_atual, 0, 4)
 		for i in range(5):
-			var cx := _x_do_slot(lado, tipo, i)
+			var cx := _pos_slotx(lado, tipo, i)
 			if cx < minx:
 				minx = cx
 				mini_idx = i
@@ -4059,7 +4091,7 @@ func _vizinho3d(lado: int, tipo: String, col_atual: int, dx: int) -> int:
 	var maxx := -1e20
 	var maxi_idx := clampi(col_atual, 0, 4)
 	for i in range(5):
-		var cx2 := _x_do_slot(lado, tipo, i)
+		var cx2 := _pos_slotx(lado, tipo, i)
 		if cx2 > maxx:
 			maxx = cx2
 			maxi_idx = i
@@ -4148,13 +4180,13 @@ func _mover(dx: int, dy: int) -> void:
 			if novo_idx != idx:
 				var nova := int(ORDEM_CAMPO_3D[novo_idx])
 				# Preserva a COLUNA VISÍVEL (X de tela, igual ao 2D).
-				var atual_x := _x_do_slot(int((_lado_tipo_da_fileira(_fileira) as Array)[0]), str((_lado_tipo_da_fileira(_fileira) as Array)[1]), clampi(_col, 0, 4))
+				var atual_x := _pos_slotx(int((_lado_tipo_da_fileira(_fileira) as Array)[0]), str((_lado_tipo_da_fileira(_fileira) as Array)[1]), clampi(_col, 0, 4))
 				var mln := int((_lado_tipo_da_fileira(nova) as Array)[0])
 				var mlt := str((_lado_tipo_da_fileira(nova) as Array)[1])
 				var melhor := 0
 				var melhor_dist := 1e20
 				for i in range(5):
-					var d := absf(_x_do_slot(mln, mlt, i) - atual_x)
+					var d := absf(_pos_slotx(mln, mlt, i) - atual_x)
 					if d < melhor_dist:
 						melhor_dist = d
 						melhor = i
@@ -4483,8 +4515,14 @@ func _auto_passa() -> void:
 
 
 func _process(delta: float) -> void:
-	# CÂMERA FIXA (ref): nunca mexe — só o cursor pulsa. Sem órbita/balanço.
+	# D47: a CÂMERA não é mexida aqui. Quem se mexe é o PIVÔ, e só na volta da
+	# mesa (`_girar_campo`) — o `look_at` de todo frame saiu porque brigaria com
+	# o giro (e porque ele só servia para fixar a inclinação, que agora é a
+	# rotação local da câmera dentro do pivô).
+	# O cursor segue pulsando (é o único movimento próprio da tela).
 	_pulso += delta * 4.0
+	if _girando:
+		_aplicar_vista_hud()
 	if not _foto_destino.is_empty():
 		_foto_frames += 1
 		if _auto_passa_espera >= 0.0:
@@ -4495,30 +4533,27 @@ func _process(delta: float) -> void:
 		if _foto_frames >= _foto_frame_alvo:
 			var img := get_viewport().get_texture().get_image()
 			img.save_png(_foto_destino)
-			print("[MESA3D] Foto salva (quadro %d, perspectiva %d): %s" % [
-				_foto_frames, _perspectiva(), _foto_destino])
+			print("[MESA3D] Foto salva (quadro %d, volta %.0f graus): %s" % [
+				_foto_frames, _giro_campo, _foto_destino])
 			get_tree().quit()
-	if _cam != null:
-		if _cam.position != CAM_POS:
-			_cam.position = CAM_POS
-		# look_at todo frame é barato e garante o tilt fixo da ref.
-		_cam.look_at(CAM_ALVO)
 	if _cursor3d != null:
 		var s := (1.0 + 0.04 * sin(_pulso)) * _cursor_escala
 		_cursor3d.scale = Vector3(s, 1.0, s)
 	if _st == null:
 		return
-	# Repetição do direcional (igual ao 2D).
+	# Repetição do direcional (igual ao 2D). D47: nada de andar o cursor
+	# enquanto a mesa está girando.
 	var dx := 0
 	var dy := 0
-	if Input.is_action_pressed("mover_esq"):
-		dx -= 1
-	if Input.is_action_pressed("mover_dir"):
-		dx += 1
-	if Input.is_action_pressed("mover_cima"):
-		dy -= 1
-	if Input.is_action_pressed("mover_baixo"):
-		dy += 1
+	if not _girando:
+		if Input.is_action_pressed("mover_esq"):
+			dx -= 1
+		if Input.is_action_pressed("mover_dir"):
+			dx += 1
+		if Input.is_action_pressed("mover_cima"):
+			dy -= 1
+		if Input.is_action_pressed("mover_baixo"):
+			dy += 1
 	var desejado := Vector2i(dx, dy)
 	if desejado == Vector2i.ZERO:
 		_pad_dir = Vector2i.ZERO
@@ -4536,6 +4571,12 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(evento: InputEvent) -> void:
+	# D47: com a mesa girando, o controle fica TRAVADO. Sem isto a carta focada
+	# andaria de um lado para o outro da tela no meio do giro, e um START
+	# passando por cima da volta quebraria a sequência.
+	if _girando:
+		get_viewport().set_input_as_handled()
+		return
 	if evento.is_action_pressed("confirmar"):
 		_confirmar()
 		get_viewport().set_input_as_handled()
