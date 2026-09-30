@@ -44,7 +44,6 @@ extends "res://testing/astralis_test_base.gd"
 
 const DataLoaderScript := preload("res://core/data_loader.gd")
 const BoardLayoutScript := preload("res://core/board_layout.gd")
-const BoardScript := preload("res://duel_legacy2d/duel_board.gd")
 # ProjectLoaderScript vem da base (astralis_test_base.gd) - R8: uma cópia só.
 
 ## Pasta de projeto montada na hora (user://).
@@ -361,6 +360,8 @@ func test_arena_oficial_e_a_unica_e_a_perfeita() -> void:
 		var zs: Vector2 = slots[BoardLayoutScript.slot_id(lado, "magia", 2)]
 		assert_almost_eq(absf(zs.y - zm.y), passo, 0.000001, "Vão monstro->magia de p%d = 263." % lado)
 	assert_eq((slots["p0_m0"] as Vector2).y - (slots["p1_m0"] as Vector2).y, 390.0, "A distância entre as fileiras de monstro continua 390.")
-	# E o 2D legado usa o MESMO dado (sem número próprio).
-	var r: Rect2 = BoardScript.slot_rect(0, "monstro", 2, slots)
-	assert_eq(r.position, slots["p0_m2"] as Vector2, "O 2D legado lê a posição do mesmo arquivo.")
+	# E quem DESENHA usa o MESMO dado (sem número próprio): a posição do slot
+	# na tela sai do layout, e a trava disso é do arquivo 3D
+	# (test_posicao_carta_exatamente_no_painel).
+	assert_eq(BoardLayoutScript.get_pos(slots, "p0_m2"), slots["p0_m2"] as Vector2,
+		"O desenho sai do XY do mesmo arquivo.")

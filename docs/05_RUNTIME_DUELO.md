@@ -62,7 +62,7 @@ Duelist.ai_preset:
 
 Studio expõe como 3 sliders + dropdown. Runtime interpreta. Dá identidade (ex.: Kaiba agressivo/fusionador, Joey equilibrado) sem código. Futuro: AI profiles/behavior params completos.
 
-> **Estado real em v1.5:** o `ai_preset` está no contrato e o Studio edita, mas o runtime **ainda não lê** os 4 números. A IA atual é fixa em `duel_table.gd` (regra do original: direto com o mais forte, kill com o mais fraco que vence, melhor margem contra ATK virado para cima) e a guardiã ±500 está desligada num hook. Dado pronto, motor pendente.
+> **Estado real em v1.5:** o `ai_preset` está no contrato e o Studio edita, mas o runtime **ainda não lê** os 4 números. **D54/D55:** a mesa 2D onde a IA do rival vivia (FindKiller + FindBestAttack, a regra do original: direto com o mais forte, kill com o mais fraco que vence, melhor margem contra ATK virado para cima) foi removida, e o usuário chamou essa IA de **temporária** - vai mudar como ela "pensa" na jogada. O que o jogo faz hoje: o rival invoca o primeiro monstro e ataca o primeiro slot (`duel3d/mesa_3d.gd::_rival_auto`). Dado pronto, motor pendente - e quando ele for feito, a escolha mora em `duel/` (sistema real, testado sem mesa), nunca dentro de um arquivo de tela.
 
 ## 5.5 MVP Runtime
 

@@ -5,18 +5,13 @@ extends Node3D
 ## moldura, emblema ou vazio estrelado — só DESENHA o estado real
 ## (DuelManager/GameState + sistemas reais Summon/Battle/Position/Turn/
 ## Fusion) flutuando no céu azul com painéis de vidro azul. Zero regra
-## aqui (R1): cada jogada chama o sistema real e redesenha. A mesa 2D
-## aposentada mora em duel_legacy2d/ (só emergência, nunca carrega).
+## aqui (R1): cada jogada chama o sistema real e redesenha.
 ## Controle 100% joypad (D19): só as 11 ações custom, sem mouse/teclado.
 ## Uso headless p/ validação: `-- --mesa3d-sair=5` sai sozinho após N segundos.
-## Controle 100% joypad (D19): só as 11 ações custom, sem mouse/teclado.
-## Uso headless p/ validação: `-- --mesa3d-sair=5` sai sozinho após N segundos.
+## Diagnóstico no console: `-- --debug` (doc 15 §15.6).
 ##
-## Arg oficial --cenario3d (boot, documentado aqui):
-##   sem arg (ou valor diferente de 0) = abre SEMPRE esta mesa 3D;
-##   `-- --cenario3d 0` (ou `--cenario3d=0`) = volta ao legado 2D
-##   (duel_legacy2d/duel_table.tscn), só p/ emergência; se o legado não
-##   existir mais, avisa em PT-BR e segue no 3D.
+## Esta é a ÚNICA tela do duelo: a mesa 2D (duel_legacy2d) foi removida (D54)
+## e a flag `--cenario3d` foi junto com ela.
 
 const ProjectLoaderScript := preload("res://core/project_loader.gd")
 const DuelManagerScript := preload("res://duel/duel_manager.gd")
@@ -120,8 +115,7 @@ const PECA_PROF_CARTAS := 1.58
 ## `arena_starter.json` (y 695/958 no jogador, 305/42 no rival = 263 nos dois
 ## lados), o mesmo número do passo horizontal. NADA desloca a fileira de magia
 ## aqui: se algum dia o vão ficar feio de novo, o dado é que se muda — não um
-## desvio escondido no código. O 2D legado (`duel_legacy2d/duel_board.gd`) usa
-## a mesma grade.
+## desvio escondido no código.
 ## ATENÇÃO (o que a tela NÃO pode prometer): o vão é igual em MUNDO, mas a
 ## perspectiva faz o mesmo intervalo aparecer com 276 px na fileira da frente,
 ## 257 px no meio e 220 px no fundo. Isso é projeção, não erro do dado (doc 15
@@ -510,10 +504,6 @@ var _foto_frames := -1
 
 
 func _ready() -> void:
-	# Boot oficial (ver o topo: --cenario3d). Sem o arg fica no 3D; com
-	# `--cenario3d 0` troca p/ o legado 2D e PARA aqui (nada do 3D monta).
-	if _usar_legado_2d():
-		return
 	_construir_janela_campo()
 	_construir_ambiente()
 	_construir_hud()
@@ -580,51 +570,6 @@ func _ready() -> void:
 	_ver_autoquit()
 
 
-## Boot: lê --cenario3d nas 2 formas (igual ao --project/--setup).
-## "0" = legado 2D (emergência); sem arg ou outro valor = fica no 3D.
-## `--debug` liga o diagnostico detalhado (medidas, camera, calibracao,
-## fila de fusao, foto). Sem ela o jogo so imprime o boot.
-var _debug := _quer_debug()
-
-## Volta true quando trocou de cena (quem chamou PARA aqui).
-## Diagnostico: so sai com `--debug`. O que o boot imprime SEM a flag e
-## contrato do `test_project_arg` (ele roda o jogo de verdade e le o log), e
-## por isso nenhum contrato passa por aqui.
-func _diag(texto: String) -> void:
-	if _debug:
-		print("[MESA3D] " + texto)
-
-
-## A flag `--debug`, nas duas formas de escrever (igual ao --cenario3d).
-func _quer_debug() -> bool:
-	var args := OS.get_cmdline_user_args()
-	for i in range(args.size()):
-		var s := str(args[i])
-		if s == "--debug" or s.begins_with("--debug="):
-			return true
-	return false
-
-
-func _usar_legado_2d() -> bool:
-	var modo := ""
-	var args := OS.get_cmdline_user_args()
-	for i in range(args.size()):
-		var s := str(args[i])
-		if s == "--cenario3d" and i + 1 < args.size():
-			modo = str(args[i + 1]).strip_edges()
-		elif s.begins_with("--cenario3d="):
-			modo = s.trim_prefix("--cenario3d=").strip_edges()
-	if modo != "0":
-		return false
-	var legado := "res://duel_legacy2d/duel_table.tscn"
-	if not FileAccess.file_exists(legado):
-		print("[MESA3D] Aviso: --cenario3d 0 pediu o legado 2D, mas ele não existe mais — seguindo no 3D.")
-		return false
-	print("[MESA3D] --cenario3d 0: abrindo o legado 2D (emergência).")
-	get_tree().call_deferred("change_scene_to_file", legado)
-	return true
-
-
 ## Log de boot da mesa: uma linha por fato (arena, fusões, duelo) e o resto do
 ## diagnóstico só com `--debug`. As linhas do boot são contrato do
 ## `test_project_arg`, que roda o jogo de verdade e lê o que ele imprimiu.
@@ -635,6 +580,26 @@ func _avisar_arena() -> void:
 		var h0: Dictionary = BoardLayoutScript.get_hand(_arena_data, 0)
 		var h1: Dictionary = BoardLayoutScript.get_hand(_arena_data, 1)
 		print("[MESA3D] Arena carregada: %d slots + mão p0(%d,%d,%d) p1(%d,%d,%d)." % [_arena_layout.size(), int(h0["x"]), int(h0["y"]), int(h0["step"]), int(h1["x"]), int(h1["y"]), int(h1["step"])])
+
+
+## Diagnóstico: só sai com `--debug` (medidas, câmera, calibração, fila de
+## fusão, foto). Sem ela o jogo só imprime o log de boot.
+var _debug := _quer_debug()
+
+
+## A flag `--debug`, nas duas formas de escrever (o resto do jogo lê assim).
+func _quer_debug() -> bool:
+	for s in OS.get_cmdline_user_args():
+		if str(s) == "--debug" or str(s).begins_with("--debug="):
+			return true
+	return false
+
+
+## Uma linha de diagnóstico, só com `--debug`. O que o boot imprime SEM a
+## flag é contrato do `test_project_arg` e não passa por aqui.
+func _diag(texto: String) -> void:
+	if _debug:
+		print("[MESA3D] " + texto)
 
 
 ## ---------- QUEM JOGA PRIMEIRO (bug do "Aguarde o rival") ----------

@@ -119,9 +119,9 @@ Dano, compra, descarte, quem venceu, resultado fusão, alvo válido, fase atual.
 ## 13.10.1 UMA arena só (D48)
 
 - **A arena oficial é `schemas/examples/arenas/arena_starter.json`** (a "grade larga"): X `632 → 1684` de 263 em 263, Y `p0 monstro 695 / p0 magia 958 / p1 monstro 305 / p1 magia 42`. Mão p0(1240,980,95) e p1(1240,20,60).
-- A grade embutida em `core/board_layout.gd` (usada quando o projeto não tem `arenas/`) **não é uma segunda arena**: são os MESMOS números, escritos nas constantes `GRID_X/GAP/Y_*`. E `duel_legacy2d/duel_board.gd` repete essa grade só para o 2D legado.
+- A grade embutida em `core/board_layout.gd` (usada quando o projeto não tem `arenas/`) **não é uma segunda arena**: são os MESMOS números, escritos nas constantes `GRID_X/GAP/Y_*`. O 2D legado repetia essa grade em `duel_legacy2d/duel_board.gd`, mas ele foi removido (D54) - hoje a arena tem UM lugar só.
 - **O que era errado (D48):** o JSON já usava a grade larga, mas a grade embutida, a descrição do próprio JSON, o schema e dois testes ainda falavam da grade antiga e estreita (X `780 → 1536`, Y `600/789/317/128`, passo 189). Resultado: quem tinha `arenas/arena_starter.json` via a grade larga, e quem não tinha (projeto novo do Studio) via a grade estreita — **duas telas diferentes**, e a estreita com a mão invadindo a fileira de baixo. Só a larga é a que a câmera da D47 foi calibrada.
-- **D50 mudou esta seção:** não existe mais "grade padrão embutida" para cair (13.10.3). A posição vem SO do arquivo da arena oficial; sem ele, o jogo avisa e nao desenha o campo. O que era fallback virou o proprio dado.butidos com os 20 do JSON, trava `SLOT + GAP == 263` e compara as constantes do 2D legado com as do `BoardLayout`. Se alguém mexer num lado só, a suíte quebra. `test_project_arg.gd` refaz a comparação slot a slot pelo caminho de projeto sem arena.
+- **D50 mudou esta seção (e o D54 fechou):** não existe mais "grade padrão embutida" para cair (13.10.3). A posição vem SO do arquivo da arena oficial; sem ele, o jogo avisa e nao desenha o campo. O que era fallback virou o proprio dado.butidos com os 20 do JSON, trava `SLOT + GAP == 263` e compara o layout lido com os 20 slots do JSON. Se alguém mexer num lado só, a suíte quebra. `test_project_arg.gd` refaz a comparação slot a slot pelo caminho de projeto sem arena.
 - Regra para o futuro: **um número de arena vive em dois lugares por necessidade técnica (JSON + fallback), então a igualdade é obrigatória e testada.** Mover a arena = mudar o JSON **e** as constantes, no mesmo commit.
 
 ## 13.10.2 A grade PERFEITA (D49) — um valor só, 263
@@ -173,7 +173,7 @@ pixels foram removidos.
 **Travas de teste:**
 - `test_mesa_3d_oficial.gd::test_d49_grade_perfeita_um_valor_so_e_mao_vem_para_a_camera` — os 20 slots são o dado puro (tolerância 1e-6), o passo horizontal das 4 fileiras é o mesmo número, o vão vertical monstro→magia dos 2 lados é **igual a ele**, a ordem das fileiras continua a do dado, e a distância entre as fileiras de monstros dos 2 lados continua **390** (com um `assert_ne` que impede alguém de "harmonizar" os 390 para 263).
 - `test_board_layout.gd::test_espelho_p1_fileiras_perto_longe` — as mesmas três distâncias, medidas no **arquivo** (sem câmera).
-- `test_project_arg.gd::test_arena_oficial_e_a_unica_e_a_perfeita` — o arquivo tem 20 slots, um valor só nas seis direções, o 390 congelado, e o 2D legado lê o mesmo arquivo.
+- `test_project_arg.gd::test_arena_oficial_e_a_unica_e_a_perfeita` — o arquivo tem 20 slots, um valor só nas seis direções, o 390 congelado, e quem desenha (a mesa 3D) lê o mesmo arquivo.
 
 ## 13.10.3 UMA arena, e ela é do jogo (D50)
 
@@ -184,7 +184,7 @@ jogo, não temos mais; se tiver mais está errado e é pra ser removido"*.
 **O que existia: 1 arquivo e 3 cópias dos números.**
 1. `schemas/examples/arenas/arena_starter.json` — o arquivo (a mesa de verdade);
 2. `core/board_layout.gd` — as constantes `GRID_X`/`GAP`/`Y_*`, o "fallback";
-3. `duel_legacy2d/duel_board.gd` — as mesmas constantes de novo, para o 2D.
+3. ~~`duel_legacy2d/duel_board.gd`~~ - **saiu no D54**: a mesa 2D foi removida (o jogo tem uma tela só, a 3D).
 
 O D48 tinha tornado as três iguais, mas continuavam sendo três. E a (2) era
 perigosa: era ela que deixava o jogo cair numa tela diferente **em silêncio**,
@@ -195,7 +195,6 @@ quando o arquivo não vinha.
 | Onde | Antes | Agora |
 |---|---|---|
 | `core/board_layout.gd` | `SLOT`/`GAP`/`GRID_X`/`Y_*` + `default_pos` com a grade | **nada.** `default_pos` só devolve `NULO` ("não tem posição") |
-| `duel_legacy2d/duel_board.gd` | as mesmas 7 constantes | **nada.** `slot_rect` lê o layout e devolve `Rect2` vazio se faltar |
 | `get_pos(layout, slot)` | layout → grade do código → fallback | **layout → fallback do chamador.** Sem layout, `NULO` |
 | `project_arena_path(arena_id)` | buscava `projeto/arenas/<id>.json`, senão examples/ | **sempre a arena oficial**; o `arena_id` é lido e avisado como ignorado |
 | projeto do Studio | esqueleto com pasta `arenas/` | **sem a pasta** (`PASTAS_ESQUELETO` foi de 9 para 8) |

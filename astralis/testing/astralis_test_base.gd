@@ -21,7 +21,7 @@ extends GutTest
 ## (monta duelo, enche a mão, ocupa slot, limpa campo) ou OBSERVA o estado.
 ## Quem decide a regra é SEMPRE o sistema real do Astralis (DuelManager,
 ## Summon, Battle, Damage, Turn, Fusion, DataLoader, BoardLayout e a cena
-## duel_legacy2d/duel_table.tscn). Proibido Fake/Mock/Stub de gameplay (R2) e proibido
+## duel3d/mesa_3d.tscn). Proibido Fake/Mock/Stub de gameplay (R2) e proibido
 ## "adaptar" um teste que falhou: teste vermelho = bug do runtime, reportar.
 ##
 ## Os preloads abaixo são os SISTEMAS REAIS. Nenhum é cópia, nenhum é dublê.
@@ -34,8 +34,6 @@ extends GutTest
 const ProjectLoaderScript := preload("res://core/project_loader.gd")
 const DuelManagerScript := preload("res://duel/duel_manager.gd")
 const SummonSystem := preload("res://duel/summon_system.gd")
-const TableScript := preload("res://duel_legacy2d/duel_table.gd")
-const MesaScene := preload("res://duel_legacy2d/duel_table.tscn")
 const Mesa3DScene := preload("res://duel3d/mesa_3d.tscn")
 
 ## O mundo 3D (doc 15 15.4) mora dentro de um SubViewport: o caminho da janela
@@ -86,20 +84,6 @@ func _garantir_monstros_na_mao(st, player_idx: int, quantos: int) -> void:
 			deck.remove_at(k)
 		else:
 			k += 1
-
-
-# ---------- MESA REAL 2D (duel_legacy2d/duel_table.tscn) ----------
-# ESTE BLOCO SAI NO F2 (D54: o 2D aposentado foi removido). As funcoes
-# `_mesa_nova` e `_fluxo_completo_ate_campo` usam `MesaScene`/`TableScript`,
-# que nao existiram mais depois do D54.
-
-# Mesa nova de verdade: instancia a cena, espera 4 quadros (a mesa monta o
-# duelo e desenha sozinha) e devolve o nó. O GUT libera no fim do teste.
-func _mesa_nova():
-	var mesa: Node = MesaScene.instantiate()
-	add_child_autofree(mesa)
-	await wait_process_frames(4)
-	return mesa
 
 
 # ---------- MESA REAL 3D (duel3d/mesa_3d.tscn) ----------
@@ -157,48 +141,48 @@ func _textos_visiveis(n: Node, out: Array) -> void:
 		_textos_visiveis(f, out)
 
 
-# Roda o fluxo fiel completo na mesa real via confirmar de verdade:
-# carta -> centro (face) -> slot -> estrela -> campo. Devolve o slot usado
-# e a estrela esperada. O botão é só simulado (Input.action_press);
-# quem anda é o método real da mesa.
-func _fluxo_completo_ate_campo(mesa: Node, face_baixo: bool, estrela_idx: int) -> Dictionary:
+# Roda o fluxo fiel completo na mesa 3D pelo CONFIRMAR de verdade:
+# carta -> centro (face) -> slot -> estrela -> campo. Devolve o slot usado e
+# a estrela esperada. O botão é só simulado (Input.action_press); quem anda é
+# o método real da mesa (`_confirmar`/`_mover`).
+func _fluxo3d_ate_campo(mesa: Node, face_baixo: bool, estrela_idx: int) -> Dictionary:
 	var st = mesa.get("_st")
 	var mao_antes: int = ((st.players[0] as Dictionary)["hand"] as Array).size()
 	var idx: int = _indice_monstro_na_mao(st, 0)
 	assert_true(idx >= 0, "Preparo: mão tem monstro p/ o fluxo fiel.")
-	mesa.set("_pad_fileira", TableScript.FILEIRA_MAO)
-	mesa.set("_pad_col", idx)
+	mesa.set("_fileira", 0) # FILEIRA_MAO
+	mesa.set("_col", idx)
 	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
+	mesa.call("_confirmar")
 	Input.action_release("confirmar")
-	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_FACE, "Carta foi ao centro (trava a face).")
+	assert_eq(int(mesa.get("_sub_mao")), 1, "Carta foi ao centro (trava a face).") # SUB_FACE
 	if face_baixo:
 		Input.action_press("mover_dir")
-		mesa.call("_pad_mover", 1, 0)
+		mesa.call("_mover", 1, 0)
 		Input.action_release("mover_dir")
 	assert_eq(bool(mesa.get("_face_baixo")), face_baixo, "Face escolhida: p/ baixo = %s." % str(face_baixo))
 	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
+	mesa.call("_confirmar")
 	Input.action_release("confirmar")
-	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_SLOT, "Face travada, escolhe 1 dos 5 slots.")
+	assert_eq(int(mesa.get("_sub_mao")), 2, "Face travada, escolhe 1 dos 5 slots.") # SUB_SLOT
 	var slot: int = SummonSystem.free_monster_slot(st, 0)
 	assert_true(slot >= 0, "Preparo: há slot livre no próprio campo.")
-	mesa.set("_pad_col", slot)
+	mesa.set("_col", slot)
 	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
+	mesa.call("_confirmar")
 	Input.action_release("confirmar")
-	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_ESTRELA, "Slot escolhido, abre o menu da estrela.")
+	assert_eq(int(mesa.get("_sub_mao")), 3, "Slot escolhido, abre o menu da estrela.") # SUB_ESTRELA
 	assert_true((mesa.get("_popup") as Control).visible, "Menu da estrela abriu no centro.")
 	var ops: Array = mesa.get("_estrela_ops")
 	assert_eq(ops.size(), 2, "Menu traz as 2 guardian stars do dado.")
 	if estrela_idx == 1:
 		Input.action_press("mover_baixo")
-		mesa.call("_pad_mover", 0, 1)
+		mesa.call("_mover", 0, 1)
 		Input.action_release("mover_baixo")
 	assert_eq(int(mesa.get("_pad_popup_idx")), estrela_idx, "Cursor do menu na estrela %d." % (estrela_idx + 1))
 	var esperada := str(ops[estrela_idx])
 	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
+	mesa.call("_confirmar")
 	Input.action_release("confirmar")
 	return {"slot": slot, "estrela": esperada, "mao_antes": mao_antes}
 

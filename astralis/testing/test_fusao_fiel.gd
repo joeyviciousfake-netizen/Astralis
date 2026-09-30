@@ -1,22 +1,29 @@
 extends "res://testing/astralis_test_base.gd"
 
-## test_fusao_fiel — GUT da mão reta + fusão fiel (runtime, sem Fake R2).
-## Trava o que o runtime fez (duel_table.gd + fusion_system.gd):
-## A) MÃO RETA: sempre retas (sem leque/rotação), centralizadas; levantada (cima)
-##    sobe + escala ~1.15 + vizinhas afastam; selo 1,2,3... renumera sozinho.
-## B) FUSÃO FIEL (D24 avulsa mantido): 0=avulsa, 1=bloqueia e avisa, 2+=combina
-##    no confirmar; voam ao centro EM ORDEM, par a par (receita ordem livre ->
-##    regra tipo+atributo fallback D08 -> equip pendente -> falha descarta a
-##    ACUMULADA, novata fica e continua); resultado face p/ cima, zona normal,
-##    conta como a jogada. Só controle (Input simula botão, método real anda).
-## Usa mesa real (duel_table.tscn) + sistemas reais (Duel/Summon/Fusion).
-## Seed fixa 42 (duel_setup). Bug aqui vira teste permanente.
-## Helpers (_mesa_nova/_indice_monstro_na_mao) vêm de astralis_test_base.gd.
+## test_fusao_fiel — GUT da fusão fiel (runtime, sem Fake R2).
+## A) LEVANTADA: cima levanta a carta do cursor e o selo sai na ordem (1,2,3);
+##    baixo abaixa e renumera; 0 levantadas = avulsa, 1 = bloqueia e avisa.
+## B) FUSÃO FIEL: 2+ levantadas no confirmar -> ESCOLHE O SLOT PRIMEIRO ->
+##    fila EM ORDEM, par a par (receita ordem livre -> regra tipo+atributo
+##    fallback -> equip pendente -> falha descarta a ACUMULADA, novata fica);
+##    resultado face p/ cima, zona normal, conta como a jogada.
+## Usa a mesa 3D REAL (duel3d/mesa_3d.tscn, a oficial) + sistemas reais
+## (Duel/Summon/Fusion). Seed fixa 42. Bug aqui vira teste permanente.
+## Helpers vêm de astralis_test_base.gd - R8: uma cópia só.
+## (A parte de MÃO RETA - arco/leque/px de 2D - foi junto com a mesa legada;
+##  no 3D o arco é 3D e a invariante dele é "as duas mãos centralizadas no X do
+##  campo", travada em test_mesa_3d_oficial/test_volta_mesa.)
 
 const FusionSystem := preload("res://duel/fusion_system.gd")
-const BoardLayoutScript := preload("res://core/board_layout.gd")
-const CardViewScript := preload("res://ui/card_view.gd")
-# TableScript e MesaScene vêm da base (astralis_test_base.gd) - R8: uma cópia só.
+## FASE_*/SUB_*/FILEIRA_* da mesa 3D (mesmos valores do legado).
+const FASE_MAO := 0
+const FASE_CAMPO := 1
+const SUB_MAO_ESCOLHA := 0
+const SUB_FACE := 1
+const SUB_SLOT := 2
+const SUB_ESTRELA := 3
+const FILEIRA_MAO := 0
+const FILEIRA_MEU_M := 1
 
 
 func _fusoes_mini() -> Dictionary:
@@ -37,136 +44,102 @@ func _carta(id: String, tipo: String = "monster", mt: String = "dragon", attr: S
 	return {"id": id, "name": id, "card_type": tipo, "monster_type": mt, "attribute": attr, "attack": atk, "defense": 1000}
 
 
-func test_mao_sempre_reta_sem_leque() -> void:
-	var mesa = await _mesa_nova()
-	assert_true(is_instance_valid(mesa), "Mesa real instanciada.")
-	# Giro sempre 0 (sem leque), mesmo com várias cartas.
-	for n in [1, 2, 5, 7]:
-		for i in range(n):
-			assert_almost_eq(float(mesa.call("_giro_mao", i, n)), 0.0, 0.001, "Giro reto i=%d n=%d." % [i, n])
-	# Posição sem curva: y = y0 da arena (p0 980, p1 20), x simétrico.
-	var arena: Dictionary = mesa.get("_arena_data")
-	for lado in [0, 1]:
-		var h: Dictionary = BoardLayoutScript.get_hand(arena, lado)
-		var y0 := float(h.get("y", 980.0 if lado == 0 else 20.0))
-		for n in [1, 3, 5]:
-			for i in range(n):
-				var p: Vector2 = mesa.call("_pos_mao", i, n, lado)
-				assert_almost_eq(p.y, y0, 0.05, "Mão reta lado %d i=%d n=%d: y=y0." % [lado, i, n])
-	# Desenho real: todas as vistas da mão com rotação 0.
-	var camada: Node = mesa.get("_camada_mao")
-	assert_true(camada.get_child_count() > 0, "Mão desenha cartas.")
-	for v in camada.get_children():
-		assert_almost_eq(float((v as Control).rotation), 0.0, 0.001, "Vista da mão reta (rotação 0).")
+## A mao reta saia na mesa 2D (reta, sem leque, em pixel). A mao do jogo
+## oficial e um ARCO 3D (D52) e o que trava a invariante dela agora e
+## test_mesa_3d_oficial/test_maos_centralizadas_no_x_do_campo (erro 0,00 px
+## nos dois lugares) e test_volta_mesa/test_as_duas_maos_trocam_de_lugar_e_as_duas_aparecem.
+
+## O selo de uma carta levantada e a POSICAO dela na lista de levantadas - e
+## o proprio runtime que faz assim (`_levantadas.find(i) + 1` no `_redesenhar`).
+## O 2D legado tinha uma funcao `_ordem_levantada` para isso.
+func _selo(mesa: Node, idx: int) -> int:
+	return (mesa.get("_levantadas") as Array).find(idx) + 1
 
 
-func test_levantar_sobe_escala_afasta_e_selo() -> void:
-	var mesa = await _mesa_nova()
+func test_levantar_marca_o_selo_na_ordem() -> void:
+	# Cima levanta a carta do cursor e o selo sai na ORDEM em que levantou.
+	# No 3D alevantada nao muda a posicao (a mao e um arco travado pela D52):
+	# o que aparece e o SELO, na etiqueta TagPos da carta.
+	var mesa = await _mesa3d_nova()
 	var st = mesa.get("_st")
 	var n: int = ((st.players[0] as Dictionary)["hand"] as Array).size()
-	assert_true(n >= 3, "Preparo: mão tem %d cartas p/ afastar." % n)
+	assert_true(n >= 3, "Preparo: mao tem %d cartas." % n)
 	var meio := n / 2
-	mesa.set("_pad_fileira", TableScript.FILEIRA_MAO)
-	mesa.set("_pad_col", meio)
-	# Cima levanta (só controle: simula o botão, quem anda é a mesa real).
+	mesa.set("_fileira", FILEIRA_MAO)
+	mesa.set("_col", meio)
 	Input.action_press("mover_cima")
-	mesa.call("_pad_mover", 0, -1)
+	mesa.call("_mover", 0, -1)
 	Input.action_release("mover_cima")
-	assert_true((mesa.get("_levantadas") as Array).has(meio), "Cima levantou a carta do cursor.")
-	assert_eq(int(mesa.call("_ordem_levantada", meio)), 1, "Selo 1 na ordem em que levantou.")
-	# Visual: levantada sobe + escala ~1.15.
-	var base: Vector2 = mesa.call("_pos_mao", meio, n, 0)
-	var vis: Vector2 = mesa.call("_pos_mao_visual", meio, n)
-	assert_almost_eq(vis.y, base.y - TableScript.LEVANTA_DY, 0.5, "Levantada sobe %d px." % int(TableScript.LEVANTA_DY))
-	# Vizinhas se afastam p/ dar espaço.
-	var esq: Vector2 = mesa.call("_pos_mao_visual", maxi(meio - 1, 0), n)
-	var esq_base: Vector2 = mesa.call("_pos_mao", maxi(meio - 1, 0), n, 0)
-	var dir: Vector2 = mesa.call("_pos_mao_visual", mini(meio + 1, n - 1), n)
-	var dir_base: Vector2 = mesa.call("_pos_mao", mini(meio + 1, n - 1), n, 0)
-	if meio - 1 >= 0:
-		assert_true(esq.x < esq_base.x - 1.0, "Vizinha da esquerda afasta (%.0f -> %.0f)." % [esq_base.x, esq.x])
-	if meio + 1 < n:
-		assert_true(dir.x > dir_base.x + 1.0, "Vizinha da direita afasta (%.0f -> %.0f)." % [dir_base.x, dir.x])
-	# Desenho: levantada com escala 1.15 + selo "1" no canto.
-	mesa.call("_atualizar")
+	assert_eq((mesa.get("_levantadas") as Array), [meio], "Cima levantou a carta do cursor.")
 	await wait_process_frames(2)
-	var achou_selo := false
-	var achou_escala := false
-	for v in (mesa.get("_camada_mao") as Node).get_children():
-		var sc: Vector2 = (v as Control).scale
-		if sc.is_equal_approx(Vector2(TableScript.LEVANTA_ESCALA, TableScript.LEVANTA_ESCALA)):
-			achou_escala = true
-			for f in (v as Node).get_children():
-				if f is Panel:
-					for g in (f as Node).get_children():
-						if g is Label and str((g as Label).text) == "1":
-							achou_selo = true
-	assert_true(achou_escala, "Desenho: levantada aumenta (~1.15).")
-	assert_true(achou_selo, "Desenho: selo pequeno numerado '1' no canto.")
+	# O selo e o texto da etiqueta da carta levantada (e so dela).
+	var carta := _carta_da_mao(mesa, meio, 0)
+	assert_true(carta != null, "Preparo: a carta levantada esta desenhada.")
+	assert_eq(str((carta.get_node("TagPos") as Label3D).text), "SELO 1", "Selo 1 na etiqueta.")
+	assert_true((carta.get_node("TagPos") as Label3D).visible, "Selo visivel.")
+	var outra := _carta_da_mao(mesa, 0, 0)
+	if outra != null and outra != carta:
+		assert_ne(str((outra.get_node("TagPos") as Label3D).text), "SELO 1", "Carta NAO levantada nao tem selo.")
 
 
-func test_abaixar_restaura_e_renumera() -> void:
-	var mesa = await _mesa_nova()
+func test_abaixar_renumera_os_selos() -> void:
+	# Levanta 2 em ordem; baixo abaixa a 1a e o selo da 2a volta a ser 1.
+	var mesa = await _mesa3d_nova()
 	var st = mesa.get("_st")
 	var n: int = ((st.players[0] as Dictionary)["hand"] as Array).size()
-	assert_true(n >= 3, "Preparo: mão tem %d cartas." % n)
-	# Levanta 2 em ordem (0 depois 1).
-	mesa.set("_pad_col", 0)
+	assert_true(n >= 3, "Preparo: mao tem %d cartas." % n)
+	mesa.set("_col", 0)
 	Input.action_press("mover_cima")
-	mesa.call("_pad_mover", 0, -1)
+	mesa.call("_mover", 0, -1)
 	Input.action_release("mover_cima")
-	mesa.set("_pad_col", 1)
+	mesa.set("_col", 1)
 	Input.action_press("mover_cima")
-	mesa.call("_pad_mover", 0, -1)
+	mesa.call("_mover", 0, -1)
 	Input.action_release("mover_cima")
 	assert_eq((mesa.get("_levantadas") as Array), [0, 1], "Ordem em que levantou: [0,1].")
-	assert_eq(int(mesa.call("_ordem_levantada", 0)), 1, "Selo 1 na primeira.")
-	assert_eq(int(mesa.call("_ordem_levantada", 1)), 2, "Selo 2 na segunda.")
-	# Baixo abaixa a primeira e renumera sozinho (segunda vira 1).
-	mesa.set("_pad_col", 0)
+	await wait_process_frames(2)
+	assert_eq(str((_carta_da_mao(mesa, 1, 0).get_node("TagPos") as Label3D).text), "SELO 2", "A 2a levantada e o selo 2.")
+	# Baixo abaixa a primeira e renumera sozinho (a segunda vira 1).
+	mesa.set("_col", 0)
 	Input.action_press("mover_baixo")
-	mesa.call("_pad_mover", 0, 1)
+	mesa.call("_mover", 0, 1)
 	Input.action_release("mover_baixo")
 	assert_eq((mesa.get("_levantadas") as Array), [1], "Abaixou a 0, restou [1].")
-	assert_eq(int(mesa.call("_ordem_levantada", 1)), 1, "Abaixar renumera: antiga 2 vira 1.")
-	# Abaixada volta a descer (y da base); x pode seguir afastado pela outra
-	# levantada (vizinhas abrem espaço). Restaura tudo ao abaixar as 2.
-	var base0: Vector2 = mesa.call("_pos_mao", 0, n, 0)
-	var vis0: Vector2 = mesa.call("_pos_mao_visual", 0, n)
-	assert_almost_eq(vis0.y, base0.y, 0.5, "Abaixada volta a descer (y da base).")
-	assert_eq(int(mesa.call("_ordem_levantada", 0)), 0, "Abaixada sem selo.")
-	mesa.set("_pad_col", 1)
+	await wait_process_frames(2)
+	assert_eq(str((_carta_da_mao(mesa, 1, 0).get_node("TagPos") as Label3D).text), "SELO 1", "Abaixar renumera: antiga 2 vira 1.")
+	# Abaixar a ultima limpa tudo.
+	mesa.set("_col", 1)
 	Input.action_press("mover_baixo")
-	mesa.call("_pad_mover", 0, 1)
+	mesa.call("_mover", 0, 1)
 	Input.action_release("mover_baixo")
 	assert_true((mesa.get("_levantadas") as Array).is_empty(), "Abaixou tudo, sem levantadas.")
-	var vis0b: Vector2 = mesa.call("_pos_mao_visual", 0, n)
-	assert_true(vis0b.distance_to(base0) < 0.5, "Abaixar restaura tudo (volta à base).")
+	await wait_process_frames(2)
+	assert_false((_carta_da_mao(mesa, 1, 0).get_node("TagPos") as Label3D).visible, "Sem levantadas, nenhum selo visivel.")
 
 
 func test_confirmar_0_avulsa_1_bloqueia() -> void:
 	# 0 levantadas = avulsa (fluxo D24 vai ao centro); 1 = bloqueia e avisa.
-	var mesa = await _mesa_nova()
+	var mesa = await _mesa3d_nova()
 	var st = mesa.get("_st")
 	assert_true((mesa.get("_levantadas") as Array).is_empty(), "Preparo: 0 levantadas.")
-	mesa.set("_pad_fileira", TableScript.FILEIRA_MAO)
-	mesa.set("_pad_col", _indice_monstro_na_mao(st, 0))
+	mesa.set("_fileira", FILEIRA_MAO)
+	mesa.set("_col", _indice_monstro_na_mao(st, 0))
 	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
+	mesa.call("_confirmar")
 	Input.action_release("confirmar")
-	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_FACE, "0 levantadas: avulsa vai ao centro (D24 mantido).")
+	assert_eq(int(mesa.get("_sub_mao")), SUB_FACE, "0 levantadas: avulsa vai ao centro (D24 mantido).")
 	# Volta e levanta 1: confirmar bloqueia e avisa, sem sair da mão.
-	mesa.call("_pad_cancelar")
-	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_MAO_ESCOLHA, "Preparo: voltou à escolha.")
-	mesa.set("_pad_col", _indice_monstro_na_mao(st, 0))
+	mesa.call("_cancelar")
+	assert_eq(int(mesa.get("_sub_mao")), SUB_MAO_ESCOLHA, "Preparo: voltou à escolha.")
+	mesa.set("_col", _indice_monstro_na_mao(st, 0))
 	Input.action_press("mover_cima")
-	mesa.call("_pad_mover", 0, -1)
+	mesa.call("_mover", 0, -1)
 	Input.action_release("mover_cima")
 	assert_eq((mesa.get("_levantadas") as Array).size(), 1, "Preparo: 1 levantada.")
 	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
+	mesa.call("_confirmar")
 	Input.action_release("confirmar")
-	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_MAO_ESCOLHA, "1 levantada: bloqueia, não sai da mão.")
+	assert_eq(int(mesa.get("_sub_mao")), SUB_MAO_ESCOLHA, "1 levantada: bloqueia, não sai da mão.")
 	assert_true(str((mesa.get("_log") as Array).back()).contains("Só 1"), "1 levantada: avisa (fala '%s')." % str((mesa.get("_log") as Array).back()))
 
 
@@ -239,7 +212,7 @@ func test_mesa_fusao_desce_face_cima_conta_jogada() -> void:
 	# Fluxo novo: 2+ levantadas no confirmar -> ESCOLHE O SLOT PRIMEIRO
 	# (vazio ou ocupado) -> fila ao centro EM ORDEM -> FINAL + menu da estrela
 	# -> desce face p/ cima em Ataque.
-	var mesa = await _mesa_nova()
+	var mesa = await _mesa3d_nova()
 	var st = mesa.get("_st")
 	var cartas: Dictionary = mesa.get("_cartas")
 	assert_true(cartas.has("fm_0002") and cartas.has("fm_0008"), "Preparo: FM tem fm_0002/fm_0008.")
@@ -251,42 +224,42 @@ func test_mesa_fusao_desce_face_cima_conta_jogada() -> void:
 	var i_a := n - 2
 	var i_b := n - 1
 	var mao_antes := n
-	mesa.call("_atualizar")
+	mesa.call("_redesenhar", false)
 	# Levanta EM ORDEM (A depois B) só no controle.
-	mesa.set("_pad_fileira", TableScript.FILEIRA_MAO)
-	mesa.set("_pad_col", i_a)
+	mesa.set("_fileira", FILEIRA_MAO)
+	mesa.set("_col", i_a)
 	Input.action_press("mover_cima")
-	mesa.call("_pad_mover", 0, -1)
+	mesa.call("_mover", 0, -1)
 	Input.action_release("mover_cima")
-	mesa.set("_pad_col", i_b)
+	mesa.set("_col", i_b)
 	Input.action_press("mover_cima")
-	mesa.call("_pad_mover", 0, -1)
+	mesa.call("_mover", 0, -1)
 	Input.action_release("mover_cima")
 	assert_eq((mesa.get("_levantadas") as Array), [i_a, i_b], "Preparo: 2 levantadas EM ORDEM.")
 	# Confirmar: escolhe o SLOT primeiro (não desce direto).
 	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
+	mesa.call("_confirmar")
 	Input.action_release("confirmar")
 	await wait_process_frames(2)
-	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_SLOT, "Fusão: confirmar pede o slot primeiro.")
+	assert_eq(int(mesa.get("_sub_mao")), SUB_SLOT, "Fusão: confirmar pede o slot primeiro.")
 	assert_true(bool(mesa.get("_combinando")), "Fusão: marca combinando no slot.")
 	assert_true(str((mesa.get("_log") as Array).back()).contains("slots") or str((mesa.get("_log") as Array).back()).contains("Slot"), "Fusão: mostra slots (fala '%s')." % str((mesa.get("_log") as Array).back()))
 	# Escolhe o slot 0 vazio -> fila + FINAL + menu da estrela.
-	mesa.set("_pad_col", 0)
+	mesa.set("_col", 0)
 	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
+	mesa.call("_confirmar")
 	Input.action_release("confirmar")
 	await wait_process_frames(6)
-	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_ESTRELA, "Fusão: fila pronta, abre o menu da estrela (igual ao da avulsa).")
+	assert_eq(int(mesa.get("_sub_mao")), SUB_ESTRELA, "Fusão: fila pronta, abre o menu da estrela (igual ao da avulsa).")
 	assert_false((mesa.get("_fusao_final") as Dictionary).is_empty(), "Fusão: FINAL calculado antes da estrela.")
 	# Estrela no fim da combinação (menu igual ao da avulsa).
 	mesa.set("_pad_popup_idx", 0)
 	var estrela_fusao: String = str((mesa.get("_estrela_ops") as Array)[0])
 	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
+	mesa.call("_confirmar")
 	Input.action_release("confirmar")
 	await wait_process_frames(4)
-	assert_eq(int(mesa.get("_fase_jogador")), TableScript.FASE_CAMPO, "Fusão: entra na fase de campo.")
+	assert_eq(int(mesa.get("_fase_jogador")), FASE_CAMPO, "Fusão: entra na fase de campo.")
 	assert_eq(String(st.phase), "BATTLE", "Fusão: MAIN -> BATTLE (conta como a jogada).")
 	assert_true(bool(st.normal_summon_used), "Fusão conta como a jogada do turno.")
 	var zona: Array = (st.players[0] as Dictionary)["monster"]
@@ -304,73 +277,51 @@ func test_mesa_fusao_desce_face_cima_conta_jogada() -> void:
 
 func test_cancelar_abaixa_ultima_e_renumera() -> void:
 	# Cancelar abaixa a ÚLTIMA levantada e renumera sozinho (mesa real, só controle).
-	var mesa = await _mesa_nova()
+	var mesa = await _mesa3d_nova()
 	var st = mesa.get("_st")
 	var n: int = ((st.players[0] as Dictionary)["hand"] as Array).size()
 	assert_true(n >= 3, "Preparo: mão tem %d cartas." % n)
-	mesa.set("_pad_fileira", TableScript.FILEIRA_MAO)
+	mesa.set("_fileira", FILEIRA_MAO)
 	for col in [0, 1, 2]:
-		mesa.set("_pad_col", col)
+		mesa.set("_col", col)
 		Input.action_press("mover_cima")
-		mesa.call("_pad_mover", 0, -1)
+		mesa.call("_mover", 0, -1)
 		Input.action_release("mover_cima")
 	assert_eq((mesa.get("_levantadas") as Array), [0, 1, 2], "Preparo: 3 levantadas em ordem.")
-	assert_eq(int(mesa.call("_ordem_levantada", 2)), 3, "Selo 3 na última.")
+	assert_eq(_selo(mesa, 2), 3, "Selo 3 na última.")
 	# Cancelar abaixa a última (2) e renumera o resto.
-	mesa.call("_pad_cancelar")
+	mesa.call("_cancelar")
 	assert_eq((mesa.get("_levantadas") as Array), [0, 1], "Cancelar abaixou a última, restou [0,1].")
-	assert_eq(int(mesa.call("_ordem_levantada", 0)), 1, "Renumera: 0 vira selo 1.")
-	assert_eq(int(mesa.call("_ordem_levantada", 1)), 2, "Renumera: 1 vira selo 2.")
-	assert_eq(int(mesa.call("_ordem_levantada", 2)), 0, "Abaixada sem selo.")
-	mesa.call("_pad_cancelar")
+	assert_eq(_selo(mesa, 0), 1, "Renumera: 0 vira selo 1.")
+	assert_eq(_selo(mesa, 1), 2, "Renumera: 1 vira selo 2.")
+	assert_eq(_selo(mesa, 2), 0, "Abaixada sem selo.")
+	mesa.call("_cancelar")
 	assert_eq((mesa.get("_levantadas") as Array), [0], "Cancelar de novo abaixa a última, restou [0].")
-	assert_eq(int(mesa.call("_ordem_levantada", 0)), 1, "Última restante vira selo 1.")
+	assert_eq(_selo(mesa, 0), 1, "Última restante vira selo 1.")
 
 
-func test_mao_centrada_no_cx_sem_rotacao() -> void:
-	# Mão centrada: média dos centros = cx da arena, nos 2 lados, sem rotação.
-	var mesa = await _mesa_nova()
-	var arena: Dictionary = mesa.get("_arena_data")
-	for lado in [0, 1]:
-		var h: Dictionary = BoardLayoutScript.get_hand(arena, lado)
-		var cx := float(h.get("x", 1240.0))
-		var larg := CardViewScript.TAM.x
-		if lado == 1:
-			larg *= TableScript.ESCALA_MAO_P1
-		for n in [1, 3, 5, 7]:
-			var soma := 0.0
-			for i in range(n):
-				var p: Vector2 = mesa.call("_pos_mao", i, n, lado)
-				assert_almost_eq(float(mesa.call("_giro_mao", i, n)), 0.0, 0.001, "Giro 0 lado %d n=%d." % [lado, n])
-				soma += p.x + larg / 2.0
-			var centro := soma / float(n)
-			assert_almost_eq(centro, cx, 0.5, "Mão centrada lado %d n=%d (centro %.0f = cx %.0f)." % [lado, n, centro, cx])
-	# Desenho real: mão dos 2 lados (p0 aberta + p1 costas) toda com rotação 0.
-	mesa.call("_atualizar")
-	await wait_process_frames(2)
-	var camada: Node = mesa.get("_camada_mao")
-	assert_true(camada.get_child_count() > 0, "Mão desenha cartas dos 2 lados.")
-	for v in camada.get_children():
-		assert_almost_eq(float((v as Control).rotation), 0.0, 0.001, "Vista reta dos 2 lados (rotação 0).")
-
+## A mao centralizada saia na mesa 2D (reta, sem leque, em pixel). A mao do jogo
+## oficial e um ARCO 3D (D52) e o que trava a invariante dela agora e
+## test_mesa_3d_oficial/test_maos_centralizadas_no_x_do_campo (erro 0,00 px
+## nos dois lugares) e test_volta_mesa/test_as_duas_maos_trocam_de_lugar_e_as_duas_aparecem.
 
 func test_1_levantada_bloqueia_e_preserva() -> void:
 	# 1 levantada bloqueia no confirmar, avisa e PRESERVA a levantada (mesa real).
-	var mesa = await _mesa_nova()
+	var mesa = await _mesa3d_nova()
 	var st = mesa.get("_st")
-	mesa.set("_pad_fileira", TableScript.FILEIRA_MAO)
-	mesa.set("_pad_col", _indice_monstro_na_mao(st, 0))
+	mesa.set("_fileira", FILEIRA_MAO)
+	mesa.set("_col", _indice_monstro_na_mao(st, 0))
 	Input.action_press("mover_cima")
-	mesa.call("_pad_mover", 0, -1)
+	mesa.call("_mover", 0, -1)
 	Input.action_release("mover_cima")
 	var alvo: int = _indice_monstro_na_mao(st, 0)
 	assert_eq((mesa.get("_levantadas") as Array), [alvo], "Preparo: 1 levantada.")
 	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
+	mesa.call("_confirmar")
 	Input.action_release("confirmar")
-	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_MAO_ESCOLHA, "1 levantada: bloqueia, não sai da mão.")
+	assert_eq(int(mesa.get("_sub_mao")), SUB_MAO_ESCOLHA, "1 levantada: bloqueia, não sai da mão.")
 	assert_eq((mesa.get("_levantadas") as Array), [alvo], "1 levantada: preserva p/ levantar +1 ou abaixar.")
-	assert_eq(int(mesa.call("_ordem_levantada", alvo)), 1, "1 levantada: selo 1 mantido.")
+	assert_eq(_selo(mesa, alvo), 1, "1 levantada: selo 1 mantido.")
 	assert_eq(String(st.phase), "MAIN", "1 levantada: não conta como jogada (segue na MAIN).")
 	assert_false(bool(st.normal_summon_used), "1 levantada: não gasta a jogada.")
 
@@ -396,7 +347,7 @@ func test_cadeia_falha_cemiterio_novata_desce() -> void:
 	assert_eq((cadeia_eq.get("descartes", []) as Array), ["m1", "e1"], "Falhas descartam acumulada em ordem.")
 	assert_eq(str(cadeia_eq.get("final_id", "")), "m2", "Última novata fica e é o final.")
 	# Mesa real: falha desce a novata face p/ cima em ATK, descarte ao cemitério.
-	var mesa = await _mesa_nova()
+	var mesa = await _mesa3d_nova()
 	var st = mesa.get("_st")
 	var mao: Array = (st.players[0] as Dictionary)["hand"]
 	mao.append(a.duplicate(true))
@@ -441,7 +392,7 @@ func _ocupar_slot_com(st, mesa, slot: int, card_id: String) -> void:
 	var base := (cartas[card_id] as Dictionary).duplicate(true)
 	var zona: Array = (st.players[0] as Dictionary)["monster"]
 	zona[slot] = {"card_id": card_id, "nome": str(base.get("name", card_id)), "atk": clampi(int(base.get("attack", 0)), 0, 9999), "def": clampi(int(base.get("defense", 0)), 0, 9999), "position": "ATK", "battle_position": "ATK", "face_down": false, "guardian_star": str(base.get("guardian_star_1", "")), "has_attacked": false}
-	mesa.call("_atualizar")
+	mesa.call("_redesenhar", false)
 
 
 func _achar_par_que_falha(cartas: Dictionary, fusions: Dictionary, id_campo: String, candidatos: Array) -> String:
@@ -460,7 +411,7 @@ func _achar_par_que_falha(cartas: Dictionary, fusions: Dictionary, id_campo: Str
 func test_avulsa_ocupado_que_funde_resultado_no_slot() -> void:
 	# (1) Avulsa em ocupado que FUNDE: encontro campo+mão via FusionSystem
 	# real, resultado fm_0638 desce ao slot (mesa real, sem Fake).
-	var mesa = await _mesa_nova()
+	var mesa = await _mesa3d_nova()
 	var st = mesa.get("_st")
 	var cartas: Dictionary = mesa.get("_cartas")
 	var fusions: Dictionary = mesa.get("_fusions_data")
@@ -473,33 +424,33 @@ func test_avulsa_ocupado_que_funde_resultado_no_slot() -> void:
 	var n: int = ((st.players[0] as Dictionary)["hand"] as Array).size()
 	var idx := _indice_id_na_mao(st, "fm_0008")
 	assert_true(idx >= 0, "Preparo: fm_0008 na mão.")
-	mesa.call("_atualizar")
+	mesa.call("_redesenhar", false)
 	# Fluxo avulsa só no controle: carta -> centro -> face -> slot -> estrela.
-	mesa.set("_pad_fileira", TableScript.FILEIRA_MAO)
-	mesa.set("_pad_col", idx)
+	mesa.set("_fileira", FILEIRA_MAO)
+	mesa.set("_col", idx)
 	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
+	mesa.call("_confirmar")
 	Input.action_release("confirmar")
-	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_FACE, "Avulsa: carta foi ao centro.")
+	assert_eq(int(mesa.get("_sub_mao")), SUB_FACE, "Avulsa: carta foi ao centro.")
 	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
+	mesa.call("_confirmar")
 	Input.action_release("confirmar")
-	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_SLOT, "Avulsa: face travada, pede o slot.")
-	mesa.set("_pad_col", 0)
+	assert_eq(int(mesa.get("_sub_mao")), SUB_SLOT, "Avulsa: face travada, pede o slot.")
+	mesa.set("_col", 0)
 	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
+	mesa.call("_confirmar")
 	Input.action_release("confirmar")
 	await wait_process_frames(2)
-	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_ESTRELA, "Avulsa em ocupado: abre o menu da estrela.")
+	assert_eq(int(mesa.get("_sub_mao")), SUB_ESTRELA, "Avulsa em ocupado: abre o menu da estrela.")
 	assert_false(bool(mesa.get("_combinando")), "Avulsa: não marca combinando.")
 	assert_true(str((mesa.get("_log") as Array).back()).contains("fus"), "Avulsa em ocupado: avisa o encontro (fala '%s')." % str((mesa.get("_log") as Array).back()))
 	var estrela: String = str((mesa.get("_estrela_ops") as Array)[0])
 	mesa.set("_pad_popup_idx", 0)
 	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
+	mesa.call("_confirmar")
 	Input.action_release("confirmar")
 	await wait_process_frames(4)
-	assert_eq(int(mesa.get("_fase_jogador")), TableScript.FASE_CAMPO, "Avulsa: entra na fase de campo.")
+	assert_eq(int(mesa.get("_fase_jogador")), FASE_CAMPO, "Avulsa: entra na fase de campo.")
 	assert_eq(String(st.phase), "BATTLE", "Avulsa: MAIN -> BATTLE (conta como a jogada).")
 	assert_true(bool(st.normal_summon_used), "Avulsa em ocupado conta como a jogada.")
 	var zona: Array = (st.players[0] as Dictionary)["monster"]
@@ -516,7 +467,7 @@ func test_avulsa_ocupado_que_funde_resultado_no_slot() -> void:
 func test_avulsa_ocupado_que_falha_descarta_campo_e_desce_com_face() -> void:
 	# (2) Avulsa em ocupado que FALHA: campo descartado ao cemitério e a da
 	# mão desce ao slot COM a face escolhida (mesa real, sem Fake).
-	var mesa = await _mesa_nova()
+	var mesa = await _mesa3d_nova()
 	var st = mesa.get("_st")
 	var cartas: Dictionary = mesa.get("_cartas")
 	var fusions: Dictionary = mesa.get("_fusions_data")
@@ -528,32 +479,32 @@ func test_avulsa_ocupado_que_falha_descarta_campo_e_desce_com_face() -> void:
 	var idx := _indice_id_na_mao(st, mao_id)
 	assert_true(idx >= 0, "Preparo: %s na mão." % mao_id)
 	var cem_antes: int = ((st.players[0] as Dictionary)["graveyard"] as Array).size()
-	mesa.call("_atualizar")
+	mesa.call("_redesenhar", false)
 	# Fluxo avulsa com face P/ BAIXO (esq/dir no centro alterna, só controle).
-	mesa.set("_pad_fileira", TableScript.FILEIRA_MAO)
-	mesa.set("_pad_col", idx)
+	mesa.set("_fileira", FILEIRA_MAO)
+	mesa.set("_col", idx)
 	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
+	mesa.call("_confirmar")
 	Input.action_release("confirmar")
-	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_FACE, "Avulsa: carta foi ao centro.")
+	assert_eq(int(mesa.get("_sub_mao")), SUB_FACE, "Avulsa: carta foi ao centro.")
 	Input.action_press("mover_esq")
-	mesa.call("_pad_mover", -1, 0)
+	mesa.call("_mover", -1, 0)
 	Input.action_release("mover_esq")
 	assert_true(bool(mesa.get("_face_baixo")), "Face p/ baixo escolhida no centro.")
 	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
+	mesa.call("_confirmar")
 	Input.action_release("confirmar")
-	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_SLOT, "Avulsa: face travada, pede o slot.")
-	mesa.set("_pad_col", 0)
+	assert_eq(int(mesa.get("_sub_mao")), SUB_SLOT, "Avulsa: face travada, pede o slot.")
+	mesa.set("_col", 0)
 	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
+	mesa.call("_confirmar")
 	Input.action_release("confirmar")
 	await wait_process_frames(2)
-	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_ESTRELA, "Avulsa em ocupado: abre o menu da estrela.")
+	assert_eq(int(mesa.get("_sub_mao")), SUB_ESTRELA, "Avulsa em ocupado: abre o menu da estrela.")
 	var estrela: String = str((mesa.get("_estrela_ops") as Array)[0])
 	mesa.set("_pad_popup_idx", 0)
 	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
+	mesa.call("_confirmar")
 	Input.action_release("confirmar")
 	await wait_process_frames(4)
 	assert_eq(String(st.phase), "BATTLE", "Avulsa: MAIN -> BATTLE (conta como a jogada).")
@@ -574,7 +525,7 @@ func test_combinacao_ocupado_final_funde_ou_desce_com_estrela() -> void:
 	# (3) Combinação em ocupado: a FINAL encontra o campo via FusionSystem
 	# real (funde = resultado no slot; falha = campo descartado e FINAL
 	# desce), sempre face-up em ATK com a estrela do menu gravada.
-	var mesa = await _mesa_nova()
+	var mesa = await _mesa3d_nova()
 	var st = mesa.get("_st")
 	var cartas: Dictionary = mesa.get("_cartas")
 	var fusions: Dictionary = mesa.get("_fusions_data")
@@ -605,39 +556,39 @@ func test_combinacao_ocupado_final_funde_ou_desce_com_estrela() -> void:
 	var n: int = ((st.players[0] as Dictionary)["hand"] as Array).size()
 	var i_a := n - 2
 	var i_b := n - 1
-	mesa.call("_atualizar")
-	mesa.set("_pad_fileira", TableScript.FILEIRA_MAO)
-	mesa.set("_pad_col", i_a)
+	mesa.call("_redesenhar", false)
+	mesa.set("_fileira", FILEIRA_MAO)
+	mesa.set("_col", i_a)
 	Input.action_press("mover_cima")
-	mesa.call("_pad_mover", 0, -1)
+	mesa.call("_mover", 0, -1)
 	Input.action_release("mover_cima")
-	mesa.set("_pad_col", i_b)
+	mesa.set("_col", i_b)
 	Input.action_press("mover_cima")
-	mesa.call("_pad_mover", 0, -1)
+	mesa.call("_mover", 0, -1)
 	Input.action_release("mover_cima")
 	assert_eq((mesa.get("_levantadas") as Array), [i_a, i_b], "Preparo: 2 levantadas EM ORDEM.")
 	# Confirmar pede o SLOT primeiro (vazio ou ocupado).
 	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
+	mesa.call("_confirmar")
 	Input.action_release("confirmar")
 	await wait_process_frames(2)
-	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_SLOT, "Fusão: confirmar pede o slot primeiro.")
+	assert_eq(int(mesa.get("_sub_mao")), SUB_SLOT, "Fusão: confirmar pede o slot primeiro.")
 	assert_true(bool(mesa.get("_combinando")), "Fusão: marca combinando no slot.")
 	# Escolhe o slot 0 OCUPADO -> fila + FINAL + menu da estrela.
-	mesa.set("_pad_col", 0)
+	mesa.set("_col", 0)
 	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
+	mesa.call("_confirmar")
 	Input.action_release("confirmar")
 	await wait_process_frames(6)
-	assert_eq(int(mesa.get("_sub_mao")), TableScript.SUB_ESTRELA, "Fusão em ocupado: abre o menu da estrela.")
+	assert_eq(int(mesa.get("_sub_mao")), SUB_ESTRELA, "Fusão em ocupado: abre o menu da estrela.")
 	assert_eq(str((mesa.get("_fusao_final") as Dictionary).get("id", "")), "fm_0638", "Fusão: FINAL fm_0638 antes da estrela.")
 	var estrela: String = str((mesa.get("_estrela_ops") as Array)[0])
 	mesa.set("_pad_popup_idx", 0)
 	Input.action_press("confirmar")
-	mesa.call("_pad_confirmar")
+	mesa.call("_confirmar")
 	Input.action_release("confirmar")
 	await wait_process_frames(4)
-	assert_eq(int(mesa.get("_fase_jogador")), TableScript.FASE_CAMPO, "Fusão: entra na fase de campo.")
+	assert_eq(int(mesa.get("_fase_jogador")), FASE_CAMPO, "Fusão: entra na fase de campo.")
 	assert_eq(String(st.phase), "BATTLE", "Fusão: MAIN -> BATTLE (conta como a jogada).")
 	assert_true(bool(st.normal_summon_used), "Fusão em ocupado conta como a jogada.")
 	var zona: Array = (st.players[0] as Dictionary)["monster"]

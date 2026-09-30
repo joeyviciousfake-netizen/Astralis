@@ -6,7 +6,7 @@ extends "res://testing/astralis_test_base.gd"
 ## 2) refill até 5 todo início de turno, pros 2 lados (TurnManager DRAW);
 ## 3) deck vazio só dá deckout na hora de COMPLETAR (mão cheia + deck vazio não perde);
 ## 4) animação em fila da mesa é só visual: cadeia igual + headless ok.
-## Sistemas e cena REAIS (Duel/Summon/Fusion/Turn + duel_table.tscn). Seed fixa 42.
+## Sistemas e cena REAIS (Duel/Summon/Fusion/Turn + duel3d/mesa_3d.tscn). Seed fixa 42.
 ## Bug aqui vira teste permanente.
 ## Helpers (_novo_duelo/_garantir_monstros_na_mao/_indice_monstro_na_mao/
 ## _mesa_nova) vêm de astralis_test_base.gd.
@@ -184,7 +184,7 @@ func test_deck_vazio_ao_completar_deckout() -> void:
 
 func test_animacao_nao_muda_resultado_cadeia_igual() -> void:
 	# Mesa real (headless): a fila anima e a regra resolve igual, com ou sem animação.
-	var mesa = await _mesa_nova()
+	var mesa = await _mesa3d_nova()
 	assert_true(is_instance_valid(mesa), "Mesa real instanciada.")
 	var st = mesa.get("_st")
 	var cartas: Dictionary = mesa.get("_cartas")
@@ -215,7 +215,8 @@ func test_animacao_nao_muda_resultado_cadeia_igual() -> void:
 		if m is Dictionary:
 			campo_antes += 1
 	# A fila (só visual): não pode mexer no estado nem travar.
-	mesa.call("_animar_fila_fusao", em_ordem, passos_prev, ordem)
+	var slot: int = SummonSystem.free_monster_slot(st, 0)
+	mesa.call("_animar_fila_fusao", passos_prev, slot)
 	await wait_process_frames(3)
 	assert_false(bool(mesa.get("_fusao_animando")), "Fila direta não prende a trava (só _iniciar prende).")
 	assert_eq(((st.players[0] as Dictionary)["hand"] as Array).size(), mao_antes, "Animação não tira carta da mão.")
@@ -227,7 +228,6 @@ func test_animacao_nao_muda_resultado_cadeia_igual() -> void:
 			campo_depois += 1
 	assert_eq(campo_depois, campo_antes, "Animação não desce nada ao campo.")
 	# A regra resolve igual após a animação (mesmo final, mesmos passos).
-	var slot: int = SummonSystem.free_monster_slot(st, 0)
 	assert_true(slot >= 0, "Preparo: slot livre p/ a fusão real.")
 	var r: Dictionary = FusionSystem.perform_fusion_summon(st, 0, ordem, slot, fusions, cartas)
 	assert_true(bool(r.get("ok", false)), "Fusão real funciona após a animação.")
@@ -241,24 +241,20 @@ func test_animacao_nao_muda_resultado_cadeia_igual() -> void:
 
 func test_animacao_headless_ok_sem_render() -> void:
 	# Headless (comando oficial): animação vira só som/print, sem tween nem erro.
-	var mesa = await _mesa_nova()
+	var mesa = await _mesa3d_nova()
 	assert_true(is_instance_valid(mesa), "Mesa real instanciada.")
 	assert_true(bool(mesa.call("_sem_render")), "Headless: sem render (DisplayServer headless).")
 	assert_false(bool(mesa.get("_fusao_animando")), "Preparo: trava solta.")
 	var st = mesa.get("_st")
 	var mao_antes: int = ((st.players[0] as Dictionary)["hand"] as Array).size()
-	# Flash + chacoalhada toleram sem render (só som, sem quebrar).
-	mesa.call("_flash_fusao")
-	mesa.call("_sacudir_fusao", null)
+	# A chacoalhada da fusão (D53) e da CARTA do slot e tolera sem render;
+	# a trava esta dentro dela: a mesa INTEIRA nunca sacode.
+	mesa.call("_sacudir", mesa.get("_no_cartas"))
 	await wait_process_frames(2)
 	assert_eq(((st.players[0] as Dictionary)["hand"] as Array).size(), mao_antes, "Flash/chacoalhada não mexem na mão.")
-	# Fila vazia/curta sai na hora (precisa de ao menos 2).
-	mesa.call("_animar_fila_fusao", [], [], [])
-	mesa.call("_animar_fila_fusao", [{"id": "x"}], [], [0])
+	# Fila vazia/curta sai na hora (precisa de ao menos 2 passos).
+	mesa.call("_animar_fila_fusao", [], 0)
+	mesa.call("_animar_fila_fusao", [{"id": "x"}], 0)
 	await wait_process_frames(2)
 	assert_eq(((st.players[0] as Dictionary)["hand"] as Array).size(), mao_antes, "Fila vazia/curta não mexe em nada.")
-	# Voo compatível (agora usa a fila) tolera headless sem erro.
-	mesa.call("_animar_voo_centro", [0, 1])
-	await wait_process_frames(2)
-	assert_eq(((st.players[0] as Dictionary)["hand"] as Array).size(), mao_antes, "Voo headless não mexe na mão.")
 	assert_false(bool(mesa.get("_fusao_animando")), "Trava segue solta após animações headless.")
