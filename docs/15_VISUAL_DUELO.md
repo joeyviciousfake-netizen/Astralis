@@ -205,6 +205,14 @@ O jogo já sai com `-- --mesa3d-foto=<caminho.png>` (salva o viewport e sai)
 e com `--mesa3d-calib=1` (liga o quadrado de calibração do §15.0). É o jeito de
 olhar a tela real e comparar com a referência. Usar em toda fase.
 
+`-- --debug` liga o **log de diagnóstico** da mesa (D56): janela do campo em
+pixel, posição/FOV da câmera, vão das fileiras, calibração das duas mãos e o
+que a fila de fusão está fazendo. Sem a flag o jogo só imprime o **log de
+boot** (arena, fusões, duelo montado, avisos) e a fala do jogo — porque esse
+trecho é contrato do `test_project_arg`, que roda o jogo de verdade e lê o que
+saiu. Medir em pixel por foto não funciona com a volta da mesa: use `--debug`
+ou os helpers de `test_volta_mesa.gd`, que medem em unidades de mundo.
+
 Para a arte aparecer, o jogo precisa de um projeto com os assets: dá para
 apontar `--project` para uma cópia descompactada do
 `studio_pack_20260925_180627_COMPLETO.apack` (722 cartas, 59 MB, tem as artes).

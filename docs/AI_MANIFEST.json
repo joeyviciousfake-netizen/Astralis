@@ -1,6 +1,6 @@
 {
   "project": "Astralis",
-  "docs_version": "2.6",
+  "docs_version": "2.7",
   "entrypoint": "AGENTS.md",
   "bootstrap_read_order": [
     "docs/AI_MANIFEST.json",
@@ -62,7 +62,10 @@
     "R6 .astralis binario trancado",
     "R7 nao reabrir DECISOES sem permissao",
     "R8 nada solto: arquivo novo na pasta do dono (ver 02.7)",
-    "R9 autoria visual sem blacklist própria no Studio"
+    "R9 autoria visual sem blacklist própria no Studio",
+    "R10 um .gd = um assunto, alvo de 700 linhas, e a divisao e pelo ASSUNTO (nunca pela contagem, nunca arquivo minusculo so para existir) (D57)",
+    "R11 comentario = o que e, quem e o dono do numero, a invariante e o porque quando nao for obvio; sem historia, sem citacao do usuario, sem numero de decisao (que ja esta em DECISOES.md) (D57)",
+    "R12 o log de BOOT do jogo e contrato (o test_project_arg le); o diagnostico so com `-- --debug` (D56)"
   ],
   "change_protocol": {
     "schema_ou_protocolo": "mudar contract_files exige: 1) atualizar este manifest 2) atualizar docs/04 e o README de schemas/ 3) espelhar a mesma regra no Studio (checar_* em main.rs) 4) rodar tools/fm_import.py --check 5) registrar em DECISOES.md e SESSAO_ATUAL.md",
