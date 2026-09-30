@@ -407,10 +407,6 @@ var _auto_passa_espera := -1.0
 ## as etiquetas de nome ao lado de cada retrato (dado real do duelista).
 var _lbl_placa_nome_voce: Label = null
 var _lbl_placa_nome_rival: Label = null
-## D44 (item 6): a barra de FASES (DRAW/MAIN/BATTLE/END) foi REMOVIDA da tela
-## por ordem do usuário. O dicionário fica vazio de propósito — nenhuma
-## fase é desenhada em lugar nenhum agora.
-var _caixas_fase: Dictionary = {}
 ## Orbes e contador da carta focada (painel esquerdo, estilo da ref).
 var _orbe_foco: TextureRect = null
 var _orbe_tipo_foco: TextureRect = null
@@ -572,21 +568,43 @@ func _ready() -> void:
 	if int(_st.current_player) == 0:
 		_redesenhar(false)
 		_atualizar_hud()
-	print("[MESA3D] Pronta: mão p0=%d p1=%d, artes carregadas=%d, assets embutidos=%d/17." % [
+	_diag("Pronta: mão p0=%d p1=%d, artes carregadas=%d, assets embutidos=%d/17." % [
 		((_st.players[0] as Dictionary)["hand"] as Array).size(),
 		((_st.players[1] as Dictionary)["hand"] as Array).size(), _artes_ok,
 		_conta_assets_embutidos()])
 	if _cam != null:
-		print("[MESA3D] Cam: pos=%s fov=%s alvo=%s." % [str(_cam.global_position), str(_cam.fov), str(CAM_ALVO)])
+		_diag("Cam: pos=%s fov=%s alvo=%s." % [str(_cam.global_position), str(_cam.fov), str(CAM_ALVO)])
 		var px := _cam.unproject_position(_pos_slot(0, "monstro", 2))
-		print("[MESA3D] Slot p0_m2 na tela: janela=%s tela_x=%.1f." % [str(px), JANELA_CAMPO_X + px.x])
+		_diag("Slot p0_m2 na tela: janela=%s tela_x=%.1f." % [str(px), JANELA_CAMPO_X + px.x])
 		_calibrar_mao()
 	_ver_autoquit()
 
 
 ## Boot: lê --cenario3d nas 2 formas (igual ao --project/--setup).
 ## "0" = legado 2D (emergência); sem arg ou outro valor = fica no 3D.
+## `--debug` liga o diagnostico detalhado (medidas, camera, calibracao,
+## fila de fusao, foto). Sem ela o jogo so imprime o boot.
+var _debug := _quer_debug()
+
 ## Volta true quando trocou de cena (quem chamou PARA aqui).
+## Diagnostico: so sai com `--debug`. O que o boot imprime SEM a flag e
+## contrato do `test_project_arg` (ele roda o jogo de verdade e le o log), e
+## por isso nenhum contrato passa por aqui.
+func _diag(texto: String) -> void:
+	if _debug:
+		print("[MESA3D] " + texto)
+
+
+## A flag `--debug`, nas duas formas de escrever (igual ao --cenario3d).
+func _quer_debug() -> bool:
+	var args := OS.get_cmdline_user_args()
+	for i in range(args.size()):
+		var s := str(args[i])
+		if s == "--debug" or s.begins_with("--debug="):
+			return true
+	return false
+
+
 func _usar_legado_2d() -> bool:
 	var modo := ""
 	var args := OS.get_cmdline_user_args()
@@ -607,11 +625,12 @@ func _usar_legado_2d() -> bool:
 	return true
 
 
-## Espelha o log da mesa antiga p/ o boot continuar legível ([MESA3D]
-## no lugar de [TABLE]): arena carregada ou aviso + grade padrão.
+## Log de boot da mesa: uma linha por fato (arena, fusões, duelo) e o resto do
+## diagnóstico só com `--debug`. As linhas do boot são contrato do
+## `test_project_arg`, que roda o jogo de verdade e lê o que ele imprimiu.
 func _avisar_arena() -> void:
 	if _arena_layout.is_empty():
-		print("[MESA3D] Aviso: arena não carregou, usando grade padrão.")
+		print("[MESA3D] ERRO: a arena oficial não carregou — o campo NÃO foi desenhado (D50: uma arena só, e ela é o dado).")
 	else:
 		var h0: Dictionary = BoardLayoutScript.get_hand(_arena_data, 0)
 		var h1: Dictionary = BoardLayoutScript.get_hand(_arena_data, 1)
@@ -689,7 +708,7 @@ func _ver_autoquit() -> void:
 			var n := float(s.trim_prefix("--mesa3d-sair="))
 			if n > 0.0:
 				await get_tree().create_timer(n).timeout
-				print("[MESA3D] Autoquit de validação após %s s." % str(n))
+				_diag("Autoquit de validação após %s s." % str(n))
 				get_tree().quit()
 
 
@@ -766,7 +785,7 @@ func _calib_visual(hud: Control) -> void:
 		y = float(par[1])
 		_calib_linha(hud, "CalibL%s" % str(par[0]).replace(" ", ""), y, CALIB_COR_LINHA_FINA, 1, x0, larg,
 			"%s: %.0f px" % [str(par[0]), y])
-	print("[MESA3D] Calib visual: quadrado de y=%.0f ate o rodape (linha dos slots em %.0f px)." % [
+	_diag("Calib visual: quadrado de y=%.0f ate o rodape (linha dos slots em %.0f px)." % [
 		linha_slots, linha_slots])
 
 
@@ -822,7 +841,7 @@ func _construir_janela_campo() -> void:
 	janela.add_child(_vp)
 	camada.add_child(janela)
 	# O tamanho do viewport é o do container (stretch 1:1) = o retângulo medido.
-	print("[MESA3D] Janela do campo: x=%d..%d px (%.1f%%..100%% da tela), %dx%d, altura toda. Centro do campo = %.1f%% da tela. Camera SEM deslocamento." % [
+	_diag("Janela do campo: x=%d..%d px (%.1f%%..100%% da tela), %dx%d, altura toda. Centro do campo = %.1f%% da tela. Camera SEM deslocamento." % [
 		JANELA_CAMPO_X, TELA_L, float(JANELA_CAMPO_X) / float(TELA_L) * 100.0,
 		JANELA_CAMPO_L, JANELA_CAMPO_A,
 		(float(JANELA_CAMPO_X) + float(JANELA_CAMPO_L) * 0.5) / float(TELA_L) * 100.0])
@@ -893,7 +912,7 @@ func _construir_ambiente() -> void:
 	# (um lado estica, o outro comprime) e o campo fica torto. Quem joga o
 	# campo p/ a direita é a JANELA do campo, criada acima.
 	_cam.frustum_offset = Vector2.ZERO
-	print("[MESA3D] Ambiente: céu azul + neblina + pilares + câmera no PIVÔ da mesa (a volta da mesa, D47).")
+	_diag("Ambiente: céu azul + neblina + pilares + câmera no PIVÔ da mesa (a volta da mesa, D47).")
 
 
 ## Cenário do céu da ref (só desenho): pilares altos de vidro azulado ao
@@ -1025,7 +1044,7 @@ func _construir_campo() -> void:
 	_cursor_moldura.name = "Moldura"
 	_cursor_grupo.add_child(_cursor_moldura)
 	_construir_mao_cursor()
-	print("[MESA3D] Campo: 20 painéis + faixa do meio (7 itens) + Cursor3D.")
+	_diag("Campo: 20 painéis + faixa do meio (7 itens) + Cursor3D.")
 
 
 ## Redesenha a moldura do foco com o tamanho e a inclinação da focada.
@@ -1338,33 +1357,6 @@ func _montar_retrato(foto: TextureRect, silhueta: Label, caminho: String, nome: 
 		silhueta.visible = true
 
 
-## Código curto do atributo. Sobrou do painel antigo, que printava "LUZ" e
-## companhia numa linha de texto entre o [TIPO] e a descrição (D5: a ref não
-## tem essa linha — o atributo aparece como orbe, não como palavra). Ajudar
-## a chamar é `_cor_atributo` e o asset `assets/attributes/<attr>.png`.
-func _rotulo_attr_curto(attr: String) -> String:
-	match attr:
-		"light":
-			return "LUZ"
-		"dark":
-			return "TREVAS"
-		"fire":
-			return "FOGO"
-		"water":
-			return "ÁGUA"
-		"earth":
-			return "TERRA"
-		"wind":
-			return "VENTO"
-		"thunder":
-			return "TROVÃO"
-		"divine":
-			return "DIVINO"
-	if attr.strip_edges().is_empty():
-		return "—"
-	return attr.to_upper()
-
-
 func _rotulo3d(texto: String, tamanho: int, cor: Color) -> Label3D:
 	var l := Label3D.new()
 	l.text = texto
@@ -1418,7 +1410,7 @@ func _quad_textura(nome: String, larg: float, alt: float, pos: Vector3, tex: Tex
 	return mi
 
 
-func _fazer_carta(dado: Dictionary, face_down: bool, lado: int, em_defesa: bool) -> Node3D:
+func _fazer_carta(dado: Dictionary, face_down: bool, em_defesa: bool) -> Node3D:
 	# Carta INTEIRA igual ao editor (só leitura do projeto): moldura JPG
 	# por tipo + arte na janela + orbe + estrelas + nome/ATK na placa.
 	# Sem nada no projeto = cai na cor (comportamento antigo).
@@ -1825,7 +1817,7 @@ func _x_mao_no_alvo(y: float, z: float, alvo_x: float) -> float:
 ## no code page do Windows (ver test_project_arg).
 func _calibrar_mao() -> void:
 	if _cam == null or not is_instance_valid(_cam):
-		print("[MESA3D] Calib: sem câmera, arco no X de fallback.")
+		_diag("Calib: sem câmera, arco no X de fallback.")
 		return
 	var n := [5, 5]
 	if _st != null:
@@ -1836,7 +1828,7 @@ func _calibrar_mao() -> void:
 	# X do centro do campo na TELA REAL: a janela do campo começa em
 	# JANELA_CAMPO_X, então é só somar a origem da janela ao X projetado.
 	var alvo_tela := JANELA_CAMPO_X + alvo
-	print("[MESA3D] Calib: janela=%dx%d em x=%d | tela=%dx%d centro_da_tela=%.1f centro_do_campo=%.1f (%.2f%% da tela)" % [
+	_diag("Calib: janela=%dx%d em x=%d | tela=%dx%d centro_da_tela=%.1f centro_do_campo=%.1f (%.2f%% da tela)" % [
 		int(janela.x), int(janela.y), JANELA_CAMPO_X, TELA_L, TELA_A,
 		float(TELA_L) * 0.5, alvo_tela, alvo_tela / float(TELA_L) * 100.0])
 	for lado in [0, 1]:
@@ -1845,7 +1837,7 @@ func _calibrar_mao() -> void:
 		var meio := int(ceil(float(maxi(q - 1, 0)) / 2.0))
 		var centro := _pos_mao_arco(meio, q, lado)
 		var sx := _cam.unproject_position(centro).x
-		print("[MESA3D] Calib:   p%d cartas=%d x_mundo=%.3f tela=%.2f tela_x=%.1f erro=%.2fpx escala=%.1fpx/u arco=[%.0f..%.0f]px" % [
+		_diag("Calib:   p%d cartas=%d x_mundo=%.3f tela=%.2f tela_x=%.1f erro=%.2fpx escala=%.1fpx/u arco=[%.0f..%.0f]px" % [
 			lado, q, centro.x, sx, JANELA_CAMPO_X + sx, sx - alvo,
 			absf(_cam.unproject_position(centro + Vector3(1, 0, 0)).x - sx),
 			_cam.unproject_position(_pos_mao_arco(0, q, lado)).x,
@@ -1856,7 +1848,7 @@ func _calibrar_mao() -> void:
 		# `_pose_da_mao` que manda), não do lado.
 		var tilt_ := float(_pose_da_mao(lado == _dono_do_lugar_perto())["tilt"])
 		var caixa := _caixa_carta_tela(centro, tilt_)
-		print("[MESA3D] Calib:   p%d carta_na_tela: x=[%.0f..%.0f] y=[%.0f..%.0f] px | largura=%.0fpx (%.1f%% da tela) | em%% da altura: %.1f..%.1f" % [
+		_diag("Calib:   p%d carta_na_tela: x=[%.0f..%.0f] y=[%.0f..%.0f] px | largura=%.0fpx (%.1f%% da tela) | em%% da altura: %.1f..%.1f" % [
 			lado, caixa.x + JANELA_CAMPO_X, caixa.z + JANELA_CAMPO_X,
 			caixa.y, caixa.w, dx_, dx_ / float(TELA_L) * 100.0,
 			caixa.y / float(TELA_A) * 100.0, caixa.w / float(TELA_A) * 100.0])
@@ -2047,9 +2039,9 @@ func _aplicar_vista_hud() -> void:
 		_faixa2d.pivot_offset = _faixa2d.size * 0.5
 		_faixa2d.scale = Vector2(esc, 1.0)
 	for b in _blocos_voce:
-		_virar_bloco(b, esc, invertido)
+		_virar_bloco(b, esc)
 	for b in _blocos_rival:
-		_virar_bloco(b, esc, invertido)
+		_virar_bloco(b, esc)
 	if invertido != _vista_trocada:
 		_vista_trocada = invertido
 		_trocar_lado_das_blocos()
@@ -2058,7 +2050,7 @@ func _aplicar_vista_hud() -> void:
 
 ## Um bloco do HUD que vira de carta: pivô no meio dele (para encolher para os
 ## dois lados, como uma carta virando) e a escala do giro.
-func _virar_bloco(b: Control, esc: float, _invertido: bool) -> void:
+func _virar_bloco(b: Control, esc: float) -> void:
 	if b == null or not is_instance_valid(b):
 		return
 	b.pivot_offset = Vector2(b.size.x * 0.5, b.size.y * 0.5)
@@ -2142,7 +2134,7 @@ func _redesenhar(com_efeito: bool, dono_efeito: int = 0) -> void:
 				var tipo := "monstro" if zona_nome == "monster" else "magia"
 				var virada := bool(m.get("face_down", false))
 				var em_defesa := str(m.get("position", "ATK")) == "DEF"
-				var carta := _fazer_carta(_fantasia(m), virada, lado, em_defesa)
+				var carta := _fazer_carta(_fantasia(m), virada, em_defesa)
 				# A carta do campo cresce com o campo (mesma proporção dentro
 				# do vidro) e fica apoiada na peça, não flutuando.
 				carta.scale = Vector3.ONE * ESCALA_CAMPO
@@ -2166,7 +2158,7 @@ func _redesenhar(com_efeito: bool, dono_efeito: int = 0) -> void:
 	# cálculo da câmera. Mude TILT_MAO_LIVRE à vontade (graus no eixo X).
 	var mao0: Array = (_st.players[0] as Dictionary)["hand"]
 	for i in range(mao0.size()):
-		var c := _fazer_carta(mao0[i] as Dictionary, false, 0, false)
+		var c := _fazer_carta(mao0[i] as Dictionary, false, false)
 		# Mão PEQUENA no rodapé (fase 2/doc 15 §15.3): o X acompanha o
 		# centro do campo (calculado da câmera) e o Y/Z é o do LUGAR perto
 		# (LUGAR_PERTO_YZ) — a carta nasce cortada pela borda de baixo.
@@ -2186,7 +2178,7 @@ func _redesenhar(com_efeito: bool, dono_efeito: int = 0) -> void:
 		_animar_compra(c, 0, com_efeito, dono_efeito)
 	var mao1: Array = (_st.players[1] as Dictionary)["hand"]
 	for j in range(mao1.size()):
-		var v := _fazer_carta({}, true, 1, false)
+		var v := _fazer_carta({}, true, false)
 		v.position = _pos_mao_arco(j, mao1.size(), 1)
 		v.set_meta("mao_idx", j)
 		v.set_meta("mao_dono", 1)
@@ -2430,20 +2422,6 @@ func _rotulo_hud(nome: String, texto: String, pos: Vector2, tam: int, cor: Color
 	return l
 
 
-func _rotulo_placa(nome: String, texto: String, tam: int) -> Label:
-	# Texto escuro gravado na placa metálica (sombra clara, D19: sem clique).
-	var l := Label.new()
-	l.name = nome
-	l.text = texto
-	l.add_theme_font_size_override("font_size", tam)
-	l.add_theme_color_override("font_color", Color(0.05, 0.05, 0.10))
-	l.add_theme_color_override("font_shadow_color", Color(1, 1, 1, 0.35))
-	l.add_theme_constant_override("shadow_offset_x", 1)
-	l.add_theme_constant_override("shadow_offset_y", 1)
-	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return l
-
-
 func _estilo_placa(fundo: Color = Color(0.62, 0.64, 0.70), borda: Color = Color(0.18, 0.19, 0.24)) -> StyleBoxFlat:
 	# Placa metálica do topo (ref nova): azul (você), azul-escuro (turno),
 	# vermelha (rival). Texto claro gravado.
@@ -2627,23 +2605,8 @@ func _placa_nome_retrato(hud: Control, nome: String, x: float, y: float, larg: f
 	hud.add_child(p)
 	return l
 
-## Gradiente metálico (a barra da ref é metal com bisel, não chapa): uma
-## textura de gradiente vertical gerada em código — sem arquivo externo.
-func _tex_metal(topo: Color, base: Color) -> GradientTexture2D:
-	var g := Gradient.new()
-	g.set_color(0, topo)
-	g.set_color(1, base)
-	var t := GradientTexture2D.new()
-	t.gradient = g
-	t.width = 8
-	t.height = 64
-	t.fill_from = Vector2(0.0, 0.0)
-	t.fill_to = Vector2(0.0, 1.0)
-	return t
 
-
-# ---- D45: A FAIXA DO MEIO EM 2D (item 2 do usuário) ----------------------
-## "vai continuar essa faixa no meio mas agora em 2d, assim fica mais facil,
+# ---- D45: A FAIXA DO MEIO EM 2D (item 2 do usuário) ----------------------## "vai continuar essa faixa no meio mas agora em 2d, assim fica mais facil,
 ## podemos fazer algo bonito que mostre isso e tambem tenha um contador de
 ## cartas ainda no deck e contador de cartas no cemiterio".
 ##
@@ -2747,7 +2710,7 @@ func _construir_faixa_2d(hud: Control) -> void:
 	# filhos do HBox É a ordem na tela).
 	_faixa_linha = linha
 	_atualizar_faixa()
-	print("[MESA3D] Faixa 2D: 7 celulas em x=%.0f..%.0f y=%.0f..%.0f (vao das fileiras %.0f..%.0f px)." % [
+	_diag("Faixa 2D: 7 celulas em x=%.0f..%.0f y=%.0f..%.0f (vao das fileiras %.0f..%.0f px)." % [
 		x0, x0 + larg, y, y + alt, y_topo, y_base])
 
 
@@ -3217,6 +3180,8 @@ func _fala(texto: String) -> void:
 		_log.pop_front()
 	if _lbl_log != null:
 		_lbl_log.text = "\n".join(_log)
+	# A fala vai para o log SEMPRE, mesmo sem `--debug`: é a linha que prova
+	# que o jogo chegou na sua vez (contrato do test_project_arg).
 	print("[MESA3D] " + texto)
 
 
@@ -3511,7 +3476,7 @@ func _carta_completa_do_campo(inst: Dictionary) -> Dictionary:
 	return base
 
 
-func _mostrar_centro3d(_carta: Dictionary, face_baixo: bool) -> void:
+func _mostrar_centro3d(face_baixo: bool) -> void:
 	if _painel_centro == null or _lbl_centro == null:
 		return
 	_lbl_centro.text = "Centro: %s (%s)" % [_nome_carta_mao(_mao_idx), ("face p/ baixo" if face_baixo else "face p/ cima")]
@@ -3585,7 +3550,6 @@ func _atualizar_menus() -> void:
 # ---- EFEITOS VISUAIS (só visual: flash + solavanco + voo) ----
 
 func _flash_efeito() -> void:
-	print("[SOM] flash 3D.")
 	if _sem_render() or _flash_tela == null:
 		return
 	_flash_tela.modulate.a = 0.85
@@ -3652,7 +3616,7 @@ func _fluxo_escolher_carta() -> void:
 	_face_baixo = false
 	_combinando = false
 	_sub_mao = SUB_FACE
-	_mostrar_centro3d(carta, false)
+	_mostrar_centro3d(false)
 	_fala("Carta no centro. Esq/dir: face p/ cima / p/ baixo. Confirme.")
 	_redesenhar(false)
 
@@ -3798,7 +3762,6 @@ func _executar_summon_fiel(estrela: String) -> void:
 			_st.normal_summon_used = true
 			_fala("Fusão com campo! %s + %s = %s." % [nome_campo, str(carta_mao.get("id", "?")), rid])
 			_fala("Desceu %s em Ataque (estrela %s)!" % [("virada p/ baixo" if face else "p/ cima"), estrela])
-			print("[SOM] encontro fundiu no slot %d." % slot_n)
 		else:
 			(p["graveyard"] as Array).append(str(ocupante.get("card_id", "")))
 			mao.remove_at(hand_idx)
@@ -3812,7 +3775,6 @@ func _executar_summon_fiel(estrela: String) -> void:
 		_st.normal_summon_used = true
 		_fala("Não fundiu: %s descartado." % nome_campo)
 		_fala("Desceu %s em Ataque (estrela %s)!" % [("virada p/ baixo" if face else "p/ cima"), estrela])
-		print("[SOM] encontro falhou, campo descartado no slot %d." % slot_n)
 	_terminar_jogada_mao(slot_n)
 
 
@@ -3913,7 +3875,7 @@ func _fluxo_escolher_slot_fusao() -> void:
 		_redesenhar(false)
 		return
 	_fusao_animando = true
-	await _animar_fila_fusao(em_ordem, previa.get("passos", []) as Array, ordem, slot)
+	await _animar_fila_fusao(previa.get("passos", []) as Array, slot)
 	if bool(_st.over) or int(_st.current_player) != 0 or String(_st.phase) != "MAIN":
 		_fusao_animando = false
 		_combinando = false
@@ -4025,12 +3987,10 @@ func _executar_fusao_fiel(estrela: String) -> void:
 		else:
 			(p["graveyard"] as Array).append(str((zona[slot_n] as Dictionary).get("card_id", "")))
 			_fala("Não fundiu com campo: %s descartado." % nome_campo)
-			print("[SOM] encontro da fusão falhou no slot %d." % slot_n)
 	var real_f: Dictionary = (_cartas.get(descer_id, {}) as Dictionary) if _cartas.has(descer_id) else descer_carta
 	zona[slot_n] = SummonSystem.construir_instancia(descer_carta, false, "ATK", estrela, real_f, descer_id)
 	_st.normal_summon_used = true
 	_fala("Fundiu %s em Ataque p/ cima (estrela %s)!" % [descer_id, estrela])
-	print("[SOM] fusão pronta no slot %d." % slot_n)
 	_combinando = false
 	_fusao_ordem = []
 	_fusao_final = {}
@@ -4058,13 +4018,13 @@ func _executar_fusao_fiel(estrela: String) -> void:
 ## cartas (as 4 fileiras e as DUAS mãos): na falha da fusão a mesa inteira
 ## tremia e as duas mãos andavam juntas, que é o "as cartas se movimentam junto"
 ## que o usuário reportou.
-func _animar_fila_fusao(_em_ordem: Array, passos: Array, _indices_mao: Array, slot_n: int) -> void:
+func _animar_fila_fusao(passos: Array, slot_n: int) -> void:
 	_fusao_passos = (passos as Array).duplicate()
 	_redesenhar(false)
 	if _sem_render():
 		for p in _fusao_passos:
 			if p is Dictionary:
-				print("[MESA3D] Fusão: %s + %s = %s." % [str((p as Dictionary).get("a", "?")), str((p as Dictionary).get("b", "?")), str((p as Dictionary).get("result_id", "?"))])
+				_diag("Fusão: %s + %s = %s." % [str((p as Dictionary).get("a", "?")), str((p as Dictionary).get("b", "?")), str((p as Dictionary).get("result_id", "?"))])
 		return
 	for p in _fusao_passos:
 		if not (p is Dictionary):
@@ -4501,7 +4461,6 @@ func _levantar3d(hand_idx: int) -> void:
 	if hand_idx < 0 or hand_idx >= mao.size():
 		return
 	_levantadas.append(hand_idx)
-	print("[SOM] levantar carta %d (selo %d)." % [hand_idx, _levantadas.size()])
 	_fala("Levantada %d (%d p/ fundir)." % [_levantadas.size(), _levantadas.size()])
 	_redesenhar(false)
 
@@ -4511,7 +4470,6 @@ func _abaixar3d(hand_idx: int) -> void:
 	if not _levantadas.has(hand_idx):
 		return
 	_levantadas.erase(hand_idx)
-	print("[SOM] abaixar carta %d." % hand_idx)
 	_fala("Abaixou. Restam %d levantadas." % _levantadas.size())
 	_redesenhar(false)
 
@@ -4693,7 +4651,6 @@ func _cancelar() -> void:
 				if not _levantadas.is_empty():
 					var ultima := int(_levantadas.back())
 					_levantadas.pop_back()
-					print("[SOM] abaixar carta %d (cancelar)." % ultima)
 					_fala("Abaixou a última. Restam %d levantadas." % _levantadas.size())
 					_redesenhar(false)
 					return
@@ -4808,7 +4765,7 @@ func _process(delta: float) -> void:
 		if _foto_frames >= _foto_frame_alvo:
 			var img := get_viewport().get_texture().get_image()
 			img.save_png(_foto_destino)
-			print("[MESA3D] Foto salva (quadro %d, volta %.0f graus): %s" % [
+			_diag("Foto salva (quadro %d, volta %.0f graus): %s" % [
 				_foto_frames, _giro_campo, _foto_destino])
 			get_tree().quit()
 	if _cursor3d != null:
@@ -4861,7 +4818,7 @@ func _unhandled_input(evento: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if evento.is_action_pressed("sair_duelo"):
-		print("[MESA3D] sair_duelo sem tela de desistência (não existe).")
+		_diag("sair_duelo sem tela de desistência (não existe).")
 		_fala("Sair do duelo: sem tela de desistência (não existe).")
 		get_viewport().set_input_as_handled()
 		return

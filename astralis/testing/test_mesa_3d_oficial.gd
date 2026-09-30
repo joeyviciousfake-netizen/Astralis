@@ -336,7 +336,7 @@ func test_verso_marrom_com_espiral() -> void:
 	# cai no marrom com espiral. Os dois caminhos são o comportamento certo:
 	# o que NUNCA pode é a cruz azul.
 	var mesa: Node = await _mesa3d_nova()
-	var carta := mesa.call("_fazer_carta", {}, true, 1, false) as Node3D
+	var carta := mesa.call("_fazer_carta", {}, true, false) as Node3D
 	assert_true(carta != null, "Carta virada construída.")
 	assert_true(carta.get_node_or_null(NodePath("Cruz")) == null, "Sem cruz no verso.")
 	var verso := carta.get_node_or_null(NodePath("Verso")) as MeshInstance3D

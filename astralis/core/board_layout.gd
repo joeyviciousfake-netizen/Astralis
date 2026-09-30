@@ -243,7 +243,6 @@ static func valida_arena_oficial(slots: Dictionary) -> Array:
 			% [faltando.size(), str(faltando)]
 			+ "O jogo NÃO inventa posição (D50): sem o arquivo schemas/examples/arenas/"
 			+ "arena_starter.json completo, o campo não pode ser desenhado.")
-		print("[ARENA] ERRO: faltando %d slot(s): %s. O campo não vai ser desenhado (D50, sem grade no código)." % [faltando.size(), str(faltando)])
 	return faltando
 
 
@@ -258,22 +257,18 @@ static func load_arena_data(path: String) -> Dictionary:
 	var vazio := {"slots": {}, "hand": sem_hand}
 	if path.is_empty():
 		push_warning("[ARENA] Caminho da arena oficial vazio: o campo não pode ser desenhado (D50).")
-		print("[ARENA] ERRO: sem caminho da arena oficial. O campo não vai ser desenhado (D50).")
 		return vazio
 	if not FileAccess.file_exists(path):
 		push_warning("[ARENA] Arena oficial não encontrada: %s. O campo não pode ser desenhado (D50)." % path)
-		print("[ARENA] ERRO: arena oficial não encontrada: " + path + ". O campo não vai ser desenhado (D50, sem grade no código).")
 		return vazio
 	var f := FileAccess.open(path, FileAccess.READ)
 	if f == null:
 		push_warning("[ARENA] Não foi possível abrir a arena oficial: %s." % path)
-		print("[ARENA] ERRO: não foi possível abrir: " + path + ". O campo não vai ser desenhado (D50).")
 		return vazio
 	var texto: String = f.get_as_text()
 	var json := JSON.new()
 	if json.parse(texto) != OK:
 		push_warning("[ARENA] JSON inválido na arena oficial %s: %s" % [path, json.get_error_message()])
-		print("[ARENA] ERRO: JSON inválido: " + path + ". O campo não vai ser desenhado (D50).")
 		return vazio
 	if not (json.data is Dictionary):
 		push_warning("[ARENA] Formato inesperado na arena oficial %s (esperava objeto)." % path)
@@ -281,13 +276,11 @@ static func load_arena_data(path: String) -> Dictionary:
 	var dados: Dictionary = json.data
 	if not dados.has("slots") or not (dados["slots"] is Array):
 		push_warning("[ARENA] Arena oficial sem lista 'slots' em %s." % path)
-		print("[ARENA] ERRO: arena oficial sem 'slots': " + path + ". O campo não vai ser desenhado (D50).")
 		return vazio
 	var layout: Dictionary = {}
 	var lista: Array = dados["slots"]
 	if lista.size() != 20:
 		push_warning("[ARENA] Arena oficial precisa de 20 slots, achou %d em %s." % [lista.size(), path])
-		print("[ARENA] A arena oficial tem %d slots (esperava 20)." % lista.size())
 	for item in lista:
 		if not (item is Dictionary):
 			push_warning("[ARENA] Slot inválido ignorado (esperava objeto com slot_id/x/y).")
@@ -316,7 +309,6 @@ static func load_arena_data(path: String) -> Dictionary:
 	var hand := parse_hand(dados)
 	if not dados.has("hand"):
 		push_warning("[ARENA] A arena oficial não tem 'hand': a mão cai no padrão do contrato.")
-		print("[ARENA] Sem 'hand' no JSON, usando o padrão p0(1240,980,95)/p1(1240,20,60).")
 	return {"slots": layout, "hand": hand}
 
 
