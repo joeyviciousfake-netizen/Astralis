@@ -27,7 +27,7 @@ schemas/
                                (SEM texto/imagem FM no repo, por decisão)
   examples/                <- conteúdo OFICIAL FM (D20), jogável
     layouts/card_layout_monster_default.json <- ÚNICO molde V1: monstro padrão medido do scan real (doc 04.8)
-    arenas/arena_starter.json  <- A ARENA OFICIAL (D48: uma arena so; D49: grade PERFEITA, um valor so = 263): 20 slots XY (x 632-1684 de 263 em 263; y p0 695/958 e p1 305/42, ou seja 263 vertical monstro->magia dos 2 lados) + hand p0 1240/980/95 e p1 1240/20/60 (D24). A distancia entre as fileiras de monstro dos 2 lados (390) e CONGELADA. Mesmos numeros da grade embutida em core/board_layout.gd
+    arenas/arena_starter.json  <- A ARENA OFICIAL E A UNICA (D50: a mesa e do JOGO, nao do projeto; D49: grade PERFEITA, um valor so = 263): 20 slots XY (x 632-1684 de 263 em 263; y p0 695/958 e p1 305/42, ou seja 263 vertical monstro->magia dos 2 lados) + hand p0 1240/980/95 e p1 1240/20/60 (D24). A distancia entre as fileiras de monstro dos 2 lados (390) e CONGELADA. **O projeto NAO tem mais pasta arenas/ e o runtime ignora o `duel_setup.arena_id`** (o dado FM traz `arena_starter`, que e esta mesma). Zero numeros de arena no codigo: a posicao de cada slot vem SO deste arquivo.
     cards/                 <- 722 cartas fm_0001..fm_0722 (621 monstros, 34 equip, 33 spell, 24 ritual, 10 trap)
     duelists/              <- 39 duelistas fm_duelist_01..39 (starting_lp 8000, ai_preset normal)
     decks/                 <- 39 decks fm_deck_01..39 (40 cartas cada, máx 3 cópias, seed 42)

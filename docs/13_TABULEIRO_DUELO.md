@@ -111,17 +111,17 @@ Dano, compra, descarte, quem venceu, resultado fusão, alvo válido, fase atual.
 ## 13.10 Slots D24 (ID fixo + layout separado + escolha livre)
 
 - ID fixo: `p0/p1 + m/s + 0-4` (lado + tipo + índice). Lógica só usa ID/índice.
-- Posição XY mora em `arenas/arena_*.json` (dado puro, só desenho), com limite 0-1920 / 0-1080 no contrato. Editor futuro move XY sem renomear/apagar.
-- Fallback: sem arena, ou arena inválida, usa a **grade padrão embutida** (1920x1080). Nunca quebra o jogo.
+- Posição XY mora na **arena oficial** (`schemas/examples/arenas/arena_starter.json`, dado puro, só desenho), com limite 0-1920 / 0-1080 no contrato. É a única mesa do jogo (D50, 13.10.3).
+- **Sem fallback (D50):** não existe mais "grade padrão embutida". Arquivo faltando ou quebrado = erro honesto: o log avisa e a mesa **não desenha o campo**, em vez de inventar uma mesa.
 - Jogador escolhe slot livre (de 5) ao descer da mão, pelo controle. Rival usa o primeiro livre.
-- O fallback embutido tem exatamente os mesmos números do `arena_starter.json` — logo um projeto sem arena vê a mesma tela.
+- O `arena_id` do `duel_setup` continua no contrato (o dado FM traz `arena_starter`) mas o runtime o **ignora de propósito**: o jogo tem uma mesa só.
 
 ## 13.10.1 UMA arena só (D48)
 
 - **A arena oficial é `schemas/examples/arenas/arena_starter.json`** (a "grade larga"): X `632 → 1684` de 263 em 263, Y `p0 monstro 695 / p0 magia 958 / p1 monstro 305 / p1 magia 42`. Mão p0(1240,980,95) e p1(1240,20,60).
 - A grade embutida em `core/board_layout.gd` (usada quando o projeto não tem `arenas/`) **não é uma segunda arena**: são os MESMOS números, escritos nas constantes `GRID_X/GAP/Y_*`. E `duel_legacy2d/duel_board.gd` repete essa grade só para o 2D legado.
 - **O que era errado (D48):** o JSON já usava a grade larga, mas a grade embutida, a descrição do próprio JSON, o schema e dois testes ainda falavam da grade antiga e estreita (X `780 → 1536`, Y `600/789/317/128`, passo 189). Resultado: quem tinha `arenas/arena_starter.json` via a grade larga, e quem não tinha (projeto novo do Studio) via a grade estreita — **duas telas diferentes**, e a estreita com a mão invadindo a fileira de baixo. Só a larga é a que a câmera da D47 foi calibrada.
-- **Travado em teste:** `test_board_layout.gd::test_grade_embutida_igual_arena_oficial` compara os 20 slots embutidos com os 20 do JSON, trava `SLOT + GAP == 263` e compara as constantes do 2D legado com as do `BoardLayout`. Se alguém mexer num lado só, a suíte quebra. `test_project_arg.gd` refaz a comparação slot a slot pelo caminho de projeto sem arena.
+- **D50 mudou esta seção:** não existe mais "grade padrão embutida" para cair (13.10.3). A posição vem SO do arquivo da arena oficial; sem ele, o jogo avisa e nao desenha o campo. O que era fallback virou o proprio dado.butidos com os 20 do JSON, trava `SLOT + GAP == 263` e compara as constantes do 2D legado com as do `BoardLayout`. Se alguém mexer num lado só, a suíte quebra. `test_project_arg.gd` refaz a comparação slot a slot pelo caminho de projeto sem arena.
 - Regra para o futuro: **um número de arena vive em dois lugares por necessidade técnica (JSON + fallback), então a igualdade é obrigatória e testada.** Mover a arena = mudar o JSON **e** as constantes, no mesmo commit.
 
 ## 13.10.2 A grade PERFEITA (D49) — um valor só, 263
@@ -172,8 +172,55 @@ pixels foram removidos.
 
 **Travas de teste:**
 - `test_mesa_3d_oficial.gd::test_d49_grade_perfeita_um_valor_so_e_mao_vem_para_a_camera` — os 20 slots são o dado puro (tolerância 1e-6), o passo horizontal das 4 fileiras é o mesmo número, o vão vertical monstro→magia dos 2 lados é **igual a ele**, a ordem das fileiras continua a do dado, e a distância entre as fileiras de monstros dos 2 lados continua **390** (com um `assert_ne` que impede alguém de "harmonizar" os 390 para 263).
-- `test_board_layout.gd::test_espelho_p1_fileiras_perto_longe` — as mesmas três distâncias no `BoardLayout` (dado, sem câmera).
-- `test_grade_embutida_igual_arena_oficial` (D48) continua guaranteeing que o fallback é o JSON slot por slot.
+- `test_board_layout.gd::test_espelho_p1_fileiras_perto_longe` — as mesmas três distâncias, medidas no **arquivo** (sem câmera).
+- `test_project_arg.gd::test_arena_oficial_e_a_unica_e_a_perfeita` — o arquivo tem 20 slots, um valor só nas seis direções, o 390 congelado, e o 2D legado lê o mesmo arquivo.
+
+## 13.10.3 UMA arena, e ela é do jogo (D50)
+
+O usuário, depois de ver que a tela "continuava igual", mandou: *"porra ainda
+tem outras arenas nos arquivos? é pra ter só uma, nós só temos uma arena no
+jogo, não temos mais; se tiver mais está errado e é pra ser removido"*.
+
+**O que existia: 1 arquivo e 3 cópias dos números.**
+1. `schemas/examples/arenas/arena_starter.json` — o arquivo (a mesa de verdade);
+2. `core/board_layout.gd` — as constantes `GRID_X`/`GAP`/`Y_*`, o "fallback";
+3. `duel_legacy2d/duel_board.gd` — as mesmas constantes de novo, para o 2D.
+
+O D48 tinha tornado as três iguais, mas continuavam sendo três. E a (2) era
+perigosa: era ela que deixava o jogo cair numa tela diferente **em silêncio**,
+quando o arquivo não vinha.
+
+**O que existe agora: UM arquivo, e ZERO números de arena no código.**
+
+| Onde | Antes | Agora |
+|---|---|---|
+| `core/board_layout.gd` | `SLOT`/`GAP`/`GRID_X`/`Y_*` + `default_pos` com a grade | **nada.** `default_pos` só devolve `NULO` ("não tem posição") |
+| `duel_legacy2d/duel_board.gd` | as mesmas 7 constantes | **nada.** `slot_rect` lê o layout e devolve `Rect2` vazio se faltar |
+| `get_pos(layout, slot)` | layout → grade do código → fallback | **layout → fallback do chamador.** Sem layout, `NULO` |
+| `project_arena_path(arena_id)` | buscava `projeto/arenas/<id>.json`, senão examples/ | **sempre a arena oficial**; o `arena_id` é lido e avisado como ignorado |
+| projeto do Studio | esqueleto com pasta `arenas/` | **sem a pasta** (`PASTAS_ESQUELETO` foi de 9 para 8) |
+| pasta `arenas/` num projeto | usada como mesa | **IGNORADA com aviso** ("o jogo tem UMA arena só") |
+| `data_loader.gd` (unpack) | copiava a arena para dentro do projeto | **não copia mais** |
+| lista de arenas do Studio | `ids_de_projeto("arenas")` | **`["arena_starter"]` fixo** |
+| gate da arena no Studio | projeto sem arena = aviso | id diferente da oficial = **erro**; a oficial nunca dá erro |
+
+**Arquivo faltando ou quebrado = erro honesto.** Não existe mais para onde cair:
+`valida_arena_oficial` lista o que falta, o log avisa, e a mesa 3D **não desenha
+o campo** em vez de inventar uma mesa. (O jogo usa `push_warning` + `print` e
+não `push_error`, porque o GUT conta `push_error` como erro inesperado — o
+comportamento é o mesmo: nada é desenhado.)
+
+**O que foi perdido, e é escolha do usuário:** um projeto não pode mais ter mesa
+própria. Mover slots por projeto era uma capacidade V2 do D24 ("editor futuro
+move XY") que nunca teve editor. Se um dia ele quiser isso de volta, é um
+arquivo por projeto + um seletor — e aí são duas mesas **por escolha**, não por
+acidente.
+
+**Travas de teste:**
+- `test_board_layout.gd::test_d50_sem_grade_no_codigo` — `default_pos` e `default_layout` são `NULO`, `project_arena_path` cai na oficial para qualquer id, e o projeto do Studio não tem `arenas/`.
+- `test_board_layout.gd::test_sem_layout_nao_inventa_posicao` e `test_arquivo_ruim_nao_inventa_posicao` — sem layout ou com arquivo ruim não sai posição nenhuma, e o 2D não desenha.
+- `test_project_arg.gd::test_pasta_arenas_no_projeto_e_ignorada_com_aviso` — o jogo de verdade, como processo filho, avisa que ignorou e usa a oficial.
+- `test_project_arg.gd::test_arena_oficial_e_a_unica_e_a_perfeita` — a grade perfeita (D49) medida no arquivo, e o 2D legado no mesmo arquivo.
 
 ## 13.11 Mão D25 (posição editável + rival de costas)
 
@@ -185,5 +232,5 @@ pixels foram removidos.
 ## 13.12 Onde os dados vêm (D29)
 
 - O jogo lê **a pasta do projeto** via `--project <pasta>`, não `schemas/examples/`. `schemas/examples/` é dado de TESTE e nunca é a fonte em produção.
-- Consequência: um projeto sem `arenas/` usa a grade padrão do runtime (13.10), e um projeto sem `duel_setup.json` sobe com LP 4000 e baralhos vazios. O duelo rápido do Studio monta o `duel_setup` na hora e passa por `--setup`.
+- Consequência (D50): um projeto sem `duel_setup.json` sobe com LP 4000 e baralhos vazios, e a MESA não vem do projeto — vem da arena oficial do jogo (13.10.3), que é a única. O duelo rápido do Studio monta o `duel_setup` na hora e passa por `--setup`.
 - O `examples/` ainda é a base embutida quando o jogo roda **sem** `--project` (é assim que os testes rodam).
