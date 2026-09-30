@@ -70,13 +70,20 @@ O boot abre sempre a mesa 3D. Volta ao legado 2D só em emergência:
 Saída esperada (sem erros):
 
 ```text
-[MESA3D] Ambiente: WorldEnvironment + 1 direcional + 3 omni + flash + Camera3D.
-[MESA3D] Mesa: tampo + moldura + emblema + 20 marcas + 2 decks + Cursor3D.
+[MESA3D] Janela do campo: x=562..1920 px (29.3%..100% da tela), 1358x1080, altura toda.
+[MESA3D] Ambiente: céu azul + neblina + pilares + câmera no PIVÔ da mesa (a volta da mesa, D47).
 [MESA3D] Arena carregada: 20 slots + mão p0(1240,980,95) p1(1240,20,60).
+[MESA3D] Campo: 20 painéis + faixa do meio (7 itens) + Cursor3D.
+[MESA3D] Faixa 2D: 7 celulas em x=620..1862 y=450..514 (vao das fileiras 438..525 px).
 [MESA3D] Fusões carregadas: 25081 receitas + 0 regras.
 [MESA3D] Mesa 3D: duelo real carregado.
 [MESA3D] Duelo começou! Sua vez.
-[MESA3D] Pronta: mão p0=5 p1=5, artes carregadas=0.
+[MESA3D] Pronta: mão p0=5 p1=5, assets embutidos=17/17.
 ```
 
-Testes: ver `tests/README.md` (GUT 94/94, 1412 asserts) — tem o comando exato e o passo `--import`.
+Prova de que a arena é uma só (D48): com o projeto **sem** pasta `arenas/`, o
+jogo avisa `[ARENA] Sem arena no projeto: usando a grade padrão.` e mesmo assim
+o `p0_m2` cai em `janela=(679.0, 597.246) tela_x=1241.0` — coordenada idêntica à
+de quem tem o arquivo, porque a grade embutida É a arena oficial.
+
+Testes: ver `tests/README.md` (**178/178, 3835 asserts**, ~160 s) — tem o comando exato e o passo `--import`.

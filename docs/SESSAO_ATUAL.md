@@ -91,9 +91,9 @@ f_qa: "QA: (a) CRIOU astralis/testing/astralis_test_base.gd — base unica, 34 h
 
 # ---------- ESTADO ATUAL VERIFICADO (2026-09-25, fim da sessão anterior) ----------
 
-verificado_agora: "GUT 94/94 passed, 1412 asserts, ~43s, 0 SCRIPT ERROR, 0 orphans (rodado pelo Lead, nao por agente). Jogo headless sem --project: [BOARD] 20 slots / [TABLE] Arena 20 slots + mao p0(1240,980,95) p1(1240,20,60) / [TABLE] 25081 receitas / Duelo comecou. cargo test 55 passed 0 failed 0 warnings. npm run build ok. svelte-check 0 errors 0 warnings. python tools/fm_import.py --check OK. Os 7 schemas validam como JSON."
+verificado_agora: "GUT 178/178 passed, 3835 asserts, ~160s, 0 SCRIPT ERROR, 0 orphans (rodado pelo Lead em 2026-09-30, depois do D48). Jogo headless SEM --project: [ARENA] Sem arena no projeto: usando a grade padrao. / [MESA3D] Slot p0_m2 na tela: janela=(679.0, 597.246) tela_x=1241.0. / [MESA3D] Mesa 3D: duelo real carregado. / [MESA3D] Duelo comecou! Sua vez. cargo test 108 passed 0 failed. npm run build ok. svelte-check 0 errors 0 warnings. python tools/fm_import.py --check OK. Os 8 schemas validam como JSON. (Os numeros de cargo/build sao de 2026-09-29; nao foram mexidos no D48, que so tocou arena + docs.)"
 
-estado_gut: "177 testes / 3781 asserts em 19 arquivos + base (rodado pelo Lead em 2026-09-29, depois das etapas 1 e 2 da perspectiva). R2 cumprido (zero fake). Avisos conhecidos: 2 testes esperam 5s a IA real (flakiness em maquina lenta); test_seed_zero_da_resultados_diferentes tem ~1 em 4000 de cair por acaso (sorteio real por desenho); 3 avisos de Float/Int comparison vem do teste D45 da faixa 2d (antigos, nao desta etapa). O teste da volta: test_volta_mesa.gd (10)."
+estado_gut: "178 testes / 3835 asserts em 20 arquivos + base (rodado pelo Lead em 2026-09-30, depois do D48). R2 cumprido (zero fake). Avisos conhecidos: 2 testes esperam 5s a IA real (flakiness em maquina lenta); test_seed_zero_da_resultados_diferentes tem ~1 em 4000 de cair por acaso (sorteio real por desenho); 3 avisos de Float/Int comparison vem do teste D45 da faixa 2d (antigos, nao desta etapa). Testes do D47: test_volta_mesa.gd (10). Teste do D48: test_grade_embutida_igual_arena_oficial (a grade embutida tem que ser a arena oficial, 20/20 slots)."
 
 estado_cargo: "108 testes Rust (104 + 4 da semente/ordem de turno). ZERO teste de frontend ainda."
 
@@ -157,7 +157,7 @@ dividas_pendentes:
 
 data_utc: "2026-09-30"
 
-versão_docs: "1.8"
+versão_docs: "2.1"
 
  
 # ---------- LOG CURTO (ultimas 11) ----------
@@ -178,5 +178,9 @@ log_curto:
   - "2026-09-25: BUG DO IMPORTAR: 'Importar pack' nao fazia nada (evento disparava antes do painel montar). Corrigido + preventivo do WebView2 + texto das 50 fusoes A+A + avisos com teto. Achou-se de passagem que abrir o app sujava o git — corrigido tambem."
 
   - "2026-09-25: EDITOR VISUAL: CardPreview, molde em dado, Campo de Testes, importar/exportar .apack e correcao de eventos com lazy-mount. Build/check e testes documentados permaneceram verdes nos pontos registrados acima."
+
+  - "2026-09-29: D45/D45b (faixa do meio 2D) e D47 (a volta da mesa: a camera da a volta de 180 graus em torno do centro do campo, as cartas nao se mexem; substitui a D46 inteira e deleta ~400 linhas)."
+
+  - "2026-09-30: D48 (UMA ARENA SO): a grade embutida do runtime deixou de ser uma segunda arena e passou a ser os MESMOS numeros do arena_starter.json - o projeto novo do Studio jogava na grade antiga e estreita, com a mao em cima da fileira de baixo. Descricao do JSON, schema, comentarios e 2 testes corrigidos; trava nova test_grade_embutida_igual_arena_oficial. GUT 177->178 testes, 3781->3835 asserts."
 
 ```
