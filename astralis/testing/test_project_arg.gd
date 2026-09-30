@@ -44,6 +44,7 @@ extends "res://testing/astralis_test_base.gd"
 
 const DataLoaderScript := preload("res://core/data_loader.gd")
 const BoardLayoutScript := preload("res://core/board_layout.gd")
+const BoardScript := preload("res://duel_legacy2d/duel_board.gd")
 # ProjectLoaderScript vem da base (astralis_test_base.gd) - R8: uma cópia só.
 
 ## Pasta de projeto montada na hora (user://).
@@ -87,14 +88,15 @@ func _setup_do_projeto(arena_id: String) -> Dictionary:
 	}
 
 
-func _montar_projeto(sem_arena: bool) -> void:
-	# Refaz a pasta do zero. `sem_arena` = projeto SEM arenas/ (o caso do D29,
-	# aberto pelo Editor, que recria o esqueleto vazio).
+func _montar_projeto(com_pasta_arenas: bool) -> void:
+	# Refaz a pasta do zero. D50: o esqueleto de um projeto NÃO tem `arenas/`
+	# (a mesa é do jogo). `com_pasta_arenas` = cria a pasta na mão, que é
+	# justamente o caso que o runtime tem que IGNORAR com aviso.
 	_apagar_tudo(_proj)
-	# Marcadores que o DataLoader reconhece: cards/ duelists/ decks/ arenas/.
+	# Marcadores que o DataLoader reconhece: cards/ duelists/ decks/.
 	# FileAccess NÃO cria as pastas sozinho, então criamos antes de escrever.
 	var subpastas := ["cards", "duelists", "decks"]
-	if not sem_arena:
+	if com_pasta_arenas:
 		subpastas.append("arenas")
 	for sub in subpastas:
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(_proj.path_join(sub)))
@@ -112,8 +114,8 @@ func _montar_projeto(sem_arena: bool) -> void:
 	_escrever_json(_proj.path_join("fusions.json"), {"schema_version": 1, "recipes": [], "rules": []})
 	_escrever_json(_proj.path_join("effects.json"), {"schema_version": 1, "effects": []})
 	_escrever_json(_proj.path_join("duel_setup.json"), _setup_do_projeto("arena_qa_1"))
-	if not sem_arena:
-		# Arena do projeto, com XY próprio (prova que a arena do projeto é lida).
+	if com_pasta_arenas:
+		# Uma arena de projeto, que D50 manda IGNORAR (o teste prova o aviso).
 		var slots: Array = []
 		for lado in [0, 1]:
 			for i in range(5):
@@ -123,10 +125,9 @@ func _montar_projeto(sem_arena: bool) -> void:
 			"schema_version": 1, "id": "arena_qa_1", "name": "Arena QA", "slots": slots,
 		})
 
-
 func before_each() -> void:
 	# Recomeça limpo: se uma rodada anterior morreu, não sobra nada (R8).
-	_montar_projeto(false)
+	_montar_projeto(true) # D50: projeto nasce SEM arenas/ (a mesa e do jogo)
 
 
 func after_each() -> void:
@@ -193,13 +194,17 @@ func test_pasta_valida_reconhece_os_marcadores() -> void:
 
 
 func test_load_traz_arenas_e_base() -> void:
+	# D50: a mesa é o DADO DO JOGO e há uma só. O dicionário de dados ainda
+	# tem a chave "arenas" (o contrato não muda de forma), mas ela vem VAZIA:
+	# projeto nenhum tem mais mesa própria.
 	var state: Dictionary = ProjectLoaderScript.load_initial_state()
 	var data: Dictionary = state.get("data", {})
-	assert_true(data.has("arenas"), "load_starter_kit traz 'arenas' (só dado, sem regra).")
-	assert_true((data.get("arenas", {}) as Dictionary).has("arena_starter"), "arena_starter vem junto.")
+	assert_true(data.has("arenas"), "load_starter_kit ainda traz a chave 'arenas' (vazia, D50).")
+	assert_true((data.get("arenas", {}) as Dictionary).is_empty(), "D50: nenhum projeto tem arena própria.")
 	assert_eq(str(data.get("base_dir", "")), DataLoaderScript.starter_kit_dir(), "Sem --project, base_dir é a embutida.")
-	assert_eq(BoardLayoutScript.project_arena_path("arena_starter"), BoardLayoutScript.starter_arena_path(), "Sem --project, arena sai da embutida.")
-	assert_eq(BoardLayoutScript.project_arena_path("arena_que_nao_existe"), BoardLayoutScript.starter_arena_path(), "Arena ausente cai na embutida.")
+	assert_eq(BoardLayoutScript.project_arena_path("arena_starter"), BoardLayoutScript.arena_oficial_path(), "A arena é sempre a oficial do jogo.")
+	assert_eq(BoardLayoutScript.project_arena_path("arena_que_nao_existe"), BoardLayoutScript.arena_oficial_path(), "D50: qualquer arena pedida cai na oficial (o jogo tem uma só).")
+	assert_true(FileAccess.file_exists(BoardLayoutScript.arena_oficial_path()), "A arena oficial existe no disco.")
 
 
 # ---------- (3) CAMINHO RELATIVO (função real chamada direto) ----------
@@ -273,86 +278,89 @@ func test_project_igual_mesmo_resultado_que_espaco() -> void:
 # ---------- (4) e (5) --setup POR CIMA DO --project ----------
 
 func test_setup_por_cima_do_project_vence_o_duel_setup() -> void:
-	# (4) O duel_setup do --setup VENCE o do projeto. Prova observável: a
-	# arena vem de duel_setup.arena_id, então um arena_id que NÃO existe só
-	# acontece se o setup ganhou. O controle (mesmo projeto sem --setup)
-	# carrega a arena, então a diferença é do --setup mesmo.
+	# (4) O duel_setup do --setup VENCE o do projeto. Prova observável: o log
+	# mostra qual duel_setup entrou. O `arena_id` NÃO é mais prova de nada
+	# (D50: a mesa é do jogo e é sempre a oficial), então a prova passa a ser o
+	# duel_setup em si + o jogo continuing jogável.
 	var abs := ProjectSettings.globalize_path(_proj)
 	var controle := _rodar_jogo(["--project", abs])
-	assert_true(_contem(controle, "[MESA3D] Arena carregada: 20 slots"), "Controle: sem setup, vale a arena do projeto: %s" % controle)
+	assert_true(_contem(controle, "[MESA3D] Arena carregada: 20 slots"), "Controle: sem setup, a arena oficial carrega: %s" % controle)
 	var caminho_setup := _proj.path_join("qa_setup_override.json")
 	_escrever_json(caminho_setup, _setup_do_projeto("arena_que_nao_existe_xyz"))
 	var saida := _rodar_jogo(["--project", abs, "--setup", ProjectSettings.globalize_path(caminho_setup)])
 	assert_true(_contem(saida, "[DataLoader] --project usando: " + abs), "--project continua valendo: %s" % saida)
 	assert_true(_contem(saida, "[DataLoader] --setup usando: " + ProjectSettings.globalize_path(caminho_setup)), "--setup foi lido por cima.")
-	assert_true(_contem(saida, "[MESA3D] Aviso: arena "), "duel_setup do setup venceu: ele pediu uma arena que não existe.")
-	assert_false(_contem(saida, "[MESA3D] Arena carregada"), "A arena do projeto NÃO foi usada (o setup mandou).")
+	assert_true(_contem(saida, "[ARENA] arena_id 'arena_que_nao_existe_xyz' IGNORADO"), "D50: o arena_id do setup foi ignorado (o jogo tem uma mesa só).")
+	assert_true(_contem(saida, "[MESA3D] Arena carregada: 20 slots"), "D50: mesmo com arena_id estranho, a arena oficial carrega.")
 	assert_true(_contem(saida, "[MESA3D] Duelo come"), "O jogo continua jogável com o setup por cima.")
 
 
 func test_setup_invalido_avisa_e_segue_com_o_do_projeto() -> void:
 	# (5) --setup apontando para arquivo inexistente = aviso PT-BR e o jogo
-	# continua com o duel_setup do PROJETO (a arena do projeto carrega).
+	# continua com o duel_setup do PROJETO.
 	var abs := ProjectSettings.globalize_path(_proj)
 	var quebrado := ProjectSettings.globalize_path(_proj.path_join("nao_existe_xyz.json"))
 	var saida := _rodar_jogo(["--project", abs, "--setup", quebrado])
 	assert_true(_contem(saida, "[DataLoader] Aviso: --setup ignorado"), "Avisa que ignorou o --setup inválido: %s" % saida)
 	assert_true(_contem(saida, "usando starter"), "Aviso diz que segue o starter (o do projeto).")
 	assert_false(_contem(saida, "[DataLoader] --setup usando:"), "Não tentou usar o setup quebrado.")
-	assert_true(_contem(saida, "[MESA3D] Arena carregada: 20 slots"), "Seguiu com o duel_setup do projeto (arena dele carregou).")
+	assert_true(_contem(saida, "[MESA3D] Arena carregada: 20 slots"), "Seguiu com o duel_setup do projeto.")
 	assert_true(_contem(saida, "[MESA3D] Duelo come"), "Jogo continua rodando de verdade.")
 
 
-# ---------- (6) ARENA AUSENTE NO PROJETO = GRADE PADRÃO (D29) ----------
+# ---------- (6) A MESA É DO JOGO E HÁ UMA SÓ (D50) ----------
 
-func test_arena_ausente_no_projeto_usa_grade_padrao_com_espelho() -> void:
-	# (6) REGRA NOVA: base de PROJETO (não embutida) + arena ausente lá =>
-	# project_arena_path() devolve "" e o jogo usa a grade padrão embutida.
-	_montar_projeto(true) # projeto SEM arenas/
+func test_projeto_sem_arena_usa_a_mesa_oficial_do_jogo() -> void:
+	# D50: projeto de verdade, SEM pasta arenas/ (o esqueleto do Studio não tem
+	# mais uma). O jogo usa a arena OFICIAL DO JOGO — a mesma para qualquer
+	# projeto — e o log diz isso. Não existe mais "grade padrão embutida".
+	_montar_projeto(false) # projeto SEM a pasta arenas/ (o esqueleto de verdade)
 	var abs := ProjectSettings.globalize_path(_proj)
 	assert_ne(abs, DataLoaderScript.starter_kit_dir(), "Preparo: a base é um PROJETO, não a embutida.")
 	assert_false(DirAccess.dir_exists_absolute(abs.path_join("arenas")), "Preparo: o projeto não tem arenas/.")
-	# (6a) No jogo de verdade: o BoardLayout avisa que a arena não existe no
-	# projeto e devolve "", a mesa cai na grade padrão e o duelo continua.
 	var saida := _rodar_jogo(["--project", abs])
 	assert_true(_contem(saida, "[DataLoader] --project usando: " + abs), "Base = a pasta do projeto: %s" % saida)
-	assert_true(_contem(saida, "[ARENA] Arena 'arena_qa_1' "), "Arena pedida não existe no projeto (D29: não lê examples/).")
-	assert_true(_contem(saida, "[ARENA] Sem arena no projeto"), "BoardLayout devolveu caminho vazio e avisou.")
-	assert_true(_contem(saida, "[MESA3D] Aviso: arena "), "Mesa cai na grade padrão embutida.")
-	assert_false(_contem(saida, "[MESA3D] Arena carregada"), "Nenhuma arena foi carregada (nem a de examples/).")
-	assert_true(_contem(saida, "[MESA3D] Duelo come"), "Jogo segue jogável sem arena no projeto.")
-	# (6b) A grade padrão embutida: 20 slots, IDs válidos, espelho correto e
-	# mão no fallback. Este é o mesmo caminho que load_arena_data("") devolve.
-	var arena: Dictionary = BoardLayoutScript.load_arena_data("")
-	assert_true((arena.get("slots", {}) as Dictionary).is_empty(), "Sem caminho de arena, load_arena_data volta sem slots (usa a grade padrão).")
-	var total := 0
+	assert_true(_contem(saida, "[ARENA] Arena oficial OK: 20 slots"), "D50: a arena oficial do jogo foi usada.")
+	assert_true(_contem(saida, "[MESA3D] Arena carregada: 20 slots"), "A mesa carregou os 20 slots da arena oficial.")
+	assert_true(_contem(saida, "[MESA3D] Duelo come"), "Jogo segue jogável.")
+
+
+func test_pasta_arenas_no_projeto_e_ignorada_com_aviso() -> void:
+	# D50: se alguém largar uma pasta `arenas/` no projeto (projeto velho), ela
+	# é IGNORADA com aviso, e a mesa continua sendo a oficial. Este teste é o
+	# que garante que nunca mais vai existir uma "segunda arena" em jogo.
+	_montar_projeto(false)
+	var abs := ProjectSettings.globalize_path(_proj)
+	DirAccess.make_dir_recursive_absolute(abs.path_join("arenas"))
+	var falso := abs.path_join("arenas").path_join("arena_falsa.json")
+	var f := FileAccess.open(falso, FileAccess.WRITE)
+	f.store_string('{"schema_version":1,"id":"arena_falsa","name":"Falsa","slots":[]}')
+	f.close()
+	var saida := _rodar_jogo(["--project", abs])
+	assert_true(_contem(saida, "[ARENA] AVISO: a pasta arenas/ do projeto foi IGNORADA"), "A pasta arenas/ do projeto foi ignorada com aviso: %s" % saida)
+	assert_true(_contem(saida, "[ARENA] Arena oficial OK: 20 slots"), "A mesa continuou com a arena oficial do jogo.")
+	assert_true(_contem(saida, "[MESA3D] Arena carregada: 20 slots"), "A arena falsa não entrou em jogo.")
+	assert_true((BoardLayoutScript.load_arena(falso) as Dictionary).size() <= 20, "A arena falsa tem 0 slots: não é uma segunda mesa.")
+
+
+func test_arena_oficial_e_a_unica_e_a_perfeita() -> void:
+	# A arena oficial: 20 slots, um valor só (263) nas seis direções, e a
+	# distância de 390 entre as fileiras de monstro dos 2 lados congelada.
+	var slots: Dictionary = BoardLayoutScript.load_arena(BoardLayoutScript.arena_oficial_path())
+	assert_eq(slots.size(), 20, "A arena oficial tem 20 slots.")
+	assert_true(BoardLayoutScript.valida_arena_oficial(slots).is_empty(), "A arena oficial passa na validação.")
+	var passo: float = (slots["p0_m1"] as Vector2).x - (slots["p0_m0"] as Vector2).x
+	assert_eq(passo, 263.0, "Passo horizontal = 263.")
 	for lado in [0, 1]:
-		for i in range(5):
-			for tipo in ["monstro", "magia"]:
-				var sid: String = BoardLayoutScript.slot_id(lado, tipo, i)
-				assert_true(BoardLayoutScript.eh_slot_valido(sid), "Slot '%s' segue o contrato p0/p1+m/s+0-4." % sid)
-				assert_eq(BoardLayoutScript.get_pos({}, sid), BoardLayoutScript.default_pos(sid), "Slot '%s' cai na grade padrão embutida." % sid)
-				total += 1
-	assert_eq(total, 20, "Grade padrão tem 20 slots (5 monstro + 5 magia em cada lado).")
-	# Espelho correto: rival com X invertido (índice 0 à direita) e fileiras
-	# trocadas (monstro perto do centro, magia longe).
-	assert_true(BoardLayoutScript.default_pos("p1_m0").x > BoardLayoutScript.default_pos("p1_m4").x, "Espelho: p1_m0 à direita de p1_m4.")
-	assert_eq(BoardLayoutScript.default_pos("p1_m0").x, BoardLayoutScript.default_pos("p0_m4").x, "Espelho horizontal: p1_m0.x == p0_m4.x.")
-	assert_eq(BoardLayoutScript.default_pos("p1_s0").x, BoardLayoutScript.default_pos("p1_m0").x, "Magia do rival na mesma coluna do monstro.")
-	assert_eq(BoardLayoutScript.default_pos("p1_s4").x, BoardLayoutScript.default_pos("p1_m4").x, "Magia do rival espelha a coluna do monstro.")
-	assert_eq(BoardLayoutScript.default_pos("p1_m2").x, BoardLayoutScript.default_pos("p0_m2").x, "Meio espelha no mesmo X.")
-	assert_eq(BoardLayoutScript.default_pos("p1_m0").y, 305.0, "Monstro do rival perto do centro (y=305).")
-	assert_eq(BoardLayoutScript.default_pos("p1_s0").y, 42.0, "Magia do rival longe (y=42).")
-	assert_eq(BoardLayoutScript.default_pos("p0_m0").y, 695.0, "Seu monstro perto (y=695).")
-	assert_eq(BoardLayoutScript.default_pos("p0_s0").y, 958.0, "Sua magia longe (y=958).")
-	# A mão também cai no fallback embutido (nada quebra sem arena).
-	assert_eq(BoardLayoutScript.get_hand(arena, 0), BoardLayoutScript.default_hand(0), "Mão p0 no fallback embutido (1240/980/95).")
-	assert_eq(BoardLayoutScript.get_hand(arena, 1), BoardLayoutScript.default_hand(1), "Mão p1 no fallback embutido (1240/20/60).")
-	# E a grade embutida É a arena oficial (D48: uma arena só, sem grade
-	# fantasma): com ou sem arquivo de arena, a tela é a mesma.
-	var starter_slots: Dictionary = BoardLayoutScript.load_arena(BoardLayoutScript.starter_arena_path())
-	assert_eq(starter_slots.size(), 20, "arena_starter (pasta de teste) também tem 20 slots.")
-	assert_eq(starter_slots["p1_m0"] as Vector2, Vector2(1684, 305), "Starter: p1_m0 na arena oficial.")
-	assert_eq(starter_slots["p0_s0"] as Vector2, Vector2(632, 958), "Starter: p0_s0 na arena oficial.")
-	for sid in starter_slots.keys():
-		assert_eq(BoardLayoutScript.default_pos(str(sid)), starter_slots[sid] as Vector2, "Slot '%s': sem arena = com arena (mesma arena)." % str(sid))
+		for tipo in ["monstro", "magia"]:
+			for i in range(4):
+				var a: Vector2 = slots[BoardLayoutScript.slot_id(lado, tipo, i)]
+				var b: Vector2 = slots[BoardLayoutScript.slot_id(lado, tipo, i + 1)]
+				assert_almost_eq(absf(b.x - a.x), passo, 0.000001, "Passo horizontal %s de p%d = 263." % [tipo, lado])
+		var zm: Vector2 = slots[BoardLayoutScript.slot_id(lado, "monstro", 2)]
+		var zs: Vector2 = slots[BoardLayoutScript.slot_id(lado, "magia", 2)]
+		assert_almost_eq(absf(zs.y - zm.y), passo, 0.000001, "Vão monstro->magia de p%d = 263." % lado)
+	assert_eq((slots["p0_m0"] as Vector2).y - (slots["p1_m0"] as Vector2).y, 390.0, "A distância entre as fileiras de monstro continua 390.")
+	# E o 2D legado usa o MESMO dado (sem número próprio).
+	var r: Rect2 = BoardScript.slot_rect(0, "monstro", 2, slots)
+	assert_eq(r.position, slots["p0_m2"] as Vector2, "O 2D legado lê a posição do mesmo arquivo.")

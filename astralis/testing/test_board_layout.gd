@@ -23,176 +23,146 @@ func _ids_esperados() -> Array:
 	return out
 
 
+## D50: A MESA É O DADO E HÁ SÓ UM. Estas linhas de teste medem o ARQUIVO
+## `schemas/examples/arenas/arena_starter.json`, que é a única fonte da mesa.
+## Não existe mais nenhuma grade no código: nem `BoardLayout` nem o 2D legado
+## (DuelBoard) têm `GRID_X`/`GAP`/`Y_*`, e `get_pos` sem layout devolve NULO
+## em vez de inventar uma grade. Prova disso logo abaixo, em
+## `test_d50_sem_grade_no_codigo`.
+
+
 func test_arena_starter_tem_20_slots_unicos() -> void:
-	var caminho: String = BoardLayoutScript.starter_arena_path()
-	assert_true(FileAccess.file_exists(caminho), "arena_starter.json existe: %s" % caminho)
+	var caminho: String = BoardLayoutScript.arena_oficial_path()
+	assert_true(FileAccess.file_exists(caminho), "A arena oficial existe: %s" % caminho)
 	var layout: Dictionary = BoardLayoutScript.load_arena(caminho)
-	assert_eq(layout.size(), 20, "Arena starter tem 20 slots.")
+	assert_eq(layout.size(), 20, "A arena oficial tem 20 slots.")
 	var vistos := {}
 	for sid in layout.keys():
 		assert_true(BoardLayoutScript.eh_slot_valido(str(sid)), "Slot '%s' segue o contrato p0/p1+m/s+0-4." % str(sid))
 		assert_false(vistos.has(sid), "Slot '%s' não repete (ID único)." % str(sid))
 		vistos[sid] = true
 	for esperado in _ids_esperados():
-		assert_true(layout.has(esperado), "Arena tem o slot '%s'." % esperado)
+		assert_true(layout.has(esperado), "A arena tem o slot '%s'." % esperado)
 	for sid in layout.keys():
 		var p = layout[sid]
 		assert_true(p is Vector2, "Slot '%s' guarda Vector2." % str(sid))
 		assert_true((p as Vector2).x >= 0.0 and (p as Vector2).y >= 0.0, "Slot '%s' tem XY válido." % str(sid))
+	assert_true(BoardLayoutScript.valida_arena_oficial(layout).is_empty(), "A arena oficial passa na validação de 20 slots.")
 
 
 func test_get_pos_com_xy_custom_retorna_custom() -> void:
 	var custom := Vector2(11, 22)
 	var layout := {"p0_m2": custom}
 	var p: Vector2 = BoardLayoutScript.get_pos(layout, "p0_m2")
-	assert_eq(p, custom, "get_pos devolve o XY custom da arena.")
+	assert_eq(p, custom, "get_pos devolve o XY do layout da arena.")
 	# Formatos aceitos no Dict (Array [x,y] e Dict {x,y}) também valem.
 	var via_array: Vector2 = BoardLayoutScript.get_pos({"p0_m2": [30, 40]}, "p0_m2")
 	assert_eq(via_array, Vector2(30, 40), "Array [x,y] também vale como XY.")
 	var via_dict: Vector2 = BoardLayoutScript.get_pos({"p0_m2": {"x": 50, "y": 60}}, "p0_m2")
 	assert_eq(via_dict, Vector2(50, 60), "Dict {x,y} também vale como XY.")
-	# O desenho usa o XY custom.
+	# O desenho (2D legado) usa o XY do layout.
 	var r: Rect2 = BoardScript.slot_rect(0, "monstro", 2, layout)
-	assert_eq(r.position, custom, "slot_rect usa o XY custom da arena.")
-	assert_eq(r.size, Vector2(BoardScript.SLOT, BoardScript.SLOT), "Tamanho do slot continua 165x165.")
+	assert_eq(r.position, custom, "slot_rect usa o XY do layout da arena.")
+	assert_eq(r.size, Vector2(BoardScript.PECA, BoardScript.PECA), "O ladrilho 2D tem o tamanho de sempre.")
 
 
-func test_sem_layout_retorna_grade_padrao() -> void:
-	var padrao: Vector2 = BoardLayoutScript.default_pos("p0_m2")
-	assert_true(padrao.x >= 0.0, "Grade padrão tem XY válido p/ p0_m2.")
+func test_sem_layout_nao_inventa_posicao() -> void:
+	# D50: SEM GRADE NO CÓDIGO. Sem layout, `get_pos` devolve NULO e o desenho
+	# 2D devolve um retângulo vazio — a "segunda arena" que fazia o jogo cair
+	# numa tela diferente da oficial NÃO EXISTE MAIS.
 	var sem_layout: Vector2 = BoardLayoutScript.get_pos({}, "p0_m2")
-	assert_eq(sem_layout, padrao, "Sem layout, get_pos volta p/ grade padrão.")
+	assert_eq(sem_layout, BoardLayoutScript.NULO, "Sem layout, get_pos devolve NULO (não há grade para cair).")
+	assert_eq(BoardLayoutScript.default_pos("p0_m2"), BoardLayoutScript.NULO, "default_pos é só o 'não tem posição' (D50).")
+	assert_eq(BoardLayoutScript.default_pos("xx"), BoardLayoutScript.NULO, "ID inválido também devolve NULO.")
 	var r: Rect2 = BoardScript.slot_rect(0, "monstro", 2, {})
-	assert_eq(r.position, padrao, "Sem layout, slot_rect volta p/ grade padrão.")
-	# Slot inválido não quebra: devolve o fallback.
+	assert_eq(r.size, Vector2.ZERO, "Sem layout, o 2D legado não desenha o slot (retângulo vazio).")
+	# O fallback explícito do chamador ainda funciona (quem sabe o que fazer).
 	var queda := Vector2(-1, -1)
-	assert_eq(BoardLayoutScript.get_pos({}, "invalido", queda), queda, "Slot inválido devolve o fallback.")
-	assert_eq(BoardLayoutScript.default_pos("xx"), Vector2(-1, -1), "default_pos inválido devolve (-1,-1).")
+	assert_eq(BoardLayoutScript.get_pos({}, "invalido", queda), queda, "Slot fora do layout usa o fallback do chamador.")
 
 
-func test_arquivo_ruim_retorna_fallback_padrao() -> void:
+func test_arquivo_ruim_nao_inventa_posicao() -> void:
+	# D50: arquivo ausente/quebrado é ERRO HONESTO — slots vazios, sem grade
+	# para completar, e a mesa avisa em vez de desenhar uma mesa inventada.
 	var vazio1: Dictionary = BoardLayoutScript.load_arena("")
-	assert_true(vazio1.is_empty(), "Caminho vazio carrega vazio (usa grade padrão).")
+	assert_true(vazio1.is_empty(), "Caminho vazio carrega vazio (sem inventar posição).")
 	var vazio2: Dictionary = BoardLayoutScript.load_arena("Z:/caminho/que/nao/existe/arena.json")
-	assert_true(vazio2.is_empty(), "Arquivo que não existe carrega vazio (usa grade padrão).")
-	# Arquivo real mas que não é arena (sem lista 'slots'): também não quebra.
+	assert_true(vazio2.is_empty(), "Arquivo que não existe carrega vazio.")
 	var res_dir: String = ProjectSettings.globalize_path("res://")
 	var duel_setup_path: String = res_dir.path_join("../schemas/examples/duel_setup.json").simplify_path()
 	var vazio3: Dictionary = BoardLayoutScript.load_arena(duel_setup_path)
-	assert_true(vazio3.is_empty(), "JSON que não é arena carrega vazio (usa grade padrão).")
-	# E o fallback funciona em todos os casos.
-	var padrao: Vector2 = BoardLayoutScript.default_pos("p0_m0")
+	assert_true(vazio3.is_empty(), "JSON que não é arena carrega vazio.")
 	for layout_ruim in [vazio1, vazio2, vazio3]:
 		var p: Vector2 = BoardLayoutScript.get_pos(layout_ruim, "p0_m0")
-		assert_eq(p, padrao, "Com arquivo ruim, get_pos volta p/ grade padrão.")
-		var r: Rect2 = BoardScript.slot_rect(0, "monstro", 0, layout_ruim)
-		assert_eq(r.position, padrao, "Com arquivo ruim, slot_rect volta p/ grade padrão.")
+		assert_eq(p, BoardLayoutScript.NULO, "Com arquivo ruim, get_pos devolve NULO (nada é inventado).")
+		assert_eq(BoardScript.slot_rect(0, "monstro", 0, layout_ruim).size, Vector2.ZERO, "Com arquivo ruim, o 2D não desenha o slot.")
+	# E a validação diz exatamente o que falta, para o log ser útil.
+	var faltando: Array = BoardLayoutScript.valida_arena_oficial({})
+	assert_eq(faltando.size(), 20, "Layout vazio: a validação aponta os 20 slots que faltam.")
 
 
 func test_espelho_p1_x_invertido() -> void:
-	# D25 ESPELHO (só desenho): p1 com X invertido, índice 0 à direita.
-	var p1_m0: Vector2 = BoardLayoutScript.default_pos("p1_m0")
-	var p1_m4: Vector2 = BoardLayoutScript.default_pos("p1_m4")
-	var p0_m0: Vector2 = BoardLayoutScript.default_pos("p0_m0")
-	var p0_m4: Vector2 = BoardLayoutScript.default_pos("p0_m4")
+	# D25 ESPELHO (só desenho), medido no ARQUIVO: p1 com X invertido, índice 0
+	# à direita, e a mesma distância do espelho dos dois lados.
+	var s: Dictionary = BoardLayoutScript.load_arena(BoardLayoutScript.arena_oficial_path())
+	var p1_m0: Vector2 = BoardLayoutScript.get_pos(s, "p1_m0")
+	var p1_m4: Vector2 = BoardLayoutScript.get_pos(s, "p1_m4")
+	var p0_m0: Vector2 = BoardLayoutScript.get_pos(s, "p0_m0")
+	var p0_m4: Vector2 = BoardLayoutScript.get_pos(s, "p0_m4")
 	assert_true(p1_m0.x > p1_m4.x, "Espelho: p1_m0 à direita de p1_m4 (x maior).")
 	assert_eq(p1_m0.x, p0_m4.x, "Espelho horizontal: p1_m0.x == p0_m4.x.")
 	assert_eq(p1_m4.x, p0_m0.x, "Espelho horizontal: p1_m4.x == p0_m0.x.")
-	var p1_s0: Vector2 = BoardLayoutScript.default_pos("p1_s0")
-	var p1_s4: Vector2 = BoardLayoutScript.default_pos("p1_s4")
-	assert_true(p1_s0.x > p1_s4.x, "Espelho: p1_s0 à direita de p1_s4 (magia também inverte).")
-	assert_eq(p1_s0.x, p1_m0.x, "Mesma coluna: p1_s0.x == p1_m0.x.")
-	assert_eq(p1_s4.x, p1_m4.x, "Mesma coluna: p1_s4.x == p1_m4.x.")
-	var meio_p1: Vector2 = BoardLayoutScript.default_pos("p1_m2")
-	var meio_p0: Vector2 = BoardLayoutScript.default_pos("p0_m2")
-	assert_eq(meio_p1.x, meio_p0.x, "Meio espelha no mesmo X: p1_m2.x == p0_m2.x.")
-	# O desenho sem layout usa o mesmo espelho.
-	var r0: Rect2 = BoardScript.slot_rect(1, "monstro", 0, {})
-	assert_eq(r0.position, p1_m0, "slot_rect fallback de p1_m0 usa o espelho.")
-	var r4: Rect2 = BoardScript.slot_rect(1, "monstro", 4, {})
-	assert_eq(r4.position, p1_m4, "slot_rect fallback de p1_m4 usa o espelho.")
+	assert_eq(BoardLayoutScript.get_pos(s, "p1_s0").x, p1_m0.x, "Mesma coluna: p1_s0.x == p1_m0.x.")
+	assert_eq(BoardLayoutScript.get_pos(s, "p1_s4").x, p1_m4.x, "Mesma coluna: p1_s4.x == p1_m4.x.")
+	assert_eq(BoardLayoutScript.get_pos(s, "p1_m2").x, BoardLayoutScript.get_pos(s, "p0_m2").x, "Meio espelha no mesmo X.")
 
 
 func test_espelho_p1_fileiras_perto_longe() -> void:
-	# D25 ESPELHO (só desenho): monstro perto do centro, magia longe.
-	# D49: fileiras da arena OFICIAL, com UM valor só (263) no vão monstro->magia.
-	var m: Vector2 = BoardLayoutScript.default_pos("p1_m0")
-	var s: Vector2 = BoardLayoutScript.default_pos("p1_s0")
-	assert_eq(m.y, BoardLayoutScript.Y_RIVAL_MONSTRO, "Fileira rival monstro = Y_RIVAL_MONSTRO.")
-	assert_eq(s.y, BoardLayoutScript.Y_RIVAL_MAGIA, "Fileira rival magia = Y_RIVAL_MAGIA.")
-	assert_eq(m.y, 305.0, "Rival monstro y=305 (embaixo/perto do centro).")
-	assert_eq(s.y, 42.0, "Rival magia y=42 (cima/longe do centro).")
-	assert_true(m.y > s.y, "Rival monstro fica abaixo da magia (perto do centro).")
+	# D25 ESPELHO + D49 (uma distância só), medido no ARQUIVO: monstro perto
+	# do centro, magia longe, e o vão monstro->magia é o MESMO dos dois lados e
+	# o mesmo do passo horizontal.
+	var s: Dictionary = BoardLayoutScript.load_arena(BoardLayoutScript.arena_oficial_path())
+	var m: Vector2 = BoardLayoutScript.get_pos(s, "p1_m0")
+	var sm: Vector2 = BoardLayoutScript.get_pos(s, "p1_s0")
+	assert_eq(m.y, 305.0, "Rival monstro y=305 (perto do centro).")
+	assert_eq(sm.y, 42.0, "Rival magia y=42 (longe do centro).")
+	assert_true(m.y > sm.y, "Rival: o monstro fica ABAIXO da magia (perto do centro).")
 	for i in range(5):
-		assert_eq(BoardLayoutScript.default_pos("p1_m%d" % i).y, 305.0, "Rival monstro %d na fileira 305." % i)
-		assert_eq(BoardLayoutScript.default_pos("p1_s%d" % i).y, 42.0, "Rival magia %d na fileira 42." % i)
-	# Você continua intacto (monstro 695 perto, magia 958 longe).
-	assert_eq(BoardLayoutScript.default_pos("p0_m0").y, 695.0, "Você monstro y=695 (cima/perto).")
-	assert_eq(BoardLayoutScript.default_pos("p0_s0").y, 958.0, "Você magia y=958 (baixo/longe).")
-	# D49: o vão monstro->magia é o MESMO valor dos dois lados, e é o mesmo do
-	# passo horizontal. Uma distância só em todo o campo.
-	var passo: float = BoardLayoutScript.default_pos("p0_m1").x - BoardLayoutScript.default_pos("p0_m0").x
-	assert_eq(absf(BoardLayoutScript.default_pos("p0_s0").y - BoardLayoutScript.default_pos("p0_m0").y), passo, "D49: vão monstro->magia do jogador = passo horizontal.")
-	assert_eq(absf(BoardLayoutScript.default_pos("p1_m0").y - BoardLayoutScript.default_pos("p1_s0").y), passo, "D49: vão monstro->magia do rival = passo horizontal.")
-	# E a distância entre as fileiras de monstro dos 2 lados segue CONGELADA
-	# em 390: o usuário pediu para não mexer nela (não faz parte da grade).
-	assert_eq(BoardLayoutScript.default_pos("p0_m0").y - BoardLayoutScript.default_pos("p1_m0").y, 390.0, "D49: distância entre as fileiras de monstro dos 2 lados continua 390.")
+		assert_eq(BoardLayoutScript.get_pos(s, "p1_m%d" % i).y, 305.0, "Rival monstro %d na fileira 305." % i)
+		assert_eq(BoardLayoutScript.get_pos(s, "p1_s%d" % i).y, 42.0, "Rival magia %d na fileira 42." % i)
+	# Você: monstro 695 perto, magia 958 longe.
+	assert_eq(BoardLayoutScript.get_pos(s, "p0_m0").y, 695.0, "Você monstro y=695.")
+	assert_eq(BoardLayoutScript.get_pos(s, "p0_s0").y, 958.0, "Você magia y=958.")
+	# D49: UM VALOR SÓ no campo.
+	var passo: float = BoardLayoutScript.get_pos(s, "p0_m1").x - BoardLayoutScript.get_pos(s, "p0_m0").x
+	assert_eq(passo, 263.0, "Passo horizontal dos monstros = 263.")
+	assert_eq(BoardLayoutScript.get_pos(s, "p0_s1").x - BoardLayoutScript.get_pos(s, "p0_s0").x, passo, "Passo horizontal das magias = o mesmo.")
+	assert_eq(BoardLayoutScript.get_pos(s, "p1_m0").x - BoardLayoutScript.get_pos(s, "p1_m1").x, passo, "Passo horizontal dos monstros do rival = o mesmo.")
+	assert_eq(BoardLayoutScript.get_pos(s, "p1_s0").x - BoardLayoutScript.get_pos(s, "p1_s1").x, passo, "Passo horizontal das magias do rival = o mesmo.")
+	assert_eq(absf(BoardLayoutScript.get_pos(s, "p0_s0").y - BoardLayoutScript.get_pos(s, "p0_m0").y), passo, "Vão monstro->magia do jogador = o passo horizontal.")
+	assert_eq(absf(BoardLayoutScript.get_pos(s, "p1_m0").y - BoardLayoutScript.get_pos(s, "p1_s0").y), passo, "Vão monstro->magia do rival = o passo horizontal.")
+	# E a distância entre as fileiras de monstro dos 2 lados segue CONGELADA.
+	assert_eq(BoardLayoutScript.get_pos(s, "p0_m0").y - BoardLayoutScript.get_pos(s, "p1_m0").y, 390.0, "D50/D49: a distância entre as fileiras de monstro continua 390.")
+	assert_ne(BoardLayoutScript.get_pos(s, "p0_m0").y - BoardLayoutScript.get_pos(s, "p1_m0").y, passo, "A distância dos monstros NÃO virou o valor da grade.")
 
 
-func test_espelho_arena_starter_igual_fallback() -> void:
-	# Arena starter = a arena OFICIAL (D48). O espelho e as fileiras valem.
-	var arena: Dictionary = BoardLayoutScript.load_arena_data(BoardLayoutScript.starter_arena_path())
-	assert_true(arena.has("slots"), "Arena completa traz 'slots'.")
-	var slots: Dictionary = arena.get("slots", {})
-	for sid in ["p1_m0", "p1_m4", "p1_s0", "p1_s4", "p0_m0", "p0_m4", "p0_s0"]:
-		assert_true(slots.has(sid), "Starter tem '%s'." % sid)
-	var p1_m0: Vector2 = BoardLayoutScript.get_pos(slots, "p1_m0")
-	var p1_m4: Vector2 = BoardLayoutScript.get_pos(slots, "p1_m4")
-	var p0_m4: Vector2 = BoardLayoutScript.get_pos(slots, "p0_m4")
-	assert_true(p1_m0.x > p1_m4.x, "Starter: p1_m0 à direita de p1_m4.")
-	assert_eq(p1_m0.x, p0_m4.x, "Starter: p1_m0.x == p0_m4.x (espelho).")
-	assert_eq(p1_m0, Vector2(1684, 305), "Starter: p1_m0 na grade oficial.")
-	assert_eq(BoardLayoutScript.get_pos(slots, "p1_s0"), Vector2(1684, 42), "Starter: p1_s0 na grade oficial.")
-	assert_eq(BoardLayoutScript.get_pos(slots, "p0_m0"), Vector2(632, 695), "Starter: p0_m0 na grade oficial.")
-	assert_eq(BoardLayoutScript.get_pos(slots, "p0_s0"), Vector2(632, 958), "Starter: p0_s0 na grade oficial.")
-	var r: Rect2 = BoardScript.slot_rect(1, "monstro", 0, slots)
-	assert_eq(r.position, Vector2(1684, 305), "slot_rect usa o XY da arena.")
-
-
-func test_grade_embutida_igual_arena_oficial() -> void:
-	# D48: UMA ARENA SÓ. O fallback embutido (projeto sem arena) tem que ser
-	# a MESMA arena do arena_starter.json, slot por slot. Antes desta trava o
-	# código tinha uma grade fantasma (780→1536, y 128/317/600/789) que só
-	# aparecia quando o projeto não tinha arena - dava uma tela diferente da
-	# que a câmera foi calibrada. Se um dos dois mudar, este teste quebra.
-	var slots: Dictionary = BoardLayoutScript.load_arena(BoardLayoutScript.starter_arena_path())
-	assert_eq(slots.size(), 20, "Starter tem 20 slots para comparar.")
-	for lado in [0, 1]:
-		for i in range(5):
-			for letra in ["m", "s"]:
-				var sid := "p%d_%s%d" % [lado, letra, i]
-				var embutida: Vector2 = BoardLayoutScript.default_pos(sid)
-				var do_json: Vector2 = slots.get(sid, Vector2(-1, -1))
-				assert_eq(embutida, do_json, "Slot '%s': grade embutida = arena oficial." % sid)
-	# O 2D legado tem a MESMA grade (duas cópias dos números, uma regra).
-	assert_eq(BoardScript.SLOT, BoardLayoutScript.SLOT, "2D legado: SLOT igual.")
-	assert_eq(BoardScript.GAP, BoardLayoutScript.GAP, "2D legado: GAP igual.")
-	assert_eq(BoardScript.GRID_X, BoardLayoutScript.GRID_X, "2D legado: GRID_X igual.")
-	assert_eq(BoardScript.Y_VOCE_MONSTRO, BoardLayoutScript.Y_VOCE_MONSTRO, "2D legado: Y_VOCE_MONSTRO igual.")
-	assert_eq(BoardScript.Y_VOCE_MAGIA, BoardLayoutScript.Y_VOCE_MAGIA, "2D legado: Y_VOCE_MAGIA igual.")
-	assert_eq(BoardScript.Y_RIVAL_MONSTRO, BoardLayoutScript.Y_RIVAL_MONSTRO, "2D legado: Y_RIVAL_MONSTRO igual.")
-	assert_eq(BoardScript.Y_RIVAL_MAGIA, BoardLayoutScript.Y_RIVAL_MAGIA, "2D legado: Y_RIVAL_MAGIA igual.")
-	# Passo oficial da arena: 632 + 4*263 = 1684.
-	assert_eq(BoardLayoutScript.SLOT + BoardLayoutScript.GAP, 263.0, "Passo da arena oficial = 263.")
-	var passo: float = BoardLayoutScript.default_pos("p0_m4").x - BoardLayoutScript.default_pos("p0_m0").x
-	assert_eq(passo, 4.0 * 263.0, "Grade embutida anda 263 por slot, igual ao JSON.")
-	# Espelho: p1_m0 é a coluna direita, p0_m0 a esquerda. O par espelhado do
-	# índice i de p1 é o índice 4-i de p0 (mesma coluna de tela).
-	assert_eq(BoardLayoutScript.default_pos("p1_m0").x, BoardLayoutScript.default_pos("p0_m4").x, "Espelho: p1_m0.x == p0_m4.x.")
-	assert_eq(BoardLayoutScript.default_pos("p1_s0").x, BoardLayoutScript.default_pos("p0_s4").x, "Espelho: p1_s0.x == p0_s4.x.")
-	assert_eq(BoardLayoutScript.default_pos("p1_s0").x, BoardLayoutScript.default_pos("p1_m0").x, "Mesma coluna: p1_s0.x == p1_m0.x.")
-	assert_true(BoardLayoutScript.default_pos("p0_s0").x < BoardLayoutScript.default_pos("p1_s0").x, "Espelho: p0_s0 fica à esquerda, p1_s0 à direita.")
-
+func test_d50_sem_grade_no_codigo() -> void:
+	# D50: o que o usuário mandou — UMA arena. A prova de que não existe uma
+	# segunda: (1) o código não tem mais as constantes da grade, (2) sem layout
+	# não sai posição nenhuma, (3) a pasta arenas/ do projeto é ignorada, e
+	# (4) o único arquivo de arena do repo é a arena oficial.
+	assert_eq(BoardLayoutScript.default_pos("p0_m0"), BoardLayoutScript.NULO, "BoardLayout não tem grade: default_pos é NULO.")
+	assert_eq(BoardLayoutScript.default_pos("p1_s4"), BoardLayoutScript.NULO, "BoardLayout não tem grade: nenhum slot tem posição embutida.")
+	var vazio: Dictionary = BoardLayoutScript.default_layout()
+	for sid in vazio.keys():
+		assert_eq(vazio[sid] as Vector2, BoardLayoutScript.NULO, "default_layout sem layout é tudo NULO: '%s'." % str(sid))
+	# O caminho da arena é SEMPRE o oficial, e o id do setup é ignorado.
+	assert_eq(BoardLayoutScript.project_arena_path("arena_starter"), BoardLayoutScript.arena_oficial_path(), "arena_id da oficial = arena oficial.")
+	assert_eq(BoardLayoutScript.project_arena_path("arena_qualquer_outra"), BoardLayoutScript.arena_oficial_path(), "D50: qualquer outra arena cai na oficial (o jogo tem uma só).")
+	assert_true(FileAccess.file_exists(BoardLayoutScript.arena_oficial_path()), "A arena oficial existe no disco.")
+	# E o projeto do Studio não tem mais pasta arenas/ (uma mesa só).
+	var proj: String = "res://../astralis-studio/projects/default/arenas"
+	assert_false(DirAccess.dir_exists_absolute(proj), "O projeto do Studio não tem mais pasta arenas/ (D50).")
 
 func test_logica_por_indice_intacta_xy_nao_muda_slot() -> void:
 	# D24: mover o XY no JSON só move o desenho; a carta vai p/ o ÍNDICE.
