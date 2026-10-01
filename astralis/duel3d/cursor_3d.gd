@@ -13,8 +13,11 @@ extends Node3D
 ##
 ## Zero regra (R1): isto e desenho puro.
 
-## Espessura do vidro do ladrilho (a moldura sai aFrente dele, nao dentro).
-var espessura_carta := 0.05
+## Espessura do vidro do ladrilho (a moldura sai a frente dele, nao dentro).
+## O DONO e a mesa, que mede a carta e passa. Sem default de proposito: 0,05
+## aqui era 10x a espessura real (0,30 mm numa carta de 59 mm) e só nao apareceu
+## porque a mesa sobrescreve no boot.
+var espessura_carta: float
 ## Cor do foco: o azul brilhante da ref.
 var cor := Color(0.25, 0.55, 1.0)
 ## Material UNSHADED: a mesa passa o dela (tudo na cena e sem luz).
@@ -45,6 +48,9 @@ func _ready() -> void:
 func moldar(larg: float, alt: float, rot: Vector3, escala_mao: float) -> void:
 	if _grupo == null:
 		return
+	assert(espessura_carta > 0.0,
+		"cursor_3d: espessura_carta vem da mesa (dono da medida). Vazio aqui = "
+		+ "moldura com espessura zero em silencio.")
 	_grupo.rotation_degrees = rot
 	for f in _moldura.get_children():
 		(f as Node).queue_free()

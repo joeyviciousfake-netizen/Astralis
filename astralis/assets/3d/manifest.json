@@ -63,7 +63,7 @@
         "fechada": true,
         "origem": "em_pe",
         "regra": "Peca EM PE: a altura fica no eixo Y do jogo e a espessura no Z, e o asset e CENTRADO em Y, igual ao BoxMesh(larg, alt, gross) que a mesa monta hoje - a integracao e so trocar a malha, sem mexer em posicao. NO .BLEND isso aparece trocado, porque o exportador glTF converte Blender Z-up para glTF Y-up: game_y = Blender_z, game_z = -Blender_y, game_x = Blender_x. Autorar a carta deitada (como a estrela) daria no jogo uma carta DEITADA e com a base em y = -0,7288 - foi o que o portao acusou. Nao ha imagem nenhuma: moldura, arte, orbe e estrelas continuam vindo do jogo, como hoje.",
-        "medida_real": "59 mm x 86 mm x 0,30 mm -> 1.0 x 1.4576271186 x 0.0050847458 em unidade de mundo (1 unidade = 1 largura de carta). A espessura REAL e 1,69% maior que a GROSS_CARTA = 0.005 que a mesa usa hoje - quando integrar, o numero do jogo passa a ser este. Os 8 vertices tem valencia 3 (cubo) e as 12 arestas estao em 2 faces."
+        "medida_real": "59 mm x 86 mm x 0,30 mm -> 1.0 x 1.4576271186 x 0.0050847458 em unidade de mundo (1 unidade = 1 largura de carta). O 59 e o 86 nao sao escolha: vem do contrato (schemas/card_layout.schema.json, canvas w=59 h=86, por-mil). A espessura e 0,30/59 = 0.0050847458, e a GROSS_CARTA da mesa e ESTE numero (escrito como 0.30/59.0) - antes era 0,005 arredondado, que errava 1,69% e nao batia com esta caixa. Os 8 vertices tem valencia 3 (cubo) e as 12 arestas estao em 2 faces."
       },
       "materiais": [
         "mat_carta_base"

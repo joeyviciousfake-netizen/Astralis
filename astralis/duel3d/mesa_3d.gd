@@ -254,8 +254,10 @@ const LUGAR_LONGE_X_SEM_CAM := -2.8
 ## dois assuntos recebem por parametro.
 const JANELA_ART := Vector4(0.10, 0.165, 0.90, 0.615)
 const ALT_CARTA := 86.0 / 59.0
-## Finura real de carta (0,3mm numa carta 59mm = 0,005 da largura).
-const GROSS_CARTA := 0.005
+## Finura real de carta: 0,30 mm numa largura de 59 mm. E a DIVISAO, e nao o
+## 0,005 arredondado: o arredondado errava 1,69% da medida e nao batia com a
+## caixa do asset 3D da carta (manifest.json), que e a mesma medida.
+const GROSS_CARTA := 0.30 / 59.0
 
 const FILEIRA_MAO := 0
 const FILEIRA_MEU_M := 1

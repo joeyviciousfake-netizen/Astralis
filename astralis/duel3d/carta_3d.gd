@@ -15,12 +15,19 @@ extends RefCounted
 ## As texturas e as cores chegam por Callable da mesa porque o PAINEL 2D do
 ## HUD usa as MESMAS (e o dono delas continua sendo a mesa, um so lugar).
 
-## Tamanho da carta em unidades de mundo (a medida e da mesa).
-var larg_carta := 1.0
-var alt_carta := 1.4576
-var gross_carta := 0.05
-## Retangulo da janela de arte dentro da moldura (fracao do JPG real).
-var janela_art := Vector4(0.1190, 0.1827, 0.8918, 0.7099)
+## Tamanho da carta em unidades de mundo (1 unidade = a largura, que e 59 mm).
+## O DONO destes numeros e a mesa, que mede e passa. Aqui nao ha default de
+## proposito: um valor escrito neste arquivo seria a segunda fonte da mesma
+## medida, e foi assim que a espessura chegou a 0,05 num arquivo (10x) e a
+## 0,005 arredondado no outro, sem ninguem ver. Sem valor a carta avisa em vez
+## de nascer com tamanho errado.
+var larg_carta: float
+var alt_carta: float
+var gross_carta: float
+## Retangulo da janela de arte dentro da moldura (fracao do JPG real). DONO: a
+## mesa, porque o painel esquerdo usa a MESMA janela. Sem default pelo mesmo
+## motivo acima.
+var janela_art: Vector4
 ## Textura do projeto pelo caminho do dado (com cache de sessao).
 var textura: Callable
 ## Moldura pelo DADO, cor do atributo, arte da carta, e o material UNSHADED.
@@ -33,6 +40,10 @@ var mat: Callable
 ## Monta UMA carta. `dado` e a carta do DADO (só leitura), `face_down` diz se
 ## ela mostra o verso e `em_defesa` se é a carta virada de lado no ladrilho.
 func montar(dado: Dictionary, face_down: bool, em_defesa: bool) -> Node3D:
+	assert(larg_carta > 0.0 and alt_carta > 0.0 and gross_carta > 0.0
+			and janela_art.z > janela_art.x and janela_art.w > janela_art.y,
+		"carta_3d: larg/alt/gross/janela_art chegam da mesa (ela e o dono da medida). "
+		+ "Vazio aqui = carta com tamanho zero em silencio.")
 	# Carta INTEIRA igual ao editor: moldura JPG por tipo + arte na janela +
 	# orbe + estrelas + nome/ATK na placa. Sem nada no projeto = cai na cor.
 	var no := Node3D.new()

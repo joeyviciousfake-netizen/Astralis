@@ -52,7 +52,7 @@ um dos dois discordar do manifesto, a suíte/export falha.
 | Material | um por asset, `mat_<id>` | e o que a tela procura ao trocar o material |
 | Nó do `.glb` | **identidade** (sem matrix/translation/rotation/scale) | transform no nó é o `.glb` mentindo: alguém "consertaria" no código (foi o `APROXIMA_MAGIA_*` que o D49 apagou) |
 
-### Origem: `deitada` ou `em_pe` (D62, medido na carta)
+### Origem: `deitada` ou `em_pe` (D70, medido na carta)
 
 `y=0` no chão **só é certo para peça deitada**. Uma carta em pé é centrada em Y,
 porque a mesa a posiciona por `alt/2` a partir do centro. As duas são legítimas; o
@@ -295,10 +295,16 @@ Custo medido: 768×768 com 256 amostras leva **3 a 5 s** na RTX 5060.
 
 ## 17.11 Decisões do usuário (abertas, sem pressa)
 
-1. **Primeiro asset real** da mesa. A lacuna listada no doc 15 §15.5 é a
-   cidade de fundo; os pilares de vidro são a opção mais barata (a mesa já
-   tem a "_vidro" duplicado em código). **A topologia de referência a seguir é a
-   estrela de teste (§17.9)** — 5 quads por tampa em torno de um vértice
+1. **A carta de duelo é o primeiro asset real — e ela ainda NÃO está na mesa.**
+   `carta_base` (59 × 86 × 0,30 mm, a medida do contrato) existe, passa pelo
+   portão e está versionado, por ordem do usuário de criar antes de integrar.
+   A mesa continua montando `BoxMesh(larg, alt, gross)`. Quando a integração
+   acontecer, é **só trocar a malha**: a caixa do asset é idêntica à do `BoxMesh`
+   e a origem (`em_pe`) é a mesma que a mesa já posiciona. Enquanto isso, a
+   **cidade de fundo** (doc 15 §15.5) é a próxima peça, e os **pilares de vidro**
+   a mais barata depois dela (a mesa já tem a `_vidro` duplicado em código).
+   A topologia de referência a seguir é a carta (§17.3: peça `em_pe`) ou a
+   estrela de teste (§17.9) — 5 quads por tampa em torno de um vértice
    central —, e o portão já recusa qualquer peça que não passe nela.
 2. **Se o projeto do usuário pode ter 3D próprio** (hoje: não, D61).
 3. **Parâmetros de import por asset**: o `.import` do `.glb` hoje usa o padrão

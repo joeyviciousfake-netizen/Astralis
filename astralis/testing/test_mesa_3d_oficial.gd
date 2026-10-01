@@ -615,6 +615,19 @@ func test_d49_grade_perfeita_um_valor_so_e_mao_vem_para_a_camera() -> void:
 	var alt: float = float(mesa.get("ALT_CARTA"))
 	assert_almost_eq(larg, 1.0, 0.000001, "LARG_CARTA intocada: 1,0 (D44 não pode aumentar a carta).")
 	assert_almost_eq(alt, ALT_CARTA_TESTE, 0.000001, "ALT_CARTA intocada: proporção real 86/59 (D44).")
+	# A espessura e a MEDIDA, nao o 0,005 arredondado: 0,30 mm numa carta de
+	# 59 mm. O arredondado errava 1,69% e nao batia com a caixa do asset 3D.
+	var gross: float = float(mesa.get("GROSS_CARTA"))
+	assert_almost_eq(gross, 0.30 / 59.0, 0.0000001,
+		"GROSS_CARTA e a medida real: 0,30 mm numa carta de 59 mm (%.10f), nao 0,005 arredondado." % gross)
+	# Nenhum assunto pode guardar a medida da carta: ela e da mesa, e o assunto
+	# recebe. Um default escrito no receptor e a segunda fonte que esconde o
+	# erro (a espessura chegou a 0,05 = 10x num arquivo e 0,005 no outro).
+	for caminho in ["carta_3d.gd", "cursor_3d.gd", "painel_carta_3d.gd"]:
+		var txt := FileAccess.get_file_as_string("res://duel3d/" + caminho)
+		assert_false(txt.contains("gross_carta :=") or txt.contains("espessura_carta :=")
+				or txt.contains("alt_carta := 1.") or txt.contains("janela_art := Vector4"),
+			"%s nao escreve default da medida da carta (o dono e a mesa)." % caminho)
 	# O mundo da carta: ela é desenhada do mesmo jeito em qualquer lugar, e o
 	# que mudou foi SÓ a distância até a câmera (z maior = mais perto).
 	assert_true(p0_m.z > 10.0, "A sua mão veio mesmo para perto da câmera (z %.2f > 10,0)." % p0_m.z)

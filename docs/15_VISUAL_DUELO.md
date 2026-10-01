@@ -281,9 +281,30 @@ Três regras que atravessam os oito (ver D57, D59, D64, D65):
 2. **Número com um dono só.** Quem mede é a mesa; o assunto **recebe por
    parâmetro** (`larg_carta`, `gross_carta`, `janela_art`, `escala_campo`) ou
    por `Callable` (`pos_slot`, `caixa`, `vidro`, `mat`). Nenhum assunto copia
-   número de outro.
+   número de outro. **Na prática isso é sem default no receptor** (D70): a mesa
+   passa, e o receptor tem um `assert` que reclama se a medida não chegar — é
+   melhor a peça nascer do tamanho zero com grito do que nascer com a medida
+   errada em silêncio. Foi assim que a espessura sobreviveu escrita como `0,05`
+   (10×) num arquivo e `0,005` arredondado no outro.
 3. **UI não guarda cópia do estado.** Faixa, painel e menus **perguntam** ao
    dono a cada atualização; não existe segunda cópia do `GameState`.
+
+### 15.8.1 A medida da carta é a do contrato, não uma escolha (D70)
+
+A medida da carta em unidades de mundo vem do **contrato**, não do olho:
+
+| No mundo | Const na mesa | Medida real | De onde |
+|---|---|---|---|
+| largura | `LARG_CARTA := 1.0` | 59 mm | 1 unidade = 1 largura |
+| altura | `ALT_CARTA := 86.0 / 59.0` | 86 mm | `card_layout.schema.json` → `canvas.h = 86` |
+| espessura | `GROSS_CARTA := 0.30 / 59.0` | **0,30 mm** | o papel, escrito como divisão |
+
+O 59 e o 86 já eram `const` no schema (`canvas.w = 59`, `canvas.h = 86`,
+`unit: per_mil`, doc 04 §4.8) — a medida da carta nunca foi uma decisão de
+cabeça, era dado. A espessura é a única que o olho não vê, e por isso foi a
+primeira a ser escrita errada: `0,005` é o 0,30/59 **arredondado** (o
+verdadeiro é `0,0050847458`, 1,69% maior). O asset 3D da carta mede
+`0,0050847458` e a mesa agora usa o mesmo número.
 
 Nada disso muda uma linha do contrato visual: é a mesma tela, com o desenho
 dividido. Se este doc e o código divergirem, o doc está errado até prova em

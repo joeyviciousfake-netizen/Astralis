@@ -29,8 +29,9 @@ var altura := 1080
 ## Janela de arte DENTRO da moldura real (832x1248), em fracao: a arte preenche
 ## a janela sem sobra, e ancorar em % faz a peca acompanhar o tamanho do molde.
 ## A JANELA e do CONTRATO da carta, entao o dono dela e a mesa (a carta 3D usa
-## a mesma); o painel recebe.
-var janela_art := Vector4(0.1190, 0.1827, 0.8918, 0.7099)
+## a mesma); o painel recebe. Sem default de proposito: o valor que estava
+## escrito aqui era outro, e so nao apareceu porque a mesa sobrescreve no boot.
+var janela_art: Vector4
 
 const CARTA_Y0 := 16
 const CARTA_Y1 := 562
@@ -94,6 +95,9 @@ func _ready() -> void:
 ## --- A CARTA (y 16..562). A moldura real e 832x1248 (0,667), entao numa caixa
 ## de 546 de altura a carta tem 364 de largura, CENTRADA na faixa.
 func _construir_carta() -> void:
+	assert(janela_art.z > janela_art.x and janela_art.w > janela_art.y,
+		"painel_carta_3d: janela_art vem da mesa (dono da janela, compartilhada com a "
+		+ "carta 3D). Vazia aqui = arte ancorada em zero, em silencio.")
 	var molde := Control.new()
 	molde.name = "CartaMolde"
 	var alt_carta := float(CARTA_Y1 - CARTA_Y0)
