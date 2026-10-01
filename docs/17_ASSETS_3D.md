@@ -1,10 +1,10 @@
 # 17 — ASSETS 3D (Blender → jogo)
 
-VERSION: 1.0 (2026-09-30)
+VERSION: 1.1 (2026-09-30, D62: a prévia oficial em Cycles na GPU, §17.10)
 STATUS: AUTHORITATIVE para o pipeline de 3D
 OWNER: lead (o contrato de convenções) + runtime (`core/asset_3d.gd`, o carregador)
 DEPENDES: `02_PRINCIPIOS_ARQUITETURAIS.md` (R1/R3), `13_TABULEIRO_DUELO.md`,
-`15_VISUAL_DUELO.md` (§15.2, a cascata de assets), D38, D49, D50, D59
+`15_VISUAL_DUELO.md` (§15.2, a cascata de assets), D38, D49, D50, D61, D62
 
 > **Escopo: SÓ DESENHO.** Um modelo 3D é elemento visual. Ele não decide
 > regra nenhuma (R1) e não é lido pelo motor de duelo. Se algum dia um modelo
@@ -138,7 +138,7 @@ for indispensável*.
 O asset de teste (`estrela_teste`): 36 tris, 60 verts, 1 malha, `mat_estrela_teste`,
 caixa `x[-0.4755, 0.4755] y[0, 0.15] z[-0.5, 0.4045]`, `.blend` 92 KB, `.glb` 3 KB.
 
-## 17.7 DONO: do jogo, como a arena (D59)
+## 17.7 DONO: do jogo, como a arena (D61)
 
 Assets 3D são do **jogo**. Um projeto de usuário **não** sobrescreve mesh de
 mesa. Isso é escolha, não acidente: é a mesma razão do D50 (o override por
@@ -165,7 +165,45 @@ ganhando campo novo, com schema, espelho no `main.rs` e `fm_import --check`.
 1. **Primeiro asset real** da mesa. A lacuna listada no doc 15 §15.5 é a
    cidade de fundo; os pilares de vidro são a opção mais barata (a mesa já
    tem a "_vidro" duplicado em código).
-2. **Se o projeto do usuário pode ter 3D próprio** (hoje: não, D59).
+2. **Se o projeto do usuário pode ter 3D próprio** (hoje: não, D61).
 3. **Parâmetros de import por asset**: o `.import` do `.glb` hoje usa o padrão
    do Godot (`generate_lods`/`create_shadow_meshes` ligados, inúteis para
    peça pequena). Ajuste por asset é possível e é dado do `.import` versionado.
+
+## 17.10 A prévia oficial: Cycles na GPU (D62)
+
+O renderizador do projeto é **Cycles** (decisão do usuário, D62), e a prévia de
+um asset é `tools/blender/preview.py`.
+
+O que ela trava, e por quê:
+
+| Trava | Motivo |
+|---|---|
+| **Cycles, e só Cycles** | decisão do usuário; e o render está gravado no próprio `.blend` fonte (`engine=CYCLES`, `device=GPU`), então quem abre a fonte vê o mesmo render que a prova |
+| **GPU obrigatória** (sem GPU o script falha; `--cpu` só a pedido) | render "de GPU" que cai na CPU em silêncio não prova nada — é a mesma família do defeito do D50 |
+| **CPU desligada do Cycles** | o backend éOptiX (medido: Blender 5.2.2 LTS vê a RTX 5060 em OPTIX e em CUDA); o dispositivo CPU fica com `use = false` para o render não escorregar para ele |
+| **Amostras e semente fixas** (256, semente 0, denoise, AgX) | a prévia não pode mudar cada vez que é refeita |
+| **Cenário montado pelo script** (3 luzes + fundo na cor da mesa, sem HDRI e sem arquivo externo) | a prova não depende de nada além do script, e duas prévias de assets diferentes saem comparáveis |
+| **Enquadramento 3/4 calculado da caixa** com folga fixa | uma regra só para todo asset; a prova mostra o asset inteiro, sempre do mesmo ângulo |
+
+**O que a prévia NÃO garante (medido, não prometido):** o Cycles na GPU **não
+é bit-exato** entre execuções — a soma em float do kernel não é associativa e a
+ordem das operações muda com o escalonamento. Duas execuções da mesma cena
+deram PNGs de 465.048 e 465.113 bytes, com sha256 diferente. Por isso a prévia
+**mede** em vez de prometer: `--comparar <outro.png>` faz o A/B pixel a pixel
+(o mesmo método das fotos da mesa, doc 16 §16.12). Resultado medido na estrela:
+**0 de 589.824 pixels com diferença maior que 1 passo de 8 bits (0,0000%)**,
+delta máximo 0,0039 (= 1/255), delta médio 0,000000. A imagem é a mesma; o que
+muda é o byte do PNG.
+
+**O que continua sendo a garantia é a geometria, não a imagem:** o `.glb`
+medido contra o manifesto, pelos dois medidores (§17.2). E o renderizador não
+entra no `.glb` (o export glTF não depende do render): depois de gravar CYCLES
+na fonte, o exportador reexportou, o manifesto continuou batendo e o `.glb`
+saiu byte a byte igual.
+
+Custo medido: 768×768 com 256 amostras leva **3 a 5 s** na RTX 5060.
+
+> **O jogo não tem Cycles.** Isso aqui é o render do *Blender*, ou seja, das
+> provas de asset. O render do jogo continua sendo o do Godot (Forward+/Mobile) —
+> e nenhum dos dois toca no outro: o `.glb` é geometria, sem luz.

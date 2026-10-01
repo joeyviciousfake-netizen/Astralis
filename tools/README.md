@@ -36,6 +36,20 @@ Dono: QA/Integration (script de dev) + o carregador no jogo é do runtime
   & $env:BLENDER --background --factory-startup --python tools\blender\exportar_assets.py -- exportar
   & $env:BLENDER --background --factory-startup --python tools\blender\exportar_assets.py -- medir
   ```
+- `preview.py` — a **prévia oficial** de um asset: **Cycles na GPU** (D62;
+  backend OptiX medido nesta máquina, RTX 5060). GPU é obrigatória — sem GPU o
+  script falha em vez de renderizar na CPU — e o dispositivo CPU do Cycles fica
+  desligado, para o render não escorregar para ele. Amostras e semente fixas,
+  cenário de 3 luzes montado pelo script (sem HDRI e sem arquivo externo) e
+  enquadramento 3/4 calculado da caixa do asset, para duas prévias serem
+  comparáveis. Não salva o `.blend`.
+  ```powershell
+  & $env:BLENDER --background --factory-startup `
+      --python tools\blender\preview.py -- --asset estrela_teste --out "$env:TEMP\pv.png"
+  # e o A/B pixel a pixel (o Cycles na GPU não é bit-exato entre execuções):
+  & $env:BLENDER --background --factory-startup `
+      --python tools\blender\preview.py -- --asset estrela_teste --out b.png --comparar a.png
+  ```
 
 O outro lado da trava é `astralis/testing/test_assets_3d.gd` (GUT), que mede o
 mesmo `.glb` do lado do Godot. Duas medidas independentes, um manifesto só.

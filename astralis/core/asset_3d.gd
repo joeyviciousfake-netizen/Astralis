@@ -19,7 +19,7 @@ extends RefCounted
 ## `.gdignore`, que o Godot nao escaneia). O jogo NUNCA carrega o `.blend`:
 ## carrega o `.glb`, que e o export deterministico do `.blend`.
 ##
-## DONO DO 3D (D59): sao assets DO JOGO, como a arena oficial. Um projeto de
+## DONO DO 3D (D61): sao assets DO JOGO, como a arena oficial. Um projeto de
 ## usuario nao sobrescreve mesh de mesa — se um dia ele precisar, isso vira
 ## decisao de contrato (campo novo + espelho no Studio), nao um detalhe de
 ## caminho de arquivo.

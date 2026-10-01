@@ -8,7 +8,7 @@ numero de amostras e o sampling com a pressa, e a imagem "comprovava" o que
 quisesse. Aqui nada disso e livre.
 
 O QUE ELE TRAVA:
-  - CYCLES, e so Cycles (D61). A maquina tem RTX 5060; o backend e OptiX
+  - CYCLES, e so Cycles (D62). A maquina tem RTX 5060; o backend e OptiX
     (medido em 2026-09-30: o Blender 5.2.2 LTS ve a 5060 em OPTIX e em CUDA).
   - GPU OBRIGATORIA por padrao: se nao achar GPU, o script FALHA em vez de
     cair para a CPU em silencio. Um "render na GPU" que virou CPU nao prova
@@ -151,7 +151,7 @@ def configurar_gpu(permitir_cpu):
     tentativa.append("CPU: %d nucleo(s)" % (os.cpu_count() or 0))
     if not permitir_cpu:
         falhar("nenhuma GPU encontrada (%s) e --cpu nao foi passado. "
-               "A previa do projeto EXIGE GPU (D61)." % "; ".join(tentativa))
+               "A previa do projeto EXIGE GPU (D62)." % "; ".join(tentativa))
     cp.compute_device_type = "NONE"
     return "NONE", ["CPU (%d nucleos)" % (os.cpu_count() or 0)], tentativa
 

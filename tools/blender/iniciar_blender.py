@@ -35,7 +35,7 @@ BACKEND_GPU = ("OPTIX", "CUDA", "HIP", "ONEAPI")
 
 
 def deixar_cycles_na_gpu():
-    """D61: o projeto renderiza em CYCLES, na GPU. A maquina tem RTX 5060 e o
+    """D62: o projeto renderiza em CYCLES, na GPU. A maquina tem RTX 5060 e o
     backend medido e OPTIX (Blender 5.2.2 LTS ve a 5060 em OPTIX e em CUDA).
 
     O backend e preferencia de maquina (nao mora no .blend), entao e aqui que

@@ -31,3 +31,7 @@ Desktop.ini
 # Cache Python (tools/*.py geram ao compilar)
 __pycache__/
 *.pyc
+
+# Blender: backup automatico que o proprio Blender cria ao salvar por cima
+# (o .blend da FONTE e' versionado de proposito, doc 17; o .blend1 e' lixo)
+*.blend1
