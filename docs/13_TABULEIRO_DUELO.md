@@ -116,13 +116,17 @@ Dano, compra, descarte, quem venceu, resultado fusão, alvo válido, fase atual.
 - Jogador escolhe slot livre (de 5) ao descer da mão, pelo controle. Rival usa o primeiro livre.
 - O `arena_id` do `duel_setup` continua no contrato (o dado FM traz `arena_starter`) mas o runtime o **ignora de propósito**: o jogo tem uma mesa só.
 
-## 13.10.1 UMA arena só (D48)
+## 13.10.1 A arena oficial e o valor que ela trava (D48 → D50)
+
+> **Estado que vale hoje: uma arena, em UM lugar só — o arquivo.** As duas
+> primeiras camadas abaixo são **histórico** (o que existia e por que foi
+> fechado); a regra que vale está no fim da seção e em §13.10.3.
 
 - **A arena oficial é `schemas/examples/arenas/arena_starter.json`** (a "grade larga"): X `632 → 1684` de 263 em 263, Y `p0 monstro 695 / p0 magia 958 / p1 monstro 305 / p1 magia 42`. Mão p0(1240,980,95) e p1(1240,20,60).
-- A grade embutida em `core/board_layout.gd` (usada quando o projeto não tem `arenas/`) **não é uma segunda arena**: são os MESMOS números, escritos nas constantes `GRID_X/GAP/Y_*`. O 2D legado repetia essa grade em `duel_legacy2d/duel_board.gd`, mas ele foi removido (D54) - hoje a arena tem UM lugar só.
-- **O que era errado (D48):** o JSON já usava a grade larga, mas a grade embutida, a descrição do próprio JSON, o schema e dois testes ainda falavam da grade antiga e estreita (X `780 → 1536`, Y `600/789/317/128`, passo 189). Resultado: quem tinha `arenas/arena_starter.json` via a grade larga, e quem não tinha (projeto novo do Studio) via a grade estreita — **duas telas diferentes**, e a estreita com a mão invadindo a fileira de baixo. Só a larga é a que a câmera da D47 foi calibrada.
-- **D50 mudou esta seção (e o D54 fechou):** não existe mais "grade padrão embutida" para cair (13.10.3). A posição vem SO do arquivo da arena oficial; sem ele, o jogo avisa e nao desenha o campo. O que era fallback virou o proprio dado.butidos com os 20 do JSON, trava `SLOT + GAP == 263` e compara o layout lido com os 20 slots do JSON. Se alguém mexer num lado só, a suíte quebra. `test_project_arg.gd` refaz a comparação slot a slot pelo caminho de projeto sem arena.
-- Regra para o futuro: **um número de arena vive em dois lugares por necessidade técnica (JSON + fallback), então a igualdade é obrigatória e testada.** Mover a arena = mudar o JSON **e** as constantes, no mesmo commit.
+- **O que existia (D48) e era perigoso:** os mesmos números apareciam em **três** lugares — o arquivo, as constantes `GRID_X/GAP/Y_*` de `core/board_layout.gd` (o "fallback" de projeto sem `arenas/`) e a grade repetida em `duel_legacy2d/duel_board.gd`. O fallback era o que fazia o jogo cair numa tela diferente **em silêncio**. Pior: a descrição do próprio JSON, o `arena.schema.json` e dois testes ainda falavam da grade **antiga e estreita** (X `780 → 1536`, Y `600/789/317/128`, passo 189) — resto de um teste de layout. Efeito prático: quem tinha `arenas/` via a larga, quem não tinha (projeto novo do Studio) via a estreita — **duas telas diferentes**, e a estreita com a mão invadindo a fileira de baixo.
+- **O que existe agora (D50, fechado pelo D54):** as 14 constantes sumiram dos dois arquivos, o 2D saiu, e a posição dos 20 slots vem **SO do arquivo da arena oficial**. Detalhamento em §13.10.3.
+- **Regra que vale hoje:** **um número de arena vive em UM lugar só.** Mover a arena = mexer no `arena_starter.json`, e é só isso. Não existe constante de arena para atualizar junto, e não existe "para o futuro" de devolver o fallback — se um dia o usuário quiser mesa por projeto, é decisão nova (campo novo no contrato + seletor no Studio), não uma grade escondida no código.
+- **Travas que sustentam isso hoje:** `test_board_layout.gd::test_d50_sem_grade_no_codigo` (não existe grade no código, `project_arena_path` cai na oficial para qualquer id e o projeto do Studio não tem `arenas/`), `test_board_layout.gd::test_sem_layout_nao_inventa_posicao` e `test_arquivo_ruim_nao_inventa_posicao`, e `test_project_arg.gd::test_arena_oficial_e_a_unica_e_a_perfeita` + `test_pasta_arenas_no_projeto_e_ignorada_com_aviso` (o jogo de verdade, como processo filho).
 
 ## 13.10.2 A grade PERFEITA (D49) — um valor só, 263
 

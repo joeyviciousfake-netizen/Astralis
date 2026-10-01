@@ -1,13 +1,16 @@
 # 01 — VISÃO DE PRODUTO
 
 ORIGEM: spec v1.1 seções 1, 2, 103, 104, 110
+STATUS: AUTHORITATIVE
 
 ## 1.1 Identidade
 
-Astralis é runtime 2D especializado em:
-- duelo de cartas inspirado em Yu-Gi-Oh! Forbidden Memories;
+Astralis é um runtime **Godot 3D** especializado em:
+- duelo de cartas inspirado em Yu-Gi-Oh! Forbidden Memories (a tela do duelo é
+  3D desde o D40/D41: `astralis/duel3d/`, com a volta da mesa do D47);
 - campanha em formato visual novel;
-- cartas, duelistas, decks, fusões, efeitos (linguagem visual declarativa), campanha, UIs especializadas, assets — tudo configurável.
+- cartas, duelistas, decks, fusões, efeitos (linguagem visual declarativa),
+  campanha, UIs especializadas, assets — tudo configurável.
 
 Astralis Studio é o software de autoria para projetos Astralis.
 
@@ -36,7 +39,7 @@ Usuário não precisa saber: Godot, GDScript, Rust, Tauri, Svelte, MCP, GUT.
 
 ## 1.4 Definição final
 
-ASTRALIS: "Runtime 2D especializado em duelo de cartas + campanha visual novel, capaz de interpretar projetos autorados pelo Studio."
+ASTRALIS: "Runtime 3D especializado em duelo de cartas + campanha visual novel, capaz de interpretar projetos autorados pelo Studio."
 
 ASTRALIS STUDIO: "Editor visual especializado que permite criar projetos Astralis via dados, blocos, graphs e propriedades, sem programar."
 

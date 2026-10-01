@@ -1,7 +1,11 @@
 # astralis/ — Runtime jogável (Godot 4.7, 1920x1080)
 
 Dono: Runtime Engineer. Ver `docs/05_RUNTIME_DUELO.md`, `docs/13_TABULEIRO_DUELO.md`.
-Status: mesa jogável e testada (D22-D29) — invocar/atacar/fundir/passar, IA do rival, LP, vitória/derrota. **100% controle (D19): zero mouse e teclado.**
+Status: mesa 3D jogável e testada — invocar/atacar/fundir/passar, LP, vitória/derrota,
+a volta da mesa (a câmera dá 180° e vira o ponto de vista de quem joga, D47-D53) e a
+IA do rival, que hoje é **temporária** de propósito (D55: só o primeiro monstro e o
+primeiro em campo; a escolha fina mora em `ai/ia_rival.gd` quando existir, D68).
+**100% controle (D19): zero mouse e teclado.**
 
 ## O que tem aqui
 
@@ -9,14 +13,20 @@ Status: mesa jogável e testada (D22-D29) — invocar/atacar/fundir/passar, IA d
 astralis/
   project.godot            <- projeto "Astralis" (3D, 1920x1080, cena inicial = duel3d/mesa_3d)
   main.tscn / main.gd      <- simulação automática do duelo no console (STP; não é o boot)
-  core/                    <- data_loader, project_loader, runtime_validator, board_layout
+  core/                    <- data_loader, project_loader, runtime_validator,
+                              board_layout (arena) e asset_3d (carregador de .glb)
   duel/                    <- game_state, duel_manager, turn_manager, summon/battle/damage/
-                               position/fusion_system (regra, usada pelo 3D e pelo legado)
-  duel3d/                  <- mesa_3d (mesa 3D OFICIAL, orquestrador; boot + --cenario3d)
-  duel_legacy2d/           <- duel_table + duel_board (mesa 2D aposentada, só emergência)
-  ui/                      <- card_view (carta 2D, usada pelo legado)
+                              position/fusion_system (REGRA — a única verdade de gameplay)
+  duel3d/                  <- A TELA do duelo em 8 arquivos, UM ASSUNTO CADA (D57/D59-D67):
+                              mesa_3d (orquestrador + dono das medidas), painel_carta_3d,
+                              faixa_2d, carta_3d (fabrica), menus_3d, vista_3d (camera e a
+                              volta), campo_3d (os 20 paineis), cursor_3d
+  ai/                      <- ia_rival (a IA ESCOLHE: carta e alvo; a mesa EXECUTA, D68)
+  ui/                      <- card_view (a carta 2D/molde; a mesa do duelo saiu no D54/D58)
   testing/                 <- testes GUT + astralis_test_base.gd (base comum)
-  campaign/ debug/ assets/ <- vazias por enquanto (.gitkeep)
+  campaign/ debug/         <- vazias por enquanto (.gitkeep)
+  assets/                  <- 17 assets de carta embutidos (frames/attributes/estrelas/backs)
+                              + assets/3d/ (manifest.json = fonte unica dos numeros, D61/D62)
   addons/gut/              <- framework de testes (único addon)
 ```
 
@@ -61,29 +71,40 @@ Na raiz do repo, no PowerShell:
 .\Godot\Godot_v4.7.2-stable_win64_console.exe --headless --path astralis --quit-after 30
 ```
 
-O boot abre sempre a mesa 3D. Volta ao legado 2D só em emergência:
-
-```powershell
-.\Godot\Godot_v4.7.2-stable_win64_console.exe --headless --path astralis --quit-after 30 -- --cenario3d 0
-```
-
-Saída esperada (sem erros):
+O boot abre **sempre** a mesa 3D, que é a única tela do duelo. Saída real, medida
+em 2026-09-30 sem nenhuma flag:
 
 ```text
-[MESA3D] Janela do campo: x=562..1920 px (29.3%..100% da tela), 1358x1080, altura toda.
-[MESA3D] Ambiente: céu azul + neblina + pilares + câmera no PIVÔ da mesa (a volta da mesa, D47).
+[MESA3D] Duelo: Simon Muran x Jono.
+[Duel] Seed 42 -> semente fixa, deterministico. Primeiro jogador: p0 (voce).
+[ARENA] Arena oficial OK: 20 slots, uma mesa só (D50).
+[ARENA] Arena oficial OK: 20 slots, uma mesa só (D50).
 [MESA3D] Arena carregada: 20 slots + mão p0(1240,980,95) p1(1240,20,60).
-[MESA3D] Campo: 20 painéis + faixa do meio (7 itens) + Cursor3D.
-[MESA3D] Faixa 2D: 7 celulas em x=620..1862 y=450..514 (vao das fileiras 438..525 px).
 [MESA3D] Fusões carregadas: 25081 receitas + 0 regras.
 [MESA3D] Mesa 3D: duelo real carregado.
 [MESA3D] Duelo começou! Sua vez.
-[MESA3D] Pronta: mão p0=5 p1=5, assets embutidos=17/17.
 ```
 
-Prova de que a arena é uma só (D48): com o projeto **sem** pasta `arenas/`, o
-jogo avisa `[ARENA] Sem arena no projeto: usando a grade padrão.` e mesmo assim
-o `p0_m2` cai em `janela=(679.0, 597.246) tela_x=1241.0` — coordenada idêntica à
-de quem tem o arquivo, porque a grade embutida É a arena oficial.
+Esse log é **contrato**: o `test_project_arg.gd` roda o jogo de verdade como
+processo filho e prova o `--project`/`--setup` lendo o que ele imprimiu. Por isso
+não se mexa nessas linhas sem quebrar o teste.
 
-Testes: ver `tests/README.md` (**178/178, 3835 asserts**, ~160 s) — tem o comando exato e o passo `--import`.
+### Flags (todas depois de `--`, todas de prova — zero regra)
+
+| Flag | O que faz |
+|---|---|
+| `-- --debug` | liga o log de **diagnóstico** da mesa (janela do campo em pixel, câmera, vão das fileiras, calibração das mãos). O log de boot acima sai **sem** ela (D56) |
+| `-- --mesa3d-foto=<caminho.png>` | salva o viewport e sai |
+| `-- --mesa3d-foto-frame=N` | em qual quadro a foto sai (padrão 90) |
+| `-- --mesa3d-calib=1` | quadrado vermelho de calibração: o que entrar dentro dele está afundado na mesa |
+| `-- --mesa3d-auto-passa=<s>` | passa a vez sozinho depois de N segundos, pelo mesmo caminho do START |
+| `-- --mesa3d-sair=<s>` | sai sozinho depois de N segundos (validação headless) |
+
+Arena: **uma só, e é do jogo** (D50). A posição dos 20 slots vem SO de
+`schemas/examples/arenas/arena_starter.json`; não existe grade no código nem
+override por projeto, e o `arena_id` do `duel_setup` é lido e ignorado com
+aviso. Arquivo faltando ou quebrado = erro honesto: o log avisa e a mesa não
+desenha o campo em vez de inventar uma mesa.
+
+Testes: ver `tests/README.md` (**183/183, 3495 asserts**, ~112 s) — tem o
+comando exato e o passo `--import`.

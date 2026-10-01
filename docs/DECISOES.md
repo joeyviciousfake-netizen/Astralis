@@ -2,6 +2,16 @@
 
 > IA: só vale o que está aqui. Se o usuário mudar algo, apague a linha antiga e renumere — nunca acumule.
 > Travado p/ IA e subagentes; o usuário muda quando quiser (D23).
+>
+> **Como o arquivo se organiza.** As decisões estão no corpo, em ordem de
+> número: `D01`-`D62` em uma linha cada (`- Dnn data: decisão | motivo | impacto`)
+> e `D63`-`D68` em parágrafo (`**Dnn: ...**`). Cada uma aparece **uma vez só**.
+> No fim do arquivo está o **ÍNDICE**, uma linha por `Dnn` — é ele que a R13
+> manda consultar para saber a **maior** decisão que já existe antes de anexar
+> uma nova (hoje: **D68**).
+> **Não existe D46:** o número foi reservado e a decisão foi **substituída** pela
+> D47 (a tela gira a câmera em vez de mover as cartas). Nada se renumera — a D47
+> diz o que supersede, e o índice marca o buraco.
 
 - D01 2026-09-23: DATA != LOGIC. Studio nunca implementa/calcula gameplay. | motivo: evitar 2 motores | impacto: todo preview/test usa Astralis real
 - D02 2026-09-23: Proibido FakeDuel/Effect/Fusion/Campaign mesmo para preview. | motivo: "funcionou no editor mas não no jogo" | impacto: TestHarness só prepara/observa, chama sistema real
@@ -65,13 +75,9 @@
 - D60 2026-09-30: **O PAINEL ESQUERDO E O NO `duel3d/painel_carta_3d.gd` (F3 3/7), E A SUITE REALMENTE TEM 174 TESTES - EU VINHA REPORTANDO 168.** O painel (molde, arte, ATK/DEF com os dois orbes, contador de copias, nome, tipo, descricao; 13 nos) saiu do `mesa_3d.gd` (4.468 -> 4.141) para 404 linhas, com o estado dele junto. O no se chama `PainelCarta` e e filho direto do HUD, com os mesmos filhos de antes - por isso as 25 travas que leem `HUD/PainelCarta/...` (CartaMolde, FocoArte, FocoOrbe, FocoStats, FocoCopias, FocoDesc, BarraVermelha) continuam valendo sem trocar caminho. **O QUE FICOU NA MESA E POR QUE (medicao e contrato tem UM dono so, que e a licao do D48/D50):** `JANELA_ART_*` (a janela de arte dentro da moldura e usada pela carta 3D TAMBEM - o dono continua sendo a mesa e o painel recebe, uma so medida para as duas pecas); `PAINEL_ESQ_L` (e onde o campo 3D comeca, entao e numero da TELA, nao do painel); `_carta_focada` (responde 'o que o cursor esta apontando', que e estado do CONTROLE); `_estrelas_da_carta` (o FLUXO tambem precisa delas, porque sao as opcoes do menu da estrela, entao a leitura e da mesa e o painel pergunta); `_construir_fundo_painel` (o fundo e IRMAO do painel - o caminho dele e `HUD/FundoPainelEsq` - entao continua na mesa). O painel recebe 7 dependencias, todas leitura por `Callable`, e nao guarda copia de nada (D59). **A CONTAGEM CORRIGIDA:** a suite tem **174 testes em 19 arquivos**, nao 168/18. Em algumas rodadas o GUT deixava o `test_assets_3d.gd` (6 testes) de fora SEM AVISAR, e eu vinha reportando 168 nas levas anteriores (D58, D59). Agora roda 19/20 de forma estavel (rodei 3 vezes) e o numero do caderno e desta decisao estao certos. **ERRO MEU, ANOTADO:** digitei as cores do painel DE MEMORIA em vez de copiar, e o teste da referencia pegou - NAME amarelo e TIPO verde com os valores errados. Corrigido com os valores do arquivo original (`COR_NOME` 1.0/0.85/0.15, `COR_TIPO` 0.30/0.95/0.45, `COR_LP_VALOR` 1.0/0.83/0.00, `COR_DESCRICAO` 0.92/0.94/1.00, `JANELA_ART_*` 0.1190/0.8918 x 0.1827/0.7099). LECAO: numero de cor tambem se COPIA, nunca se digita. GUT 174/174, 3458 asserts, 0 SCRIPT ERROR, 0 orphans; `fm_import --check` OK. **O QUE O F3 JA TIROU DA MESA (4.801 -> 4.141, tres assuntos com no e arquivo proprios):** `faixa_2d.gd` (360), `menus_3d.gd` (180) e `painel_carta_3d.gd` (404). | motivo: D57 (um .gd = um assunto) + o usuario mandou continuar | impacto: `astralis/duel3d/painel_carta_3d.gd` (NOVO), `astralis/duel3d/mesa_3d.gd` (o painel, suas consts e estado sairam; `_atualizar_painel_foco` virou delegacao; `JANELA_ART_*` e `_estrelas_da_carta` ficaram), `astralis/testing/test_mesa_3d_oficial.gd` e `test_volta_mesa.gd` (as leituras que entravam na mesa por dentro passaram a apontar para o no do painel)
 - D61 2026-09-30: **O 3D ENTROU NO PROJETO, E ENTROU COM TRATAS: O `.blend` E A FONTE, O `.glb` E O ARTEFATO, E `manifest.json` E A FONTE UNICA DOS NUMEROS — MEDIDOS POR DOIS LADOS INDEPENDENTES.** O usuario quer mais elemento 3D na mesa e pediu um MCP do Blender para eu poder criar asset. Ferramenta escolhida: `mcp-for-blender` (community, o unico com exportar GLB/FBX + screenshot + assets CC0; o oficial do Blender Lab so se instala por codigo-fonte e e focado em documentar cena), na porta 9876 com `uvx --python 3.11` (o Python 3.14 da maquina e incompativel — medido: o `install-addon` quebrou com `UnicodeEncodeError` no cp1252 do Windows, resolvido com `PYTHONIOENCODING=utf-8` na config do opencode). **O QUE FOI MEDIDO, NAO ACHADO:** (1) o auto-start do add-on **nao dispara no Blender 5.2.2 LTS** — depois de abrir o Blender com o add-on habilitado, `bpy.types.blendermcp_server` nao existe e nao ha escuta; `bpy.ops.blendermcp.start_server()` na mao sobe na hora, entao quem manda no inicio e `tools/blender/iniciar_blender.py` (chamado pelo `abrir_blender.ps1`), sem clique e sem depender de estado anterior; (2) o Blender 5.2 nao tem modificador `EXTRUDE` em curva (enum novo) e o engine de render chama `BLENDER_EEVEE`, nao `BLENDER_EEVEE_NEXT`; (3) **medir o `.glb` reimportando no Blender devolve os eixos do Blender** (a conversao Y-up se cancela no ida e volta), entao o exportador mede LENDO O ARQUIVO `.glb` — e o `.glb` tem 60 vertices onde o `.blend` tem 20, porque o glTF quebra o vertice por canto (normais/UV por face): o manifesto guarda o numero DO ARTEFATO, que e o que o jogo carrega; (4) tamanho: malha e barata (34 objetos / 768 tris = 46 KB de `.glb`, `.blend` 94 KB comprimido) e o que pesa e TEXTURA (1 textura 1024 = 1,8 MB), e o estilo da mesa e material e cor pura — por isso o `.blend` e versionado sem medo, com a regra "textura embutida so quando for indispensavel"; (5) Godot trata `.blend` como cena e tentou importar a fonte (gerou `estrela_teste.blend.import` orfao) — por isso as fontes moram em `assets/3d/fonte/` com `.gdignore` versionado. **AS TRATAS:** (a) tres numeros, tres lugares — o `.blend` na pasta `fonte/` e a fonte do MESH; `manifest.json` e a fonte dos NUMEROS (tris/verts/caixa/material), e o exportador **recusa** um `.glb` com transform no no em vez de corrigir (transform no no e o `.glb` mentindo, e o conserto seria feito no codigo da mesa — foi o `APROXIMA_MAGIA_*` que o D49 apagou); (b) o manifesto e conferido por DOIS medidores do MESMO artefato — `tools/blender/exportar_assets.py` (Blender, headless, CI-avel) e `astralis/testing/test_assets_3d.gd` (GUT, do lado do Godot) — e os dois foram SABOTADOS de proposito (manifesto com 99 tris) e pegaram; (c) convencoes travadas: 1 unidade = 1 largura de carta (`LARG_CARTA`), Y para cima (a conversao e do exportador glTF, `yup=true`, nao nossa), origem na BASE e no centro (`y=0` no chao, pra o objeto pousar no plano do campo sem ajuste), um material por asset (`mat_<id>`), e asset faltando e ERRO HONESTO (nulo + aviso, nunca geometria inventada); (d) o carregador novo (`core/asset_3d.gd`) NAO guarda copia do estado: le o manifesto e a cada chamada (a lição do D59, que foi a falha da faixa). **DONO:** do JOGO, como a arena (escolha do usuario) — um projeto de usuario NAO sobrescreve mesh de mesa; se um dia ele quiser, e campo novo no contrato + espelho no Studio, nao detalhe de caminho. Consequencia boa: **nada de schema, nada no Studio, nada em `duel/`** (R1/R4 intactos, `fm_import --check` nem muda). **O QUE FICOU FORA:** a estrela e peca de TESTE e NAO entra na mesa ainda; o primeiro asset real (cidade de fundo ou pilares de vidro) e decisao do usuario. Pipeline e convencoes em `docs/17_ASSETS_3D.md`. | motivo: o usuario quer mais elemento 3D e pediu MCP do Blender; o risco real nao e a ferramenta, e a DUPLICACAO DE VERDADE, que foi o que matou a arena (D48 achou duas grades, D50 apagou tres copias) | impacto: `astralis/assets/3d/` (manifest.json + estrela_teste.glb/.import + fonte/estrela_teste.blend + .gdignore), `astralis/core/asset_3d.gd` (carregador, so desenho), `astralis/testing/test_assets_3d.gd` (6 testes), `tools/blender/` (iniciar_blender.py, abrir_blender.ps1, exportar_assets.py), `tools/README.md`, `docs/17_ASSETS_3D.md`, `docs/AI_MANIFEST.json`, `docs/00_INDICE_GERAL.md`, `~/.config/opencode/opencode.json` (servidor `blender`); `mesa_3d.gd`/`duel/`/`ui/` intocados
 
-**D63: o cursor de foco e assunto proprio (`duel3d/cursor_3d.gd`)** | A moldura azul + mao branca envolve a carta da MAO e o LADRILHO do campo, entao nao pertence nem a um nem ao outro: quem sabe desenhar e o arquivo dele, e quem sabe o que esta focado e a mesa (que mede e passa largura, altura, inclinacao e escala). O no e o proprio `Cursor3D`, dentro do viewport, entao as travas de `Viewport3D/Cursor3D/Grupo/Moldura` nao mudaram. GROSS_CARTA (espessura) e COR_FOCO_AZUL (cor) chegam por parametro, nunca por constante copiada. Impacto: a mesa cai de 4141 para 4079 linhas e perde 2 funcoes + 6 vars; nenhum no de origem saiu do lugar. | 2026-09-30
 - D62 2026-09-30: **O RENDER DO PROJETO E CYCLES NA GPU, E A PREVIA E MEDIDA, NAO PROMETIDA.** O usuario, vendo eu usar EEVEE numa prova, mandou: "nao quero usar eeve, vamos usar cycles, minha placa de video e uma rtx 5060, aguenta de boa". **O QUE FOI MEDIDO NA MAQUINA:** o Cycles do Blender 5.2.2 LTS ve a RTX 5060 em **OPTIX** (e em CUDA); o build aceita OPTIX/CUDA/HIP/ONEAPI (nao METAL, que e Windows) e o plano B seria os 12 nucleos do Ryzen 5 5500. **O QUE FICOU TRAVADO:** (1) o renderizador esta no proprio `.blend` fonte (`render.engine = CYCLES`, `cycles.device = GPU`, 256 amostras, denoise, semente 0, AgX) — o arquivo que e a fonte e tambem o que diz com que renderizador o asset foi visto, entao quem abre a fonte na interface ve Cycles e nao o EEVEE padrao do Blender; (2) o backend de GPU e preferencia de MAQUINA (nao mora no `.blend`), entao quem escolhe e `iniciar_blender.py` (OPTIX primeiro, depois CUDA/HIP/ONEAPI, e **desliga o dispositivo CPU** do Cycles — sem isso o render "da GPU" cairia na CPU sem falar, que e a mesma Familia do defeito que o D50 apagou); (3) `tools/blender/preview.py` e a previa oficial: Cycles, GPU **OBRIGATORIA** por padrao (sem GPU o script FALHA em vez de renderizar na CPU; `--cpu` so quando pedido a mao), amostras/semente fixas, cenario de estudio montado pelo script (3 luzes + fundo na cor da mesa, sem HDRI e sem arquivo externo, para a previa nao depender de nada alem do script), e enquadramento 3/4 calculado da caixa do asset com folga fixa — assim duas previas de assets diferentes sao comparaveis. Medido: 768x768 com 256 amostras leva **3 a 5 s** na 5060. **O QUE EU ERREI E CORRIGI (fica escrito porque e a regra):** eu afirmei no docstring que "mesma cena => mesmos bytes" e **e falso** — duas execucoes deram PNGs de 465.048 e 465.113 bytes com sha256 diferente. A causa e o proprio Cycles na GPU: a soma em float do kernel nao e associativa e a ordem das operacoes muda com o escalonamento, entao nao ha bit-exato entre execucoes na GPU. A CORRECAO foi trocar promessa por MEDICAO: `--comparar <outro.png>` faz o A/B pixel a pixel (o mesmo metodo das fotos da mesa, doc 16 §16.12) e o resultado medido foi **0 de 589.824 pixels com diferenca maior que 1 passo de 8 bits (0,0000%)**, delta maximo 0,0039 (= 1/255) e delta medio 0,000000 — ou seja, a imagem e a mesma, e o que muda e o byte do PNG. **O QUE CONTINUA VALENDO COMO GARANTIA E A GEOMETRIA, NAO A IMAGEM:** o `.glb` medido contra o manifesto (dois medidores independentes), que e numero e nao pixel. E o renderizador nao muda o `.glb` (o export glTF nao depende do render): depois de gravar CYCLES na fonte, o exportador reexportou e o manifesto continuou batendo, com o `.glb` byte-a-byte igual. | motivo: ordem do usuario sobre o renderizador; e a previa que "comprova" o asset nao pode mudar cada vez que e refeita | impacto: `tools/blender/preview.py` (novo, a previa oficial com `--comparar`), `tools/blender/iniciar_blender.py` (backend de GPU + desliga CPU do Cycles), `astralis/assets/3d/fonte/estrela_teste.blend` (CYCLES/GPU gravado na fonte), `docs/17_ASSETS_3D.md` (§17.7), `tools/README.md`, `docs/SESSAO_ATUAL.md`; o jogo nao muda (Godot nao tem Cycles — D62 e sobre o Blender, e o render do jogo segue sendo o do Godot)
-- D63 2026-09-30: **O CURSOR DE FOCO E ASSUNTO PROPRIO** (`duel3d/cursor_3d.gd`): a moldura azul + mao branca envolve a mao e o ladrilho, entao quem sabe desenhar e o arquivo e quem sabe o que esta focado e a mesa. O no e o proprio `Cursor3D`. | 2026-09-30
-- D64 2026-09-30: **O CAMPO DE VIDRO E ASSUNTO PROPRIO** (`duel3d/campo_3d.gd`) e `_peca_lado`/`PECA_EM_CARTAS` eram codigo morto: nao eram chamadas por nada. | 2026-09-30
-- D65 2026-09-30: **A VISTA E A VOLTA SAO ASSUNTO PROPRIO** (`duel3d/vista_3d.gd`) e o numero do giro nao tem segunda copia: ele mora com a camera e o pivo. | 2026-09-30
-- D66 2026-09-30: **A CARTA 3D E UMA FABRICA** (`duel3d/carta_3d.gd`), e nao um no: carta tem varias na cena. | 2026-09-30
-- D68 2026-09-30: **A IA DO RIVAL TEM ARQUIVO PROPRIO** (`astralis/ai/ia_rival.gd`): ela SO ESCOLHE (a invocacao e o alvo); a mesa continua executando. A D55 continua valendo - isto e onde a escolha de verdade vai morar, nao a escolha de hoje. | 2026-09-30- D67 2026-09-30: **COMENTARIO E FINALIDADE, INVARIANTE E DONO - NUNCA A HISTORIA** (F5): 34 blocos de historia sairam dos codigos do duel3d; as referencias a Dnn foram mantidas de proposito. | 2026-09-30
+
+**D63: o cursor de foco e assunto proprio (`duel3d/cursor_3d.gd`)** | A moldura azul + mao branca envolve a carta da MAO e o LADRILHO do campo, entao nao pertence nem a um nem ao outro: quem sabe desenhar e o arquivo dele, e quem sabe o que esta focado e a mesa (que mede e passa largura, altura, inclinacao e escala). O no e o proprio `Cursor3D`, dentro do viewport, entao as travas de `Viewport3D/Cursor3D/Grupo/Moldura` nao mudaram. GROSS_CARTA (espessura) e COR_FOCO_AZUL (cor) chegam por parametro, nunca por constante copiada. Impacto: a mesa cai de 4141 para 4079 linhas e perde 2 funcoes + 6 vars; nenhum no de origem saiu do lugar. | 2026-09-30
 
 **D64: o campo de vidro e assunto proprio (`duel3d/campo_3d.gd`), e `_peca_lado`/`PECA_EM_CARTAS` sao codigo morto** | Os 20 paineis de vidro + as laterais sao um assunto so: onde o vidro fica. O no e o proprio `Campo` dentro do viewport, entao `Viewport3D/Campo/Slots/Painel_p0_m0` nao mudou. A divisao do saber: o painel sabe o TAMANHO do vidro e a POSICAO de cada painel vem do DADO, entao quem traduz slot em XZ de mundo continua sendo a mesa (`pos_slot`), e a medida do lado (1,58, a mesma que a mao e o cursor usam) chega por parametro em vez de copiada. `_peca_lado` e a const `PECA_EM_CARTAS` (1,40) NAO ERAM CHAMADAS POR NADA - so existia a definicao e um comentario; o vidro usa a medida 1,58 desde que o ladrilho passou a ser maior que o lado longo da carta em DEFESA. Apagadas as duas (regra F4: nada de codigo morto). Impacto: mesa 4079 -> 4020 linhas, 2 funcoes + 2 vars + 1 const a menos. | 2026-09-30
 
@@ -82,3 +88,86 @@
 **D67: comentario e finalidade, invariante e dono - nunca a historia (F5, parcial)** | A regra R12 ja existia; o F5 e a primeira vez que ela e aplicada aos codigos. Saiu de proposito: `antes era 3D e virou 2D`, `o antigo CAM_OFFSET_X = 0.16 foi REMOVIDO`, `fases estilo Tag Force REMOVIDAS (ordem do usuario, 2026-09-28)`, `as pilhas SAIRAM dos cantos (o usuario: ...)`, `Era isso que o usuario pedia`, `Antes a moldura era um quadrado chapado no chao`. Ficou de proposito: o POR QUE do numero (por que 1,58 de vidro; por que a faixa e 2D e nao 3D), o INVARIANTE (a camera nunca se move e so o pivo gira; `Laterais` fica vazio de proposito) e o DONO (o numero do giro mora em um lugar so). REFERENCIAS A Dnn FORAM MANTIDAS de proposito: elas nao sao historia, sao o indice que aponta para DECISOES.md, que e o historico oficial deste projeto. ESTADO: os 8 arquivos do duel3d foram limpos; a `mesa_3d.gd` ainda tem ~890 linhas de comentario e ~35 blocos com historia. Impacto: nenhuma mudanca de codigo, nenhuma mudanca de teste (174/174). | 2026-09-30
 
 **D68: a IA do rival tem arquivo proprio (`astralis/ai/ia_rival.gd`), e ela SO ESCOLHE** | O usuario pediu um script so para a inteligencia da IA. A D55 CONTINUA VALENDO (o usuario decidiu isso explicitamente quando foi consultado): a IA do rival e temporaria e a escolha fina NAO foi portada. O que muda e SO ONDE a escolha mora: nascia `astralis/ai/ia_rival.gd`, com duas decisoes e nada mais - `escolher_invocacao` (o indice do monstro na mao) e `escolher_ataque` (o indice do alvo). A IA nao conduz o turno, nao conhece a tela, nao sabe o que e fase nem tempo; a mesa continua sendo quem EXECUTA, pelo mesmo caminho da jogada do jogador. A divisao e o que garante a R1: onde a carta entra e do SummonSystem, se o ataque vale e do BattleSystem, e o AI tem metodo de execucao (o `test_ia_rival.gd` trava isso). MOTIVO da pasta `ai/`: a IA e um assunto, como o campo e a vista; `duel/` e so sistemas de regra. BUG MEU QUE O TESTE PEGOU: tratei o `-1` do motor como 'sem alvo' e pulei o ataque. No motor, `target_slot < 0` E o ATAQUE DIRETO no jogador (so legal com o campo do outro lado vazio) - o rival parou de dar dano direto e o `test_mesa_6bugs.gd` acusou. Agora o -1 e uma escolha valida e a IA marca `direto: true`. Este e o segundo bug que um teste do projeto pegou no mesmo dia (o outro foi o YAML), e a razao dos dois e a mesma: eu escrevi a linha com pressa. Impacto: 183 testes (os 9 novos em `test_ia_rival.gd`, todos contra o arquivo real, sem duble). | 2026-09-30
+
+---
+
+# ÍNDICE (R13: a maior decisão que existe hoje é a **D68**)
+
+Uma linha por decisão, em ordem. `SUBSTITUÍDA` = não vale mais, o texto está no
+corpo da decisão que a substituiu. `---` = buraco reservado, sem entrada.
+
+```text
+D01 DATA != LOGIC
+D02 Proibido motor falso (FakeDuel/Effect/Fusion/Campaign)
+D03 Distribuição é .astralis binário trancado
+D04 Export protegido com cadeado por jogo
+D05 Player + fita no mesmo zip, versionamento junto
+D06 Win/Linux exe+fita; Android V1 APK+importação
+D07 Campanha: Battle on_win/on_lose/retry + flags-lite
+D08 Fusão = receita explícita (prioridade) + regra genérica (fallback)
+D09 IA por preset (dificuldade/agressividade/uso_fusao/protecao_lp)
+D10 Efeitos: Modo Simples (templates) + Avançado (blocos)
+D11 New Project abre VAZIO; conteúdo só via Importar pack
+D12 Preview unificado "Jogar a partir daqui" + Test Lab mínimo
+D13 6 agentes por domínio, sem micro-agentes
+D14 Ferramentas oficiais: godot-mcp (Godot 4.7.2) + GUT 9.7.1
+D15 Tabuleiro: turno 1 do jogador, mão 5, decks 40, 5+5 slots  [ampliada por D43]
+D16 Resolução fixa 1920x1080
+D17 Slot com ID fixo; posição mora no layout da arena
+D18 Campo do rival é espelho SÓ no desenho
+D19 Jogo 100% controle: zero mouse e teclado, só as 11 ações joypad
+D20 Referência/starter versionado = 100% FM original (722/39/39)
+D21 Schema de carta estendido (equip/ritual, tipos novos, estrelas/senha)
+D22 Studio é app Tauri 2 (app.bat dev/build; Jogar lança o Godot)
+D23 Quem manda é o usuário: muda qualquer decisão a qualquer hora
+D24 Fluxo fiel FM (fase da mão → centro → face → slot → estrela → Ataque)
+D25 Mão reta centralizada com selo; fusão fiel
+D26 Mão sempre 5, refill até 5, deck out perde na hora
+D27 Slot escolhido ANTES da fusão; estrela no final
+D28 IA do rival fiel básica  [base mantida; a escolha fina foi temporária no D55]
+D29 Studio abre SEMPRE vazio; o jogo lê via --project (+ --setup)
+D30 Efeitos NÃO são executados na mesa V1 (dado existe, motor não)
+D31 Contrato apertado (ATK/DEF 9999, flow=sequence, LP 99999, arena 1920x1080)
+D32 Reload no dev não zera; abrir o app (processo novo) zera
+D33 Campo de Testes com duel_setup.test_state V1
+D34 No Campo de Testes o ataque no turno 1 é liberado (is_test)
+D35 Pack de criação é arquivo único .apack (zip + manifest APACK)
+D36 Layout da carta é MOLDE EM DADO (card_layout V1)
+D37 Molduras JPG viram o padrão visual da carta
+D38 As 6 molduras ORIGINAIS do usuário, sem edição (PROIBIDO mexer)
+D39 MCP oficial é o Coding-Solo godot-mcp (o asset-5470 foi removido)
+D40 Duelo oficial é 3D (a mesa 2D foi APOSENTADA e depois removida no D58)
+D41 Visual da mesa segue a referência do Tag Force: câmera sem deslocamento,
+   campo num SubViewport à direita, frustum_offset = ZERO (só desenho)
+D42 seed=0 é SEM SEMENTE (sorteio real); a tela honra current_player e
+   conduz o turno do rival quando é a vez dele
+D43 Sem ataque enquanto o turno for 1 — para QUEM ESTIVER jogando, não por lado
+D44 A faixa do meio é do JOGADOR, na ordem do dado (a 3D foi para 2D no D45)
+D45 A faixa do meio é 2D, no HUD, dentro do vão entre as fileiras (+ D45b: cores)
+D46 ---  (nunca entrou: substituída pela D47)
+D47 A tela é o ponto de vista de quem joga, girando a CÂMERA 180° em torno do
+   campo; as cartas do campo não se mexem; o HUD não gira, vira de carta
+D48 UMA arena só (a grade embutida virou a oficial)  [fechado pelo D50]
+D49 A grade do campo é PERFEITA: um valor só, 263, nas seis direções (390 congelado)
+D50 UMA arena, e ELA É DO JOGO: zero números de arena no código, sem override
+D51 A vista do rival é o ESPELHO EXATO da sua (a faixa 2D não se mexe)
+D52 As DUAS mãos, uma em cada lugar, nas duas vistas (troca nos 90°)
+D53 Um desenho que se mexe sem precisar (compra da mão certa; a chacoalhada é da carta)
+D54 O 2D aposentado SERIA removido de vez  [executado no D58]
+D55 A IA do rival é TEMPORÁRIA e a escolha fina não é portada agora
+D56 O log de BOOT é contrato; o diagnóstico só com `-- --debug`
+D57 Convenção de arquivo e de comentário (assunto único, ~700 linhas; comentário
+   = finalidade/invariante/dono, nunca história)
+D58 O 2D aposentado FOI removido (fecha o D54)
+D59 A faixa do meio vira o nó `faixa_2d.gd`; a divisão teachou: NÃO COPIAR ESTADO
+D60 O painel esquerdo vira o nó `painel_carta_3d.gd` (F3 3/7)
+D61 O 3D entra com TRAVAS: .blend é a fonte, .glb é o artefato, manifest.json é a
+   fonte única dos números, medidos por DOIS lados independentes
+D62 O render do projeto é CYCLES na GPU; a prévia é MEDIDA (--comparar), não prometida
+D63 O cursor de foco vira assunto próprio `cursor_3d.gd` (F3 4/7)
+D64 O campo de vidro vira assunto próprio `campo_3d.gd`; `_peca_lado` era código morto (F3 5/7)
+D65 A vista e a volta viram assunto próprio `vista_3d.gd`; o giro não tem 2ª cópia (F3 6/7)
+D66 A carta 3D é uma FÁBRICA `carta_3d.gd` (F3 7/7)
+D67 Comentário é finalidade, invariante e dono — nunca a história (F5)
+D68 A IA do rival tem arquivo próprio `astralis/ai/ia_rival.gd`: ela SÓ ESCOLHE
+```
