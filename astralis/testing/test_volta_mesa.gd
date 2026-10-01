@@ -692,10 +692,11 @@ func _nomes_das_celulas(linha: Node) -> Array:
 func test_o_painel_esquerdo_continua_neutro_na_vez_do_rival() -> void:
 	var mesa: Node = await _mesa3d_nova()
 	var st = mesa.get("_st")
-	var lbl_nome: Label = mesa.get("_lbl_foco_nome") as Label
-	var lbl_stats: Label = mesa.get("_lbl_foco_stats") as Label
-	var lbl_tipo: Label = mesa.get("_lbl_foco_tipo") as Label
-	var lbl_desc: Label = mesa.get("_lbl_foco_desc") as Label
+	var painel: Control = mesa.get("_painel") as Control
+	var lbl_nome: Label = painel.get_node("FocoNome") as Label
+	var lbl_stats: Label = painel.get_node("FocoFaixa/FocoStats") as Label
+	var lbl_tipo: Label = painel.get_node("FocoTipo") as Label
+	var lbl_desc: Label = painel.get_node("BlocoDesc/FocoDesc") as Label
 	assert_true(lbl_nome != null and lbl_stats != null, "O painel esquerdo tem as pecas de texto.")
 	if lbl_nome == null or lbl_stats == null or lbl_tipo == null or lbl_desc == null:
 		return

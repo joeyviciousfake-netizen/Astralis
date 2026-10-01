@@ -22,6 +22,7 @@ const FusionSystem := preload("res://duel/fusion_system.gd")
 const BoardLayoutScript := preload("res://core/board_layout.gd")
 const Faixa2D := preload("res://duel3d/faixa_2d.gd")
 const Menus3D := preload("res://duel3d/menus_3d.gd")
+const PainelCarta3D := preload("res://duel3d/painel_carta_3d.gd")
 
 ## Conversão desenho 2D->3D (só desenho): campo 2D centrado em x=1158.
 ## Composição ref nova (céu azul GX, SEM MESA): câmera FIXA atrás/acima do
@@ -133,14 +134,6 @@ const COLUNAS_CAMPO := 5
 ## movimentos da tela (TRANS_CUBIC/EASE_IN_OUT) e não pula: passar a vez
 ## sempre gira a mesa inteira.
 const VOLTA_DURACAO := 1.0
-## Janela de arte da MOLDURA REAL (medida no JPG do usuário, D38 — o JPG
-## é 832x1248 e a janela fica em x 11,90%..89,18% e y 18,27%..70,99%).
-## Usada no 3D e no painel 2D: a arte preenche a janela sem sobra, seja a
-## arte 408x384 (paisagem) ou outra.
-const JANELA_ART_X0 := 0.1190
-const JANELA_ART_X1 := 0.8918
-const JANELA_ART_Y0 := 0.1827
-const JANELA_ART_Y1 := 0.7099
 
 ## Chão de desenho do campo: o plano da FACE DE CIMA do ladrilho (a caixa de
 ## vidro tem 0,05 de espessura assentada em TOPO - 0,03, ou seja o topo dela
@@ -164,21 +157,7 @@ const COR_PRETO_FUNDO := Color(0.21, 0.21, 0.25, 0.96)
 ## 1920x1080; a referência é 1024x583 e o §15.3 traz os %) ----------------
 ## PAINEL ESQUERDO: a faixa inteira x 0..562, altura toda.
 const PAINEL_ESQ_L := 562
-## Carta focada: y 16..562 (1,5%..52% da altura na ref). A moldura real é
-## 832x1248 (0,667 de proporção), então numa caixa de 546 de altura a carta
-## tem 364 de largura e fica CENTRADA na faixa (x 99..463).
-const PAINEL_CARTA_Y0 := 16
-const PAINEL_CARTA_Y1 := 562
 const PAINEL_CARTA_L := 364
-## ATK/DEF + orbes + contador: y 562..648.
-const PAINEL_STATS_Y0 := 562
-const PAINEL_STATS_Y1 := 648
-## NOME (amarelo) y 670..756; TIPO (verde) y 756..799; DESCRIÇÃO y 810..1080.
-const PAINEL_NOME_Y0 := 670
-const PAINEL_NOME_Y1 := 756
-const PAINEL_TIPO_Y0 := 756
-const PAINEL_TIPO_Y1 := 799
-const PAINEL_DESC_Y0 := 810
 ## BARRA SUPERIOR metálica: x 562..1920 (29,3%..100%), y 0..92 (8,5% da alt).
 const BARRA_TOPO_X0 := 562
 const BARRA_TOPO_Y1 := 92
@@ -224,11 +203,6 @@ const RETRATO_NOME_RIVAL_X := RETRATO_RIVAL_X - 10 - RETRATO_NOME_L # 1460
 ## Cores da ref (amarelo do valor/nome, verde do tipo, laranja da barra).
 const COR_PAINEL := Color(0.106, 0.137, 0.251, 1.0)   # #1b2340 azul-marinho
 const COR_PAINEL_BORDA := Color(0.30, 0.38, 0.62, 1.0)
-const COR_LP_VALOR := Color(1.0, 0.83, 0.00, 1.0)
-const COR_NOME := Color(1.0, 0.85, 0.15, 1.0)
-const COR_TIPO := Color(0.30, 0.95, 0.45, 1.0)
-const COR_DESCRICAO := Color(0.92, 0.94, 1.00, 1.0)
-const COR_SCROLL := Color(1.0, 0.55, 0.00, 1.0)
 const COR_METAL_TOPO := Color(0.46, 0.62, 0.96, 1.0)
 const COR_METAL_BASE := Color(0.10, 0.17, 0.44, 1.0)
 const COR_FASE_ATIVA := Color(1.0, 0.83, 0.00, 1.0)
@@ -287,6 +261,13 @@ const LUGAR_PERTO_X_SEM_CAM := 0.3
 const LUGAR_LONGE_X_SEM_CAM := -2.8
 ## Proporção exata da carta real 59x86mm (0,6860). Tudo que é carta, slot
 ## ou pilha usa essa proporção — nenhuma carta fica de tamanho diferente.
+## Janela de arte DENTRO da moldura real da carta (832x1248), em fracao: a arte
+## preenche a janela sem sobra. DONO: a mesa, porque a carta 3D e o painel
+## esquerdo usam a mesma janela (uma so medida para as duas pecas).
+const JANELA_ART_X0 := 0.10
+const JANELA_ART_X1 := 0.90
+const JANELA_ART_Y0 := 0.165
+const JANELA_ART_Y1 := 0.615
 const ALT_CARTA := 86.0 / 59.0
 ## Finura real de carta (0,3mm numa carta 59mm = 0,005 da largura).
 const GROSS_CARTA := 0.005
@@ -371,10 +352,6 @@ var _auto_passa_espera := -1.0
 ## as etiquetas de nome ao lado de cada retrato (dado real do duelista).
 var _lbl_placa_nome_voce: Label = null
 var _lbl_placa_nome_rival: Label = null
-## Orbes e contador da carta focada (painel esquerdo, estilo da ref).
-var _orbe_foco: TextureRect = null
-var _orbe_tipo_foco: TextureRect = null
-var _lbl_copia_foco: Label = null
 var _lbl_mao_rival: Label = null
 var _lbl_fase: Label = null
 var _lbl_log: Label = null
@@ -390,22 +367,9 @@ var _retrato_voce_foto: TextureRect = null
 var _retrato_voce_silhueta: Label = null
 var _lbl_retrato_rival_nome: Label = null
 var _lbl_retrato_voce_nome: Label = null
-var _painel_foco: Control = null
-var _tex_foco_arte: TextureRect = null
-var _cor_foco_arte: ColorRect = null
-var _tex_foco_moldura: TextureRect = null
-var _tex_foco_orbe: TextureRect = null
-var _caixa_foco_estrelas: HBoxContainer = null
-var _lbl_foco_nome_molde: Label = null
 ## Cache de textura da sessao (a moldura/orbe/estrela se repetem; o que for
 ## lido do disco e guardado aqui, entao a tela nao relê a imagem a cada uso).
 var _cache_tex: Dictionary = {}
-var _lbl_foco_nome: Label = null
-var _lbl_foco_estrelas: Label = null
-var _lbl_foco_stats: Label = null
-var _cor_foco_attr: ColorRect = null
-var _lbl_foco_tipo: Label = null
-var _lbl_foco_desc: Label = null
 
 ## Identidade real do duelo (só leitura do dado): nomes + retratos dos
 ## duelistas vindos de duel_setup.duelist1/2 + duelists (nome/portrait).
@@ -541,6 +505,8 @@ var _faixa: PanelContainer = null
 ## Os menus sobre a cena (carta do centro + popup da estrela/alvo): o no e o
 ## arquivo `menus_3d.gd`.
 var _menus: CanvasLayer = null
+## O painel esquerdo com a carta focada: o no e o arquivo `painel_carta_3d.gd`.
+var _painel: Control = null
 var _debug := _quer_debug()
 
 
@@ -2612,7 +2578,19 @@ func _construir_hud() -> void:
 	_flash_tela.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_flash_tela.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud.add_child(_flash_tela)
-	_construir_painel_foco(hud)
+	_painel = PainelCarta3D.new()
+	_painel.largura = PAINEL_ESQ_L
+	_painel.altura = TELA_A
+	_painel.janela_art = Vector4(JANELA_ART_X0, JANELA_ART_Y0, JANELA_ART_X1, JANELA_ART_Y1)
+	_painel.estado = Callable(self, "_pegar_estado")
+	_painel.cartas_de = Callable(self, "_pegar_cartas")
+	_painel.foco = Callable(self, "_carta_focada")
+	_painel.tex_cache = Callable(self, "_tex_cache")
+	_painel.cor_de_atributo = Callable(self, "_cor_atributo")
+	_painel.textura_arte = Callable(self, "_textura_arte")
+	_painel.moldura_da_carta = Callable(self, "_moldura_da_carta")
+	_painel.estrelas_da_carta = Callable(self, "_estrelas_da_carta")
+	hud.add_child(_painel)
 
 
 ## Fundo do painel esquerdo: azul-marinho escuro (ref) ocupando a faixa
@@ -2652,166 +2630,6 @@ func _construir_fundo_painel(hud: Control) -> void:
 ## turno atual". A fase real do motor NÃO é mais desenhada em lugar nenhum da
 ## tela (ela continua existindo no GameState, que ninguém mexeu).
 
-func _ancorar_moldura(c: Control, x0: float, y0: float, x1: float, y1: float) -> void:
-	c.anchor_left = x0
-	c.anchor_top = y0
-	c.anchor_right = x1
-	c.anchor_bottom = y1
-	c.offset_left = 0.0
-	c.offset_top = 0.0
-	c.offset_right = 0.0
-	c.offset_bottom = 0.0
-
-
-## PAINEL ESQUERDO da ref (doc 15 §15.3), de cima para baixo, nas faixas
-## medidas no §15.3: fundo azul-marinho (feito em `_construir_fundo_painel`),
-## a CARTA (y 16..562), a faixa ATK/DEF com os orbes e o contador de
-## cópias (y 562..648), o NOME em amarelo (y 670..756), o TIPO verde entre
-## colchetes (y 756..799) e a DESCRIÇÃO branca com a barra laranja de rolagem
-## (y 810..1080). Tudo lê o dado real da carta focada; nada aqui calcula
-## regra (só desenho, D19).
-func _construir_painel_foco(hud: Control) -> void:
-	_painel_foco = Control.new()
-	_painel_foco.name = "PainelCarta"
-	_painel_foco.position = Vector2.ZERO
-	_painel_foco.size = Vector2(PAINEL_ESQ_L, TELA_A)
-	_painel_foco.custom_minimum_size = Vector2(PAINEL_ESQ_L, TELA_A)
-	_painel_foco.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hud.add_child(_painel_foco)
-	# --- CARTA (y 16..562). A moldura real é 832x1248 (0,667), então numa
-	# caixa de 546 de altura a carta tem 364 de largura, CENTRADA na faixa.
-	var molde := Control.new()
-	molde.name = "CartaMolde"
-	var altura_carta := float(PAINEL_CARTA_Y1 - PAINEL_CARTA_Y0)
-	var largura_carta := altura_carta * (832.0 / 1248.0)
-	molde.position = Vector2(round((PAINEL_ESQ_L - largura_carta) * 0.5), PAINEL_CARTA_Y0)
-	molde.size = Vector2(round(largura_carta), altura_carta)
-	molde.custom_minimum_size = molde.size
-	molde.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_painel_foco.add_child(molde)
-	_tex_foco_moldura = TextureRect.new()
-	_tex_foco_moldura.name = "Moldura"
-	_tex_foco_moldura.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_tex_foco_moldura.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_tex_foco_moldura.stretch_mode = TextureRect.STRETCH_SCALE
-	_tex_foco_moldura.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	molde.add_child(_tex_foco_moldura)
-	# Peças posicionadas em % da MOLDURA REAL (JANELA_ART_* e as medidas do
-	# editor), com ÂNCORAS: assim elas acompanham o tamanho do molde
-	# (que estica com o painel) e a arte preenche a janela sem sobra — antes
-	# a posição era em px de um molde de 300 px e sobrava uma faixa.
-	_tex_foco_arte = TextureRect.new()
-	_tex_foco_arte.name = "FocoArte"
-	_ancorar_moldura(_tex_foco_arte, JANELA_ART_X0, JANELA_ART_Y0, JANELA_ART_X1, JANELA_ART_Y1)
-	_tex_foco_arte.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_tex_foco_arte.stretch_mode = TextureRect.STRETCH_SCALE
-	_tex_foco_arte.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	molde.add_child(_tex_foco_arte)
-	_cor_foco_arte = ColorRect.new()
-	_cor_foco_arte.name = "FocoCor"
-	_ancorar_moldura(_cor_foco_arte, JANELA_ART_X0, JANELA_ART_Y0, JANELA_ART_X1, JANELA_ART_Y1)
-	_cor_foco_arte.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	molde.add_child(_cor_foco_arte)
-	_lbl_foco_nome_molde = _rotulo_hud("FocoNomeMolde", "", Vector2.ZERO, 15, Color(0.12, 0.07, 0.03))
-	_ancorar_moldura(_lbl_foco_nome_molde, 0.054, 0.027, 0.674, 0.078)
-	_lbl_foco_nome_molde.clip_text = true
-	molde.add_child(_lbl_foco_nome_molde)
-	_tex_foco_orbe = TextureRect.new()
-	_tex_foco_orbe.name = "FocoOrbe"
-	_ancorar_moldura(_tex_foco_orbe, 0.833, 0.044, 0.928, 0.109)
-	_tex_foco_orbe.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_tex_foco_orbe.stretch_mode = TextureRect.STRETCH_SCALE
-	_tex_foco_orbe.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	molde.add_child(_tex_foco_orbe)
-	_caixa_foco_estrelas = HBoxContainer.new()
-	_caixa_foco_estrelas.name = "FocoEstrelasBox"
-	_ancorar_moldura(_caixa_foco_estrelas, 0.40, 0.118, 0.92, 0.172)
-	_caixa_foco_estrelas.alignment = BoxContainer.ALIGNMENT_END
-	_caixa_foco_estrelas.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_caixa_foco_estrelas.add_theme_constant_override("separation", 1)
-	molde.add_child(_caixa_foco_estrelas)
-	# --- FAIXA ATK/DEF (y 562..648): "ATK 3000 DEF 2000" + 2 orbes +
-	# contador de cópias da carta no baralho do jogador (dado real).
-	var faixa := HBoxContainer.new()
-	faixa.name = "FocoFaixa"
-	faixa.position = Vector2(28, PAINEL_STATS_Y0)
-	faixa.size = Vector2(PAINEL_ESQ_L - 56, PAINEL_STATS_Y1 - PAINEL_STATS_Y0)
-	faixa.custom_minimum_size = faixa.size
-	faixa.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	faixa.add_theme_constant_override("separation", 10)
-	faixa.alignment = BoxContainer.ALIGNMENT_CENTER
-	_painel_foco.add_child(faixa)
-	_cor_foco_attr = ColorRect.new()
-	_cor_foco_attr.name = "FocoAttrIcon"
-	_cor_foco_attr.custom_minimum_size = Vector2(26, 26)
-	_cor_foco_attr.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_cor_foco_attr.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	faixa.add_child(_cor_foco_attr)
-	_lbl_foco_stats = _rotulo_hud("FocoStats", "", Vector2.ZERO, 26, COR_LP_VALOR)
-	faixa.add_child(_lbl_foco_stats)
-	_orbe_foco = TextureRect.new()
-	_orbe_foco.name = "FocoOrbeFaixa"
-	_orbe_foco.custom_minimum_size = Vector2(52, 52)
-	_orbe_foco.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_orbe_foco.stretch_mode = TextureRect.STRETCH_SCALE
-	_orbe_foco.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_orbe_foco.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	faixa.add_child(_orbe_foco)
-	_orbe_tipo_foco = TextureRect.new()
-	_orbe_tipo_foco.name = "FocoOrbeTipo"
-	_orbe_tipo_foco.custom_minimum_size = Vector2(52, 52)
-	_orbe_tipo_foco.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_orbe_tipo_foco.stretch_mode = TextureRect.STRETCH_SCALE
-	_orbe_tipo_foco.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_orbe_tipo_foco.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	faixa.add_child(_orbe_tipo_foco)
-	_lbl_copia_foco = _rotulo_hud("FocoCopias", "", Vector2.ZERO, 26, COR_DESCRICAO)
-	_lbl_copia_foco.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	faixa.add_child(_lbl_copia_foco)
-	# --- NOME (y 670..756) em amarelo, do lado esquerdo como na ref.
-	_lbl_foco_nome = _rotulo_hud("FocoNome", "—", Vector2(28, PAINEL_NOME_Y0), 30, COR_NOME)
-	_lbl_foco_nome.size = Vector2(PAINEL_ESQ_L - 56, PAINEL_NOME_Y1 - PAINEL_NOME_Y0)
-	_lbl_foco_nome.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_lbl_foco_nome.clip_text = true
-	_painel_foco.add_child(_lbl_foco_nome)
-	# --- TIPO (y 756..799) verde entre colchetes, como na ref.
-	_lbl_foco_tipo = _rotulo_hud("FocoTipo", "", Vector2(28, PAINEL_TIPO_Y0), 24, COR_TIPO)
-	_lbl_foco_tipo.size = Vector2(PAINEL_ESQ_L - 56, PAINEL_TIPO_Y1 - PAINEL_TIPO_Y0)
-	_lbl_foco_tipo.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_lbl_foco_tipo.clip_text = true
-	_painel_foco.add_child(_lbl_foco_tipo)
-	# --- DESCRIÇÃO (y 810..1080): bloco de tamanho FIXO (texto longo nunca
-	# muda o tamanho do painel, corta com clip) + barra laranja de rolagem.
-	var bloco := Control.new()
-	bloco.name = "BlocoDesc"
-	bloco.position = Vector2(28, PAINEL_DESC_Y0)
-	bloco.size = Vector2(PAINEL_ESQ_L - 56, TELA_A - PAINEL_DESC_Y0 - 10)
-	bloco.custom_minimum_size = bloco.size
-	bloco.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_painel_foco.add_child(bloco)
-	# SEM linha de atributo aqui (D5): na ref, depois do [TIPO] vem direto a
-	# descrição. O atributo já aparece como ORBE na faixa de ATK/DEF e no
-	# canto da carta — repetir o nome em texto era só ruído.
-	_lbl_foco_desc = _rotulo_hud("FocoDesc", "", Vector2.ZERO, 21, COR_DESCRICAO)
-	_lbl_foco_desc.position = Vector2(0, 4)
-	_lbl_foco_desc.size = Vector2(bloco.size.x - 22, bloco.size.y - 4)
-	_lbl_foco_desc.custom_minimum_size = Vector2(bloco.size.x - 22, bloco.size.y - 4)
-	_lbl_foco_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_lbl_foco_desc.clip_text = true
-	_lbl_foco_desc.vertical_alignment = VERTICAL_ALIGNMENT_TOP
-	bloco.add_child(_lbl_foco_desc)
-	var barra := ColorRect.new()
-	barra.name = "BarraVermelha"
-	barra.color = COR_SCROLL
-	barra.position = Vector2(bloco.size.x - 10, 0)
-	barra.size = Vector2(10, bloco.size.y)
-	barra.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	bloco.add_child(barra)
-
-
-## Os menus (carta do centro + popup) estao no no `menus_3d.gd`; a mesa so
-## MANDA o que eles mostram. Quem sabe escrever no menu e o arquivo dele, e o
-## menu nunca guarda regra: as opcoes e os textos chegam prontos.
 func _mostrar_centro3d(face_baixo: bool) -> void:
 	if _menus != null and is_instance_valid(_menus):
 		_menus.mostrar_centro(_texto_do_centro(face_baixo))
@@ -2904,6 +2722,13 @@ func _atualizar_hud() -> void:
 	_atualizar_painel_foco()
 
 
+## O painel esquerdo PERGUNTA a mesa o que esta sob o cursor e escreve. Quem
+## sabe desenhar o painel e o arquivo dele (`painel_carta_3d.gd`).
+func _atualizar_painel_foco() -> void:
+	if _painel != null and is_instance_valid(_painel):
+		_painel.atualizar()
+
+
 ## D44 (itens 3, 4 e 11): as PLACAS DE CONTADOR dos cantos saíram de cena. O
 ## número de cartas do baralho/cemiterio nao e mais um numero solto: quem
 ## mostra a quantidade real e a ALTURA da pilha, na faixa do meio
@@ -2941,159 +2766,25 @@ func _carta_focada() -> Dictionary:
 	return {"dado": _fantasia(inst), "aberta": aberta, "lado": lado, "inst": inst}
 
 
-## Preenche o painel esquerdo com o DADO real (nome/level/ATK/DEF/tipo/
-## descrição) + arte real quando existir, senão cor do atributo.
-func _atualizar_painel_foco() -> void:
-	if _painel_foco == null:
-		return
-	var foco := _carta_focada()
-	var dado: Dictionary = foco.get("dado", {}) as Dictionary
-	if dado.is_empty():
-		_lbl_foco_nome.text = "—"
-		if _lbl_foco_estrelas != null:
-			_lbl_foco_estrelas.text = ""
-		_lbl_foco_stats.text = ""
-		_cor_foco_attr.color = Color(0.2, 0.2, 0.25)
-		_lbl_foco_tipo.text = ""
-		_lbl_foco_desc.text = "Mire numa carta."
-		_lbl_copia_foco.text = ""
-		_orbe_foco.texture = null
-		_orbe_tipo_foco.texture = null
-		_orbe_foco.visible = false
-		_orbe_tipo_foco.visible = false
-		_tex_foco_arte.visible = false
-		_cor_foco_arte.color = Color(0.08, 0.08, 0.12)
-		_tex_foco_moldura.texture = null
-		_tex_foco_orbe.texture = null
-		_lbl_foco_nome_molde.text = ""
-		for f in _caixa_foco_estrelas.get_children():
-			(f as Node).queue_free()
-		return
-	# D46b: na vez do RIVAL o painel esquerdo CONTINUA VIVO (o jogador pode
-	# focar o que quiser), mas não entrega a carta: mostra a imagem
-	# PADRONIZADA do jogo (o verso) e NENHUM dado — sem nome, ATK/DEF, tipo,
-	# descrição, estrelas, orbe nem contador. É o que o rival está vendo, e o
-	# rival não pode saber o que você tem.
-	if _st != null and int(_st.current_player) == 1:
-		_atualizar_painel_neutro()
-		return
-	# Completa pelo DADO real quando a instância só tem o básico.
-	var cid := str(dado.get("id", dado.get("card_id", "")))
-	var real: Dictionary = dado
-	if not cid.is_empty() and _cartas.has(cid):
-		real = _cartas[cid] as Dictionary
-	var nome := str(real.get("name", dado.get("name", "?")))
-	_lbl_foco_nome.text = nome
-	var nivel := int(real.get("level", dado.get("level", 0)))
-	if _lbl_foco_estrelas != null:
-		_lbl_foco_estrelas.text = ""
-	# Carta inteira na moldura (igual ao editor): moldura + arte + nome +
-	# orbe + fileira de estrelas-imagem, tudo do projeto (com cache).
-	_tex_foco_moldura.texture = _tex_cache(_moldura_da_carta(real))
-	_lbl_foco_nome_molde.text = nome.to_upper()
-	var attr_cedo := str(real.get("attribute", dado.get("attribute", "")))
-	var tex_o := _tex_cache("assets/attributes/%s.png" % attr_cedo.to_lower())
-	_tex_foco_orbe.texture = tex_o
-	for f in _caixa_foco_estrelas.get_children():
-		(f as Node).queue_free()
-	var tex_e := _tex_cache("assets/estrelas/estrela.png")
-	if tex_e != null and str(real.get("card_type", dado.get("card_type", "monster"))) == "monster":
-		for s in range(clampi(nivel, 0, 12)):
-			var im := TextureRect.new()
-			im.custom_minimum_size = Vector2(20, 20)
-			im.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			im.stretch_mode = TextureRect.STRETCH_SCALE
-			im.texture = tex_e
-			im.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			_caixa_foco_estrelas.add_child(im)
-	_lbl_foco_stats.text = "ATK/%d DEF/%d" % [int(real.get("attack", dado.get("attack", 0))), int(real.get("defense", dado.get("defense", 0)))]
-	var tipo := str(real.get("monster_type", dado.get("monster_type", "")))
-	var attr := str(real.get("attribute", dado.get("attribute", "")))
-	# O atributo NÃO vira texto no painel (D5): fica no orbe da faixa e no
-	# canto da carta. O quadradinho da faixa usa a cor do atributo real.
-	_cor_foco_attr.color = _cor_atributo(attr)
-	var ctipo := str(real.get("card_type", dado.get("card_type", "monster")))
-	if ctipo == "monster":
-		_lbl_foco_tipo.text = "[%s]" % tipo.to_upper() if not tipo.is_empty() else "[MONSTRO]"
-	else:
-		_lbl_foco_tipo.text = "[%s]" % ctipo.to_upper()
-	var desc := str(real.get("description", dado.get("description", "")))
-	if desc.strip_edges().is_empty():
-		var ops := _estrelas_da_carta(dado)
-		desc = "Guardiãs %s/%s." % [str(ops[0]), str(ops[1])] if not dado.is_empty() else ""
-		if not attr.is_empty():
-			desc += (" Atributo %s." % attr) if not desc.is_empty() else ("Atributo %s." % attr)
-	_lbl_foco_desc.text = desc
-	# --- Faixa ATK/DEF: os 2 orbes e o contador de cópias (dado real).
-	# Orbe 1 = ATRIBUTO; orbe 2 = TIPO, e só existe quando o dado tem
-	# atributo de magia/armadilha (spell/trap) — carta sem esse atributo não
-	# ganha orbe inventado.
-	_orbe_foco.texture = tex_o
-	_orbe_foco.visible = tex_o != null
-	var tipo_orbe := attr_cedo.to_lower() if ctipo == "spell" or ctipo == "trap" else ""
-	if not tipo_orbe.is_empty():
-		var tex_t := _tex_cache("assets/attributes/%s.png" % tipo_orbe)
-		_orbe_tipo_foco.texture = tex_t
-		_orbe_tipo_foco.visible = tex_t != null
-	else:
-		_orbe_tipo_foco.texture = null
-		_orbe_tipo_foco.visible = false
-	var copias := _contar_copia_carta(cid)
-	_lbl_copia_foco.text = ("x%d" % copias) if copias > 0 else ""
-	var tex := _textura_arte(real)
-	if tex != null:
-		_tex_foco_arte.texture = tex
-		_tex_foco_arte.visible = true
-		_cor_foco_arte.visible = false
-	else:
-		_tex_foco_arte.visible = false
-		_cor_foco_arte.visible = true
-		_cor_foco_arte.color = _cor_atributo(attr)
-
-
-## D46b: o painel na vez do RIVAL — a carta some, o quadro fica. Imagem
-## PADRONIZADA (o verso, que já é asset do jogo: nada inventado) e nenhum
-## dado. Só DESENHO; o estado não é tocado.
-func _atualizar_painel_neutro() -> void:
-	_lbl_foco_nome.text = ""
-	_lbl_foco_nome_molde.text = ""
-	_lbl_foco_stats.text = ""
-	_lbl_foco_tipo.text = ""
-	_lbl_foco_desc.text = ""
-	_lbl_copia_foco.text = ""
-	if _lbl_foco_estrelas != null:
-		_lbl_foco_estrelas.text = ""
-	for f in _caixa_foco_estrelas.get_children():
-		_caixa_foco_estrelas.remove_child(f as Node)
-		# `free()` imediato, não `queue_free`: a fila só drena no fim do frame,
-		# e o GUT conta órfão antes disso.
-		(f as Node).free()
-	_orbe_foco.texture = null
-	_orbe_foco.visible = false
-	_orbe_tipo_foco.texture = null
-	_orbe_tipo_foco.visible = false
-	_cor_foco_attr.color = Color(0.2, 0.2, 0.25)
-	_tex_foco_moldura.texture = _tex_cache("assets/frames/normal.jpg")
-	_tex_foco_orbe.texture = null
-	var verso := _tex_cache("assets/backs/verso_padrao.png")
-	_tex_foco_arte.texture = verso
-	_tex_foco_arte.visible = verso != null
-	_cor_foco_arte.visible = verso == null
-	_cor_foco_arte.color = Color(0.12, 0.12, 0.18)
-
-
-## Quantas CÓPIAS da carta focada estão no BARALHO DO JOGADOR (dado real).
-## Só conta o estado — devolve 0 se não achar, e o HUD esconde o contador
-## quando 0 (nada inventado).
-func _contar_copia_carta(cid: String) -> int:
-	if _st == null or cid.is_empty():
-		return 0
-	var p: Dictionary = (_st.players[0] as Dictionary)
-	var total := 0
-	for inst in (p.get("deck", []) as Array):
-		if inst is Dictionary and str((inst as Dictionary).get("card_id", (inst as Dictionary).get("id", ""))) == cid:
-			total += 1
-	return total
+## As 2 guardian stars do DADO (fm guardian_star_1/2). Sem inventar: se o dado
+## nao tem, usa "-" para nao travar o fluxo. E o DONO desta leitura porque o
+## FLUXO precisa delas (sao as opcoes do menu da estrela) e o painel tambem.
+## As 2 guardian stars do DADO (fm guardian_star_1/2). Sem inventar: se o dado
+## nao tem, usa "-" para nao travar o fluxo. E o DONO desta leitura porque o
+## FLUXO precisa delas (sao as opcoes do menu da estrela) e o painel tambem.
+func _estrelas_da_carta(carta: Dictionary) -> Array:
+	var cartas: Dictionary = _cartas
+	var real: Dictionary = {}
+	var cid := str(carta.get("id", ""))
+	if not cid.is_empty() and cartas.has(cid):
+		real = cartas[cid] as Dictionary
+	var s1 := str(carta.get("guardian_star_1", real.get("guardian_star_1", "")))
+	var s2 := str(carta.get("guardian_star_2", real.get("guardian_star_2", "")))
+	if s1.strip_edges().is_empty():
+		s1 = "\u2014"
+	if s2.strip_edges().is_empty():
+		s2 = "\u2014"
+	return [s1, s2]
 
 
 func _texto_inst_slot(lado: int, zona_nome: String, slot: int) -> String:
@@ -3149,24 +2840,6 @@ func _resumo_slots() -> String:
 	return txt
 
 
-## Lê as 2 guardian stars do DADO (fm guardian_star_1/2). Sem inventar:
-## se o dado não tem, usa "—" p/ não travar o fluxo (igual ao 2D).
-func _estrelas_da_carta(carta: Dictionary) -> Array:
-	var real: Dictionary = {}
-	var cid := str(carta.get("id", ""))
-	if not cid.is_empty() and _cartas.has(cid):
-		real = _cartas[cid] as Dictionary
-	var s1 := str(carta.get("guardian_star_1", real.get("guardian_star_1", "")))
-	var s2 := str(carta.get("guardian_star_2", real.get("guardian_star_2", "")))
-	if s1.strip_edges().is_empty():
-		s1 = "—"
-	if s2.strip_edges().is_empty():
-		s2 = "—"
-	return [s1, s2]
-
-
-## Instância do campo -> carta completa p/ fusão (igual ao 2D: junta o
-## DADO real pelo card_id; sem DADO usa o básico da instância).
 func _carta_completa_do_campo(inst: Dictionary) -> Dictionary:
 	var cid := str(inst.get("card_id", ""))
 	var base: Dictionary = {}

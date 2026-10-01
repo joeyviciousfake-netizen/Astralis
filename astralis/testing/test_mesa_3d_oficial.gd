@@ -872,7 +872,8 @@ func test_painel_esquerdo_carta_focada() -> void:
 	# Contador de cópias: só aparece se o baralho do jogador TEM a carta.
 	var copias := str((mesa.get_node("HUD/PainelCarta/FocoFaixa/FocoCopias") as Label).text)
 	var cid := str(dado_foco.get("card_id", dado_foco.get("id", "")))
-	var esperado_copia: int = int(mesa.call("_contar_copia_carta", cid))
+	var painel: Node = mesa.get("_painel") as Node
+	var esperado_copia: int = int(painel.call("contar_copia_carta", cid, mesa.get("_st")))
 	assert_eq(copias, ("x%d" % esperado_copia) if esperado_copia > 0 else "", "Contador de cópias bate com o baralho real (%d)." % esperado_copia)
 	# Bloco com tamanho FIXO (ref): descrição longa nunca muda o tamanho.
 	assert_true(bloco.custom_minimum_size.y > 0 and bloco.size.y > 0, "Bloco de descrição tem tamanho fixo.")

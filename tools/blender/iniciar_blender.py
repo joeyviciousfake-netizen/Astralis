@@ -31,6 +31,37 @@ import bpy
 
 ADDON = "blender_mcp"
 PORTA_PADRAO = 9876
+BACKEND_GPU = ("OPTIX", "CUDA", "HIP", "ONEAPI")
+
+
+def deixar_cycles_na_gpu():
+    """D61: o projeto renderiza em CYCLES, na GPU. A maquina tem RTX 5060 e o
+    backend medido e OPTIX (Blender 5.2.2 LTS ve a 5060 em OPTIX e em CUDA).
+
+    O backend e preferencia de maquina (nao mora no .blend), entao e aqui que
+    ele e escolhido — senao a interface abriria com o padrao do Blender, que
+    seria EEVEE na CPU, e a previa da interface mentiria sobre a previa oficial.
+    """
+    prefs = bpy.context.preferences.addons.get("cycles")
+    if prefs is None:
+        print("[ASTRALIS] Cycles nao esta neste build: a interface vai abrir sem GPU de render.")
+        return "nenhum"
+    cp = prefs.preferences
+    for backend in BACKEND_GPU:
+        try:
+            cp.compute_device_type = backend
+        except TypeError:
+            continue
+        cp.get_devices_for_type(backend)
+        gpus = [d for d in cp.devices if d.type == backend]
+        if not gpus:
+            continue
+        for d in cp.devices:
+            d.use = (d.type == backend)
+        print("[ASTRALIS] Cycles: backend %s | %s" % (backend, ", ".join(d.name for d in gpus)))
+        return backend
+    print("[ASTRALIS] Cycles: nenhuma GPU encontrada (so CPU).")
+    return "nenhum"
 
 
 def porta():
