@@ -24,6 +24,7 @@ const Faixa2D := preload("res://duel3d/faixa_2d.gd")
 const Menus3D := preload("res://duel3d/menus_3d.gd")
 const PainelCarta3D := preload("res://duel3d/painel_carta_3d.gd")
 const Cursor3D := preload("res://duel3d/cursor_3d.gd")
+const Campo3D := preload("res://duel3d/campo_3d.gd")
 
 ## Conversão desenho 2D->3D (só desenho): campo 2D centrado em x=1158.
 ## Composição ref nova (céu azul GX, SEM MESA): câmera FIXA atrás/acima do
@@ -101,11 +102,6 @@ const ASSETS_EMBUTIDOS := [
 ]
 
 const LARG_CARTA := 1.0
-## A PEÇA DE VIDRO em larguras de carta: 1,40 = a peça é 1,40x a carta,
-## com a fresta que a referência tem entre as peças (o espaçamento vem do
-## dado). Ela CRESCE junto com o campo (ESCALA_CAMPO), então a proporção
-## peça/carta é a mesma em qualquer enquadramento.
-const PECA_EM_CARTAS := 1.40
 ## Lado do ladrilho de CIMA (só o ladrilho, não o cursor): um pouco maior
 ## que a carta DEITADA (ALT_CARTA = 1,4576 larguras), para a carta de DEF
 ## caber dentro da peça em vez de encostar/cortar na borda.
@@ -310,7 +306,6 @@ var _cam: Camera3D = null
 ## região do campo (dentro de Camada3D/JanelaCampo), com a câmera dentro.
 var _vp: SubViewport = null
 var _no_cartas: Node3D = null
-var _no_slots: Node3D = null
 ## D47: o pivô da volta da mesa. A câmera é filha dele e nunca se move; quem
 ## gira 180° em torno do centro do campo é o pivô.
 var _pivo: Node3D = null
@@ -501,6 +496,8 @@ var _menus: CanvasLayer = null
 var _painel: Control = null
 ## O cursor de foco (moldura azul + mao branca): o no e o arquivo `cursor_3d.gd`.
 var _cursor: Node3D = null
+## O campo de vidro (os 20 ladrilhos): o no e o arquivo `campo_3d.gd`.
+var _campo: Node3D = null
 var _debug := _quer_debug()
 
 
@@ -883,29 +880,17 @@ func _caixa(nome: String, tamanho: Vector3, pos: Vector3, material: Material) ->
 
 
 func _construir_campo() -> void:
-	var campo := Node3D.new()
-	campo.name = "Campo"
-	_vp.add_child(campo)
-	_no_slots = Node3D.new()
-	_no_slots.name = "Slots"
-	campo.add_child(_no_slots)
-	# 20 painéis chanfrados escuros flutuantes (5+5 por lado, espelho do 2D
-	# via BoardLayout real). Vazio = painel escuro com brilho sutil na
-	# borda; na perspectiva da câmera fixa viram os trapezoides da ref.
-	for lado in [0, 1]:
-		for i in range(5):
-			_no_slots.add_child(_painel_slot(lado, "monstro", i))
-			_no_slots.add_child(_painel_slot(lado, "magia", i))
-	var laterais := Node3D.new()
-	laterais.name = "Laterais"
-	campo.add_child(laterais)
-	# D44 (itens 3, 4, 6 e 11): as pilhas de baralho/cemitério e os
-	# contadores SAÍRAM dos cantos (o usuário: "estão muito no canto e está
-	# ruim de visualizar"). D45 (item 2): eles passaram também para 2D, na
-	# faixa do meio do HUD (`_construir_faixa`) — o 3D do meio ficou
-	# VAZIO de propósito, que é o que o usuário pediu ("agora em 2d, assim
-	# fica mais facil"). `Laterais` também: é o guarda-chuva que o resto da
-	# cena já usava, e some qualquer desenho solto do canto.
+	# O CAMPO DE VIDRO (os 20 paineis + o guarda-chuva das laterais): o no e
+	# o arquivo dele (`campo_3d.gd`). Quem sabe ONDE o vidro fica e o arquivo;
+	# quem sabe a medida do DADO (a posicao de cada slot em XZ) e a mesa.
+	_campo = Campo3D.new()
+	_campo.pos_slot = Callable(self, "_pos_slot")
+	_campo.caixa = Callable(self, "_caixa")
+	_campo.vidro = Callable(self, "_vidro")
+	_campo.topo = TOPO
+	_campo.escala_campo = ESCALA_CAMPO
+	_campo.peca_prof_cartas = PECA_PROF_CARTAS
+	_vp.add_child(_campo)
 	_no_cartas = Node3D.new()
 	_no_cartas.name = "Cartas"
 	_vp.add_child(_no_cartas)
@@ -925,52 +910,8 @@ func _construir_campo() -> void:
 	_diag("Campo: 20 painéis + faixa do meio (7 itens) + Cursor3D.")
 
 
-func _peca_lado() -> float:
-	return PECA_EM_CARTAS * ESCALA_CAMPO
-
-
-## Lado do LADRIHO (vidro) que recebe a carta DEITADA: precisa caber na
-## carta em ATAQUE (1,0 de largura) E na carta em DEFESA, que é a MESMA
-## carta girada um quarto de volta — ou seja, tem de ser maior que o lado
-## LONGO dela (ALT_CARTA = 1,4576). Com 1,52 a carta de DEF terminava em
-## cima da borda do vidro e invadia o vizinho; 1,58 deixa ~0,12 de carta de
-## folga dos dois lados. Só apresentação; a composição do dado não muda.
 func _peca_prof_carta() -> float:
 	return PECA_PROF_CARTAS * ESCALA_CAMPO
-
-
-## Painel de slot = PEÇA DE VIDRO da referência (doc 15 §15.3): vidro azul
-## ESCURO translúcido (dá pra ver o céu/frente através), com aro fino mais
-## claro em volta e ESPAÇO entre as peças (na ref são ladrilhos soltos, não
-## um wireframe colado). O lado acompanha o campo (`_peca_lado`), então a
-## fresta entre as peças continua a mesma em qualquer escala.
-##
-## NÃO passa pela perspectiva (doc 16) de propósito: as 20 peças são
-## construídas UMA vez, com as DUAS fileiras, e a perspectiva só troca os
-## lugares entre elas (lado 0 <-> lado 1). O conjunto de 20 ladrilhos é o
-## mesmo antes e depois, então aqui não há nada a trocar. A CARTA dentro do
-## ladrilho é que se move — e ela passa por `_vis` em `_redesenhar`.
-func _painel_slot(lado: int, tipo: String, indice: int) -> Node3D:
-	var p := _pos_slot(lado, tipo, indice)
-	var no := Node3D.new()
-	no.name = "Painel_p%d_%s%d" % [lado, ("m" if tipo == "monstro" else "s"), indice]
-	no.position = Vector3(p.x, 0.0, p.z)
-	# Vidro: peça ESCURA e translúcida (dá pra ver o céu por baixo, como na
-	# ref) + aro fininho de luz (na ref é um fio, não um wireframe).
-	var mat_borda := _vidro(Color(0.40, 0.58, 0.88), 0.42, 0.05)
-	var mat_base := _vidro(Color(0.035, 0.08, 0.20), 0.72, 0.05)
-	var lado_pec := _peca_prof_carta()
-	var base := _caixa("Base", Vector3(lado_pec, 0.05, lado_pec), Vector3(0, TOPO - 0.03, 0), mat_base)
-	no.add_child(base)
-	var t := 0.05 * ESCALA_CAMPO
-	var meio := lado_pec / 2.0
-	var y := TOPO + 0.005
-	var fora := meio + t / 2.0
-	no.add_child(_caixa("Borda", Vector3(lado_pec + t, 0.02, t), Vector3(0, y, fora), mat_borda))
-	no.add_child(_caixa("Borda2", Vector3(lado_pec + t, 0.02, t), Vector3(0, y, -fora), mat_borda))
-	no.add_child(_caixa("Borda3", Vector3(t, 0.02, lado_pec + t), Vector3(-fora, y, 0), mat_borda))
-	no.add_child(_caixa("Borda4", Vector3(t, 0.02, lado_pec + t), Vector3(fora, y, 0), mat_borda))
-	return no
 
 
 # ---- D47: A VOLTA DA MESA (a camera da a volta, as cartas NAO se mexem) ----
