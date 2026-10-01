@@ -1,6 +1,6 @@
 # 15 — VISUAL DA MESA DE DUELO (espelho da referência)
 
-VERSION: 1.9 (D45: a faixa do meio virou 2D; START/HELP fora; retratos no alto)
+VERSION: 2.0 (D54-D67: a tela do duelo em 8 arquivos, um assunto cada)
 STATUS: AUTHORITATIVE (contrato visual, owner: lead)
 ORIGEM: pedido do usuário 2026-09-28 — "deixar o visual do nosso duelo idêntico a essa imagem"
 REFERÊNCIA: `C:\Users\Max\Downloads\Screenshot-2021-05-05-214047-e1620266990864.webp` (1024x583)
@@ -257,3 +257,34 @@ lugar**):
 
 O que essa faixa **não** é: não é o tabuleiro, não calcula nada, e o Godot
 continua sendo o dono de LP, compra, descarte e vitória.
+
+## 15.8 Onde o desenho mora: os 8 arquivos da tela
+
+A tela do duelo **não é um arquivo**: desde o D59 ela foi dividida por assunto
+(D54-D67). Quem implementa o desenho deste doc mora em `astralis/duel3d/`:
+
+| Arquivo | Assunto | Dono do que ele decide |
+|---|---|---|
+| `mesa_3d.gd` | a mesa: estado do duelo e **orquestração** | o estado e as medidas (posição de slot, altura da mão, extensão de fileira, plano de simetria) |
+| `painel_carta_3d.gd` | o painel esquerdo com a carta focada | nada: ele pergunta o que exibir |
+| `faixa_2d.gd` | a faixa do meio (§15.7) | nada: só lê o `GameState` |
+| `carta_3d.gd` | **fábrica** da carta 3D (corpo, arte, orbe, estrelas, nome, ATK, verso) | o desenho da carta, nunca onde ela fica |
+| `menus_3d.gd` | os menus 3D do centro e da seleção | nada: só escreve o que a mesa montou |
+| `vista_3d.gd` | a câmera no pivô e a volta de 180° (doc 16) | o **número do giro** (0 = seu, 180 = do rival) e o plano de simetria |
+| `campo_3d.gd` | os 20 painéis de vidro | o **tamanho** do vidro (o dado dá a posição) |
+| `cursor_3d.gd` | o cursor de foco: moldura azul + mão branca | nada: a mesa mede a coisa focada |
+
+Três regras que atravessam os oito (ver D57, D59, D64, D65):
+
+1. **Um arquivo = um assunto.** Alvo de 700 linhas, e a divisão é pelo assunto,
+   nunca pela contagem.
+2. **Número com um dono só.** Quem mede é a mesa; o assunto **recebe por
+   parâmetro** (`larg_carta`, `gross_carta`, `janela_art`, `escala_campo`) ou
+   por `Callable` (`pos_slot`, `caixa`, `vidro`, `mat`). Nenhum assunto copia
+   número de outro.
+3. **UI não guarda cópia do estado.** Faixa, painel e menus **perguntam** ao
+   dono a cada atualização; não existe segunda cópia do `GameState`.
+
+Nada disso muda uma linha do contrato visual: é a mesma tela, com o desenho
+dividido. Se este doc e o código divergirem, o doc está errado até prova em
+contrário (regra do `AI_MANIFEST.json`).

@@ -147,7 +147,7 @@ magia 42 (263 acima). O 305 e o 695 **não se mexem** — é por isso que só as
 fileiras de magia foram movidas.
 
 **O que estava estragando (e por que a tela nunca ficava perfeita).** A
-`_pos_slot` do `mesa_3d.gd` tinha, por cima do dado, dois números chutados por
+`_pos_slot` da `mesa_3d.gd` tinha, por cima do dado, dois números chutados por
 iteração de **calibração de tela** do D44 (`APROXIMA_MAGIA_VOCE = 0.22` e
 `APROXIMA_MAGIA_RIVAL = 0.05`) que deslocavam a fileira de magia no Z para
 "igualar o vão na tela". Medido em unidades de mundo, o resultado era:

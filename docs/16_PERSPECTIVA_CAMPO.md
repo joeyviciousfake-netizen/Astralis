@@ -10,9 +10,9 @@ Este arquivo continua sendo o dono do assunto ("de que lado a tela está olhando
 a mesa"); o texto abaixo das §§16.1 a 16.14 é o **histórico** do plano que a
 D47 substituiu, e está lá porque foi o que motivou a mudança (não apagar o
 raciocínio: a foto que fez o usuário mudar de ideia está described no §16.13).
-OWNER: lead (a implementação é do runtime: `duel3d/mesa_3d.gd`)
+OWNER: lead (a implementação é do runtime: `astralis/duel3d/`, e a câmera + a volta em `vista_3d.gd`, D65)
 REFERÊNCIA: conversa de 2026-09-28 (D46, plano) e 2026-09-29 (D47, a volta)
-OWNER: lead (a implementação é do runtime: `duel3d/mesa_3d.gd`)
+OWNER: lead (a implementação é do runtime: `astralis/duel3d/`, e a câmera + a volta em `vista_3d.gd`, D65)
 ORIGEM: conversa de 2026-09-28, depois de ver a faixa 2D (D45/D45b, já no git)
 DEPENDES: `13_TABULEIRO_DUELO.md`, `14_EXPERIENCIA_USUARIO.md`,
 `15_VISUAL_DUELO.md`, D17, D18, D40, D41, D42, D45, D45b
@@ -238,7 +238,7 @@ Nada disso trava a etapa 1.
 - A troca de perspectiva acontece duas vezes por rodada de turnos (uma para
   entrar na vez dele, uma para voltar). Se demorar, cansa.
 - É a maior mudança de desenho da mesa depois do D41: toca 7-8 funções do
-  `mesa_3d.gd` (ver 16.5). Nada de `duel/`/`core/`/`ui/`.
+  `astralis/duel3d/` (a câmera e a volta em `vista_3d.gd`, D65; ver 16.5). Nada de `duel/`/`core/`/`ui/`.
 
 ---
 

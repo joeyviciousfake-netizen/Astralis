@@ -11,11 +11,17 @@ Deve: carregar Project Data válido, campanha, duelos, cartas/duelistas/decks, f
 Módulos conceituais (nomes podem mudar, responsabilidades não):
 
 ```text
-EXISTE (v1.5):
+EXISTE (v2.0):
   core:     DataLoader, ProjectLoader, RuntimeValidator, BoardLayout (só desenho)
   duel:     GameState, DuelManager, TurnManager, SummonSystem, BattleSystem,
-            DamageSystem, PositionSystem, FusionSystem
-  ui:       DuelTable (mesa = orquestrador da sessão + IA), DuelBoard, CardView
+            DamageSystem, PositionSystem, FusionSystem  <- SISTEMAS DE REGRA (R1)
+  duel3d:   a TELA do duelo em 8 arquivos, UM ASSUNTO CADA (D54-D67):
+            mesa_3d.gd (orquestrador da sessão + dono das medidas),
+            painel_carta_3d.gd, faixa_2d.gd, carta_3d.gd (fábrica),
+            menus_3d.gd, vista_3d.gd, campo_3d.gd, cursor_3d.gd
+            -> o mapa com o dono de cada número está no doc 15 §15.8
+  ui:       CardView (a mesa 2D e o DuelTable saíram: a tela do duelo é
+            `duel3d/`, ver D54/D58)
   testing:  suíte GUT
 NÃO EXISTE AINDA (V1 em atraso, ver docs/11 roadmap):
   core:     SaveSystem, EventBus
