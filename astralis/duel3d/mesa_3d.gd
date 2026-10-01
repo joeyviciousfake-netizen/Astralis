@@ -105,16 +105,11 @@ const LARG_CARTA := 1.0
 ## que a carta DEITADA (ALT_CARTA = 1,4576 larguras), para a carta de DEF
 ## caber dentro da peça em vez de encostar/cortar na borda.
 const PECA_PROF_CARTAS := 1.58
-## D49: o vão vertical monstro->magia NÃO é mais corrigido aqui. A correção
-## vivia em APROXIMA_MAGIA_VOCE (0,22) e APROXIMA_MAGIA_RIVAL (0,05), dois
-## números chutados por iteração de CALIBRAÇÃO DE TELA para compensar o dado —
-## e por isso o dado nunca era o que a tela mostrava. O pedido do usuário foi
-## o contrário: UM valor só (263) em todo o campo, medido POR CÓDIGO, e a
-## correspondência dado↔tela exata. O vão agora vem inteiro do
+## D49: o vão vertical monstro->magia NÃO é corrigido aqui, por NENHUM motivo.
+## Não existe desvio escondido no código: o vão vem inteiro do
 ## `arena_starter.json` (y 695/958 no jogador, 305/42 no rival = 263 nos dois
-## lados), o mesmo número do passo horizontal. NADA desloca a fileira de magia
-## aqui: se algum dia o vão ficar feio de novo, o dado é que se muda — não um
-## desvio escondido no código.
+## lados), o mesmo número do passo horizontal. Se algum dia o vão ficar feio, o
+## dado é que se muda — não um número chutado aqui embaixo.
 ## ATENÇÃO (o que a tela NÃO pode prometer): o vão é igual em MUNDO, mas a
 ## perspectiva faz o mesmo intervalo aparecer com 276 px na fileira da frente,
 ## 257 px no meio e 220 px no fundo. Isso é projeção, não erro do dado (doc 15
@@ -186,16 +181,14 @@ const RETRATO_RIVAL_Y := RETRATO_MARGEM                            # 14
 ## D45 (item 1): a placa de NOME do duelista fica AO LADO do retrato (para
 ## dentro, para os dois lados ficarem espelhados), nunca invade o painel
 ## esquerdo (que termina em x 562) e tem o TOPO NA MESMA LINHA do topo da
-## foto — era o que o usuário pediu ("a parte de cima da imagem e a parte de
-## cima do bloco de nomes na mesma linha"). Antes a placa era centralizada na
-## altura do retrato (y 142 dentro de um retrato de y 96..232).
+## foto.
 const RETRATO_NOME_L := 300
 const RETRATO_NOME_A := 44
 const RETRATO_NOME_VOCE_X := RETRATO_VOCE_X + RETRATO_L + 10        # 722
 const RETRATO_NOME_RIVAL_X := RETRATO_RIVAL_X - 10 - RETRATO_NOME_L # 1460
-## D45 (item 7): a barra "START ? Help" da referência foi EXCLUÍDA por ordem do
-## usuário. A ação continua existindo no CONTROLE (D19, o botão START do
-## joypad), que é o que passa o turno — o que saiu da tela foi só o texto.
+## D45 (item 7): NÃO existe barra "START ? Help" na tela. A ação continua
+## existindo no CONTROLE (D19, o botão START do joypad), que é o que passa o
+## turno — o que não existe é o texto, que era informação repetida.
 ## Cores da ref (amarelo do valor/nome, verde do tipo, laranja da barra).
 const COR_PAINEL := Color(0.106, 0.137, 0.251, 1.0)   # #1b2340 azul-marinho
 const COR_PAINEL_BORDA := Color(0.30, 0.38, 0.62, 1.0)
@@ -204,8 +197,8 @@ const COR_METAL_BASE := Color(0.10, 0.17, 0.44, 1.0)
 const COR_FASE_ATIVA := Color(1.0, 0.83, 0.00, 1.0)
 const COR_FASE_TXT := Color(0.85, 0.90, 1.00, 1.0)
 const COR_FOCO_AZUL := Color(0.35, 0.70, 1.0, 1.0)
-## Inclinação da mão em graus no eixo X (LIVRE, ordem do usuário):
-## mude à vontade, nada recalcula pela câmera. Rival usa 180 + este.
+## Inclinação da mão em graus no eixo X (LIVRE): mude à vontade, nada
+## recalcula pela câmera. Rival usa 180 + este.
 ## Fase 2 (doc 15 §15.3): a mão é PEQUENA, no rodapé, DE PÉ (quase a prumo,
 ## não deitada) e cortada pela borda de baixo. -35° é o que deixa a carta
 ## "de pé" E legível com a câmera fixa de cima (a -12° a carta aparece
@@ -214,21 +207,16 @@ const TILT_MAO_LIVRE := -35.0
 ## Arco da MÃO (só desenho). Passo = distância entre cartas; Z = profundidade.
 ## D52: estes números são dos **LUGARES** da mão, não dos lados: `PERTO` é o
 ## lugar de BAIXO (quem está jogando, cartas grandes, passo aberto) e `LONGE` é
-## o de CIMA (a outra mão, de costas, pequena, colada). Antes eles se chamavam
-## `MAO_P0_*`/`MAO_P1_*` e eram do JOGADOR e do RIVAL — o que parou de valer
-## quando as mãos passaram a TROCAR de lugar na volta (a mão do jogador usa o
-## lugar de baixo na sua visão e o de cima na do rival). O nome agora diz o que
-## é: lugar.
+## o de CIMA (a outra mão, de costas, pequena, colada). O nome diz o que é:
+## lugar, não jogador.
 ##
 ## D45 (itens 4, 5 e 6): quem decide a ALTURA (Y) de cada lugar é a CÂMERA REAL
 ## (mesma matemática de `_x_centro_da_mao`, que já centraliza o X no centro do
-## campo), porque o usuário pediu ALTURAS DE LINHA, não números:
+## campo), porque o pedido é ALTURA DE LINHA, não número:
 ##   - o lugar PERTO fica COLADO na linha de baixo da fileira de magia de quem
-##     está jogando (item 5: "perto da linha de baixo dos slots das cartas
-##     magias minhas");
+##     está jogando (item 5);
 ##   - o lugar LONGE fica CENTRADO entre o topo da tela e a linha de cima dos
-##     slots de magia do outro (item 4: "perfeitamente entre a parte de cima da
-##     tela e a parte de cima dos slots de cartas magicas dele").
+##     slots de magia do outro (item 4).
 ## `_y_da_mao` resolve os dois Y por bisseção e memoriza. O Y que está no
 ## Vector2 abaixo é só o FALLBACK para quando não há câmera (o desenho não
 ## quebra, ele só sai no lugar antigo).
@@ -326,9 +314,8 @@ var _lbl_log: Label = null
 var _lbl_dica: Label = null
 var _lbl_slot: Label = null
 var _lbl_fila: Label = null
-## D45 (item 2): a FAIXA DO MEIO agora é 2D (filha do HUD), com os 7 itens
-## na ordem do usuário e o VALOR sempre do GameState real. `_cel_*` é o
-## Retratos do topo e o painel da carta focada (o resto do HUD 2D).
+## D45 (item 2): a FAIXA DO MEIO é 2D e vive em `faixa_2d.gd` (filha do
+## HUD), com o VALOR sempre do GameState real.
 var _retrato_rival_foto: TextureRect = null
 var _retrato_rival_silhueta: Label = null
 var _retrato_voce_foto: TextureRect = null
@@ -401,10 +388,10 @@ func _ready() -> void:
 	_duel = DuelManagerScript.new_duel(data.get("duel_setup", {}), data.get("decks", {}), data.get("cards", {}))
 	_st = _duel.get_state()
 	_cartas = data.get("cards", {})
-	# D50: A MESA É O DADO, E HÁ SÓ UM. Não existe mais override por projeto
-	# nem grade no código: a posição de cada slot vem do arquivo da arena
-	# oficial. O `arena_id` do setup é lido só para dizer no log que ele foi
-	# ignorado (o dado FM traz `arena_starter`, que é essa mesma).
+	# D50: A MESA É O DADO, E HÁ SÓ UM. Não existe override por projeto nem grade
+	# no código: a posição de cada slot vem do arquivo da arena oficial. O
+	# `arena_id` do setup é lido só para dizer no log que ele foi ignorado (o
+	# dado FM traz `arena_starter`, que é essa mesma).
 	var arena_id := str((data.get("duel_setup", {}) as Dictionary).get("arena_id", "arena_starter"))
 	_arena_data = BoardLayoutScript.load_arena_data(BoardLayoutScript.project_arena_path(arena_id))
 	_arena_layout = (_arena_data.get("slots", {}) as Dictionary)
@@ -508,12 +495,11 @@ func _diag(texto: String) -> void:
 ## `GameState.current_player` já saiu do sorteio do `DuelManager`
 ## (first_p1 / first_p2 / random) e é o único que esta função lê.
 ##
-## O BUG: esta tela assumia que o primeiro era sempre o jogador. Ela entrava
-## direto no fluxo da fase da mão (`_fase_jogador = FASE_MAO`) e TODAS as
-## travas do jogador caem em "current_player != 0" — então, quando o motor
-## dizia que o rival começava, NINGUÉM conduzia o turno dele e o duelo
-## ficava parado para sempre em "Aguarde o rival." (o START nunca abre mão
-## por si, e a IA só era chamada quando o jogador passava o turno).
+## O QUE IMPORTA: a tela NÃO pode assumir que o primeiro é o jogador. Todas as
+## travas do jogador caem em `current_player != 0`, então sem isto, quando o
+## motor diz que o rival começa, NINGUÉM conduz o turno dele e o duelo fica
+## parado para sempre em "Aguarde o rival." (o START nunca abre mão por si, e a
+## IA só era chamada quando o jogador passava o turno).
 ##
 ## A CORREÇÃO é de ORQUESTRAÇÃO DA TELA (R1), não de regra: se a vez é do
 ## rival, a tela conduz o turno dele pelo MESMO caminho real da IA que já
@@ -584,10 +570,8 @@ func _sem_render() -> bool:
 
 
 ## ---------- CALIBRAÇÃO VISUAL (ferramenta de desenho, zero regra) ----------
-## Pedido do usuário (D45, item 2): "crie um quadrado grande do tamanho de toda
-## a mesa, deixe a parte de cima do quadrado da mesma altura que os slots do
-## campo, assim o que for para dentro desse quadrado, vamos saber que está
-## afundando".
+## Pedido do D45 (item 2): um quadrado grande do tamanho de toda a mesa, com o
+## topo na mesma altura dos slots do campo, para dar de ver o que está afundando.
 ## Então isto é um QUADRADO VERMELHO (semi-transparente) que cobre a mesa
 ## inteira a partir da LINHA DOS SLOTS: a base de tudo que assenta na mesa
 ## tem que ficar ACIMA da linha de cima do quadrado; o que entrar dentro do
@@ -718,10 +702,10 @@ func _construir_ambiente() -> void:
 	var we := WorldEnvironment.new()
 	we.name = "WorldEnvironment"
 	var env := Environment.new()
-	# Ref nova = céu azul claro GX (SEM MESA, SEM vazio estrelado): céu
-	# procedural azul com GRADIENTE VERTICAL (mais escuro em cima, mais
-	# claro no horizonte — doc 15 §15.3) + neblina azul-clara p/ profundidade
-	# + sol branco. Sem imagem externa, sem arquivo do usuário.
+	# Céu azul claro (SEM MESA, SEM vazio estrelado): céu procedural azul com
+	# GRADIENTE VERTICAL (mais escuro em cima, mais claro no horizonte — doc 15
+	# §15.3) + neblina azul-clara p/ profundidade + sol branco. Sem imagem
+	# externa.
 	var ceu := Sky.new()
 	var mat_ceu := ProceduralSkyMaterial.new()
 	mat_ceu.sky_top_color = Color(0.10, 0.30, 0.72)
@@ -745,15 +729,11 @@ func _construir_ambiente() -> void:
 	we.environment = env
 	_vp.add_child(we)
 	_construir_cenario_ceu()
-	# SEM LUZES (ordem do usuário): tudo é UNSHADED, luz não faz nada —
-	# nem sol nem omnis. Só o flash de tela (overlay 2D, ver HUD).
+	# SEM LUZES: tudo é UNSHADED, luz não faz nada — nem sol nem omnis. Só o
+	# flash de tela (overlay 2D, ver HUD).
 	#
-	# D47 — A VOLTA DA MESA: a câmera NÃO se move e NÃO gira. Ela é pendurada
-	# num PIVÔ no centro do campo, e quem dá a volta de 180° é o pivô. Assim a
-	# tela passa a ser a visão de QUEM ESTA JOGANDO do jeito do Forbidden
-	# Memories, e — o ponto que muda tudo — **as cartas não saem do lugar**: a
-	# sua fileira continua embaixo no mundo, só que quando a câmera vai para o
-	# outro lado você passa a vê-la no topo e de cabeça para baixo, de graça.
+	# A VOLTA DA MESA (D47) mora em `vista_3d.gd`, junto com a câmera e com o
+	# número que manda nela.
 	# A lente continua NO EIXO e o `frustum_offset` continua ZERO (doc 15
 	# §15.4), então a perspectiva é simétrica e o campo tem a MESMA cara dos
 	# dois lados, só espelhado.
@@ -832,8 +812,8 @@ func _construir_cenario_ceu() -> void:
 # ---- CAMPO (SEM MESA: 20 painéis escuros flutuantes + laterais + fases) ----
 
 func _mat(cor: Color, emissao: float = 0.0, _metal: float = 0.0, alfa: float = 1.0) -> StandardMaterial3D:
-	# Tudo UNSHADED (ordem do usuário: sem luz): cor pura estilo anime,
-	# zero cálculo de luz — nada escurece, nada estoura.
+	# Tudo UNSHADED (a cena não tem luz): cor pura estilo anime, zero cálculo
+	# de luz — nada escurece, nada estoura.
 	var m := StandardMaterial3D.new()
 	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	m.albedo_color = Color(cor.r, cor.g, cor.b, alfa)
@@ -935,7 +915,7 @@ func _pos_slot(lado: int, tipo: String, indice: int) -> Vector3:
 	# D49: a conversão é PURA e igual para os 4 tipos de slot (monstro/magia,
 	# jogador/rival). O vão vertical monstro->magia é o do DADO (263 = o mesmo
 	# do passo horizontal) e a fileira de monstro fica exatamente onde o dado
-	# diz. Não existe mais nenhum desvio por tipo aqui: se a tela mostrar um vão
+	# diz. Não existe nenhum desvio por tipo aqui: se a tela mostrar um vão
 	# torto, a causa é a perspectiva da câmera (doc 15 §15.4), não este código.
 	var z := (p2.y - CENTRO_Y) / DIV * ESCALA_CAMPO + DESLOC_CAMPO.y
 	return Vector3(
@@ -1150,9 +1130,7 @@ func _dono_do_lugar_perto() -> int:
 ## o espelho da frente dela, então uma carta vista por trás não pode ser a
 ## imagem espelhada de uma carta vista pela frente. A alternativa (virada de
 ## cabeça para baixo, como a mão do rival aparece na sua visão) mostraria a
-## ARTE da carta do jogador em vez do verso — e o usuário pediu "as cartas da
-## minha mão aparecendo do outro lado igual as do inimigo aparecem na minha
-## rodada", que é o verso.
+## ARTE da carta do jogador em vez do verso — e o verso é o que o D52 exige.
 func _pose_da_mao(perto: bool) -> Dictionary:
 	var c := _x_centro_da_mao()
 	var z := LUGAR_PERTO_YZ.y if perto else LUGAR_LONGE_YZ.y
@@ -1173,9 +1151,9 @@ func _pose_da_mao(perto: bool) -> Dictionary:
 
 func _pos_mao_arco(i: int, n: int, lado: int) -> Vector3:
 	# Mão em arco SIMÉTRICO (t=0 no meio: 1ª e última equidistantes do centro),
-	# CENTRALIZADO NA TELA e na ALTURA DE LINHA pedida — o X e o Y saem da
-	# CÂMERA REAL (bug do usuário 2026-09-28: o X era chutado "no olho" e a
-	# mão saía torta; D45: o Y idem, porque ele pediu altura, não número).
+	# CENTRALIZADO NA TELA e na ALTURA DE LINHA do D45 — o X e o Y saem da
+	# CÂMERA REAL, porque chutados "no olho" a mão saía torta e altura de linha
+	# não é número (D45, itens 4 e 5).
 	# D52: `lado` é o DONO da carta no DADO (0 = você, 1 = rival) e quem decide
 	# o LUGAR é a vista (quem joga fica embaixo). Na sua vista os dois coincidem,
 	# que é por isso que a vista do jogador não muda um milímetro.
@@ -1204,8 +1182,8 @@ func _pos_mao_arco(i: int, n: int, lado: int) -> Vector3:
 ## cede quando a mão lota e o arco não caberia na janela do campo (aí o que
 ## encolhe é o passo, nunca a carta). O do lugar de CIMA é o de sempre: cartas
 ## de costas, pequenas, coladas. D52: é do LUGAR, não do lado — quem joga usa o
-## passo largo nas DUAS vistas (é o que o usuário pediu: as cartas dele
-## aparecendo "exatamente como as minhas aparecem pra mim").
+## passo largo nas DUAS vistas, para a carta dele aparecer igual à sua na sua
+## tela.
 func _passo_mao(n: int, perto: bool) -> float:
 	if not perto:
 		return LUGAR_LONGE_PASSO
@@ -1214,7 +1192,7 @@ func _passo_mao(n: int, perto: bool) -> float:
 
 
 ## ALTURA (Y de mundo) de cada LUGAR da mão, resolvida da CÂMERA REAL para as
-## LINHAS que o usuário pediu (D45, itens 4 e 5):
+## LINHAS do D45 (itens 4 e 5):
 ##   perto — o TOPO da carta na linha de baixo da fileira de magia de quem
 ##           joga, mais a folga de LUGAR_PERTO_FOLGA_PX (a mão não cobre a
 ##           fileira nem fica pendurada no vazio embaixo dela);
@@ -1475,15 +1453,15 @@ var _vista_trocada := false
 
 
 ## APlica a "vista" no HUD 2D (D47). A tela 3D gira com a câmera; o HUD NÃO
-## gira (o usuário não quer isso), então o que ele faz é VIRAR DE CARTA:
-## encolhe no eixo X até sumir nos 90° e volta crescendo do outro lado, com o
-## conteúdo do outro jogador. Uma regra só (`_escala_do_virar`) para tudo que
-## tem nome ou número, e a troca acontece exatamente na largura ZERO — ou
-## seja, ninguém vê o instante em que o conteúdo muda.
+## gira (ele vira de carta): encolhe no eixo X até sumir nos 90° e volta
+## crescendo do outro lado, com o conteúdo do outro jogador. Uma regra só
+## (`escala_do_virar` da vista) para tudo que tem nome ou número, e a troca
+## acontece exatamente na largura ZERO — ou seja, ninguém vê o instante em que
+## o conteúdo muda.
 ##
 ## O que inverte e o que NÃO inverte, e por quê:
 ##   * retratos e plaquinhas de nome/LP: invertem as POSIÇÕES (o seu vai para
-##     a direita, o dele para a esquerda) — é o que o usuário pediu;
+##     a direita, o dele para a esquerda) — para cada um ver o seu do lado dele;
 ##   * a faixa do meio: a ORDEM das 7 células se espelha, então o seu deck e o
 ##     seu LP ficam do lado que agora é o seu na tela, e a cor viaja com o
 ##     número (azul = você, sempre);
@@ -1581,18 +1559,16 @@ func _redesenhar(com_efeito: bool, dono_efeito: int = 0) -> void:
 				carta.set_meta("card_id", str(m.get("card_id", "")))
 				_no_cartas.add_child(carta)
 	# Mãos em arco: DUAS na tela, uma embaixo e outra em cima, e QUEM ESTÁ
-	# JOGANDO é a de baixo (D52, decisão do usuário: "as duas cartas da minha mão
-	# aparecendo do outro lado igual as do inimigo aparecem na minha rodada").
-	# O que decide o lugar é a VISTA (`_giro_campo`, pelos 90°), e a troca
-	# acontece com a tela sem mostrar nada: nos 90° as mãos estão a 32,7° do
-	# eixo (o FOV é de 20°) e o HUD 2D está com largura zero. A mão do rival é
-	# sempre um VERSO genérico (você nunca lê a mão do adversário); na vista do
-	# rival as DUAS mãos mostram o verso, porque o verso de uma carta não é o
-	# espelho da frente dela.
+	# JOGANDO é a de baixo (D52). O que decide o lugar é a VISTA (o
+	# `giro_campo` do no da vista, pelos 90°), e a troca acontece com a tela sem
+	# mostrar nada: nos 90° as mãos estão a 32,7° do eixo (o FOV é de 20°) e o
+	# HUD 2D está com largura zero. A mão do rival é sempre um VERSO genérico
+	# (você nunca lê a mão do adversário); na vista do rival as DUAS mãos
+	# mostram o verso, porque o verso de uma carta não é o espelho da frente.
 	# Efeito-bônus que o dado já dava: o espelho do rival (D18) + a troca dos
 	# lugares se cancelam, e cada um vê a PRÓPRIA mão na ordem normal.
-	# Rotação LIVRE (ordem do usuário): valor fixo editável, sem nenhum
-	# cálculo da câmera. Mude TILT_MAO_LIVRE à vontade (graus no eixo X).
+	# Rotação LIVRE: valor fixo editável, sem nenhum cálculo da câmera. Mude
+	# TILT_MAO_LIVRE à vontade (graus no eixo X).
 	var mao0: Array = (_st.players[0] as Dictionary)["hand"]
 	for i in range(mao0.size()):
 		var c := _fazer_carta(mao0[i] as Dictionary, false, false)
@@ -1627,11 +1603,9 @@ func _redesenhar(com_efeito: bool, dono_efeito: int = 0) -> void:
 
 
 ## D53: A COMPRA ANIMADA É DA MÃO QUE COMPROU, e só dela. A carta nasce no
-## baralho do dono e voa (0,35 s) para o lugar dela na mão. Antes disso estava
-## fixo na `mao0` (a do jogador), então na vez do RIVAL a compra dele animava a
-## SUA mão — que, com a D52, é o LUGAR DE CIMA da tela dele: as cartas dela
-## saíam do baralho no meio do campo e atravessavam a tela voando, que é
-## exatamente o "a minha mão se mexe do outro lado" que o usuário reportou.
+## baralho do dono e voa (0,35 s) para o lugar dela na mão. A trava importa: se
+## a compra animasse sempre a mão de baixo, na vez do rival ela animaria o
+## LUGAR DE CIMA da tela dele e as cartas dele atravessariam a tela voando.
 func _animar_compra(carta: Node3D, dono: int, com_efeito: bool, dono_efeito: int) -> void:
 	# Sem trava de `_sem_render` de propósito (mesmo motivo do `_sacudir`): o
 	# tween é de 0,35 s e não depende de render, e assim o GUT vê QUEM animou.
@@ -1684,7 +1658,7 @@ func _pose_da_carta_da_mao(carta: Node3D, dono: int) -> void:
 ## desenhadas (sem redesenhar tudo), e é o que roda na troca dos 90°. some com
 ## o cursor junto, porque o cursor fica preso na carta da sua mão e, com as
 ## mãos trocadas, ele ficaria em cima da mão do rival denunciando a sua
-## escolha (decisão do usuário).
+## escolha.
 func _aplicar_vista_da_mao() -> void:
 	if _no_cartas == null or _st == null:
 		return
@@ -1753,9 +1727,7 @@ func _posicionar_cursor() -> void:
 	var alvo := Vector3(0, TOPO, _ponto_lateral(0.0, 0.0, 4.15).z)
 	# A moldura é do tamanho e da INCLINAÇÃO da coisa focada (doc 15 §15.3):
 	# na mão é a CARTA (com a inclinação da mão), no campo é o LADRILHO
-	# (deitado, girando junto se a carta estiver em DEFESA). Sem isso a
-	# moldura era um quadrado chapado no chão, maior que a carta, e a mão
-	# ficava fora dela.
+	# (deitado, girando junto se a carta estiver em DEFESA).
 	match _fileira:
 		FILEIRA_MAO:
 			var n: int = ((_st.players[0] as Dictionary)["hand"] as Array).size()
@@ -1914,11 +1886,9 @@ func _rotulo_placa_clara(nome: String, texto: String, tam: int) -> Label:
 ## escuro e a INICIAL do nome (o pack NÃO tem retrato de duelista — os 39
 ## duelistas do FM vêm com `portrait` vazio, então nunca há foto; se um dia
 ## vier, a foto real aparece no lugar do placeholder).
-## Moldura do retrato no estilo da ref (D6): metal claro com BISEL de
-## verdade — aro externo grosso e claro, um fio escuro por dentro (o
-## degrau do bisel) e o miolo escuro onde entra a foto/placeholder. Antes
-## era um quadrado chapado com um traço branco de 3 px, que lia como
-## "quadrado com letra".
+## Moldura do retrato no estilo da ref (D6): metal claro com BISEL de verdade —
+## aro externo grosso e claro, um fio escuro por dentro (o degrau do bisel) e o
+## miolo escuro onde entra a foto/placeholder.
 func _estilo_retrato() -> StyleBoxFlat:
 	var est := StyleBoxFlat.new()
 	est.bg_color = Color(0.03, 0.03, 0.07, 0.95)
@@ -1966,12 +1936,10 @@ func _fundo_retrato(tom: Color) -> TextureRect:
 	return tr
 
 
-## D44 (item 8): o topo da tela ficou SÓ com a foto de cada duelista + o nome
-## dele, o seu à ESQUERDA e o do rival à DIREITA, como o usuário pediu
-## ("deixe só a foto minha com meu nome à esquerda, e na direita a foto do
-## inimigo com o nome dele"). Tudo o que era informação (LP, TURN, fases) foi
-## para a faixa do meio. O pack não tem foto de duelista, então continua o
-## placeholder elegante com a inicial do nome dentro da moldura (nada de rosto
+## D44 (item 8): o topo da tela tem SÓ a foto de cada duelista + o nome dele:
+## o seu à ESQUERDA e o do rival à DIREITA. Toda a informação (LP, TURN, fases)
+## fica na faixa do meio. O pack não tem foto de duelista, então o que aparece é
+## o placeholder com a inicial do nome dentro da moldura (nada de rosto
 ## inventado) e o nome real do dado ao lado.
 func _construir_retratos(hud: Control) -> void:
 	# RIVAL: foto na direita (x 1770) e nome à ESQUERDA dela, alinhado à
@@ -2065,16 +2033,14 @@ func _placa_nome_retrato(hud: Control, nome: String, x: float, y: float, larg: f
 	return l
 
 
-# ---- D45: A FAIXA DO MEIO EM 2D (item 2 do usuário) ----------------------## "vai continuar essa faixa no meio mas agora em 2d, assim fica mais facil,
-## podemos fazer algo bonito que mostre isso e tambem tenha um contador de
-## cartas ainda no deck e contador de cartas no cemiterio".
-##
-## A barra é posicionada no VÃO entre as duas fileiras de monstro, e o vão
-## não é chutado: ele sai das bordas REAIS das fileiras (dado + câmera, em
-## `_borda_da_fileira_px`). A largura sai da fileira real (`_extensao_da_fileira_px`).
-## As 7 células seguem a ordem do usuário (D44, travada) e cada uma mostra:
-##   deck       -> pilhinha 2D + CONTAGEM de cartas do baralho real
-##   cemitério  -> pilhinha 2D + CONTAGEM de cartas do cemitério real
+## A FAIXA DO MEIO é 2D e vive em `faixa_2d.gd` (D45, item 2), filha do HUD.
+## A barra é posicionada no VÃO entre as duas fileiras de monstro, e o vão não é
+## chutado: ele sai das bordas REAIS das fileiras (dado + câmera, em
+## `_borda_da_fileira_px`). A largura sai da fileira real
+## (`_extensao_da_fileira_px`).
+## As 7 células seguem a ordem travada no D44 e cada uma mostra:
+##   deck       -> CONTAGEM de cartas do baralho real
+##   cemitério  -> CONTAGEM de cartas do cemitério real
 ##   LP         -> número do GameState
 ##   TURNO      -> número do GameState
 ## Nada aqui calcula regra: é só leitura (R1/R3), como toda a tela.
@@ -2139,12 +2105,11 @@ func _atualizar_faixa() -> void:
 
 
 func _construir_hud() -> void:
-	# HUD 2D na referência (doc 15 §15.3): painel esquerdo azul-marinho com a
-	# carta focada e os retratos com foto + nome. Tudo IGNORE (D19). D44: a
-	# barra superior com LP/TURN e a barra de fases DRAW/MAIN/BATTLE/END
-	# saíram de vez — essa informação foi para a faixa do meio (que em D45
-	# virou 2D, `_construir_faixa_2d`, montada depois do campo). D45 (item 7):
-	# a barra START ? Help também saiu.
+	# HUD 2D na referência (doc 15 §15.3): o que existe são o painel esquerdo
+	# com a carta focada, os retratos com nome e a faixa do meio. Tudo IGNORE
+	# (D19). D44/D45: NÃO existem a barra superior com LP/TURN, a barra de fases
+	# DRAW/MAIN/BATTLE/END nem a barra START ? Help — essa informação vive na
+	# faixa do meio (`faixa_2d.gd`).
 	var hud := Control.new()
 	hud.name = "HUD"
 	hud.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -2152,18 +2117,18 @@ func _construir_hud() -> void:
 	add_child(hud)
 	_construir_fundo_painel(hud)
 	_construir_retratos(hud)
-	# Textos inventados REMOVIDOS (ordem do usuário, ref não tem): MaoRival,
-	# Fase, Log, InfoSlot, FilaFusao, Dica. D44: a fase do motor não é mais
-	# desenhada em lugar nenhum.
+	# NÃO existem textos inventados nesta tela (a referência não tem): MaoRival,
+	# Fase, Log, InfoSlot, FilaFusao, Dica. D44: a fase do motor não é desenhada
+	# em lugar nenhum.
 	_lbl_mao_rival = null
 	_lbl_fase = null
 	_lbl_log = null
 	_lbl_slot = null
 	_lbl_fila = null
 	_lbl_dica = null
-	# D45 (item 7): a barra "START ? Help" foi EXCLUÍDA da tela por ordem do
-	# usuário. A ação de passar o turno continua no CONTROLE (D19: botão
-	# START do joypad) — o que saiu foi só o texto, que era info repetida.
+	# D45 (item 7): NÃO existe barra "START ? Help" na tela. A ação de passar o
+	# turno continua no CONTROLE (D19: botão START do joypad) — o que não existe
+	# é o texto, que era informação repetida.
 	_flash_tela = ColorRect.new()
 	_flash_tela.name = "FlashTela"
 	_flash_tela.color = Color(1, 1, 1)
@@ -2204,24 +2169,6 @@ func _construir_fundo_painel(hud: Control) -> void:
 	brilho.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hud.add_child(brilho)
 
-
-## Barra superior + 3 placas (doc 15 §15.3): a barra metálica azul começa
-## em x 562 (a faixa do campo, como na ref) e vai até 1920. Placa azul
-## (você) à esquerda, caixa TURN ao centro, placa vermelha (rival) à
-## direita. Valores de LP e turno SEMPRE do estado real. A aba "Single"
-## foi REMOVIDA: era texto inventado (nossa contrato não tem modo de duelo).
-## D44 (item 8): as placas do topo (a azul com seu LP, a caixa TURN e a
-## vermelha com o LP do rival) foram REMOVIDAS da tela por ordem do usuário:
-## "na parte de cima da tela remova todas as informações pois troquei elas de
-## lugar". O LP e o turno agora vivem na FAIXA DO MEIO — que em D45 (item 2)
-## virou 2D (`_construir_faixa`) — e no topo ficou só a foto + o nome de
-## cada duelista (`_construir_retratos`).
-
-## D44 (item 6): a BARRA DE FASES (DRAW/MAIN/BATTLE/END) saiu da tela inteira
-## por ordem do usuário: "atualmente existe DRAW, MAIN, BATTLE e END, eu quero
-## que remova isso e coloque no lugar os pontos de vida meu, do oponente e o
-## turno atual". A fase real do motor NÃO é mais desenhada em lugar nenhum da
-## tela (ela continua existindo no GameState, que ninguém mexeu).
 
 func _mostrar_centro3d(face_baixo: bool) -> void:
 	if _menus != null and is_instance_valid(_menus):
@@ -2304,9 +2251,9 @@ func _fala(texto: String) -> void:
 func _atualizar_hud() -> void:
 	if _st == null:
 		return
-	# D44: quem escreve o dado real na tela agora são a FAIXA DO MEIO (LP dos
-	# dois lados, turno e a espessura/carta do topo de cada pilha) e os NOMES
-	# ao lado dos retratos. A barra de fases e as placas do topo saíram.
+	# D44: quem escreve o dado real na tela são a FAIXA DO MEIO (LP dos dois
+	# lados, turno e a espessura/carta do topo de cada pilha) e os NOMES ao lado
+	# dos retratos. A barra de fases e as placas do topo NÃO existem nesta tela.
 	if _lbl_placa_nome_voce != null:
 		_lbl_placa_nome_voce.text = _nome_voce.to_upper()
 	if _lbl_placa_nome_rival != null:
@@ -2322,11 +2269,9 @@ func _atualizar_painel_foco() -> void:
 		_painel.atualizar()
 
 
-## D44 (itens 3, 4 e 11): as PLACAS DE CONTADOR dos cantos saíram de cena. O
-## número de cartas do baralho/cemiterio nao e mais um numero solto: quem
-## mostra a quantidade real e a ALTURA da pilha, na faixa do meio
-## (`_atualizar_faixa`). A mao do rival tambem perdeu a placa de contagem --
-## o usuario nao pediu contagem de mao em lugar nenhum.
+## D44 (itens 3, 4 e 11): NÃO existe placa de contador solta na tela. O número
+## de cartas do baralho/cemitério e a ALTURA da pilha são mostrados na faixa do
+## meio (`_atualizar_faixa`), e a mão não tem contagem nenhuma.
 
 ## Carta focada pelo cursor (só leitura): mão, campo próprio ou rival.
 ## Rival de costas / virada = dado oculto (mostra "?" sem vazar).
@@ -2457,10 +2402,10 @@ func _flash_efeito() -> void:
 
 func _sacudir(no: Node3D) -> void:
 	# D53: NUNCA a mesa inteira. `_no_cartas` é o guarda-chuva das 20+ cartas (as
-	# 4 fileiras e as DUAS mãos), então sacudi-lo movia as duas mãos e as fileiras
-	# JUNTAS — que é o "as cartas se movimentam junto" que o usuário reportou. A
-	# trava é AQUI dentro, e não no chamador, para nenhum ponto novo do código
-	# reintroduzir o tremor da mesa inteira. E nunca um nó que não existe.
+	# 4 fileiras e as DUAS mãos), então sacudi-lo moveria as duas mãos e as
+	# fileiras JUNTAS. A trava é AQUI dentro, e não no chamador, para nenhum
+	# ponto novo do código reintroduzir o tremor da mesa inteira. E nunca um nó
+	# que não existe.
 	# Sem a trava de `_sem_render` de propósito: é um tween de 0,22 s que não
 	# depende de render, e assim o GUT consegue ver se alguma coisa sacudiu.
 	if no == null or not is_instance_valid(no) or no == _no_cartas:
@@ -2911,11 +2856,9 @@ func _executar_fusao_fiel(estrela: String) -> void:
 
 ## Fila da fusão (só visual + som, sem regra): mostra cada passo no HUD
 ## com flash no sucesso e chacoalhada na falha. Headless: só prints.
-## D53: a chacoalhada é do SLOT onde a carta desceu, e não da mesa inteira.
-## Antes era `_sacudir(_no_cartas)`, e `_no_cartas` é o guarda-chuva de TODAS as
-## cartas (as 4 fileiras e as DUAS mãos): na falha da fusão a mesa inteira
-## tremia e as duas mãos andavam juntas, que é o "as cartas se movimentam junto"
-## que o usuário reportou.
+## D53: a chacoalhada é do SLOT onde a carta desceu, e NUNCA da mesa inteira —
+## `_no_cartas` é o guarda-chuva de TODAS as cartas (as 4 fileiras e as DUAS
+## mãos), então sacudi-lo move as duas mãos e as fileiras JUNTAS.
 func _animar_fila_fusao(passos: Array, slot_n: int) -> void:
 	_fusao_passos = (passos as Array).duplicate()
 	_redesenhar(false)
@@ -3645,10 +3588,9 @@ func _auto_passa() -> void:
 
 
 func _process(delta: float) -> void:
-	# D47: a CÂMERA não é mexida aqui. Quem se mexe é o PIVÔ, e só na volta da
-	# mesa (`_girar_campo`) - o `look_at` de todo frame saiu porque brigaria com
-	# o giro (e porque ele só servia para fixar a inclinação, que agora é a
-	# rotação local da câmera dentro do pivô).
+	# A CÂMERA não é mexida aqui. Quem se mexe é o PIVÔ, e só na volta da
+	# mesa (`_girar_campo`): a inclinação é a rotação local da câmera dentro do
+	# pivô (D47), então um `look_at` por frame brigaria com o giro.
 	# O cursor segue pulsando (é o único movimento próprio da tela).
 	_pulso += delta * 4.0
 	if _vista.girando:

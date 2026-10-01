@@ -30,7 +30,7 @@
     { "file": "docs/14_EXPERIENCIA_USUARIO.md", "owner": "lead", "purpose": "padrao Simples/Avancado, galeria, erros PT-BR, guia 5min", "depends_on": ["01", "05", "06", "07", "08", "09", "10"] },
     { "file": "docs/15_VISUAL_DUELO.md", "owner": "lead", "purpose": "contrato visual da mesa: medida da ref, SubViewport (sem perspectiva torta), fonte de cada imagem", "depends_on": ["02", "04", "05", "13", "14"] },
     { "file": "docs/16_PERSPECTIVA_CAMPO.md", "owner": "lead", "purpose": "o ponto de vista da mesa: a tela e a visao de quem esta jogando GIRANDO A CAMERA em volta do campo (D47, §16.15 e o que esta no jogo; §16.16 e a D51 (a vista do rival como espelho exato da sua) e 16.17 a D52 (as duas maos trocam de lugar); §16.1-16.14 e o plano da D46 que ele substituiu, historico). Ler ANTES de mexer na mesa", "depends_on": ["13", "14", "15"] },
-    { "file": "docs/17_ASSETS_3D.md", "owner": "lead+runtime+qa", "purpose": "o pipeline 3D do jogo (D59): o .blend em assets/3d/fonte/ e a FONTE do mesh, o .glb e o artefato que o jogo carrega, e manifest.json e a FONTE UNICA dos numeros (triangulos/caixa/material), conferidos por DOIS medidores independentes (exportar_assets.py no Blender e test_assets_3d.gd no Godot). Convencoes: 1 unidade = 1 largura de carta, Y para cima, origem na base, um material mat_<id>, no do .glb sem transform. Ler ANTES de mexer em qualquer 3D", "depends_on": ["02", "13", "15"] }
+    { "file": "docs/17_ASSETS_3D.md", "owner": "lead+runtime+qa", "purpose": "o pipeline 3D do jogo (D61): o .blend em assets/3d/fonte/ e a FONTE do mesh, o .glb e o artefato que o jogo carrega, e manifest.json e a FONTE UNICA dos numeros (triangulos/caixa/material), conferidos por DOIS medidores independentes (exportar_assets.py no Blender e test_assets_3d.gd no Godot). Convencoes: 1 unidade = 1 largura de carta, Y para cima, origem na base, um material mat_<id>, no do .glb sem transform. Ler ANTES de mexer em qualquer 3D", "depends_on": ["02", "13", "15"] }
   ],
   "contract_files": {
     "owner": "systems",
@@ -54,6 +54,20 @@
     ],
     "index": "schemas/README.md"
   },
+  "duel3d_files": {
+    "owner": "runtime",
+    "purpose": "A tela do duelo em 8 arquivos, UM ASSUNTO CADA (D54-D67). A mesa e o orquestrador: ela tem o estado do duelo e PEDE o desenho de cada assunto, nunca o recalcula. Regra que atravessa todos: NUMERO COM UM DONO SO - quem mede e a mesa e o assunto recebe por parametro ou Callable, nunca copia (D48/D50/D64/D65). UI NUNCA guarda copia do estado (D59): pergunta ao dono. Antes de criar um no aqui, leia D57 (R10/R11/R12).",
+    "files": [
+      "astralis/duel3d/mesa_3d.gd = a mesa: o estado do duelo e o orquestrador",
+      "astralis/duel3d/painel_carta_3d.gd = o painel esquerdo com a carta focada (D60)",
+      "astralis/duel3d/faixa_2d.gd = a faixa do meio 2D do vao entre as fileiras (D59)",
+      "astralis/duel3d/carta_3d.gd = FABRICA da carta 3D: corpo, arte, ATK, verso (D66)",
+      "astralis/duel3d/menus_3d.gd = os menus 3D do centro e da selecao",
+      "astralis/duel3d/vista_3d.gd = a camera no pivo e a volta de 180 graus (D65)",
+      "astralis/duel3d/campo_3d.gd = os 20 paineis de vidro (D64)",
+      "astralis/duel3d/cursor_3d.gd = o cursor de foco: moldura azul + mao branca (D63)"
+    ]
+  },
   "rules": [
     "R1 runtime unica verdade gameplay",
     "R2 proibido Fake engine",
@@ -66,7 +80,8 @@
     "R9 autoria visual sem blacklist própria no Studio",
     "R10 um .gd = um assunto, alvo de 700 linhas, e a divisao e pelo ASSUNTO (nunca pela contagem, nunca arquivo minusculo so para existir) (D57)",
     "R11 comentario = o que e, quem e o dono do numero, a invariante e o porque quando nao for obvio; sem historia, sem citacao do usuario, sem numero de decisao (que ja esta em DECISOES.md) (D57)",
-    "R12 o log de BOOT do jogo e contrato (o test_project_arg le); o diagnostico so com `-- --debug` (D56)"
+    "R12 o log de BOOT do jogo e contrato (o test_project_arg le); o diagnostico so com `-- --debug` (D56)",
+    "R13 antes de anexar uma decisao Dnn em DECISOES.md, olhe a MAIOR que ja existe la (o indice do fim do arquivo e as entradas `**Dxx:` no corpo) e use a seguinte: duas IA escrevendo no mesmo repositorio colidem no numero, e o Dnn e o indice do projeto. A decisao tambem entra no INDICE do fim do arquivo, nao so no corpo"
   ],
   "change_protocol": {
     "schema_ou_protocolo": "mudar contract_files exige: 1) atualizar este manifest 2) atualizar docs/04 e o README de schemas/ 3) espelhar a mesma regra no Studio (checar_* em main.rs) 4) rodar tools/fm_import.py --check 5) registrar em DECISOES.md e SESSAO_ATUAL.md",
