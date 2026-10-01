@@ -25,6 +25,7 @@ const Menus3D := preload("res://duel3d/menus_3d.gd")
 const PainelCarta3D := preload("res://duel3d/painel_carta_3d.gd")
 const Cursor3D := preload("res://duel3d/cursor_3d.gd")
 const Campo3D := preload("res://duel3d/campo_3d.gd")
+const Vista3D := preload("res://duel3d/vista_3d.gd")
 
 ## Conversão desenho 2D->3D (só desenho): campo 2D centrado em x=1158.
 ## Composição ref nova (céu azul GX, SEM MESA): câmera FIXA atrás/acima do
@@ -306,24 +307,6 @@ var _cam: Camera3D = null
 ## região do campo (dentro de Camada3D/JanelaCampo), com a câmera dentro.
 var _vp: SubViewport = null
 var _no_cartas: Node3D = null
-## D47: o pivô da volta da mesa. A câmera é filha dele e nunca se move; quem
-## gira 180° em torno do centro do campo é o pivô.
-var _pivo: Node3D = null
-## Onde a mesa está virada, em GRAUS: 0 = visão do jogador (como sempre foi),
-## 180 = visão do rival. É o ÚNICO número da volta (doc 17): a câmera, o HUD
-## e as animações leem ele daqui. Nunca é adivinhado nem guardado em dois
-## lugares.
-var _giro_campo := 0.0
-## D51: o Z de mundo do PLANO DE SIMETRIA DO CAMPO, medido do dado (a média
-## das duas fileiras de monstro da arena oficial). O pivô da volta está na
-## origem (0,0,0) e o campo NÃO é simétrico em relação a ela: as fileiras
-## da arena são simétricas em torno de outro Z. Por isso a volta de 180° em
-## torno da origem deixa a câmera do rival 2x esse desvio perto demais da
-## mesa, e o campo aparece torto lá embaixo. Ver `_z_local_da_camera`.
-var _z_simetria := 0.0
-## A mesa está girando agora: trava o controle do jogador (sem isso a carta
-## focada voaria de um lado para o outro no meio do giro).
-var _girando := false
 ## O turno do rival está sendo conduzido agora (trava de reentrada): sem isto
 ## duas chamadas simultâneas fariam o turno dele rodar em paralelo.
 var _rival_rodando := false
@@ -439,8 +422,8 @@ func _ready() -> void:
 	# dois lados são espelho). A câmera do jogador não muda; a do rival vai
 	# para o espelho exato dela, e é isso que deixa a faixa do meio — que é 2D
 	# e fica parada — cair no vão das fileiras nas DUAS vistas.
-	_medir_plano_de_simetria()
-	_aplicar_vista_3d()
+	_vista.medir_plano_de_simetria()
+	_vista.aplicar()
 	# Campo DEPOIS da arena (os painéis nascem no XZ real do dado).
 	_construir_campo()
 	# D52: resolve a altura e o X dos DOIS lugares da mão AGORA, com a tela na
@@ -498,6 +481,8 @@ var _painel: Control = null
 var _cursor: Node3D = null
 ## O campo de vidro (os 20 ladrilhos): o no e o arquivo `campo_3d.gd`.
 var _campo: Node3D = null
+## A vista e a volta (a camera no pivo): o no e o arquivo `vista_3d.gd`.
+var _vista: Vista3D = null
 var _debug := _quer_debug()
 
 
@@ -771,26 +756,19 @@ func _construir_ambiente() -> void:
 	# A lente continua NO EIXO e o `frustum_offset` continua ZERO (doc 15
 	# §15.4), então a perspectiva é simétrica e o campo tem a MESMA cara dos
 	# dois lados, só espelhado.
-	_pivo = Node3D.new()
-	_pivo.name = "PivoMesa"
-	_pivo.position = CAM_ALVO
-	_vp.add_child(_pivo)
-	_cam = Camera3D.new()
-	_cam.name = "Camera3D"
-	# CÂMERA FIXA da ref: atrás/acima do SEU campo, tilt p/ o rival longe.
-	# `position` aqui é LOCAL (a filha do pivô), então continua sendo CAM_POS —
-	# com o pivô em 0° a imagem é byte a byte a de antes.
-	_cam.position = CAM_POS
-	_cam.fov = CAM_FOV
-	_cam.current = true
-	_pivo.add_child(_cam)
-	# O olhar para o centro é a inclinação local do pivô (o `look_at` de todo
-	# frame saía: com o pivô girando, ele brigaria com a volta).
-	_cam.rotation_degrees = Vector3(-rad_to_deg(atan2(CAM_POS.y, CAM_POS.z)), 0.0, 0.0)
-	# LENTE NO EIXO (doc 15 §15.4): deslocar o frustum deforma a imagem
-	# (um lado estica, o outro comprime) e o campo fica torto. Quem joga o
-	# campo p/ a direita é a JANELA do campo, criada acima.
-	_cam.frustum_offset = Vector2.ZERO
+	# A VISTA E A VOLTA (a câmera pendurada no pivô da mesa, D47): o no e o
+	# arquivo dele (`vista_3d.gd`). A câmera é filha DO PIVÔ, e quem gira é o
+	# pivô - por isso o no inteiro é o próprio `PivoMesa`.
+	_vista = Vista3D.new()
+	_vista.cam_pos = CAM_POS
+	_vista.cam_alvo = CAM_ALVO
+	_vista.cam_fov = CAM_FOV
+	_vista.volta_duracao = VOLTA_DURACAO
+	_vista.pos_slot = Callable(self, "_pos_slot")
+	_vista.sem_render = Callable(self, "_sem_render")
+	_vista.ao_virar = Callable(self, "_aplicar_vista_da_mao_entao_hud")
+	_vp.add_child(_vista)
+	_cam = _vista.cam
 	_diag("Ambiente: céu azul + neblina + pilares + câmera no PIVÔ da mesa (a volta da mesa, D47).")
 
 
@@ -912,28 +890,6 @@ func _construir_campo() -> void:
 
 func _peca_prof_carta() -> float:
 	return PECA_PROF_CARTAS * ESCALA_CAMPO
-
-
-# ---- D47: A VOLTA DA MESA (a camera da a volta, as cartas NAO se mexem) ----
-#
-# A tela do duelo e a perspectiva de QUEM ESTA JOGANDO, como no Forbidden
-# Memories: quando a vez passa, a CAMERA da 180 graus em torno do centro do
-# campo. A camera e filha do `_pivo` e nunca se move nem gira (o `_pivo` e que
-# gira), entao:
-#   * a sua fileira continua embaixo NO MUNDO, e a do rival continua no topo;
-#   * quando a camera vai para o outro lado, voce passa a ver a SUA fileira no
-#     topo da tela e de cabeca para baixo, e a DELE vem para baixo de frente;
-#   * nada teleporta, nada esmaece, nenhuma carta troca de lugar.
-# E o estado nao se mexe: `players[lado]["monster"][i]` e a MESMA carta antes e
-# depois da volta (R1) - a volta e so o ponto de vista.
-#
-# O numero que manda em TUDO e `_giro_campo` (0 = seu, 180 = do rival). Nao ha
-# segunda copia dele: a camera, o HUD e as animacoes leem dele daqui.
-#
-# Onde a "coluna espelhada" da etapa 2 do doc 16 foi parar: ela nao existe mais
-# como regra, porque sai de graca. O lado 1 da arena ja vem espelhado no X
-# (D18) e a volta de 180 graus espelha de novo, entao cada jogador ve a PROPRIA
-# fileira na ordem normal (indice 0 a esquerda). Era isso que o usuario pedia.
 
 
 ## X de mundo de um slot do DADO. Para quem anda pela POSIÇÃO visível (o
@@ -1324,7 +1280,7 @@ func _fantasia(inst: Dictionary) -> Dictionary:
 ## Sai do mesmo número que manda a volta inteira (`_giro_campo`, pelos 90°,
 ## D47) — nada guardado em outro lugar, e o mesmo número que a tela 3D usa.
 func _dono_do_lugar_perto() -> int:
-	return 1 if _vista_invertida() else 0
+	return 1 if _vista.invertida() else 0
 
 
 ## D52: A POSE DE UM LUGAR DA MÃO na vista em que a tela está. `perto` = o
@@ -1355,8 +1311,8 @@ func _pose_da_mao(perto: bool) -> Dictionary:
 	var z := LUGAR_PERTO_YZ.y if perto else LUGAR_LONGE_YZ.y
 	var tilt := TILT_MAO_LIVRE if perto else 180.0 + TILT_MAO_LIVRE
 	var verso := not perto
-	if _vista_invertida():
-		z = 2.0 * _z_simetria - z
+	if _vista.invertida():
+		z = 2.0 * _vista.z_simetria - z
 		tilt = -TILT_MAO_LIVRE
 		verso = true
 	return {
@@ -1391,7 +1347,7 @@ func _pos_mao_arco(i: int, n: int, lado: int) -> Vector3:
 	# vistas (D45 item 8 + o cancelamento do D18). Logo: índice 0 sempre à
 	# esquerda da tela, e o lugar de cima sempre espelhado — que é a regra do
 	# D45, agora valendo dos dois lados.
-	var s := 1.0 if not _vista_invertida() else -1.0
+	var s := 1.0 if not _vista.invertida() else -1.0
 	var x := float(pose["x"]) + (s * t * passo if perto else -s * t * passo)
 	return Vector3(x, float(pose["y"]), float(pose["z"]))
 
@@ -1666,110 +1622,6 @@ func _deitar_carta(carta: Node3D, face_down: bool, em_defesa: bool, lado: int) -
 
 # ---- D47: A VOLTA DA MESA ----
 
-## A ESCALA DO VIRAR: 1 em 0° e em 180°, 0 (invisível) em 90°. É a mesma
-## conta para TUDO que tem nome ou número (retratos, plaquinhas, faixa do
-## meio): o bloco encolhe no eixo X até sumir, e o conteúdo troca nos 90°,
-## quando está com largura zero — então ninguém vê a troca. Um número, uma
-## regra, o mesmo efeito em toda parte (D47, pedido do usuário: "sumindo até
-## quando chegar no ângulo de 90 graus e sumir completamente, e nos mesmos 90
-## graus vai aparecendo de novo, só que invertidas as posições").
-func _escala_do_virar() -> float:
-	return absf(cos(deg_to_rad(_giro_campo)))
-
-
-## A tela já passou dos 90°? Aí o conteúdo 2D está do outro lado (é o que troca
-## os números e as posições). Nos 90° exatos o bloco tem largura ZERO, então
-## o instante da troca é invisível.
-func _vista_invertida() -> bool:
-	return absf(_giro_campo) >= 90.0
-
-
-## D51: MEDE O PLANO DE SIMETRIA DO CAMPO, em Z de mundo, direto do dado: a
-## média das DUAS fileiras de monstro da arena oficial. É o plano em que o
-## campo é espelhado — o mesmo para os dois lados, porque a arena oficial é
-## simétrica (D49: 263 de vão acima e abaixo, 390 entre as fileiras).
-## RODA UMA VEZ, quando a arena já está lida, e fica memorizado como um float.
-func _medir_plano_de_simetria() -> void:
-	var soma := 0.0
-	var n := 0
-	for lado in [0, 1]:
-		for i in range(5):
-			soma += _pos_slot(lado, "monstro", i).z
-			n += 1
-	_z_simetria = 0.0 if n == 0 else soma / float(n)
-
-
-## D51: ONDE A CÂMERA FICA, em Z LOCAL dentro do pivô, para uma vista `giro`.
-## A vista do jogador (0°) é a de sempre: `CAM_POS` intacto, byte a byte. Na
-## volta, a câmera recua o MESMO desvio que o pivô tem do plano de simetria do
-## campo — porque o pivô está na origem e o campo é simétrico em torno de
-## `_z_simetria`. Sem isso a câmera do rival chega 2x esse desvio mais perto da
-## mesa do que a do jogador, e o campo sai mais para baixo (a faixa do meio,
-## que é 2D e NÃO se mexe, deixa de cair no vão das duas fileiras).
-## Ou seja: a vista do rival é o ESPELHO EXATO da do jogador, e a do jogador
-## não muda em nada.
-func _z_local_da_camera(giro: float) -> float:
-	return CAM_POS.z - 2.0 * _z_simetria * (giro / 180.0)
-
-
-## D51: A VISTA 3D INTEIRA a partir de UM número só (`_giro_campo`): o pivô na
-## volta e a câmera na distância certa para ele. Todo mundo que mexe na volta
-## chama ISTO (nada de ajustar o pivô por conta própria), para o 3D não poder
-## ficar com a câmera de um ângulo e a distância de outro.
-func _aplicar_vista_3d() -> void:
-	if _pivo != null:
-		_pivo.rotation_degrees = Vector3(0.0, _giro_campo, 0.0)
-	if _cam != null and is_instance_valid(_cam):
-		_cam.position = Vector3(CAM_POS.x, CAM_POS.y, _z_local_da_camera(_giro_campo))
-
-
-## Dá a volta na mesa: `alvo` em GRAUS (0 = visão do jogador, 180 = do rival).
-## Uma rotina para as DUAS direções, porque é a mesma coisa. Só a câmera se
-## mexe — as cartas NÃO (é o que o usuário pediu: nada teleporta).
-## Espera a volta terminar, então quem chama (o START) só segue depois.
-func _girar_campo(alvo: float) -> void:
-	if _pivo == null or is_equal_approx(_giro_campo, alvo):
-		return
-	if _girando:
-		return
-	_girando = true
-	if _sem_render():
-		# Sem desenho (teste/headless): o estado final tem que ser o mesmo dos
-		# dois jeitos, então vai direto e aplica a vista final.
-		_giro_campo = alvo
-		_aplicar_vista_3d()
-		_aplicar_vista_da_mao()
-		_girando = false
-		_aplicar_vista_hud()
-		return
-	var tw := create_tween()
-	tw.tween_method(Callable(self, "_girar_para").bind(alvo), 0.0, 1.0, VOLTA_DURACAO) \
-		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
-	await tw.finished
-	_girando = false
-	_aplicar_vista_hud()
-
-
-## Um passo da volta (0..1 do caminho). O pivô gira na MESMA proporção, a
-## câmera recua junto (D51), as MÃOS trocam de lugar nos 90° (D52) e o HUD 2D
-## acompanha pelo `_escala_do_virar`.
-func _girar_para(t: float, alvo: float) -> void:
-	var de := _giro_de_onde()
-	_giro_campo = lerpf(de, alvo, clampf(t, 0.0, 1.0))
-	_aplicar_vista_3d()
-	_aplicar_vista_da_mao()
-	_aplicar_vista_hud()
-
-
-## De onde a volta começou (0 se a mesa nunca girou, senão o 0 ou o 180 mais
-## próximo do alvo) — é o que permite a mesma rotina ir e voltar sem estado
-## guardado em outro lugar.
-func _giro_de_onde() -> float:
-	return 0.0 if _giro_campo < 90.0 else 180.0
-
-
-## Onde o HUD 2D guarda o que é "de um lado" e o que é "do outro". Preenchido
-## no boot; o resto da volta só lê.
 var _blocos_voce: Array[Control] = []
 var _blocos_rival: Array[Control] = []
 var _vista_trocada := false
@@ -1792,8 +1644,8 @@ var _vista_trocada := false
 ##     quem está jogando (D13/doc 13), e espelhar um dado de regra seria a tela
 ##     mentir. Fica como âncora visual do meio da mesa.
 func _aplicar_vista_hud() -> void:
-	var esc := _escala_do_virar()
-	var invertido := _vista_invertida()
+	var esc: float = _vista.escala_do_virar()
+	var invertido: bool = _vista.invertida()
 	if _faixa != null:
 		_faixa.virar(esc)
 	for b in _blocos_voce:
@@ -1833,7 +1685,7 @@ func _trocar_lado_das_blocos() -> void:
 			continue
 		var xa := float(a.get_meta("x_normal"))
 		var xb := float(b2.get_meta("x_normal"))
-		if _vista_invertida():
+		if _vista.invertida():
 			a.position.x = xb
 			b2.position.x = xa
 		else:
@@ -1998,7 +1850,7 @@ func _aplicar_vista_da_mao() -> void:
 		carta.position = _pos_mao_arco(int(carta.get_meta("mao_idx")), mao.size(), dono)
 		_pose_da_carta_da_mao(carta, dono)
 	if _cursor != null and is_instance_valid(_cursor):
-		_cursor.visible = not _vista_invertida()
+		_cursor.visible = not _vista.invertida()
 
 
 ## Pinta a carta SEM teste de profundidade, como camada de MÃO (D3): a mão de
@@ -2031,6 +1883,21 @@ func _camada_da_mao(no: Node, sem_profundidade: bool) -> void:
 func _moldar_foco(larg: float, alt: float, rot: Vector3, escala_mao: float) -> void:
 	if _cursor != null and is_instance_valid(_cursor):
 		_cursor.moldar(larg, alt, rot, escala_mao)
+
+
+## A vista da mesa inteira a partir de UM número, e só isso: quem manda girar
+## (o START e os testes) chama ISTO, e nunca mexe no pivô por conta própria.
+func _girar_campo(alvo: float) -> void:
+	if _vista != null and is_instance_valid(_vista):
+		_vista.girar_para(alvo)
+
+
+## O que a mesa faz a CADA PASSO da volta, na ordem do D52: a mão troca de
+## lugar nos 90° e o HUD 2D vira de carta. A vista não conhece nenhum dos dois
+## assuntos, então quem orquestra é a mesa.
+func _aplicar_vista_da_mao_entao_hud() -> void:
+	_aplicar_vista_da_mao()
+	_aplicar_vista_hud()
 
 
 func _posicionar_cursor() -> void:
@@ -3932,12 +3799,12 @@ func _auto_passa() -> void:
 
 func _process(delta: float) -> void:
 	# D47: a CÂMERA não é mexida aqui. Quem se mexe é o PIVÔ, e só na volta da
-	# mesa (`_girar_campo`) — o `look_at` de todo frame saiu porque brigaria com
+	# mesa (`_girar_campo`) - o `look_at` de todo frame saiu porque brigaria com
 	# o giro (e porque ele só servia para fixar a inclinação, que agora é a
 	# rotação local da câmera dentro do pivô).
 	# O cursor segue pulsando (é o único movimento próprio da tela).
 	_pulso += delta * 4.0
-	if _girando:
+	if _vista.girando:
 		_aplicar_vista_hud()
 	if not _foto_destino.is_empty():
 		_foto_frames += 1
@@ -3950,7 +3817,7 @@ func _process(delta: float) -> void:
 			var img := get_viewport().get_texture().get_image()
 			img.save_png(_foto_destino)
 			_diag("Foto salva (quadro %d, volta %.0f graus): %s" % [
-				_foto_frames, _giro_campo, _foto_destino])
+				_foto_frames, _vista.giro_campo, _foto_destino])
 			get_tree().quit()
 	if _cursor != null and is_instance_valid(_cursor):
 		var s := 1.0 + 0.04 * sin(_pulso)
@@ -3961,7 +3828,7 @@ func _process(delta: float) -> void:
 	# enquanto a mesa está girando.
 	var dx := 0
 	var dy := 0
-	if not _girando:
+	if not _vista.girando:
 		if Input.is_action_pressed("mover_esq"):
 			dx -= 1
 		if Input.is_action_pressed("mover_dir"):
@@ -3990,7 +3857,7 @@ func _unhandled_input(evento: InputEvent) -> void:
 	# D47: com a mesa girando, o controle fica TRAVADO. Sem isto a carta focada
 	# andaria de um lado para o outro da tela no meio do giro, e um START
 	# passando por cima da volta quebraria a sequência.
-	if _girando:
+	if _vista.girando:
 		get_viewport().set_input_as_handled()
 		return
 	if evento.is_action_pressed("confirmar"):

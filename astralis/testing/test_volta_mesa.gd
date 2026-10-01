@@ -43,6 +43,12 @@ const COLUNAS := 5
 ## Carta de DADO no campo, pelo CONSTRUTOR REAL do jogo
 ## (`SummonSys.construir_instancia` - o unico lugar que monta instancia, R1).
 ## Este arquivo nao testa regra de invocacao, so o desenho.
+## O no da vista e da volta (D47): a camera, o pivo e o numero do giro moram
+## nele (`vista_3d.gd`), entao e ele que os testes falam.
+func _vista(mesa: Node) -> Node:
+	return mesa.get("_vista") as Node
+
+
 func _poe_no_campo(mesa: Node, st, lado: int, i: int) -> bool:
 	var cartas: Dictionary = mesa.get("_cartas")
 	var cid := ""
@@ -104,7 +110,7 @@ func test_a_camera_e_filha_do_pivo_e_nao_se_move() -> void:
 	assert_eq(cam.position, Vector3(0.0, 16.8, 20.9), "A camera nao se move (posicao local fixa).")
 	# E o pivo comeca em 0: a primeira tela e a do jogador, igual sempre foi.
 	assert_eq(pivo.rotation_degrees.y, 0.0, "A mesa comeca na visao do JOGADOR (pivo em 0).")
-	assert_eq(float(mesa.get("_giro_campo")), 0.0, "O numero da volta comeca em 0.")
+	assert_eq(float(_vista(mesa).get("giro_campo")), 0.0, "O numero da volta comeca em 0.")
 
 
 ## (2) A lente continua no eixo e o centro do campo continua no mesmo lugar da
@@ -161,12 +167,12 @@ func test_a_vista_do_rival_e_o_espelho_exato_da_do_jogador() -> void:
 	var pos_0 := cam.position
 	# (a) A VISTA DO JOGADOR NÃO MUDA: a câmera local é a de sempre, e a
 	# correção do ângulo do rival vale 0 em 0 graus.
-	var z0: float = float(mesa.call("_z_local_da_camera", 0.0))
+	var z0: float = float(_vista(mesa).call("_z_local_da_camera", 0.0))
 	assert_almost_eq(z0, pos_0.z, 0.0001,
 		"D51: em 0 graus a câmera do jogador é a de sempre (nada muda na sua vez).")
 	# (b) O PLANO DE SIMETRIA VEM DO DADO: a média das duas fileiras de monstro
 	# da arena oficial (a de cima e a de baixo da tela, na vista do jogador).
-	var sim: float = float(mesa.get("_z_simetria"))
+	var sim: float = float(_vista(mesa).get("z_simetria"))
 	var z_p1 := (mesa.call("_pos_slot", 1, "monstro", 2) as Vector3).z
 	var z_p0 := (mesa.call("_pos_slot", 0, "monstro", 2) as Vector3).z
 	assert_almost_eq(sim, (z_p1 + z_p0) * 0.5, 0.0001,
@@ -174,7 +180,7 @@ func test_a_vista_do_rival_e_o_espelho_exato_da_do_jogador() -> void:
 	# (c) A CÂMERA DO RIVAL VAI AO ESPELHO: 2x o desvio do pivô para o lado de
 	# dentro, para a distância em relação ao plano do campo ser a mesma dos
 	# dois lados.
-	var z180: float = float(mesa.call("_z_local_da_camera", 180.0))
+	var z180: float = float(_vista(mesa).call("_z_local_da_camera", 180.0))
 	assert_almost_eq(z180, pos_0.z - 2.0 * sim, 0.0001,
 		"D51: em 180 graus a câmera recua exatamente o desvio do pivô (o espelho).")
 	mesa.call("_girar_campo", 180.0)
@@ -345,7 +351,7 @@ func test_as_duas_maos_trocam_de_lugar_e_as_duas_aparecem() -> void:
 	assert_true(n0 > 0 and n1 > 0, "Preparo: as DUAS mãos têm cartas (se uma estiver vazia não há o que provar).")
 	if n0 <= 0 or n1 <= 0:
 		return
-	var sim: float = float(mesa.get("_z_simetria"))
+	var sim: float = float(_vista(mesa).get("z_simetria"))
 	# --- SUA VISTA: quem joga embaixo, o outro em cima, e as DUAS na tela ---
 	assert_eq(int(mesa.call("_dono_do_lugar_perto")), 0,
 		"D52: na sua visão o lugar de baixo é a SUA mão (quem está jogando).")
@@ -442,13 +448,13 @@ func test_as_duas_maos_trocam_de_lugar_e_as_duas_aparecem() -> void:
 	# 89 graus ainda é a sua vista (a sua mão embaixo, o Z de baixo = 12,7) e 91
 	# já é a do rival (a sua mão em cima, no Z espelhado). É o instante em que
 	# a tela não mostra nada: as mãos estão a 32,7 graus do eixo.
-	mesa.call("_girar_para", 89.0 / 180.0, 180.0)
+	_vista(mesa).call("_passo", 89.0 / 180.0, 180.0)
 	await wait_process_frames(2)
 	assert_eq(int(mesa.call("_dono_do_lugar_perto")), 0,
 		"D52: em 89 graus ainda é a vista do jogador (a troca é nos 90).")
 	assert_almost_eq((mesa.call("_pos_mao_arco", 0, n0, 0) as Vector3).z, z_baixo, 0.0001,
 		"D52: em 89 graus a sua mão ainda está no lugar de baixo do jogador.")
-	mesa.call("_girar_para", 91.0 / 180.0, 180.0)
+	_vista(mesa).call("_passo", 91.0 / 180.0, 180.0)
 	await wait_process_frames(2)
 	assert_eq(int(mesa.call("_dono_do_lugar_perto")), 1,
 		"D52: em 91 graus já é a vista do rival (a troca foi nos 90).")
@@ -498,17 +504,17 @@ func test_a_volta_vai_a_180_e_volta_a_zero() -> void:
 	var pivo := mesa.get_node(PIVO) as Node3D
 	mesa.call("_girar_campo", 180.0)
 	await wait_process_frames(2)
-	assert_eq(float(mesa.get("_giro_campo")), 180.0, "Depois da volta a mesa esta na visao do rival.")
+	assert_eq(float(_vista(mesa).get("giro_campo")), 180.0, "Depois da volta a mesa esta na visao do rival.")
 	assert_eq(pivo.rotation_degrees.y, 180.0, "O pivo girou 180 graus.")
-	assert_false(bool(mesa.get("_girando")), "A volta acabou (a trava de controle liberou).")
+	assert_false(bool(_vista(mesa).get("girando")), "A volta acabou (a trava de controle liberou).")
 	mesa.call("_girar_campo", 0.0)
 	await wait_process_frames(2)
-	assert_eq(float(mesa.get("_giro_campo")), 0.0, "A mesa voltou para a visao do jogador.")
+	assert_eq(float(_vista(mesa).get("giro_campo")), 0.0, "A mesa voltou para a visao do jogador.")
 	assert_eq(pivo.rotation_degrees.y, 0.0, "O pivo voltou a 0.")
 	# Girar duas vezes no MESMO lugar nao faz nada (idempotente, e nao trava).
 	mesa.call("_girar_campo", 0.0)
 	await wait_process_frames(2)
-	assert_eq(float(mesa.get("_giro_campo")), 0.0, "Girar para o mesmo lugar e no-op.")
+	assert_eq(float(_vista(mesa).get("giro_campo")), 0.0, "Girar para o mesmo lugar e no-op.")
 
 
 ## (4) A TRAVA CENTRAL DA D47: as cartas do campo NAO SE MEXEM. Nenhuma posicao
@@ -632,19 +638,19 @@ func test_o_hud_vira_de_carta_e_troca_nos_90_graus() -> void:
 	assert_true(faixa != null, "A faixa do meio existe (e vira de carta).")
 	if faixa == null:
 		return
-	mesa.set("_giro_campo", 0.0)
+	_vista(mesa).set("giro_campo", 0.0)
 	mesa.call("_aplicar_vista_hud")
 	assert_almost_eq(faixa.scale.x, 1.0, 0.001, "Em 0 graus a faixa esta com a largura inteira.")
-	mesa.set("_giro_campo", 45.0)
+	_vista(mesa).set("giro_campo", 45.0)
 	mesa.call("_aplicar_vista_hud")
 	var meio: float = faixa.scale.x
 	assert_true(meio < 0.75 and meio > 0.25,
 		"Em 45 graus a faixa ja esta encolhendo (%.2f) - ela vira, nao some de uma vez." % meio)
-	mesa.set("_giro_campo", 90.0)
+	_vista(mesa).set("giro_campo", 90.0)
 	mesa.call("_aplicar_vista_hud")
 	assert_almost_eq(faixa.scale.x, 0.0, 0.001,
 		"Em 90 graus a faixa tem largura ZERO (e o e o instante da troca, invisivel).")
-	mesa.set("_giro_campo", 180.0)
+	_vista(mesa).set("giro_campo", 180.0)
 	mesa.call("_aplicar_vista_hud")
 	assert_almost_eq(faixa.scale.x, 1.0, 0.001, "Em 180 graus a faixa volta a ter a largura inteira.")
 
@@ -667,7 +673,7 @@ func test_a_faixa_do_meio_se_espelha_na_volta() -> void:
 		return
 	assert_eq(nomes[0], "MeuCemiterio", "Ordem normal comeca no seu cemiterio (esquerda).")
 	assert_eq(nomes[3], "Turno", "O turno fica no meio (nao tem dono).")
-	mesa.set("_giro_campo", 180.0)
+	_vista(mesa).set("giro_campo", 180.0)
 	mesa.call("_aplicar_vista_hud")
 	var espelhado := _nomes_das_celulas(linha)
 	assert_eq(espelhado[0], "CemRival", "Virada: o cemiterio do RIVAL foi para a esquerda (invertido).")
@@ -675,7 +681,7 @@ func test_a_faixa_do_meio_se_espelha_na_volta() -> void:
 	assert_eq(espelhado[3], "Turno", "Virada: o turno continua no meio.")
 	assert_eq(espelhado[6], "MeuCemiterio", "Virada: o seu cemiterio foi para a direita.")
 	# Volta: a ordem normal volta exatamente.
-	mesa.set("_giro_campo", 0.0)
+	_vista(mesa).set("giro_campo", 0.0)
 	mesa.call("_aplicar_vista_hud")
 	assert_eq(_nomes_das_celulas(linha), nomes, "Voltou a visao do jogador: a faixa volta a ordem normal.")
 
@@ -718,8 +724,8 @@ func test_o_controle_fica_travado_enquanto_a_mesa_gira() -> void:
 	var mesa: Node = await _mesa3d_nova()
 	# Headless nao anima, entao o teste trava a bandeira na mao e prova as DUAS
 	# coisas: que a bandeira existe e que a entrada respeita ela.
-	mesa.set("_girando", true)
-	assert_true(bool(mesa.get("_girando")), "A mesa sabe que esta girando.")
+	_vista(mesa).set("girando", true)
+	assert_true(bool(_vista(mesa).get("girando")), "A mesa sabe que esta girando.")
 	var log_antes: int = (mesa.get("_log") as Array).size()
 	# Chama o que a entrada chamaria: nao pode mexer em nada enquanto gira.
 	var sel_antes: int = int(mesa.get("_sel_atk"))
@@ -727,6 +733,6 @@ func test_o_controle_fica_travado_enquanto_a_mesa_gira() -> void:
 	await wait_process_frames(2)
 	assert_eq(int(mesa.get("_sel_atk")), sel_antes,
 		"Girando: a entrada nao mexe no atacante escolhido.")
-	mesa.set("_girando", false)
+	_vista(mesa).set("girando", false)
 	assert_true((mesa.get("_log") as Array).size() >= log_antes,
 		"A tela continua viva (o bloqueio e so do controle, nao da tela).")
