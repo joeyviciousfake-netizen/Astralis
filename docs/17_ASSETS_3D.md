@@ -48,9 +48,34 @@ um dos dois discordar do manifesto, a suíte/export falha.
 |---|---|---|
 | Unidade | 1 unidade = **1 largura de carta** (`LARG_CARTA = 1.0` na mesa) | o mundo da mesa já é medido em larguras de carta |
 | Eixo | **Y para cima** no jogo; a conversão vem do exportador glTF (`yup=true`) | não é conversão nossa para inventar bug |
-| Origem | **base e centro**: `y=0` no chão, `x/z` centrados | o objeto pousa no plano do campo sem nenhum ajuste |
+| Origem | **duas formas, e o asset declara a sua** em `topologia.origem` (ver abaixo) | peça deitada e peça em pé se posicionam diferente |
 | Material | um por asset, `mat_<id>` | e o que a tela procura ao trocar o material |
 | Nó do `.glb` | **identidade** (sem matrix/translation/rotation/scale) | transform no nó é o `.glb` mentindo: alguém "consertaria" no código (foi o `APROXIMA_MAGIA_*` que o D49 apagou) |
+
+### Origem: `deitada` ou `em_pe` (D62, medido na carta)
+
+`y=0` no chão **só é certo para peça deitada**. Uma carta em pé é centrada em Y,
+porque a mesa a posiciona por `alt/2` a partir do centro. As duas são legítimas; o
+que não vale é misturar, nem fingir que a regra é uma só.
+
+| `topologia.origem` | Caixa no jogo | Quem é assim |
+|---|---|---|
+| `deitada` | face no plano XZ, espessura em Y, **`y` começa em 0** | estrela, peça que pousa no campo |
+| `em_pe` | altura no eixo Y, espessura no Z, **`y` é simétrico** (centro em 0) | carta, peça que a mesa levanta |
+
+O GUT lê a declaração e cobra a forma certa — não presume que tudo é deitado.
+
+**A pegadinha que fixou essa regra (medida, não deduzida):** o exportador glTF
+converte Blender Z-up para glTF Y-up, e a conta é
+`game_y = Blender_z`, `game_z = -Blender_y`, `game_x = Blender_x`.
+Autorar a carta **deitada**, copiando a estrela, dá no jogo uma carta **deitada**
+**e** com a base em `y = -0,7288` — foi o portão do exportador que acusou
+(`caixa.y` e `caixa.z` trocados contra o manifesto). Do jeito certo, a caixa da
+carta nova é **idêntica** ao `BoxMesh(larg, alt, gross)` que a mesa monta hoje, e a
+integração passa a ser só trocar a malha, sem tocar em posição.
+
+Vale a regra: **quem tem eixo trocado entre `.blend` e jogo tem que ser medido no
+`.glb`, nunca suposto.** O portão existe para isso.
 
 O exportador **recusa** um `.glb` com transform no nó: ele mede e falha, não
 corrige. Corrigir no arquivo é esconder o defeito.
