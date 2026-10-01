@@ -234,7 +234,6 @@ func atualizar() -> void:
 	if not is_instance_valid(self) or not estado.is_valid():
 		return
 	var st = estado.call()
-	var cartas: Dictionary = cartas_de.call() as Dictionary
 	if st == null:
 		return
 	if _num_meu_deck != null:

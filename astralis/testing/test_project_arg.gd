@@ -62,14 +62,14 @@ func _escrever_json(caminho: String, dados: Dictionary) -> bool:
 
 
 func _apagar_tudo(p: String) -> void:
-	var abs := ProjectSettings.globalize_path(p)
-	if not DirAccess.dir_exists_absolute(abs):
+	var abs_path := ProjectSettings.globalize_path(p)
+	if not DirAccess.dir_exists_absolute(abs_path):
 		return
 	for sub in ["cards", "duelists", "decks", "arenas"]:
 		_apagar_tudo(p.path_join(sub))
-	for arq in DirAccess.get_files_at(abs):
-		DirAccess.remove_absolute(abs.path_join(arq))
-	DirAccess.remove_absolute(abs)
+	for arq in DirAccess.get_files_at(abs_path):
+		DirAccess.remove_absolute(abs_path.path_join(arq))
+	DirAccess.remove_absolute(abs_path)
 
 
 func _setup_do_projeto(arena_id: String) -> Dictionary:
@@ -179,10 +179,10 @@ func test_pasta_valida_reconhece_os_marcadores() -> void:
 	# Pasta de projeto = tem ao menos UM marcador (cards/ duelists/ decks/
 	# arenas/ ou duel_setup.json/fusions.json/effects.json). Sem marcador
 	# nenhuma = inválida, mesmo que a pasta exista.
-	var abs := ProjectSettings.globalize_path(_proj)
+	var abs_path := ProjectSettings.globalize_path(_proj)
 	assert_true(DataLoaderScript.pasta_projeto_valida(_proj), "Projeto de teste (com cards/) é válido.")
 	for sub in ["cards", "duelists", "decks", "arenas"]:
-		assert_true(DirAccess.dir_exists_absolute(abs.path_join(sub)), "Marcador %s/ existe na pasta de teste." % sub)
+		assert_true(DirAccess.dir_exists_absolute(abs_path.path_join(sub)), "Marcador %s/ existe na pasta de teste." % sub)
 	# Pasta que existe mas não tem nenhum marcador = inválida.
 	var vazia := "user://qa_project_arg_vazia"
 	_apagar_tudo(vazia)
@@ -251,10 +251,10 @@ func test_project_valido_jogo_le_tudo_da_pasta() -> void:
 	# (1) --project com pasta que TEM os marcadores. O jogo tem de ler de lá:
 	# o conteúdo FM tem 25081 receitas de fusão, então "0 receitas + 0
 	# regras" só pode ter vindo do fusions.json da pasta de teste.
-	var abs := ProjectSettings.globalize_path(_proj)
+	var abs_path := ProjectSettings.globalize_path(_proj)
 	assert_true(DataLoaderScript.pasta_projeto_valida(_proj), "Preparo: a pasta montada é projeto válido.")
-	var saida := _rodar_jogo(["--project", abs])
-	assert_true(_contem(saida, "[DataLoader] --project usando: " + abs), "Base do jogo = a pasta do projeto: %s" % saida)
+	var saida := _rodar_jogo(["--project", abs_path])
+	assert_true(_contem(saida, "[DataLoader] --project usando: " + abs_path), "Base do jogo = a pasta do projeto: %s" % saida)
 	assert_false(_contem(saida, "[DataLoader] Aviso: --project ignorado"), "Pasta válida não gera aviso.")
 	assert_true(_contem(saida, "receitas + 0 regras"), "fusions.json veio da pasta do projeto (o FM tem 25081).")
 	assert_true(_contem(saida, "[MESA3D] Arena carregada: 20 slots"), "Arena veio da pasta do projeto.")
@@ -263,11 +263,11 @@ func test_project_valido_jogo_le_tudo_da_pasta() -> void:
 
 func test_project_igual_mesmo_resultado_que_espaco() -> void:
 	# (2) --project=<pasta> é a MESMA coisa que --project <pasta>.
-	var abs := ProjectSettings.globalize_path(_proj)
-	var com_espaco := _rodar_jogo(["--project", abs])
-	var com_igual := _rodar_jogo(["--project=" + abs])
-	assert_true(_contem(com_espaco, "[DataLoader] --project usando: " + abs), "Forma com espaço: base = a pasta. %s" % com_espaco)
-	assert_true(_contem(com_igual, "[DataLoader] --project usando: " + abs), "Forma com '=': base = a mesma pasta. %s" % com_igual)
+	var abs_path := ProjectSettings.globalize_path(_proj)
+	var com_espaco := _rodar_jogo(["--project", abs_path])
+	var com_igual := _rodar_jogo(["--project=" + abs_path])
+	assert_true(_contem(com_espaco, "[DataLoader] --project usando: " + abs_path), "Forma com espaço: base = a pasta. %s" % com_espaco)
+	assert_true(_contem(com_igual, "[DataLoader] --project usando: " + abs_path), "Forma com '=': base = a mesma pasta. %s" % com_igual)
 	assert_false(_contem(com_igual, "[DataLoader] Aviso: --project ignorado"), "Forma com '=' não gera aviso.")
 	for marca in ["receitas + 0 regras", "[MESA3D] Arena carregada: 20 slots", "[MESA3D] Duelo come"]:
 		assert_true(_contem(com_espaco, marca), "Controle '%s' presente na forma com espaço." % marca)
@@ -281,13 +281,13 @@ func test_setup_por_cima_do_project_vence_o_duel_setup() -> void:
 	# mostra qual duel_setup entrou. O `arena_id` NÃO é mais prova de nada
 	# (D50: a mesa é do jogo e é sempre a oficial), então a prova passa a ser o
 	# duel_setup em si + o jogo continuing jogável.
-	var abs := ProjectSettings.globalize_path(_proj)
-	var controle := _rodar_jogo(["--project", abs])
+	var abs_path := ProjectSettings.globalize_path(_proj)
+	var controle := _rodar_jogo(["--project", abs_path])
 	assert_true(_contem(controle, "[MESA3D] Arena carregada: 20 slots"), "Controle: sem setup, a arena oficial carrega: %s" % controle)
 	var caminho_setup := _proj.path_join("qa_setup_override.json")
 	_escrever_json(caminho_setup, _setup_do_projeto("arena_que_nao_existe_xyz"))
-	var saida := _rodar_jogo(["--project", abs, "--setup", ProjectSettings.globalize_path(caminho_setup)])
-	assert_true(_contem(saida, "[DataLoader] --project usando: " + abs), "--project continua valendo: %s" % saida)
+	var saida := _rodar_jogo(["--project", abs_path, "--setup", ProjectSettings.globalize_path(caminho_setup)])
+	assert_true(_contem(saida, "[DataLoader] --project usando: " + abs_path), "--project continua valendo: %s" % saida)
 	assert_true(_contem(saida, "[DataLoader] --setup usando: " + ProjectSettings.globalize_path(caminho_setup)), "--setup foi lido por cima.")
 	assert_true(_contem(saida, "[ARENA] arena_id 'arena_que_nao_existe_xyz' IGNORADO"), "D50: o arena_id do setup foi ignorado (o jogo tem uma mesa só).")
 	assert_true(_contem(saida, "[MESA3D] Arena carregada: 20 slots"), "D50: mesmo com arena_id estranho, a arena oficial carrega.")
@@ -297,9 +297,9 @@ func test_setup_por_cima_do_project_vence_o_duel_setup() -> void:
 func test_setup_invalido_avisa_e_segue_com_o_do_projeto() -> void:
 	# (5) --setup apontando para arquivo inexistente = aviso PT-BR e o jogo
 	# continua com o duel_setup do PROJETO.
-	var abs := ProjectSettings.globalize_path(_proj)
+	var abs_path := ProjectSettings.globalize_path(_proj)
 	var quebrado := ProjectSettings.globalize_path(_proj.path_join("nao_existe_xyz.json"))
-	var saida := _rodar_jogo(["--project", abs, "--setup", quebrado])
+	var saida := _rodar_jogo(["--project", abs_path, "--setup", quebrado])
 	assert_true(_contem(saida, "[DataLoader] Aviso: --setup ignorado"), "Avisa que ignorou o --setup inválido: %s" % saida)
 	assert_true(_contem(saida, "usando starter"), "Aviso diz que segue o starter (o do projeto).")
 	assert_false(_contem(saida, "[DataLoader] --setup usando:"), "Não tentou usar o setup quebrado.")
@@ -314,11 +314,11 @@ func test_projeto_sem_arena_usa_a_mesa_oficial_do_jogo() -> void:
 	# mais uma). O jogo usa a arena OFICIAL DO JOGO — a mesma para qualquer
 	# projeto — e o log diz isso. Não existe mais "grade padrão embutida".
 	_montar_projeto(false) # projeto SEM a pasta arenas/ (o esqueleto de verdade)
-	var abs := ProjectSettings.globalize_path(_proj)
-	assert_ne(abs, DataLoaderScript.starter_kit_dir(), "Preparo: a base é um PROJETO, não a embutida.")
-	assert_false(DirAccess.dir_exists_absolute(abs.path_join("arenas")), "Preparo: o projeto não tem arenas/.")
-	var saida := _rodar_jogo(["--project", abs])
-	assert_true(_contem(saida, "[DataLoader] --project usando: " + abs), "Base = a pasta do projeto: %s" % saida)
+	var abs_path := ProjectSettings.globalize_path(_proj)
+	assert_ne(abs_path, DataLoaderScript.starter_kit_dir(), "Preparo: a base é um PROJETO, não a embutida.")
+	assert_false(DirAccess.dir_exists_absolute(abs_path.path_join("arenas")), "Preparo: o projeto não tem arenas/.")
+	var saida := _rodar_jogo(["--project", abs_path])
+	assert_true(_contem(saida, "[DataLoader] --project usando: " + abs_path), "Base = a pasta do projeto: %s" % saida)
 	assert_true(_contem(saida, "[ARENA] Arena oficial OK: 20 slots"), "D50: a arena oficial do jogo foi usada.")
 	assert_true(_contem(saida, "[MESA3D] Arena carregada: 20 slots"), "A mesa carregou os 20 slots da arena oficial.")
 	assert_true(_contem(saida, "[MESA3D] Duelo come"), "Jogo segue jogável.")
@@ -329,13 +329,13 @@ func test_pasta_arenas_no_projeto_e_ignorada_com_aviso() -> void:
 	# é IGNORADA com aviso, e a mesa continua sendo a oficial. Este teste é o
 	# que garante que nunca mais vai existir uma "segunda arena" em jogo.
 	_montar_projeto(false)
-	var abs := ProjectSettings.globalize_path(_proj)
-	DirAccess.make_dir_recursive_absolute(abs.path_join("arenas"))
-	var falso := abs.path_join("arenas").path_join("arena_falsa.json")
+	var abs_path := ProjectSettings.globalize_path(_proj)
+	DirAccess.make_dir_recursive_absolute(abs_path.path_join("arenas"))
+	var falso := abs_path.path_join("arenas").path_join("arena_falsa.json")
 	var f := FileAccess.open(falso, FileAccess.WRITE)
 	f.store_string('{"schema_version":1,"id":"arena_falsa","name":"Falsa","slots":[]}')
 	f.close()
-	var saida := _rodar_jogo(["--project", abs])
+	var saida := _rodar_jogo(["--project", abs_path])
 	assert_true(_contem(saida, "[ARENA] AVISO: a pasta arenas/ do projeto foi IGNORADA"), "A pasta arenas/ do projeto foi ignorada com aviso: %s" % saida)
 	assert_true(_contem(saida, "[ARENA] Arena oficial OK: 20 slots"), "A mesa continuou com a arena oficial do jogo.")
 	assert_true(_contem(saida, "[MESA3D] Arena carregada: 20 slots"), "A arena falsa não entrou em jogo.")

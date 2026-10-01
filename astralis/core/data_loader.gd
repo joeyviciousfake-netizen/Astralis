@@ -267,14 +267,14 @@ static func pasta_projeto_valida(p: String) -> bool:
 	# Pasta de projeto válida = existe e tem cara de projeto Astralis
 	# (ao menos 1 marcador: cards/, duelists/, decks/, arenas/ ou
 	# duel_setup.json/fusions.json/effects.json). Sem mudar regra/schema.
-	var abs := _resolver_abs(p)
-	if abs.is_empty() or not DirAccess.dir_exists_absolute(abs):
+	var abs_path := _resolver_abs(p)
+	if abs_path.is_empty() or not DirAccess.dir_exists_absolute(abs_path):
 		return false
 	for sub in ["cards", "duelists", "decks"]:
-		if DirAccess.dir_exists_absolute(abs.path_join(sub)):
+		if DirAccess.dir_exists_absolute(abs_path.path_join(sub)):
 			return true
 	for arq in ["duel_setup.json", "fusions.json", "effects.json"]:
-		if FileAccess.file_exists(abs.path_join(arq)):
+		if FileAccess.file_exists(abs_path.path_join(arq)):
 			return true
 	return false
 
@@ -299,10 +299,10 @@ static func project_base_dir() -> String:
 		_base_memo = starter_kit_dir()
 		_base_memo_pronto = true
 		return _base_memo
-	var abs := _resolver_abs(pedido)
+	var abs_path := _resolver_abs(pedido)
 	if pasta_projeto_valida(pedido):
-		print("[DataLoader] --project usando: " + abs)
-		_base_memo = abs
+		print("[DataLoader] --project usando: " + abs_path)
+		_base_memo = abs_path
 	else:
 		print("[DataLoader] Aviso: --project ignorado (pasta inexistente ou inválida): " + pedido + " — usando embutida.")
 		_base_memo = starter_kit_dir()

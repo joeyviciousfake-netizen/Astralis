@@ -1715,9 +1715,17 @@ func _moldar_foco(larg: float, alt: float, rot: Vector3, escala_mao: float) -> v
 
 ## A vista da mesa inteira a partir de UM número, e só isso: quem manda girar
 ## (o START e os testes) chama ISTO, e nunca mexe no pivô por conta própria.
+## A volta da mesa e' ASSINCRONA e aqui ela e' awaited de verdade: quem chama
+## precisa esperar o giro acabar antes de seguir o fluxo (e' o que os 3
+## chamadores prometeram em comentario: rival joga so depois da volta, e a
+## volta de volta entra antes de abrir o fluxo do jogador). Sem este `await`, o
+## jogo seguia com a mesa girando e o jogador via a mao do rival pelo lado
+## errado — o aviso de "await inutil" do Godot era a prova do bug, nao ruido.
+## Sem vista (ou sem render, que resolve na hora) nao ha o que esperar.
 func _girar_campo(alvo: float) -> void:
-	if _vista != null and is_instance_valid(_vista):
-		_vista.girar_para(alvo)
+	if _vista == null or not is_instance_valid(_vista):
+		return
+	await _vista.girar_para(alvo)
 
 
 ## O que a mesa faz a CADA PASSO da volta, na ordem do D52: a mão troca de
@@ -1913,14 +1921,14 @@ func _estilo_retrato() -> StyleBoxFlat:
 ## maior que o miolo, para o miolo "entrar" nele com sombra de um lado só —
 ## é o que dá a leitura de bisel da ref.
 func _aro_retrato() -> TextureRect:
-	var tr := _fundo_retrato(Color(0.88, 0.93, 1.0))
-	tr.name = "Aro"
-	tr.set_anchors_preset(Control.PRESET_FULL_RECT)
-	tr.offset_left = -7.0
-	tr.offset_top = -7.0
-	tr.offset_right = 7.0
-	tr.offset_bottom = 7.0
-	return tr
+	var aro := _fundo_retrato(Color(0.88, 0.93, 1.0))
+	aro.name = "Aro"
+	aro.set_anchors_preset(Control.PRESET_FULL_RECT)
+	aro.offset_left = -7.0
+	aro.offset_top = -7.0
+	aro.offset_right = 7.0
+	aro.offset_bottom = 7.0
+	return aro
 
 
 ## Gradiente do placeholder do retrato (mesma linguagem do metal do HUD).
@@ -1934,13 +1942,13 @@ func _fundo_retrato(tom: Color) -> TextureRect:
 	gt.height = 64
 	gt.fill_from = Vector2(0.0, 0.0)
 	gt.fill_to = Vector2(0.0, 1.0)
-	var tr := TextureRect.new()
-	tr.texture = gt
-	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	tr.stretch_mode = TextureRect.STRETCH_SCALE
-	tr.set_anchors_preset(Control.PRESET_FULL_RECT)
-	tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return tr
+	var fundo := TextureRect.new()
+	fundo.texture = gt
+	fundo.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	fundo.stretch_mode = TextureRect.STRETCH_SCALE
+	fundo.set_anchors_preset(Control.PRESET_FULL_RECT)
+	fundo.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return fundo
 
 
 ## D44 (item 8): o topo da tela tem SÓ a foto de cada duelista + o nome dele:
@@ -2024,7 +2032,7 @@ func _construir_retratos(hud: Control) -> void:
 ## conjunto de cor do bloco de LP daquele lado — borda escura (azul a sua,
 ## vermelha a do rival) e interior mais claro. O nome é o REAL do dado.
 func _placa_nome_retrato(hud: Control, nome: String, x: float, y: float, larg: float, alt: float,
-		align: int, cor_borda: Color, cor_fundo: Color) -> Label:
+		align: HorizontalAlignment, cor_borda: Color, cor_fundo: Color) -> Label:
 	var p := PanelContainer.new()
 	p.name = nome
 	p.add_theme_stylebox_override("panel", _estilo_placa(cor_fundo, cor_borda))
@@ -3507,7 +3515,6 @@ func _cancelar() -> void:
 		match _sub_mao:
 			SUB_MAO_ESCOLHA:
 				if not _levantadas.is_empty():
-					var ultima := int(_levantadas.back())
 					_levantadas.pop_back()
 					_fala("Abaixou a última. Restam %d levantadas." % _levantadas.size())
 					_redesenhar(false)

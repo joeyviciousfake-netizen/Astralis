@@ -60,14 +60,14 @@ func _escrever_texto(caminho: String, texto: String) -> bool:
 
 
 func _apagar_tudo(p: String) -> void:
-	var abs := ProjectSettings.globalize_path(p)
-	if not DirAccess.dir_exists_absolute(abs):
+	var abs_path := ProjectSettings.globalize_path(p)
+	if not DirAccess.dir_exists_absolute(abs_path):
 		return
-	for sub in DirAccess.get_directories_at(abs):
+	for sub in DirAccess.get_directories_at(abs_path):
 		_apagar_tudo(p.path_join(sub))
-	for arq in DirAccess.get_files_at(abs):
-		DirAccess.remove_absolute(abs.path_join(arq))
-	DirAccess.remove_absolute(abs)
+	for arq in DirAccess.get_files_at(abs_path):
+		DirAccess.remove_absolute(abs_path.path_join(arq))
+	DirAccess.remove_absolute(abs_path)
 
 
 func _layouts_abs() -> String:

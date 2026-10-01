@@ -146,9 +146,11 @@ static func eh_slot_valido(slot: String) -> bool:
 ## cada slot vem SO do arquivo `arena_oficial.json`, e nao existe nenhuma
 ## segunda fonte. `get_pos` le o layout; se o slot nao estiver no arquivo, o
 ## jogo avisa em voz alta (ver `valida_arena_oficial`) e NAO inventa posicao.
-static func default_pos(slot: String) -> Vector2:
-	# D50: kept only as the "nao ha posicao" answer. NAO tem mais grade aqui.
-	# Quem chama precisa do layout (arena_oficial_path) - ver get_pos.
+## D50: kept only as the "nao ha posicao" answer. NAO tem mais grade aqui.
+## Quem chama precisa do layout (arena_oficial_path) - ver get_pos.
+## O `slot` fica no prefixo `_` porque aqui NAO ha nada para consultar: o
+## prefixo e' aviso de assinatura, nao uma regra escondida.
+static func default_pos(_slot: String) -> Vector2:
 	return NULO
 
 

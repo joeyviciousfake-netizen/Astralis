@@ -55,7 +55,12 @@ static func free_monster_slot(state, player_idx: int) -> int:
 	return -1
 
 
-static func can_normal_summon(state, player_idx: int, hand_index: int, slot_index: int, face_down: bool = false, position: String = "ATK") -> Dictionary:
+## A CARA de cima = a mesma pergunta que `normal_summon` faz, sem invocar.
+## `face_down` fica por simetria de assinatura com a invocacao (o `normal_summon`
+## repassa os mesmos argumentos); a REGRA nao olha a face porque no FM tanto
+## invocar de frente quanto de costas e' legal no MAIN — entao o prefixo `_`
+## aqui e' so para o aviso do Godot, e nao uma regra nova escondida.
+static func can_normal_summon(state, player_idx: int, hand_index: int, slot_index: int, _face_down: bool = false, position: String = "ATK") -> Dictionary:
 	if state.over:
 		return {"ok": false, "erro": "Duelo já acabou."}
 	if String(state.phase) != "MAIN":
@@ -95,4 +100,3 @@ static func normal_summon(state, player_idx: int, hand_index: int, slot_index: i
 	zona[slot_index] = inst
 	state.normal_summon_used = true
 	return {"ok": true, "erro": "", "carta": str(carta.get("id", "")), "slot": slot_index, "face_down": face_down, "position": pos_final, "guardian_star": str(guardian_star)}
-
