@@ -160,15 +160,75 @@ ganhando campo novo, com schema, espelho no `main.rs` e `fm_import --check`.
 - Não é lugar de mexer no asset: se o `.glb` está errado, corrige-se o `.blend`
   e re-exporta — **nunca** o `.glb` na mão e **nunca** um número no jogo.
 
-## 17.9 Decisões do usuário (abertas, sem pressa)
+## 17.9 A MALHA TEM QUE ENTRAR SANA (a regra do autor)
 
-1. **Primeiro asset real** da mesa. A lacuna listada no doc 15 §15.5 é a
-   cidade de fundo; os pilares de vidro são a opção mais barata (a mesa já
-   tem a "_vidro" duplicado em código).
-2. **Se o projeto do usuário pode ter 3D próprio** (hoje: não, D61).
-3. **Parâmetros de import por asset**: o `.import` do `.glb` hoje usa o padrão
-   do Godot (`generate_lods`/`create_shadow_meshes` ligados, inúteis para
-   peça pequena). Ajuste por asset é possível e é dado do `.import` versionado.
+**Face de 4 lados, nunca face de mais de 4 lados.** Triângulo é aceito (e às
+vezes é o único caminho); n-gon não.
+
+**Por que o n-gon é proibido — e a medida, não o gosto.** Num contorno
+côncavo as diagonais de uma face de N lados **não estão em lugar nenhum**: o
+exportador escolhe na hora de triangular (foi o que apareceu na estrela de
+teste: uma tampa de 10 lados virou "5 orelhas + 3 triângulos" do pentágono
+interno). A área fecha e o render sai certo, então **nenhuma medida de área,
+caixa ou triângulo acusa o problema** — mas a mesma `.blend` entregue a outra
+ferramenta (o import do Godot, um otimizador, outro exportador) escolhe
+diagonais diferentes, e numa forma côncava a diagonal muda o resultado. O
+defeito é **irreprodutibilidade**, e ele é invisível justamente porque a
+geometria está certa.
+
+> **O `.glb` tem triângulos e sempre vai ter** — o glTF só tem triângulos, é
+> formato, não escolha. O que não pode mudar é a **fonte**: no `.blend` a
+> topologia é de quads, e é ela que sobrevive.
+
+### A construção de referência (a estrela de teste)
+
+As 2 tampas são **5 quads cada, girando em torno de um vértice central**. Cada
+quad cobre duas pontas e o vale entre elas: `(C, v_i, v_i+1, v_i+2)`, com `i`
+par. A conta fecha, e fecha antes de construir:
+
+```text
+5 quads x 2 setores = os 10 setores da estrela inteira
+V=11  E=15  F=5   ->   V-E+F = 1   (disco valido)
+soma dos cantos de face = 10 + 5 + 5 = 20 = 4 x 5
+```
+
+Com as 10 paredes (já quads), o sólido fecha: `V=22 E=40 F=20`, `V-E+F=2`
+(casco), **40 arestas em exatamente 2 faces**, volume por divergência positivo
+(normais todas para fora) e a **caixa idêntica** — a silhueta não se mexeu.
+
+> **Onde o quad puro é impossível, a conta diz.** Uma estrela de 5 pontas com
+> as 10 pontas de valência 1 e só quads exigiria `4F ≡ 2 (mod 4)`, que não tem
+> solução inteira. Se uma peça precisar de quads onde a conta não fecha, o
+> caminho é **inserir vértices** (loop cut nas arestas) e emendar os anéis — não
+>(forçar) um n-gon e deixar a diagonal por conta da exportação.
+
+### O portão: onde isso é verificado (e por que na FONTE)
+
+`tools/blender/exportar_assets.py` audita a malha e **recusa** (§17.3: mede e
+falha, não corrige). **A auditoria da topologia roda na `.blend`, com bmesh** —
+porque no `.glb` o n-gon **já virou triângulo** e o defeito some de vista. É o
+único lugar onde ele existe.
+
+| Check | Onde | Ação |
+|---|---|---|
+| face com mais de 4 lados | fonte (bmesh) | **erro** |
+| face degenerada (área 0) / repetida | fonte | **erro** |
+| vértice solto (nenhuma face usa) | fonte | **erro** |
+| aresta de bordo / aresta com >2 faces | fonte | **erro** (aberta / não-manifold) |
+| normal gravada ≠ normal geométrica | artefato | **erro** — é o "alguns polígonos parecem errados" |
+| área total da fonte ≠ área do artefato | as duas | **erro** — a triangulação perdeu ou vazou geometria |
+| nenhuma face de 4 lados | fonte | **aviso** — nem toda peça precisa de quad |
+
+O portão é **provado nos dois sentidos**: ele pega n-gon, face degenerada,
+malha aberta e vértice solto (sonda descartável, 4 de 4), e passa na estrela
+de verdade com 0 problemas.
+
+A saúde da malha **viaja no manifesto** (`topologia` de cada asset: `faces`,
+`quads`, `tris_fonte`, `ngons`, `fechada`), e o GUT (`test_assets_3d.gd`)
+confere — é o terceiro medidor, e **sem escrever nenhum número à mão**: foi
+repetir os "36 triângulos" dentro do teste que o fez divergir do manifesto
+sozinho quando a estrela mudou. Se precisar repetir um número, ele está no
+dado errado.
 
 ## 17.10 A prévia oficial: Cycles na GPU (D62)
 
@@ -207,3 +267,18 @@ Custo medido: 768×768 com 256 amostras leva **3 a 5 s** na RTX 5060.
 > **O jogo não tem Cycles.** Isso aqui é o render do *Blender*, ou seja, das
 > provas de asset. O render do jogo continua sendo o do Godot (Forward+/Mobile) —
 > e nenhum dos dois toca no outro: o `.glb` é geometria, sem luz.
+
+## 17.11 Decisões do usuário (abertas, sem pressa)
+
+1. **Primeiro asset real** da mesa. A lacuna listada no doc 15 §15.5 é a
+   cidade de fundo; os pilares de vidro são a opção mais barata (a mesa já
+   tem a "_vidro" duplicado em código). **A topologia de referência a seguir é a
+   estrela de teste (§17.9)** — 5 quads por tampa em torno de um vértice
+   central —, e o portão já recusa qualquer peça que não passe nela.
+2. **Se o projeto do usuário pode ter 3D próprio** (hoje: não, D61).
+3. **Parâmetros de import por asset**: o `.import` do `.glb` hoje usa o padrão
+   do Godot (`generate_lods`/`create_shadow_meshes` ligados, inúteis para
+   peça pequena). Ajuste por asset é possível e é dado do `.import` versionado.
+4. **Peça que precise de n-gon de verdade** (uma tampa cilíndrica, um disco):
+   hoje o portão recusa. A saída, se um dia precisar, é um campo novo no
+   manifesto dizendo qual face pode ser n-gon — **não** afrouxar o portão.

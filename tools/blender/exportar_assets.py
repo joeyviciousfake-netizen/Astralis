@@ -173,6 +173,176 @@ def exportar_um(caminho_blend, caminho_glb):
     return os.path.getsize(caminho_glb)
 
 
+# ---------- AUDITAR A MALHA: a fonte e o artefato, por lados diferentes ----------
+
+def auditar_fonte_malha():
+    """A malha tem que entrar SANA em qualquer asset. Roda DENTRO do Blender,
+    com bmesh, sobre a cena aberta.
+
+    POR QUE A FONTE E NAO O .glb: o glTF so tem triangulos, entao o exportador
+    ja triangularizou um n-gon antes de ele virar arquivo — no artefato o n-gon
+    nao existe mais e o defeito some de vista. So a fonte mostra.
+
+    O QUE E ERRO e o que e AVISO:
+      ERRO  - face com mais de 4 lados (o n-gon con cavo, cuja diagonal e
+              escolhida na hora da exportacao: a mesma .blend daria geometrias
+              diferentes em ferramentas diferentes)
+      ERRO  - face degenerada (area zero), face repetida, vertice solto, aresta
+              de bordo (malha aberta) ou aresta com mais de 2 faces (nao-manifold)
+      AVISO - nenhuma face de 4 lados (so triangulos): nao e erro, porque nem
+              toda peca precisa de quad, mas o asset de teste deveria ter
+    """
+    import bpy
+    import bmesh
+    from collections import defaultdict
+
+    problemas = []
+    avisos = []
+    cena = bpy.context.scene
+    for ob in cena.objects:
+        if ob.type != "MESH":
+            continue
+        nome = ob.name
+        bm = bmesh.new()
+        bm.from_mesh(ob.data)
+        bm.faces.ensure_lookup_table()
+
+        hist = defaultdict(int)
+        for f in bm.faces:
+            hist[len(f.verts)] += 1
+
+        # n-gon: o defeito que o projeto nao aceita
+        for f in bm.faces:
+            if len(f.verts) > 4:
+                problemas.append("%s: face ngon de %d lados (maximo 4). "
+                                 "Em face con cava a diagonal e escolhida na "
+                                 "exportacao, entao a geometria nao e "
+                                 "reproduzivel." % (nome, len(f.verts)))
+                break
+
+        # degenerada / repetida / vertice solto
+        vistas = set()
+        for f in bm.faces:
+            if f.calc_area() <= 1e-12:
+                problemas.append("%s: face degenerada (area 0)" % nome)
+                break
+            chave = tuple(sorted(v.index for v in f.verts))
+            if chave in vistas:
+                problemas.append("%s: face repetida (mesmos vertices)" % nome)
+                break
+            vistas.add(chave)
+        if any(len(f.verts) < 3 for f in bm.faces):
+            problemas.append("%s: face com menos de 3 vertices" % nome)
+
+        usados = {v.index for f in bm.faces for v in f.verts}
+        soltos = [v for v in bm.verts if v.index not in usados]
+        if soltos:
+            problemas.append("%s: %d vertice(s) solto(s) — posicao que nenhuma "
+                             "face usa (peso morto)" % (nome, len(soltos)))
+
+        # fechada e manifold
+        arestas = defaultdict(int)
+        for f in bm.faces:
+            vs = list(f.verts)
+            for i in range(len(vs)):
+                a, b = vs[i], vs[(i + 1) % len(vs)]
+                arestas[(min(a.index, b.index), max(a.index, b.index))] += 1
+        cont = defaultdict(int)
+        for qtd in arestas.values():
+            cont[qtd] += 1
+        if cont.get(1):
+            problemas.append("%s: %d aresta(s) de bordo — a malha esta ABERTA"
+                             % (nome, cont[1]))
+        if any(q > 2 for q in cont):
+            problemas.append("%s: aresta com mais de 2 faces — nao-manifold" % nome)
+
+        if not hist.get(4):
+            avisos.append("%s: nenhuma face de 4 lados (so triangulos)" % nome)
+
+        area = sum(f.calc_area() for f in bm.faces)
+        bm.free()
+        # a area total e a invariante entre a fonte e o artefato: o export nao
+        # muda area, entao a soma das areas tem que bater nas duas pontas
+        return problemas, avisos, area
+    return problemas, avisos, 0.0
+
+
+def auditar_artefato_malha(caminho_glb, area_esperada):
+    """Confere o .glb como o jogo vai ver. Duas coisas que so existem aqui:
+    a normal gravada de cada triangulo, e a area total (que tem que ser a mesma
+    da fonte)."""
+    doc = ler_glb_json(caminho_glb)
+    with open(caminho_glb, "rb") as f:
+        dados = f.read()
+    bin_ = b""
+    pos = 12
+    magic, versao, tamanho = struct.unpack_from("<III", dados, 0)
+    while pos < tamanho:
+        tam, tipo = struct.unpack_from("<II", dados, pos)
+        pos += 8
+        if tipo == 0x004E4942:
+            bin_ = dados[pos:pos + tam]
+        pos += tam
+
+    comp = {5120: ("b", 1), 5121: ("B", 1), 5122: ("h", 2),
+            5123: ("H", 2), 5125: ("I", 4), 5126: ("f", 4)}
+    ncomp = {"SCALAR": 1, "VEC2": 2, "VEC3": 3, "VEC4": 4}
+    acessores = doc.get("accessors", [])
+
+    def acc(i):
+        a = acessores[i]
+        bv = doc["bufferViews"][a["bufferView"]]
+        fmt, _ = comp[int(a["componentType"])]
+        larg = ncomp[a["type"]]
+        base = int(bv.get("byteOffset", 0)) + int(a.get("byteOffset", 0))
+        bruto = struct.unpack_from("<" + fmt * (int(a["count"]) * larg), bin_, base)
+        return [tuple(bruto[k * larg:(k + 1) * larg]) for k in range(int(a["count"]))]
+
+    problemas = []
+    area_total = 0.0
+    for no in doc.get("nodes", []):
+        if "mesh" not in no:
+            continue
+        for prim in doc["meshes"][int(no["mesh"])].get("primitives", []):
+            P = acc(prim["attributes"]["POSITION"])
+            if "NORMAL" not in prim["attributes"]:
+                problemas.append("primitiva sem NORMAL: o jogo vai recalcular e "
+                                 "pode ficar diferente do que o Blender viu")
+                continue
+            N = acc(prim["attributes"]["NORMAL"])
+            if "indices" not in prim:
+                continue
+            I = acc(prim["indices"])
+            for t in range(len(I) // 3):
+                ia, ib, ic = int(I[3 * t][0]), int(I[3 * t + 1][0]), int(I[3 * t + 2][0])
+                a, b, c = P[ia], P[ib], P[ic]
+                u = (b[0] - a[0], b[1] - a[1], b[2] - a[2])
+                v = (c[0] - a[0], c[1] - a[1], c[2] - a[2])
+                cr = (u[1] * v[2] - u[2] * v[1], u[2] * v[0] - u[0] * v[2],
+                      u[0] * v[1] - u[1] * v[0])
+                m = (cr[0] ** 2 + cr[1] ** 2 + cr[2] ** 2) ** 0.5
+                if m <= 1e-12:
+                    problemas.append("triangulo %d degenerado no artefato" % t)
+                    continue
+                area_total += 0.5 * m
+                geo = (cr[0] / m, cr[1] / m, cr[2] / m)
+                if max(abs(N[ia][k] - geo[k]) for k in range(3)) > 1e-3:
+                    problemas.append("triangulo %d: a normal gravada nao bate com a "
+                                     "geometrica (=%s vs %s) — e este que faz "
+                                     "'alguns poligonos parecerem errados'"
+                                     % (t, tuple(round(x, 3) for x in N[ia]),
+                                        tuple(round(x, 3) for x in geo)))
+                    break
+
+    if area_esperada > 0:
+        erro = abs(area_total - area_esperada) / area_esperada
+        if erro > 1e-3:
+            problemas.append("area total: fonte=%.6f artefato=%.6f (erro %.4f%%) — "
+                             "a triangulacao perdeu ou vazou geometria"
+                             % (area_esperada, area_total, erro * 100))
+    return problemas, area_total
+
+
 def comparar(asset, medido):
     """O manifesto e a trava. Devolve a lista de divergencias (vazia = bate)."""
     erros = []
@@ -217,23 +387,44 @@ def main():
             continue
         bytes_ = exportar_um(blend, glb)
         medido = medir_glb(glb)
+
+        # AUDITORIA DA MALHA: a fonte pelo bmesh (e o unico lugar onde o n-gon
+        # ainda existe) e o artefato pelo arquivo (normal gravada e area).
+        probs_fonte, avisos_fonte, area_fonte = auditar_fonte_malha()
+        probs_art, area_art = auditar_artefato_malha(glb, area_fonte)
+        malha_ok = not probs_fonte and not probs_art
+
         linha = "[%s] %d tris | %d verts | %d malhas | caixa x%s y%s z%s | %s | %.0f KB" % (
             aid, medido["triangulos"], medido["vertices"], medido["malhas"],
             medido["caixa"]["x"], medido["caixa"]["y"], medido["caixa"]["z"],
             ",".join(medido["materiais"]), bytes_ / 1024.0)
+
         if modo == "medir":
             print(linha)
             print("        (medir: manifesto NAO foi conferido)")
+            for p in probs_fonte + probs_art:
+                print("        ! %s" % p)
+            for a in avisos_fonte:
+                print("        ~ %s" % a)
             continue
+
         erros = comparar(asset, medido)
+        if not malha_ok:
+            falhas += 1
+            print("[%s] MALHA NAO SANA — o asset nao entra no jogo assim:" % aid)
+            for p in (probs_fonte + probs_art)[:12]:
+                print("        ! %s" % p)
         if erros:
             falhas += 1
             print("[%s] DIVERGENCIA — o manifesto nao e o que o Blender exporta:" % aid)
             for e in erros:
                 print("        - %s" % e)
-        else:
+        if not erros and malha_ok:
             print(linha)
-            print("        manifesto OK")
+            print("        manifesto OK | malha sana (area fonte=%.6f artefato=%.6f)"
+                  % (area_fonte, area_art))
+        for a in avisos_fonte:
+            print("        ~ %s" % a)
 
     if modo == "medir":
         return 0

@@ -56,9 +56,44 @@ if ($Blend) { Write-Host "Abrindo: $Blend" -ForegroundColor Cyan }
 $argumentos = @("--python", $script)
 if ($Blend) { $argumentos += @("--", $Blend) }
 
-# -NoNewWindow: sem isso o Blender e um app GUI sem console ligado e o stdout
-# dele (as linhas "[ASTRALIS] ..." do iniciar_blender.py) e DESCARTADO — foi
-# assim que o aviso de "nenhuma GPU encontrada" passou anos invisivel. Com a
-# flag, as linhas aparecem NESTA janela, que e onde a pessoa esta olhando.
-Start-Process -FilePath $exe -ArgumentList $argumentos -NoNewWindow
-Write-Host "Sobeu. Leia as linhas [ASTRALIS] acima:-backend de render, se o MCP subiu e a porta." -ForegroundColor Green
+# O Blender e um app GUI: o stdout dele morre com o processo, entao nao ha como
+# "ver o que ele Prints" sem sequestrar o console de alguem. Tres formas foram
+# testadas nesta maquina e duas quebram:
+#   sem nada          -> o aviso some (foi assim que o D62 passou meses sem ninguem ver)
+#   -NoNewWindow      -> o Blender divide o console do shell: encerrar o Blender
+#                        derruba junto o shell que o lancou
+#   -Redirect...      -> trava o PowerShell
+# A forma que funciona: o Blender GRAVA um arquivo de status
+# (ASTRALIS_STATUS, escrito pelo iniciar_blender.py) e o launcher le e imprime.
+# A pessoa ve a mesma informacao, o console fica limpo e o Blender pode ser
+# encerrado sozinho.
+$status = Join-Path ([System.IO.Path]::GetTempPath()) ("astralis-blender-{0}.json" -f (Get-Random))
+Remove-Item $status -ErrorAction SilentlyContinue
+$env:ASTRALIS_STATUS = $status
+Start-Process -FilePath $exe -ArgumentList $argumentos | Out-Null
+
+# O Blender sobe o servidor DEPOIS de abrir o arquivo e configurar a GPU, entao
+# esperar a porta e o jeito honesto de saber que o script ja rodou.
+$espera = 0
+while ($espera -lt 40 -and -not (Get-NetTCPConnection -LocalPort $Porta -State Listen -ErrorAction SilentlyContinue)) {
+    Start-Sleep -Milliseconds 500
+    $espera += 1
+}
+Start-Sleep -Milliseconds 500   # o status e gravado logo depois de subir o servidor
+
+if (Test-Path $status) {
+    $s = Get-Content $status -Raw | ConvertFrom-Json
+    if ($s.backend -and $s.backend -ne "nenhum") {
+        Write-Host ("Cycles: backend {0} | {1}" -f $s.backend, ($s.gpus -join ", ")) -ForegroundColor Cyan
+    } else {
+        Write-Host "Cycles: NENHUMA GPU — o projeto NAO renderiza em CPU (D62)." -ForegroundColor Red
+    }
+    if ($s.mcp) {
+        Write-Host ("MCP do Blender: NO AR na porta {0} (arquivo: {1})" -f $s.porta, $s.arquivo) -ForegroundColor Green
+    } else {
+        Write-Host "MCP do Blender: NAO SUBIU." -ForegroundColor Red
+    }
+} else {
+    Write-Host "Nao achei o arquivo de status — o Blender pode ter demorado ou falhado." -ForegroundColor Yellow
+}
+Remove-Item $status -ErrorAction SilentlyContinue

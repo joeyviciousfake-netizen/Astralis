@@ -161,5 +161,23 @@ func test_o_manifesto_e_a_fonte_e_o_jogo_nao_tem_numero_de_asset() -> void:
 	for a in (c.manifesto().get("assets", []) as Array):
 		soma += int((a as Dictionary).get("triangulos", 0))
 	assert_eq(total, soma, "O total de triangulos do 3D e a soma do manifesto (%d)." % total)
-	assert_eq(int(c.medido("estrela_teste").get("triangulos", -1)), 36,
-		"O asset de teste tem os 36 triangulos que o Blender mediu.")
+	# A topologia tambem e do manifesto, e e ela que trava o portão de malha do
+	# doc 17. Este arquivo NAO repete nenhum numero do manifesto: foi repetir
+	# (os 36 triangulos estavam escritos aqui a mao) que fez o teste divergir do
+	# dado sozinho quando a estrela passou de n-gon para quads.
+	var reg := c.registro("estrela_teste") as Dictionary
+	var topo := reg.get("topologia", {}) as Dictionary
+	assert_false(topo.is_empty(), "O manifesto declara a topologia da malha do asset.")
+	assert_eq(int(topo.get("ngons", -1)), 0,
+		"Nenhuma face de mais de 4 lados: em contorno con cavo a diagonal e escolhida "
+		+ "na hora da exportacao, entao a mesma .blend daria geometrias diferentes "
+		+ "em ferramentas diferentes.")
+	assert_true(int(topo.get("quads", 0)) > 0,
+		"A malha tem face de 4 lados (a topologia de verdade esta no .blend).")
+	assert_eq(int(topo.get("tris_fonte", -1)), 0,
+		"Nenhuma face de 3 lados na fonte: o .glb tem triangulos porque o glTF so "
+		+ "tem triangulos, mas o .blend nao precisa deles.")
+	assert_true(bool(topo.get("fechada", false)),
+		"A malha e fechada e manifold (toda aresta em exatamente 2 faces).")
+	assert_eq(int(topo.get("faces", 0)) * 2, int(reg.get("triangulos", -1)),
+		"Um quad da fonte vira exatamente 2 triangulos no .glb: 20 faces -> 40 tris.")

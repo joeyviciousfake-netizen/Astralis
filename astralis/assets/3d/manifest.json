@@ -16,8 +16,17 @@
       "blend": "fonte/estrela_teste.blend",
       "glb": "estrela_teste.glb",
       "malhas": 1,
-      "vertices": 60,
-      "triangulos": 36,
+      "vertices": 62,
+      "triangulos": 40,
+      "topologia": {
+        "faces": 20,
+        "quads": 20,
+        "tris_fonte": 0,
+        "ngons": 0,
+        "vertices_fonte": 22,
+        "fechada": true,
+        "regra": "face de 4 lados, nunca n-gon: em contorno con cavo a diagonal e escolhida na hora da exportacao, entao a mesma .blend daria geometrias diferentes em ferramentas diferentes. As 2 tampas sao 5 quads cada girando em torno de um vertice central (V-E+F=2, 40 arestas em 2 faces, area preservada). O .glb tem triangulos porque o glTF so tem triangulos - o que nao pode mudar e a FONTE."
+      },
       "materiais": ["mat_estrela_teste"],
       "caixa": {
         "x": [-0.4755, 0.4755],

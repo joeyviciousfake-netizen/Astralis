@@ -31,6 +31,7 @@ para produzir `assets/3d/*.glb` — e o unico caminho de entrada do Blender
 para o repositorio (o outro lado e o exportador).
 """
 
+import json
 import os
 import sys
 
@@ -39,6 +40,28 @@ import bpy
 ADDON = "blender_mcp"
 PORTA_PADRAO = 9876
 BACKEND_GPU = ("OPTIX", "CUDA", "HIP", "ONEAPI")
+
+# Onde o launcher le o que aconteceu. O Blender nao pode "falar" com o terminal:
+# ele e um app GUI, entao o stdout dele morre junto com o processo. Escrever um
+# arquivo e o unico jeito de o launcher mostrar a verdade para a pessoa - e sem
+# sequestrar o console de ninguem (testado: `-NoNewWindow` faz o Blender
+# derrubar o shell junto, e `-RedirectStandardOutput` trava o PowerShell).
+STATUS = os.environ.get("ASTRALIS_STATUS", "")
+
+
+def registrar(**campos):
+    """Grava o estado do boot num arquivo, para o launcher imprimir.
+
+    Falha de escrita NAO derruba o Blender: o MCP e o que importa, e o log no
+    console ainda existe para quem le o System Console do proprio Blender.
+    """
+    if not STATUS:
+        return
+    try:
+        with open(STATUS, "w", encoding="utf-8") as f:
+            json.dump(campos, f, ensure_ascii=False, indent=2)
+    except OSError as exc:  # noqa: BLE001
+        print("[ASTRALIS] Nao deu para gravar o arquivo de status: %r" % (exc,))
 
 
 def deixar_cycles_na_gpu():
@@ -57,7 +80,7 @@ def deixar_cycles_na_gpu():
     if prefs is None:
         print("[ASTRALIS] ATENCAO: o Cycles nao esta neste build. O projeto "
               "renderiza em Cycles na GPU; sem ele nao existe previa oficial.")
-        return "nenhum"
+        return "nenhum", []
     cp = prefs.preferences
     for backend in BACKEND_GPU:
         try:
@@ -71,11 +94,11 @@ def deixar_cycles_na_gpu():
         for d in cp.devices:
             d.use = (d.type == backend)
         print("[ASTRALIS] Cycles: backend %s | %s" % (backend, ", ".join(d.name for d in gpus)))
-        return backend
+        return backend, [d.name for d in gpus]
     print("[ASTRALIS] ATENCAO: NENHUMA GPU encontrada para o Cycles (OPTIX/CUDA/HIP/ONEAPI). "
           "O projeto NAO renderiza em CPU (D62): se o render saiu do mesmo jeito, o backend "
           "esta errado e a previa nao serve como prova.")
-    return "nenhum"
+    return "nenhum", []
 
 
 def porta():
@@ -133,11 +156,15 @@ def subir_servidor(porta_uso):
 
 def main():
     abrir = abrir_arquivo(argumentos()[0] if argumentos() else "")
+    backend, gpus = "nenhum", []
     if not habilitar_addon():
         print("[ASTRALIS] Falha ao habilitar o add-on %s." % ADDON)
+        registrar(addon=False, mcp=False, arquivo=bpy.data.filepath)
         return
-    deixar_cycles_na_gpu()
-    subir_servidor(porta())
+    backend, gpus = deixar_cycles_na_gpu()
+    mcp = subir_servidor(porta())
+    registrar(addon=True, mcp=mcp, porta=porta(), backend=backend, gpus=gpus,
+              arquivo=bpy.data.filepath or "(vazio)")
     if not abrir:
         print("[ASTRALIS] Dica: passe o .blend depois de '--', ex.: --python iniciar_blender.py -- assets/3d/fonte/x.blend")
 

@@ -41,6 +41,13 @@ Dono: QA/Integration (script de dev) + o carregador no jogo é do runtime
   não reimportando no Blender — medir no ida-e-volta devolveria os eixos do
   Blender e a trava passaria errado) e falha se não bater com o manifesto.
   Também recusa `.glb` com transform no nó.
+  **E audita a saúde da malha, em duas pontas.** A **topologia é auditada na
+  fonte** (`.blend`, via bmesh) porque no `.glb` o n-gon **já virou triângulo**
+  e o defeito some de vista: face de mais de 4 lados, face degenerada,
+  face repetida, vértice solto, malha aberta ou não-manifold são **erro**; o
+  artefato confere a **normal gravada contra a geométrica** e a **área total
+  contra a da fonte**. Recusa, não corrige. A regra de topologia e o porquê
+  estão em `docs/17_ASSETS_3D.md` §17.9.
   ```powershell
   & $env:BLENDER --background --factory-startup --python tools\blender\exportar_assets.py -- exportar
   & $env:BLENDER --background --factory-startup --python tools\blender\exportar_assets.py -- medir
@@ -61,4 +68,23 @@ Dono: QA/Integration (script de dev) + o carregador no jogo é do runtime
   ```
 
 O outro lado da trava é `astralis/testing/test_assets_3d.gd` (GUT), que mede o
-mesmo `.glb` do lado do Godot. Duas medidas independentes, um manifesto só.
+  mesmo `.glb` do lado do Godot e confere a saúde da malha que o manifesto
+  declara. Duas medidas independentes, um manifesto só — e **nenhum número
+  escrito à mão no teste**: repetir um número do manifesto dentro do teste é o
+  que o faz divergir sozinho.
+
+## Aviso importante do Blender (medido, 2026-10-01)
+
+**`bpy.ops` dentro do `execute_blender_code` do MCP TRAVA o Blender.** A thread
+principal fica bloqueada e o MCP deixa de responder (só morre se você fechar o
+Blender). Use `bpy.data` e a API baixa (`bmesh`, `mesh.from_pydata`,
+`mesh.update`) — que é o suficiente para autorar e medir — e deixe `bpy.ops`
+para o Blender executar por conta própria (o `--python` no `abrir_blender.ps1`
+roda em `--background` quando chamado headless, e aí `bpy.ops` funciona).
+
+**E o Blender é app GUI: o `stdout` dele morre com o processo.** Três formas de
+ver o que ele Prints foram testadas e duas quebram: `-NoNewWindow` faz o
+Blender dividir o console do shell (encerrar o Blender derruba junto o shell
+que o lançou), e `-RedirectStandardOutput` trava o PowerShell. A que funciona é
+o `iniciar_blender.py` **gravar um arquivo de status** (`ASTRALIS_STATUS`) e o
+launcher ler e imprimir.
