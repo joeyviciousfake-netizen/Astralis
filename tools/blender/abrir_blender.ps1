@@ -56,5 +56,9 @@ if ($Blend) { Write-Host "Abrindo: $Blend" -ForegroundColor Cyan }
 $argumentos = @("--python", $script)
 if ($Blend) { $argumentos += @("--", $Blend) }
 
-Start-Process -FilePath $exe -ArgumentList $argumentos
-Write-Host "Sobeu. Se a janela do Blender mostrar '[ASTRALIS] MCP do Blender: NO AR na porta $Porta', o MCP esta pronto." -ForegroundColor Green
+# -NoNewWindow: sem isso o Blender e um app GUI sem console ligado e o stdout
+# dele (as linhas "[ASTRALIS] ..." do iniciar_blender.py) e DESCARTADO — foi
+# assim que o aviso de "nenhuma GPU encontrada" passou anos invisivel. Com a
+# flag, as linhas aparecem NESTA janela, que e onde a pessoa esta olhando.
+Start-Process -FilePath $exe -ArgumentList $argumentos -NoNewWindow
+Write-Host "Sobeu. Leia as linhas [ASTRALIS] acima:-backend de render, se o MCP subiu e a porta." -ForegroundColor Green

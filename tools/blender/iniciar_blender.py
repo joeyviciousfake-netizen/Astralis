@@ -12,8 +12,15 @@ como nao-confiavel e quem manda no inicio e ESTE arquivo.
 O QUE ELE FAZ, em ordem:
   1. habilita o add-on, se ainda nao estiver (idempotente);
   2. abre o `.blend` pedido (o arquivo que a pessoa vai editar), se houver;
-  3. sobe o servidor MCP na porta ASTRALIS_MCP_PORT (padrao 9876);
-  4. imprime a linha de confirmacao — se ela nao aparecer, o MCP esta fora.
+  3. FORCA o Cycles na GPU (D62) — o backend e preferencia de maquina, nao mora
+     no `.blend`, entao quem escolhe e este arquivo;
+  4. sobe o servidor MCP na porta ASTRALIS_MCP_PORT (padrao 9876);
+  5. imprime a linha de confirmacao — se ela nao aparecer, o MCP esta fora.
+
+O PROJETO RENDERIZA EM CYCLES NA GPU E NAO EM CPU. Isso nao e preferencia,
+e a invariante do D62: um render "de GPU" que escorrega para a CPU em silencio
+nao prova nada, que e a mesma familia do defeito que o D50 apagou. Entao, se
+nenhuma GPU for encontrada, o script AVISA em vez de seguir calado.
 
 COMO RODAR (e o que o `abrir_blender.ps1` faz por voce):
     & "C:\\Program Files\\Blender Foundation\\Blender 5.2\\blender.exe" `
@@ -38,13 +45,18 @@ def deixar_cycles_na_gpu():
     """D62: o projeto renderiza em CYCLES, na GPU. A maquina tem RTX 5060 e o
     backend medido e OPTIX (Blender 5.2.2 LTS ve a 5060 em OPTIX e em CUDA).
 
-    O backend e preferencia de maquina (nao mora no .blend), entao e aqui que
+    O backend e preferencia de MAQUINA (nao mora no .blend), entao e aqui que
     ele e escolhido — senao a interface abriria com o padrao do Blender, que
     seria EEVEE na CPU, e a previa da interface mentiria sobre a previa oficial.
+
+    A ordem de tentativa e a preferencia de maquina (OPTIX primeiro, medido).
+    O dispositivo CPU do Cycles e DESLIGADO de proposito: com ele ligado, o
+    render "da GPU" escorrega para o processador sem avisar.
     """
     prefs = bpy.context.preferences.addons.get("cycles")
     if prefs is None:
-        print("[ASTRALIS] Cycles nao esta neste build: a interface vai abrir sem GPU de render.")
+        print("[ASTRALIS] ATENCAO: o Cycles nao esta neste build. O projeto "
+              "renderiza em Cycles na GPU; sem ele nao existe previa oficial.")
         return "nenhum"
     cp = prefs.preferences
     for backend in BACKEND_GPU:
@@ -60,7 +72,9 @@ def deixar_cycles_na_gpu():
             d.use = (d.type == backend)
         print("[ASTRALIS] Cycles: backend %s | %s" % (backend, ", ".join(d.name for d in gpus)))
         return backend
-    print("[ASTRALIS] Cycles: nenhuma GPU encontrada (so CPU).")
+    print("[ASTRALIS] ATENCAO: NENHUMA GPU encontrada para o Cycles (OPTIX/CUDA/HIP/ONEAPI). "
+          "O projeto NAO renderiza em CPU (D62): se o render saiu do mesmo jeito, o backend "
+          "esta errado e a previa nao serve como prova.")
     return "nenhum"
 
 
@@ -122,6 +136,7 @@ def main():
     if not habilitar_addon():
         print("[ASTRALIS] Falha ao habilitar o add-on %s." % ADDON)
         return
+    deixar_cycles_na_gpu()
     subir_servidor(porta())
     if not abrir:
         print("[ASTRALIS] Dica: passe o .blend depois de '--', ex.: --python iniciar_blender.py -- assets/3d/fonte/x.blend")

@@ -17,12 +17,21 @@ Dono: QA/Integration (script de dev) + o carregador no jogo é do runtime
 (`astralis/core/asset_3d.gd`). Especificação completa em `docs/17_ASSETS_3D.md`.
 
 - `iniciar_blender.py` — roda **dentro** do Blender (`--python`): habilita o
-  add-on `mcp-for-blender`, abre o `.blend` pedido e sobe o socket do MCP.
+  add-on `mcp-for-blender`, **força o Cycles na GPU (OptiX, RTX 5060)**, abre o
+  `.blend` pedido e sobe o socket do MCP.
   Existe porque o auto-start do add-on **não dispara no Blender 5.2.2 LTS**
   (medido em 2026-09-30); chamar `start_server` na mão sobe na hora.
+  **A GPU é forçada, não é preferência** (D62): o backend é escolha de máquina
+  e não mora no `.blend`, e o dispositivo **CPU do Cycles é desligado** para o
+  render "de GPU" não escorregar para o processador em silêncio. Se nenhuma GPU
+  for encontrada, o script **avisa em vez de seguir calado**.
 - `abrir_blender.ps1` — o launcher de uso: acha o Blender (env `BLENDER`, senão
   a versão mais nova em `Program Files\Blender Foundation`), chama o
   `iniciar_blender.py` e informa a porta. Um comando, sem clique.
+  Ele sobe com **`-NoNewWindow`** de propósito: sem isso o Blender é um app GUI
+  sem console ligado e as linhas `[ASTRALIS]` (backend de render, se o MCP
+  subiu) são **descartadas** — foi assim que um aviso de GPU ficou invisível.
+  As linhas aparecem **na janela do PowerShell de onde você chamou**.
   ```powershell
   .\tools\blender\abrir_blender.ps1 -Blend astralis\assets\3d\fonte\estrela_teste.blend
   ```
