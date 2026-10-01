@@ -135,8 +135,20 @@ func test_a_convencao_da_base_e_o_no_sem_transform() -> void:
 		assert_almost_eq(no.scale.length() - sqrt(3.0), 0.0, Asset3D.TOL,
 			"'%s': o no raiz entra na escala 1 (padrao da unidade = largura da carta)." % id)
 		var caixa: AABB = _medir(no)["caixa"]
-		assert_almost_eq(caixa.position.y, 0.0, Asset3D.TOL,
-			"'%s': a base do asset esta em y=0 (pousa no chao sem ajuste nenhum)." % id)
+		# A origem tem DUAS formas legitimas (conventions.origem) e o asset declara
+		# qual e a dele. Peca deitada pousa com a base em y=0; peca em pe e centrada
+		# em Y, porque a mesa posiciona carta por alt/2 a partir do centro. O teste
+		# le a declaracao - ele nao presume que tudo e deitado, e nao aceita
+		# 'deitada' onde a caixa esta no meio do nada sem o asset pedir.
+		var origem := str(((a as Dictionary).get("topologia", {}) as Dictionary).get("origem", ""))
+		assert_true(origem in ["deitada", "em_pe"],
+			"'%s': o asset declara topologia.origem, deitada ou em_pe (veio '%s')." % [id, origem])
+		if origem == "deitada":
+			assert_almost_eq(caixa.position.y, 0.0, Asset3D.TOL,
+				"'%s': peca deitada tem a base em y=0 (pousa no chao sem ajuste nenhum)." % id)
+		elif origem == "em_pe":
+			assert_almost_eq(caixa.position.y + caixa.size.y * 0.5, 0.0, Asset3D.TOL,
+				"'%s': peca em pe e CENTRADA em y (a mesa desloca por alt/2 a partir do centro)." % id)
 
 
 func test_asset_que_nao_existe_devolve_nulo_e_nao_inventa_geometria() -> void:

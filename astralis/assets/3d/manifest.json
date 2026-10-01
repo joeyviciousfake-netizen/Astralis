@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "nota": "FONTE UNICA dos numeros do mesh (D50: um dado so, e o teste crava). O .blend e a fonte do mesh; o export (tools/blender/exportar_assets.py) mede o .glb GERADO e compara com este arquivo — se medido != manifesto, o script falha. Os numeros de `caixa` sao do .glb JA CONVERTIDO (Y para cima, como o jogo ve), nao do Blender: por isso `y` comeca em 0 (a base no chao) e `vertices` e 60, e nao os 20 do .blend, porque o glTF quebra os vertices por canto.",
+  "nota": "FONTE UNICA dos numeros do mesh (D50: um dado so, e o teste crava). O .blend e a fonte do mesh; o export (tools/blender/exportar_assets.py) mede o .glb GERADO e compara com este arquivo — se medido != manifesto, o script falha. Os numeros de `caixa` sao do .glb JA CONVERTIDO (Y para cima, como o jogo ve), nao do Blender: por isso o `y` da estrela comeca em 0 (ela e deitada, base no chao) enquanto o da carta e simetrico (ela e em pe, centrada em Y) - a regra de origem esta em `conventions.origem` e cada asset diz a sua em `topologia.origem`. E `vertices` e 60 na estrela, e nao os 22 do .blend, porque o glTF quebra os vertices por canto.",
   "conventions": {
     "unidade": "1 unidade = 1 largura de carta (LARG_CARTA = 1.0 no jogo)",
     "eixo": "Y para cima no jogo; o exportador glTF converte o Z do Blender (yup=true)",
-    "origem": "base e centro: y=0 no chao, x/z centrados, para o objeto pousar no plano do campo sem ajuste",
+    "origem": "DUAS PECAS, e cada asset declara qual e a dele em topologia.origem (o teste le la, nao adivinha). 'deitada': face no plano XZ, espessura em Y, base em y=0 - a peca pousa no plano do campo sem ajuste nenhum. 'em_pe': altura no eixo Y, espessura no Z, e CENTRADA em Y, porque a mesa posiciona carta por alt/2 a partir do centro. Os dois sao legítimos; o que nao vale e misturar, e so uma delas e o jeito de NAO usar transform no no (ver no_sem_transform).",
     "material": "um material por asset, chamado mat_<id>",
     "nome_do_objeto": "o id do asset (o objeto dentro do .blend)",
     "no_sem_transform": "o no do .glb tem que entrar com identidade; transform no no e erro, nunca ajuste no jogo"
@@ -25,13 +25,62 @@
         "ngons": 0,
         "vertices_fonte": 22,
         "fechada": true,
-        "regra": "face de 4 lados, nunca n-gon: em contorno con cavo a diagonal e escolhida na hora da exportacao, entao a mesma .blend daria geometrias diferentes em ferramentas diferentes. As 2 tampas sao 5 quads cada girando em torno de um vertice central (V-E+F=2, 40 arestas em 2 faces, area preservada). O .glb tem triangulos porque o glTF so tem triangulos - o que nao pode mudar e a FONTE."
+        "origem": "deitada",
+        "regra": "face de 4 lados, nunca n-gon: em contorno com cavao a diagonal e escolhida na hora da exportacao, entao a mesma .blend daria geometrias diferentes em ferramentas diferentes. As 2 tampas sao 5 quads cada girando em torno de um vertice central (V-E+F=2, 40 arestas em 2 faces, area preservada). O .glb tem triangulos porque o glTF so tem triangulos - o que nao pode mudar e a FONTE. Peca DEITADA: face no plano XZ, espessura em Y, base em y=0, para pousar no plano do campo sem ajuste nenhum."
       },
-      "materiais": ["mat_estrela_teste"],
+      "materiais": [
+        "mat_estrela_teste"
+      ],
       "caixa": {
-        "x": [-0.4755, 0.4755],
-        "y": [0.0, 0.15],
-        "z": [-0.5, 0.4045]
+        "x": [
+          -0.4755,
+          0.4755
+        ],
+        "y": [
+          0.0,
+          0.15
+        ],
+        "z": [
+          -0.5,
+          0.4045
+        ]
+      }
+    },
+    {
+      "id": "carta_base",
+      "uso": "ESTRUTURA da carta de duelo (59 x 86 x 0,30 mm, a medida real). NAO entra no jogo ainda: a mesa continua usando o BoxMesh procedural. Nao tem imagem nenhuma - a moldura, a arte, o orbe e as estrelas continuam vindo do jogo, como hoje. Material marrom igual ao que a mesa usa no corpo, para a integracao nao mudar a aparencia.",
+      "blend": "fonte/carta_base.blend",
+      "glb": "carta_base.glb",
+      "malhas": 1,
+      "vertices": 24,
+      "triangulos": 12,
+      "topologia": {
+        "faces": 6,
+        "quads": 6,
+        "tris_fonte": 0,
+        "ngons": 0,
+        "vertices_fonte": 8,
+        "fechada": true,
+        "origem": "em_pe",
+        "regra": "Peca EM PE: a altura fica no eixo Y do jogo e a espessura no Z, e o asset e CENTRADO em Y, igual ao BoxMesh(larg, alt, gross) que a mesa monta hoje - a integracao e so trocar a malha, sem mexer em posicao. NO .BLEND isso aparece trocado, porque o exportador glTF converte Blender Z-up para glTF Y-up: game_y = Blender_z, game_z = -Blender_y, game_x = Blender_x. Autorar a carta deitada (como a estrela) daria no jogo uma carta DEITADA e com a base em y = -0,7288 - foi o que o portao acusou. Nao ha imagem nenhuma: moldura, arte, orbe e estrelas continuam vindo do jogo, como hoje.",
+        "medida_real": "59 mm x 86 mm x 0,30 mm -> 1.0 x 1.4576271186 x 0.0050847458 em unidade de mundo (1 unidade = 1 largura de carta). A espessura REAL e 1,69% maior que a GROSS_CARTA = 0.005 que a mesa usa hoje - quando integrar, o numero do jogo passa a ser este. Os 8 vertices tem valencia 3 (cubo) e as 12 arestas estao em 2 faces."
+      },
+      "materiais": [
+        "mat_carta_base"
+      ],
+      "caixa": {
+        "x": [
+          -0.5,
+          0.5
+        ],
+        "y": [
+          -0.7288,
+          0.7288
+        ],
+        "z": [
+          -0.0025,
+          0.0025
+        ]
       }
     }
   ]
