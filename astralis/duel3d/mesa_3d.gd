@@ -26,6 +26,7 @@ const PainelCarta3D := preload("res://duel3d/painel_carta_3d.gd")
 const Cursor3D := preload("res://duel3d/cursor_3d.gd")
 const Campo3D := preload("res://duel3d/campo_3d.gd")
 const Vista3D := preload("res://duel3d/vista_3d.gd")
+const Carta3D := preload("res://duel3d/carta_3d.gd")
 
 ## Conversão desenho 2D->3D (só desenho): campo 2D centrado em x=1158.
 ## Composição ref nova (céu azul GX, SEM MESA): câmera FIXA atrás/acima do
@@ -262,10 +263,10 @@ const LUGAR_LONGE_X_SEM_CAM := -2.8
 ## Janela de arte DENTRO da moldura real da carta (832x1248), em fracao: a arte
 ## preenche a janela sem sobra. DONO: a mesa, porque a carta 3D e o painel
 ## esquerdo usam a mesma janela (uma so medida para as duas pecas).
-const JANELA_ART_X0 := 0.10
-const JANELA_ART_X1 := 0.90
-const JANELA_ART_Y0 := 0.165
-const JANELA_ART_Y1 := 0.615
+## A janela de arte DENTRO da moldura (fracao do JPG real). A MESMA medida vale
+## para a carta 3D e para o painel 2D do HUD, entao fica aqui: um dono so, e os
+## dois assuntos recebem por parametro.
+const JANELA_ART := Vector4(0.10, 0.165, 0.90, 0.615)
 const ALT_CARTA := 86.0 / 59.0
 ## Finura real de carta (0,3mm numa carta 59mm = 0,005 da largura).
 const GROSS_CARTA := 0.005
@@ -483,6 +484,9 @@ var _cursor: Node3D = null
 var _campo: Node3D = null
 ## A vista e a volta (a camera no pivo): o no e o arquivo `vista_3d.gd`.
 var _vista: Vista3D = null
+## A fabrica das cartas 3D (o desenho da carta): `carta_3d.gd`. Carta tem
+## varias na cena, entao ali mora a fabrica e aqui o botao que a chama.
+var _fabrica_carta: Carta3D = null
 var _debug := _quer_debug()
 
 
@@ -756,6 +760,19 @@ func _construir_ambiente() -> void:
 	# A lente continua NO EIXO e o `frustum_offset` continua ZERO (doc 15
 	# §15.4), então a perspectiva é simétrica e o campo tem a MESMA cara dos
 	# dois lados, só espelhado.
+	# A FABRICA DAS CARTAS 3D (`carta_3d.gd`): ela sabe desenhar a carta e
+	# nao sabe onde a carta fica. As texturas/cores chegam por Callable porque
+	# o painel 2D do HUD usa as MESMAS, e o dono delas continua sendo a mesa.
+	_fabrica_carta = Carta3D.new()
+	_fabrica_carta.larg_carta = LARG_CARTA
+	_fabrica_carta.alt_carta = ALT_CARTA
+	_fabrica_carta.gross_carta = GROSS_CARTA
+	_fabrica_carta.janela_art = JANELA_ART
+	_fabrica_carta.textura = Callable(self, "_tex_cache")
+	_fabrica_carta.moldura_da_carta = Callable(self, "_moldura_da_carta")
+	_fabrica_carta.cor_de_atributo = Callable(self, "_cor_atributo")
+	_fabrica_carta.textura_arte = Callable(self, "_textura_arte")
+	_fabrica_carta.mat = Callable(self, "_mat")
 	# A VISTA E A VOLTA (a câmera pendurada no pivô da mesa, D47): o no e o
 	# arquivo dele (`vista_3d.gd`). A câmera é filha DO PIVÔ, e quem gira é o
 	# pivô - por isso o no inteiro é o próprio `PivoMesa`.
@@ -1073,24 +1090,6 @@ func _montar_retrato(foto: TextureRect, silhueta: Label, caminho: String, nome: 
 		silhueta.visible = true
 
 
-func _rotulo3d(texto: String, tamanho: int, cor: Color) -> Label3D:
-	var l := Label3D.new()
-	l.text = texto
-	l.font_size = tamanho
-	l.pixel_size = 0.0038
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	l.modulate = cor
-	l.outline_size = 8
-	l.outline_modulate = Color(0, 0, 0, 0.9)
-	# Sem mouse_filter aqui de propósito: Label3D é 3D, não Control (D19
-	# já vale — nada nesta cena recebe clique).
-	return l
-
-
-## Moldura pelo DADO (espelho do editor, só leitura): spell/equip →
-## magia; trap → armadilha; ritual → ritual; fusão → fusão; com efeito
-## → efeito; resto → normal. Caminho no PROJETO (o jogo lê, não copia).
 func _moldura_da_carta(dado: Dictionary) -> String:
 	var t := str(dado.get("card_type", "monster"))
 	if t == "spell" or t == "equip":
@@ -1109,159 +1108,10 @@ func _moldura_da_carta(dado: Dictionary) -> String:
 	return "assets/frames/normal.jpg"
 
 
-## Quad com textura do projeto (só leitura). Sem textura = nulo.
-func _quad_textura(nome: String, larg: float, alt: float, pos: Vector3, tex: Texture2D, com_alfa: bool = false) -> MeshInstance3D:
-	var mi := MeshInstance3D.new()
-	mi.name = nome
-	var q := QuadMesh.new()
-	q.size = Vector2(larg, alt)
-	mi.mesh = q
-	mi.position = pos
-	var m := StandardMaterial3D.new()
-	m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	m.albedo_texture = tex
-	if com_alfa:
-		m.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mi.material_override = m
-	return mi
-
-
+## Monta UMA carta 3D. Quem sabe MONTAR e a fabrica (`carta_3d.gd`): ela le
+## o dado e imprime nome/ATK/DEF/estrelas, sem saber onde a carta vai ficar.
 func _fazer_carta(dado: Dictionary, face_down: bool, em_defesa: bool) -> Node3D:
-	# Carta INTEIRA igual ao editor (só leitura do projeto): moldura JPG
-	# por tipo + arte na janela + orbe + estrelas + nome/ATK na placa.
-	# Sem nada no projeto = cai na cor (comportamento antigo).
-	var no := Node3D.new()
-	no.name = "Carta3D"
-	var corpo := MeshInstance3D.new()
-	corpo.name = "Corpo"
-	var malha := BoxMesh.new()
-	malha.size = Vector3(LARG_CARTA, ALT_CARTA, GROSS_CARTA)
-	corpo.mesh = malha
-	corpo.material_override = _mat(Color(0.45, 0.30, 0.13))
-	no.add_child(corpo)
-	var zf := GROSS_CARTA / 2.0
-	var tex_moldura := _textura_arquivo(_moldura_da_carta(dado))
-	# Frente: moldura inteira (ou cor do atributo quando sem moldura).
-	var frente := MeshInstance3D.new()
-	frente.name = "Frente"
-	var qf := QuadMesh.new()
-	qf.size = Vector2(LARG_CARTA - 0.02, ALT_CARTA - 0.02)
-	frente.mesh = qf
-	frente.position = Vector3(0, 0, zf + 0.001)
-	var mat_f := StandardMaterial3D.new()
-	mat_f.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	if tex_moldura != null:
-		mat_f.albedo_texture = tex_moldura
-	else:
-		mat_f.albedo_color = _cor_atributo(str(dado.get("attribute", ""))).darkened(0.25)
-	frente.material_override = mat_f
-	no.add_child(frente)
-	var eh_monstro := str(dado.get("card_type", "monster")) == "monster"
-	# Retângulo da janela de arte dentro da moldura (medido no JPG real):
-	# preenche a janela INTEIRA, então a arte 408x384 (ou qualquer outra)
-	# cobre o quadro sem sobra nem faixa (era o que aparecia antes).
-	var larg_art := (JANELA_ART_X1 - JANELA_ART_X0) * (LARG_CARTA - 0.02)
-	var alt_art := (JANELA_ART_Y1 - JANELA_ART_Y0) * (ALT_CARTA - 0.02)
-	var x_art := ((JANELA_ART_X0 + JANELA_ART_X1) * 0.5 - 0.5) * (LARG_CARTA - 0.02)
-	var y_art := (0.5 - (JANELA_ART_Y0 + JANELA_ART_Y1) * 0.5) * (ALT_CARTA - 0.02)
-	if tex_moldura != null:
-		var tex := _textura_arte(dado)
-		if tex != null:
-			no.add_child(_quad_textura("Arte", larg_art, alt_art, Vector3(x_art, y_art, zf + 0.002), tex))
-		# Orbe do atributo no canto da placa.
-		var attr := str(dado.get("attribute", ""))
-		var tex_orbe := _textura_arquivo("assets/attributes/%s.png" % attr.to_lower())
-		if tex_orbe != null:
-			no.add_child(_quad_textura("Orbe", 0.095, 0.0947, Vector3(0.3805, 0.6173, zf + 0.002), tex_orbe, true))
-		# Estrelas = level (só monstro), à direita como na moldura.
-		if eh_monstro:
-			var tex_est := _textura_arquivo("assets/estrelas/estrela.png")
-			if tex_est != null:
-				var n := clampi(int(dado.get("level", 0)), 0, 12)
-				for s in range(n):
-					var px := 0.42 - float(n - 1 - s) * (0.0457 + 0.008) - 0.0228
-					no.add_child(_quad_textura("Estrela%d" % s, 0.0457, 0.0444, Vector3(px, 0.5174, zf + 0.002), tex_est, true))
-	# NOME impresso na faixa da moldura (doc 15 §15.3: na referência o nome
-	# é impresso na própria carta). Medidas em % da moldura real, iguais às
-	# do painel 2D: faixa x 5,4%..67,4% e y 2,7%..7,8% (de cima p/ baixo).
-	# `width` do Label3D é em PIXELS do texto (não em unidades de mundo):
-	# 160 px = a largura da faixa (0,61 de mundo / 0,0038 de pixel_size).
-	# Fonte do texto = DADO real; carta virada não mostra nada.
-	var nome := _rotulo3d(str(dado.get("name", "?")), 11, Color(0.12, 0.07, 0.03))
-	nome.name = "Nome"
-	nome.outline_size = 0
-	nome.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	nome.width = 160.0
-	nome.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	nome.position = Vector3(-0.43, 0.6434, zf + 0.003)
-	nome.visible = not face_down
-	no.add_child(nome)
-	# ATK/DEF impresso na caixa de baixo da moldura (só monstro, dado real).
-	# Medida no JPG real: a caixa bege vai de y 75,3% a 91,4% -> o texto
-	# fica no meio dela (abaixo da caixa ele caía em cima da borda).
-	var stats_txt := ""
-	if eh_monstro:
-		stats_txt = "ATK/%d DEF/%d" % [int(dado.get("attack", 0)), int(dado.get("defense", 0))]
-	var stats := _rotulo3d(stats_txt, 14, Color(0.12, 0.07, 0.03))
-	stats.name = "Stats"
-	stats.outline_size = 0
-	stats.position = Vector3(0.0, -0.4800, zf + 0.003)
-	stats.visible = not face_down
-	no.add_child(stats)
-	# Indicador ATK/DEF + face (só desenho, igual ao 2D que mostra a posição).
-	# ESCONDIDO por padrão: o ATK/DEF já sai impresso na carta e uma etiqueta
-	# flutuando no meio da tela era lixo visual (ordem do usuário 2026-09-28).
-	# Quem liga de novo: o selo de fusão na mão (`_redesenhar`).
-	var tag_txt := "VIRADA" if face_down else ("DEF" if em_defesa else "ATK")
-	var tag_cor := Color(0.7, 0.7, 0.8) if face_down else (Color(0.5, 0.8, 1.0) if em_defesa else Color(1.0, 0.75, 0.35))
-	var tag := _rotulo3d(tag_txt, 40, tag_cor)
-	tag.name = "TagPos"
-	tag.position = Vector3(0, ALT_CARTA / 2.0 + 0.14, 0)
-	tag.visible = false
-	no.add_child(tag)
-	# Verso: imagem do projeto (card_back da carta ou verso padrão).
-	# Sem nada = marrom com espiral (comportamento antigo).
-	var verso := MeshInstance3D.new()
-	verso.name = "Verso"
-	var qv := QuadMesh.new()
-	qv.size = Vector2(LARG_CARTA - 0.02, ALT_CARTA - 0.02)
-	verso.mesh = qv
-	verso.position = Vector3(0, 0, -GROSS_CARTA / 2.0 - 0.001)
-	verso.rotation_degrees = Vector3(0, 180, 0)
-	var dorso := str(dado.get("card_back", "")).strip_edges()
-	if dorso.is_empty():
-		dorso = "assets/backs/verso_padrao.png"
-	var tex_dorso := _textura_arquivo(dorso)
-	var mat_v := StandardMaterial3D.new()
-	mat_v.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	if tex_dorso != null:
-		mat_v.albedo_texture = tex_dorso
-	else:
-		mat_v.albedo_color = Color(0.45, 0.28, 0.13)
-	verso.material_override = mat_v
-	no.add_child(verso)
-	var espiral := Node3D.new()
-	espiral.name = "Espiral"
-	espiral.position = Vector3(0, 0, -GROSS_CARTA / 2.0 - 0.002)
-	espiral.rotation_degrees = Vector3(0, 180, 0)
-	espiral.visible = tex_dorso == null
-	no.add_child(espiral)
-	for r in [0.10, 0.19, 0.28]:
-		var anel := MeshInstance3D.new()
-		anel.name = "AnelEspiral"
-		var toro := TorusMesh.new()
-		toro.inner_radius = r - 0.018
-		toro.outer_radius = r
-		anel.mesh = toro
-		anel.material_override = _mat(Color(0.92, 0.82, 0.62), 0.5)
-		espiral.add_child(anel)
-	# Pose padrão: só a VIRADA (gira Y 180° = mostra o verso). A pose no
-	# mundo (deitada no painel / de pé na mão) é de quem placementa a carta:
-	# `_deitar_carta` no campo, `_redesenhar` na mão. Um dono só, sem
-	# rotação se contradizendo em dois lugares.
-	if face_down:
-		no.rotation_degrees = Vector3(0.0, 180.0, 0.0)
-	return no
+	return _fabrica_carta.montar(dado, face_down, em_defesa)
 
 
 func _fantasia(inst: Dictionary) -> Dictionary:
@@ -2327,7 +2177,7 @@ func _construir_hud() -> void:
 	_painel = PainelCarta3D.new()
 	_painel.largura = PAINEL_ESQ_L
 	_painel.altura = TELA_A
-	_painel.janela_art = Vector4(JANELA_ART_X0, JANELA_ART_Y0, JANELA_ART_X1, JANELA_ART_Y1)
+	_painel.janela_art = JANELA_ART
 	_painel.estado = Callable(self, "_pegar_estado")
 	_painel.cartas_de = Callable(self, "_pegar_cartas")
 	_painel.foco = Callable(self, "_carta_focada")
