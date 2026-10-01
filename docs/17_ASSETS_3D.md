@@ -313,3 +313,64 @@ Custo medido: 768×768 com 256 amostras leva **3 a 5 s** na RTX 5060.
 4. **Peça que precise de n-gon de verdade** (uma tampa cilíndrica, um disco):
    hoje o portão recusa. A saída, se um dia precisar, é um campo novo no
    manifesto dizendo qual face pode ser n-gon — **não** afrouxar o portão.
+
+## 17.12 Antes de escrever geometria na mao, use a ferramenta (D71)
+
+**Esta e' a regra que mais me custou nesta sessao.** Antes de gerar topologia na
+mao, a ordem e' obrigatoria:
+
+1. **Ferramenta nativa do Blender** — ele tem bevel, subdiv, remesh, snap,
+   proportional edit, boolean e Geometry Nodes. Eles **geram a topologia por
+   voce**. Nao e' falta de recurso; e' a via curta.
+2. **Pesquisa na internet** — se nao sei qual ferramenta existe ou como ela se
+   usa, pesquiso. Nao construo por deducao.
+3. **Manual** — so em ultimo caso, so para o que a ferramenta nao faz, e medindo
+   a topologia (Euler, arestas fora de 2 faces, face degenerada, colinear) antes
+   de gravar.
+
+### O caso concreto: os cantos da carta
+
+Pedido: "a carta tem um leve arredondamento nas pontas, hoje esta toda reta".
+Fiz **6 construcoes escritas a mao** e o portao recusou todas:
+
+| Construcao | O que o portao mediu |
+|---|---|
+| leque de quads com 1 vertice central | Euler = 1 (parece disco) mas **16 arestas fora de 2 faces** — os vertices impares do contorno ficam sem radial |
+| colar de aneis concentricos | so fecha se o miolo tiver P/4 pontos; P = 20 dava **Euler = -28** |
+| grade com o canto projetado por angulo | o vertice de canto cai em cima do vizinho: **face degenerada (area 0)** |
+| grade nao uniforme + projecao | **12 faces degeneradas**; o passo da grade era maior que o raio |
+| eixo com passo derivado | ponto repetido, grade nao centrada |
+| tampas em leque de quads | pontos **colineares** no lado reto: triangulo degenerado no `.glb` (area artefato = 0,0247 contra 2,9380 da fonte, **98% de perda**) |
+
+A solucao foi **linha de codigo**:
+
+```python
+bmesh.ops.bevel(bm, geom=arestas_da_espessura, offset=0.0339,  # 2 mm
+                segments=3, profile=0.5, affect="EDGES")
+```
+
+Passou de primeira: `malha sana (area fonte=2,938944 artefato=2,938944)`.
+
+### As duas coisas que eu nao sabia e que mudam o trabalho
+
+1. **Filtrar as arestas do cubo por direcao, nao por valor.** "As arestas da
+   espessura" nao e' `y1 == y2` — no cubo isso pega 8 (as 4 de Y e as 4 de Z).
+   E' "muda so em y".
+2. **Triangulo NAO e' erro no portao; n-gon e'.** O `exportar_assets.py`
+   (§17.9) marca face com **mais de 4 lados** como ERRO, e face so de
+   triangulo como AVISO — o proprio codigo diz *"nem toda peca precisa de
+   quad"*. Entao a tampa da carta (plana, com pontos colineares no lado reto)
+   foi triangular de proposito: resolve o n-gon E o colinear. As quads ficam
+   na parede e no miolo do canto.
+
+### Como isso nao se repete
+
+Duas perguntas antes de qualquer `from_pydata`:
+- **"O Blender faz isso?"** Se sim, usa (e le a doc da tool antes).
+- **"O portao so age depois que eu ja fiz errado."** Ele e' rede de seguranca,
+  nao metodo de trabalho. Se a construcao esta me exigindo 6 tentativas, o
+   problema nao e' a topologia: e' que estou fazendo na mao algo que a
+  ferramenta faz.
+
+Detalhe em `02_PRINCIPIOS_ARQUITECTURAIS.md` §2.8 (vale para qualquer programa)
+e em `DECISOES.md` D71.

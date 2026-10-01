@@ -327,12 +327,18 @@ def auditar_artefato_malha(caminho_glb, area_esperada):
                 area_total += 0.5 * m
                 geo = (cr[0] / m, cr[1] / m, cr[2] / m)
                 if max(abs(N[ia][k] - geo[k]) for k in range(3)) > 1e-3:
+                    # A area JA foi somada acima, e ela e somada de TODO
+                    # triangulo. Antes havia um `break` aqui que parava o laco
+                    # no primeiro achado, entao a area saia parcial e o proprio
+                    # portao acusava "a triangulacao perdeu geometria" (erro de
+                    # 98%) num .glb que estava inteiro. O `break` nao mede
+                    # nada: ele so trunca a soma. Agora o problema e reportado
+                    # e a leitura segue ate o fim, que e o que a area exige.
                     problemas.append("triangulo %d: a normal gravada nao bate com a "
                                      "geometrica (=%s vs %s) — e este que faz "
                                      "'alguns poligonos parecerem errados'"
                                      % (t, tuple(round(x, 3) for x in N[ia]),
                                         tuple(round(x, 3) for x in geo)))
-                    break
 
     if area_esperada > 0:
         erro = abs(area_total - area_esperada) / area_esperada

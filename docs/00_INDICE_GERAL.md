@@ -15,7 +15,7 @@ Este índice substitui o documento único. Cada arquivo abaixo é autoritativo n
 docs/
   00_INDICE_GERAL.md          <- você está aqui, Lead Architect
   01_VISAO_PRODUTO.md         <- identidade, modelo, experiência, sucesso
-  02_PRINCIPIOS_ARQUITETURAIS.md <- DATA!=LOGIC, sem motor paralelo, fontes da verdade
+  02_PRINCIPIOS_ARQUITECTURAIS.md <- DATA!=LOGIC, sem motor paralelo, fontes da verdade, e a REGRA DAS FERRAMENTAS (D71: nativa do programa -> pesquisa na internet -> manual so em ultimo caso)
   03_STACK_DISTRIBUICAO.md     <- dev stack vs product stack, modos GAME/PREVIEW/TEST/DEBUG
   04_CONTRATO_DADOS.md         <- project data, schemas, versionamento, IDs
   05_RUNTIME_DUELO.md          <- duel, duelist + AI presets [NOVO], deck, card

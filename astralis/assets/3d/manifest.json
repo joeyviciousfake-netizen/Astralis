@@ -52,18 +52,20 @@
       "blend": "fonte/carta_base.blend",
       "glb": "carta_base.glb",
       "malhas": 1,
-      "vertices": 24,
-      "triangulos": 12,
+      "vertices": 86,
+      "triangulos": 64,
       "topologia": {
-        "faces": 6,
-        "quads": 6,
-        "tris_fonte": 0,
+        "faces": 48,
+        "quads": 16,
+        "tris_fonte": 32,
         "ngons": 0,
-        "vertices_fonte": 8,
+        "vertices_fonte": 34,
         "fechada": true,
         "origem": "em_pe",
         "regra": "Peca EM PE: a altura fica no eixo Y do jogo e a espessura no Z, e o asset e CENTRADO em Y, igual ao BoxMesh(larg, alt, gross) que a mesa monta hoje - a integracao e so trocar a malha, sem mexer em posicao. NO .BLEND isso aparece trocado, porque o exportador glTF converte Blender Z-up para glTF Y-up: game_y = Blender_z, game_z = -Blender_y, game_x = Blender_x. Autorar a carta deitada (como a estrela) daria no jogo uma carta DEITADA e com a base em y = -0,7288 - foi o que o portao acusou. Nao ha imagem nenhuma: moldura, arte, orbe e estrelas continuam vindo do jogo, como hoje.",
-        "medida_real": "59 mm x 86 mm x 0,30 mm -> 1.0 x 1.4576271186 x 0.0050847458 em unidade de mundo (1 unidade = 1 largura de carta). O 59 e o 86 nao sao escolha: vem do contrato (schemas/card_layout.schema.json, canvas w=59 h=86, por-mil). A espessura e 0,30/59 = 0.0050847458, e a GROSS_CARTA da mesa e ESTE numero (escrito como 0.30/59.0) - antes era 0,005 arredondado, que errava 1,69% e nao batia com esta caixa. Os 8 vertices tem valencia 3 (cubo) e as 12 arestas estao em 2 faces."
+        "canto": "CANTOS ARREDONDADOS em arco de 2,00 mm, feito com o BEVEL NATIVO do Blender (bmesh.ops.bevel, 3 segmentos) nas 4 arestas que correm na espessura. Medido: volume 0.0074087419 contra 0.0074066478 esperado (erro de 0,028%, so a discretizacao do arco), Euler = 2, 0 face degenerada, 0 aresta fora de 2 faces. A tentativa de fazer o mesmo na mao (grade, leque de quads, colar de aneis) foi 6 vezes recusada pelo portao: o arco projetado pelo angulo fazia o vertice de canto cair em cima do vizinho, e o quad saia com area 0. **A lição: o Blender tem bevel, e ele GERA os quads. Reconstruir topologia a mao quando a ferramenta esta no programa foi o erro inteiro.**",
+        "tampas_trianguladas": "As 2 tampas (frente e tras) sao TRIANGULADAS de proposito, e nao e defeito. O portao (exportar_assets.py) e ERROR face com MAIS DE 4 lados (n-gon) e so AVISO quando so ha triangulo: o proprio codigo diz que nem toda peca precisa de quad. As tampas sao planas e o contorno do bevel tem pontos COLINEARES ao longo das 4 arestas retas, e um leque de quads com ponto colinear produz triangulo degenerado no .glb (o portao mediu area fonte=2,939985 contra artefato=0,024697, 98% de perda). Triangular a tampa resolve os dois: zero n-gon e zero degenerado. As 16 quads restantes sao a parede (12) e o miolo do canto (4).",
+        "medida_real": "59 mm x 86 mm x 0,30 mm -> 1.0 x 1.4576271186 x 0.0050847458 em unidade de mundo (1 unidade = 1 largura de carta). O 59 e o 86 nao sao escolha: vem do contrato (schemas/card_layout.schema.json, canvas w=59 h=86, por-mil). A espessura e 0,30/59 = 0.0050847458, e a GROSS_CARTA da mesa e ESTE numero (escrito como 0.30/59.0) - antes era 0,005 arredondado, que errava 1,69% e nao batia com esta caixa. O arredondamento dos 4 cantos tira 4*R^2*(1-pi/4) = 0,000987 u^2 de area, ou seja 0,068% da area da face - a caixa (x e z) continua identica, porque o canto arredondado nao passa do limite."
       },
       "materiais": [
         "mat_carta_base"

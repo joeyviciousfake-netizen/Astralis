@@ -69,3 +69,29 @@ pasta de teste fora do lugar, cena/script sem dono, dado fora de `schemas/`.
 Teste descartável vive e morre na mesma sessão: cria isolado, mostra, apaga.
 
 Auditoria: todo fim de sessão, `git status` só mostra trabalho intencional.
+
+## 2.8 Usar a ferramenta antes de refazer a mao (D71)
+
+Antes de escrever qualquer coisa na mao, perguntar se ja existe ferramenta. A
+ordem e' a regra:
+
+1. **Ferramenta nativa** — use o que o programa ja tem. O Blender tem bevel,
+   subdiv, remesh, snap, proportional edit, boolean e Geometry Nodes: ele
+   **gera a topologia por voce**. Nao e' vergonha usar; e' o caminho curto.
+2. **Pesquisa** — se nao sabe qual ferramenta existe ou como se usa, pesquise
+   na internet antes de inventar. Nada de reconstruir por deducao.
+3. **Manual** — so em ultimo caso, so para o que a ferramenta realmente nao
+   faz, e medindo a topologia antes de gravar.
+
+**Por que isso e' principio e nao conselho:** um teste que RECUSA entrada errada
+(como o portao de malha do D69) e' rede de seguranca, nao metodo de trabalho.
+Ele so age depois que voce ja construiu a coisa errada. A regra move o erro
+para antes.
+
+**O que aconteceu quando isso nao existia:** os cantos arredondados da carta
+custaram uma sessao inteira porque 6 construcoes de malha escritas a mao foram
+recusadas pelo portao (Euler negativo, aresta fora de 2 faces, face
+degenerada), enquanto `bmesh.ops.bevel` resolvia em minutos e passava de
+primeira. Detalhe em `docs/17_ASSETS_3D.md` §17.12 e em `DECISOES.md` D71.
+
+Vale para qualquer programa com ferramenta boa, nao so para o Blender.
