@@ -1,8 +1,8 @@
 extends Node3D
 
 ## mesa_3d — CAMPO 3D OFICIAL do duelo (D23/D40, cena principal do projeto).
-## Ref nova do usuário (céu azul estilo GX, SEM MESA): nada de tampo,
-## moldura, emblema ou vazio estrelado — só DESENHA o estado real
+## Céu azul estilo GX, SEM MESA: nada de tampo, moldura, emblema ou vazio
+## estrelado — só DESENHA o estado real
 ## (DuelManager/GameState + sistemas reais Summon/Battle/Position/Turn/
 ## Fusion) flutuando no céu azul com painéis de vidro azul. Zero regra
 ## aqui (R1): cada jogada chama o sistema real e redesenha.
@@ -10,8 +10,7 @@ extends Node3D
 ## Uso headless p/ validação: `-- --mesa3d-sair=5` sai sozinho após N segundos.
 ## Diagnóstico no console: `-- --debug` (doc 15 §15.6).
 ##
-## Esta é a ÚNICA tela do duelo: a mesa 2D (duel_legacy2d) foi removida (D54)
-## e a flag `--cenario3d` foi junto com ela.
+## Esta é a ÚNICA tela do duelo: a mesa 2D e a flag `--cenario3d` saíram (D54).
 
 const ProjectLoaderScript := preload("res://core/project_loader.gd")
 const DuelManagerScript := preload("res://duel/duel_manager.gd")
@@ -54,7 +53,7 @@ const TOPO := 0.35
 ## barra de fases da ref) fica em ~10% da altura.
 const ESCALA_CAMPO := 1.23
 const DESLOC_CAMPO := Vector2(0.0, -0.07)
-## Câmera FIXA (ordem do usuário), sem órbita/balanço. Subir/afastar o FOV é
+## Câmera FIXA, sem órbita/balanço. Subir/afastar o FOV é
 ## alavanca de DESENHO autorizada (doc 15 §15.5): os valores abaixo são os
 ## que medem as fileiras da referência. A tríade que garante a perspectiva
 ## simétrica (doc 15 §15.4) continua: X = 0 (sem deslocamento), ALVO no
@@ -65,11 +64,9 @@ const CAM_FOV := 20.0
 ## A LENTE NUNCA é deslocada (doc 15 §15.4): `frustum_offset` fica em 0 e a
 ## projeção fica SIMÉTRICA (mesma compressão à esquerda e à direita),
 ## idêntica à de quando o campo estava no meio da tela. O que joga o campo
-## p/ a direita é a JANELA (SubViewport), não a lente. O antigo
-## CAM_OFFSET_X = 0.16 foi REMOVIDO: era projeção fora do eixo (a imagem
-## saía esticada de um lado, comprimida do outro = torta).
-## Fases estilo Tag Force REMOVIDAS (ordem do usuário, 2026-09-28): o
-## duelo segue o Forbidden Memories, sem DP/SP/MP1/BP/MP2/EP.
+## p/ a direita é a JANELA (SubViewport), não a lente. Deslocar a lente
+## deformaria a imagem (estica um lado e comprime o outro = torta).
+## O duelo segue o Forbidden Memories: sem DP/SP/MP1/BP/MP2/EP.
 
 ## ---- JANELA DO CAMPO (doc 15 §15.4 — só DESENHO, nada de regra) ----
 ## O mundo 3D inteiro (céu, pilares, campo, cartas, mão, cursor) é

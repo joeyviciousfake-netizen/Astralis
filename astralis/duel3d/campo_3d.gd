@@ -42,13 +42,10 @@ func _ready() -> void:
 	no_laterais = Node3D.new()
 	no_laterais.name = "Laterais"
 	add_child(no_laterais)
-	# D44 (itens 3, 4, 6 e 11): as pilhas de baralho/cemitério e os
-	# contadores SAÍRAM dos cantos (o usuário: "estão muito no canto e está
-	# ruim de visualizar"). D45 (item 2): eles passaram também para 2D, na
-	# faixa do meio do HUD — o 3D do meio ficou VAZIO de propósito, que é o
-	# que o usuário pediu ("agora em 2d, assim fica mais facil"). `Laterais`
-	# também: é o guarda-chuva que o resto da cena já usava, e some qualquer
-	# desenho solto do canto.
+	# `Laterais` fica VAZIO de propósito (D44/D45): as pilhas de baralho,
+	# cemitério e os contadores foram para a faixa 2D do meio do HUD. É o
+	# guarda-chuva que o resto da cena já usava, e some qualquer desenho
+	# solto do canto.
 
 
 ## Um painel de vidro = a PEÇA DE VIDRO da ref (doc 15 §15.3): vidro azul
@@ -58,9 +55,9 @@ func _ready() -> void:
 ## peças continua a mesma em qualquer escala.
 ##
 ## O vidro precisa ser maior que o lado LONGO da carta em DEFESA (a mesma
-## carta girada um quarto de volta): com 1,52 a carta terminava em cima da
-## borda e invadia o vizinho; 1,58 deixa ~0,12 de carta de folga dos dois
-## lados. Só apresentação; a composição do dado não muda.
+## carta girada um quarto de volta): 1,58 deixa ~0,12 de carta de folga dos
+## dois lados. Abaixo disso a carta de DEF invade o vizinho. Só apresentação;
+## a composição do dado não muda.
 ##
 ## NÃO passa pela perspectiva (doc 16) de propósito: as 20 peças são
 ## construídas UMA vez, com as DUAS fileiras, e a perspectiva só troca os

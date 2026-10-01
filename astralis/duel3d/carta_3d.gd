@@ -114,8 +114,8 @@ func montar(dado: Dictionary, face_down: bool, em_defesa: bool) -> Node3D:
 	no.add_child(stats)
 	# Indicador ATK/DEF + face (só desenho, igual ao 2D que mostra a posição).
 	# ESCONDIDO por padrão: o ATK/DEF já sai impresso na carta e uma etiqueta
-	# flutuando no meio da tela era lixo visual (ordem do usuário 2026-09-28).
-	# Quem liga de novo: o selo de fusão na mão (`_redesenhar`).
+	# flutuando no meio da tela suja a visão. Quem liga de novo: o selo de fusão
+	# na mão (`_redesenhar`).
 	var tag_txt := "VIRADA" if face_down else ("DEF" if em_defesa else "ATK")
 	var tag_cor := Color(0.7, 0.7, 0.8) if face_down else (Color(0.5, 0.8, 1.0) if em_defesa else Color(1.0, 0.75, 0.35))
 	var tag := _rotulo3d(tag_txt, 40, tag_cor)

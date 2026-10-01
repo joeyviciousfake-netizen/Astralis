@@ -17,11 +17,10 @@ extends Node3D
 ## O numero que manda em TUDO e `giro_campo` (0 = seu, 180 = do rival). Nao ha
 ## segunda copia dele: a camera, o HUD e as animacoes leem daqui.
 ##
-## Onde a "coluna espelhada" da etapa 2 do doc 16 foi parar: ela nao existe mais
-## como regra, porque sai de graca. O lado 1 da arena ja vem espelhado no X
-## (D18) e a volta de 180 graus espelha de novo, entao cada jogador ve a
-## PROPRIA fileira na ordem normal (indice 0 a esquerda). Era isso que o
-## usuario pedia.
+## Nao existe "coluna espelhada" como regra: ela sai de graca. O lado 1 da
+## arena ja vem espelhado no X (D18) e a volta de 180 graus espelha de novo,
+## entao cada jogador ve a PROPRIA fileira na ordem normal (indice 0 a
+## esquerda).
 
 ## Onde a camera esta pendurada, e de onde ela olha (medidas da cena, D47).
 var cam_pos := Vector3(0.0, 9.0, 12.0)
@@ -125,7 +124,7 @@ func _giro_de_onde() -> float:
 
 ## Da a volta na mesa: `alvo` em GRAUS (0 = visao do jogador, 180 = do rival).
 ## Uma rotina para as DUAS direcoes, porque e a mesma coisa. So a camera se
-## mexe - as cartas NAO (e o que o usuario pediu: nada teleporta).
+## mexe - as cartas NAO: a volta e so o ponto de vista (R1).
 ## Espera a volta terminar, entao quem chama (o START) so segue depois.
 func girar_para(alvo: float) -> void:
 	if cam == null or is_equal_approx(giro_campo, alvo):

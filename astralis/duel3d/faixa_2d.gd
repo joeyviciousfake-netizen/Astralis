@@ -3,14 +3,13 @@ extends PanelContainer
 ## faixa_2d — A FAIXA DO MEIO (D45, item 2), um assunto so.
 ##
 ## E a barra que fica no VAO entre as fileiras de monstros, dentro do HUD 2D.
-## Antes era 3D (caixas deitadas no chao) e virou 2D porque em 3D a posicao de um
-## objeto no chao e a soma de tres numeros (z da fileira + meia profundidade do
-## ladrilho + profundidade do objeto) e "a altura do chao" na tela e uma FAIXA, nao
-## uma linha; em 2D a posicao e o pixel.
+## POR QUE 2D: em 3D a posicao de um objeto no chao e a soma de tres numeros (z
+## da fileira + meia profundidade do ladrilho + profundidade do objeto) e "a
+## altura do chao" na tela e uma FAIXA, nao uma linha; em 2D a posicao e o pixel.
 ##
-## As 7 celulas seguem a ordem que o usuario ditou (D45b): MeuCemiterio, MeuDeck,
-## LpVoce, Turno, LpVocal, LpRival, DeckRival, CemRival - o TURNO fica no meio
-## porque e o unico que nao tem dono. Cada celula mostra SO o dado real do
+## As 7 celulas seguem a ordem do D45b: MeuCemiterio, MeuDeck, LpVoce, Turno,
+## LpVocal, LpRival, DeckRival, CemRival - o TURNO fica no meio porque e o
+## unico que nao tem dono. Cada celula mostra SO o dado real do
 ## GameState (R1/R3): contagem de cartas do baralho e do cemiterio dos dois lados,
 ## o LP de cada um, o turno, e a FOTO quadrada da ultima carta que foi para cada
 ## cemiterio. Nada aqui calcula regra.
@@ -148,8 +147,8 @@ func _estilo_barra() -> StyleBoxFlat:
 	return s
 
 
-## Uma celula. SO DUAS formas, porque o usuario pediu bloco limpo (D45 item 3:
-## sem palavra e sem icone):
+## Uma celula. SO DUAS formas, porque bloco limpo e sem palavra e sem icone
+## (D45 item 3):
 ##   "numero"  - so o NUMERO, branco, grande e centralizado (deck, LP, turno);
 ##   "arte_esq" / "arte_dir" - a FOTO quadrada da ultima carta do CEMITERIO
 ##   preenchendo a ponta ESQUERDA (a sua) ou DIREITA (a do rival), com a
@@ -184,8 +183,8 @@ func _celula(nome: String, larg: float, alt: float, cor_borda: Color,
 		h.add_child(num)
 		return cel
 
-	# Cemiterio: a foto QUADRADA da ultima carta que foi para la, na ponta que
-	# o usuario pediu (esquerda no seu, direita no do rival), e a contagem do
+	# Cemiterio: a foto QUADRADA da ultima carta que foi para la, na ponta
+	# ESQUERDA no seu e DIREITA no do rival (D45 item 7), e a contagem do
 	# lado oposto. A arte e um CORTE quadrado da imagem real (nunca esticada).
 	var arte := TextureRect.new()
 	arte.name = "Arte"

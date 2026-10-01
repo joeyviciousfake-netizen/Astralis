@@ -9,8 +9,7 @@ extends Node3D
 ##
 ## A moldura e desenhada no PLANO DA CARTA (XY local dentro do `Grupo`), e o
 ## grupo gira junto com a focada - entao a moldura sai colada nela, nas DUAS
-## situacoes. Antes a moldura era um quadrado chapado no chao, maior que a
-## carta, e aparecia so como dois trilhos azuis nas laterais.
+## situacoes.
 ##
 ## Zero regra (R1): isto e desenho puro.
 
@@ -18,7 +17,7 @@ extends Node3D
 var espessura_carta := 0.05
 ## Cor do foco: o azul brilhante da ref.
 var cor := Color(0.25, 0.55, 1.0)
-## Material UNSHADED: a mesa passa o seu (tudo sem luz, por ordem do usuario).
+## Material UNSHADED: a mesa passa o dela (tudo na cena e sem luz).
 var mat: Callable
 ## Fabrica de caixa da mesa (a mesma que monta o corpo das cartas).
 var caixa: Callable
