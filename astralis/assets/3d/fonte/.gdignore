@@ -1,0 +1,2 @@
+# As fontes .blend ficam aqui e o Godot nao as escaneia: o jogo carrega o
+# .glb exportado, nunca o .blend. O arquivo .gdignore e o que o Godot le.

@@ -1,0 +1,29 @@
+{
+  "schema_version": 1,
+  "nota": "FONTE UNICA dos numeros do mesh (D50: um dado so, e o teste crava). O .blend e a fonte do mesh; o export (tools/blender/exportar_assets.py) mede o .glb GERADO e compara com este arquivo — se medido != manifesto, o script falha. Os numeros de `caixa` sao do .glb JA CONVERTIDO (Y para cima, como o jogo ve), nao do Blender: por isso `y` comeca em 0 (a base no chao) e `vertices` e 60, e nao os 20 do .blend, porque o glTF quebra os vertices por canto.",
+  "conventions": {
+    "unidade": "1 unidade = 1 largura de carta (LARG_CARTA = 1.0 no jogo)",
+    "eixo": "Y para cima no jogo; o exportador glTF converte o Z do Blender (yup=true)",
+    "origem": "base e centro: y=0 no chao, x/z centrados, para o objeto pousar no plano do campo sem ajuste",
+    "material": "um material por asset, chamado mat_<id>",
+    "nome_do_objeto": "o id do asset (o objeto dentro do .blend)",
+    "no_sem_transform": "o no do .glb tem que entrar com identidade; transform no no e erro, nunca ajuste no jogo"
+  },
+  "assets": [
+    {
+      "id": "estrela_teste",
+      "uso": "PECA DE TESTE do pipeline 3D. NAO entra na mesa do duelo ainda.",
+      "blend": "fonte/estrela_teste.blend",
+      "glb": "estrela_teste.glb",
+      "malhas": 1,
+      "vertices": 60,
+      "triangulos": 36,
+      "materiais": ["mat_estrela_teste"],
+      "caixa": {
+        "x": [-0.4755, 0.4755],
+        "y": [0.0, 0.15],
+        "z": [-0.5, 0.4045]
+      }
+    }
+  ]
+}
