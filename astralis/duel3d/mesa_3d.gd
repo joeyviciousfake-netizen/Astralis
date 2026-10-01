@@ -26,6 +26,7 @@ const Cursor3D := preload("res://duel3d/cursor_3d.gd")
 const Campo3D := preload("res://duel3d/campo_3d.gd")
 const Vista3D := preload("res://duel3d/vista_3d.gd")
 const Carta3D := preload("res://duel3d/carta_3d.gd")
+const IaRival := preload("res://ai/ia_rival.gd")
 
 ## Conversão desenho 2D->3D (só desenho): campo 2D centrado em x=1158.
 ## Composição ref nova (céu azul GX, SEM MESA): câmera FIXA atrás/acima do
@@ -468,6 +469,10 @@ var _cursor: Node3D = null
 var _campo: Node3D = null
 ## A vista e a volta (a camera no pivo): o no e o arquivo `vista_3d.gd`.
 var _vista: Vista3D = null
+## A IA do rival (`ai/ia_rival.gd`): e ela que ESCOLHE qual carta o rival joga.
+## A mesa so EXECUTA a escolha. D55: a escolha fina ainda nao existe (mora no 2D,
+## que saiu no D54) - isto e onde ela vai morar quando existir.
+var _ia: IaRival = null
 ## A fabrica das cartas 3D (o desenho da carta): `carta_3d.gd`. Carta tem
 ## varias na cena, entao ali mora a fabrica e aqui o botao que a chama.
 var _fabrica_carta: Carta3D = null
@@ -737,6 +742,8 @@ func _construir_ambiente() -> void:
 	# A lente continua NO EIXO e o `frustum_offset` continua ZERO (doc 15
 	# §15.4), então a perspectiva é simétrica e o campo tem a MESMA cara dos
 	# dois lados, só espelhado.
+	# A IA DO RIVAL (`ai/ia_rival.gd`): ela sabe ESCOLHER, e nao sabe executar.
+	_ia = IaRival.new()
 	# A FABRICA DAS CARTAS 3D (`carta_3d.gd`): ela sabe desenhar a carta e
 	# nao sabe onde a carta fica. As texturas/cores chegam por Callable porque
 	# o painel 2D do HUD usa as MESMAS, e o dono delas continua sendo a mesa.
@@ -2915,13 +2922,17 @@ func _atacar3d(alvo_slot: int) -> void:
 
 
 func _rival_auto() -> void:
-	# Rival automático simples (padrão do main.gd: invoca + ataca com o
-	# núcleo real). A escolha fina da IA mora no 2D; aqui é só p/ testar.
-	# É o MESMO caminho tanto quando o jogador aperta START e passa o turno
-	# quanto quando o RIVAL COMEÇOU o duelo: em ambos os casos aqui o turno
-	# do rival entra em DRAW, e este é quem o conduz até a vez voltar a ser
-	# do jogador. Regra nenhuma mora aqui — quem decide fase, compra, turno
-	# e vencedor é o motor (DuelManager/TurnManager/Summon/Battle/Damage).
+	# CONDUZ O TURNO DO RIVAL: fase, espera e a execucao das escolhas da IA.
+	# Quem DECIDE qual carta e qual alvo e `ai/ia_rival.gd`; quem executa e esta
+	# funcao. E o MESMO caminho tanto quando o jogador aperta START e passa o
+	# turno quanto quando o RIVAL COMECOU o duelo: em ambos os casos aqui o
+	# turno do rival entra em DRAW, e este e quem o conduz ate a vez voltar a
+	# ser do jogador. Regra nenhuma mora aqui - quem decide fase, compra,
+	# turno e vencedor e o motor (DuelManager/TurnManager/Summon/Battle/
+	# Damage).
+	# D55: a escolha fina da IA NAO existe (ela morava no 2D, que saiu no
+	# D54/D58). O que a IA faz hoje e o primeiro monstro da mao e o primeiro
+	# monstro em campo; o arquivo dela e onde a escolha de verdade vai morar.
 	if not is_inside_tree() or _st == null:
 		return
 	# Trava de reentrada: o turno do rival é conduzido UMA vez por vez. Sem
@@ -2944,21 +2955,20 @@ func _rival_auto() -> void:
 		return
 	_duel.advance_phase() # -> MAIN do rival
 	_redesenhar(false) # a barra de fases mostra a fase REAL (não a anterior)
+	# A IA ESCOLHE a carta; o slot e do SummonSystem (regra) e a invocacao e
+	# executada aqui, pelo mesmo caminho da jogada do jogador.
 	var mao: Array = (_st.players[1] as Dictionary)["hand"]
-	var idx := -1
-	for i in range(mao.size()):
-		if str((mao[i] as Dictionary).get("card_type", "")) == "monster":
-			idx = i
-			break
+	var escolha: Dictionary = _ia.escolher_invocacao(_st, 1)
+	var idx := int(escolha.get("idx", -1))
 	var slot := SummonSystem.free_monster_slot(_st, 1)
 	if idx >= 0 and slot >= 0:
 		var r: Dictionary = SummonSystem.normal_summon(_st, 1, idx, slot, false, "ATK")
 		if bool(r.get("ok", false)):
 			_fala("Rival invocou %s em Ataque." % str((r.get("nome", (mao[idx] as Dictionary).get("name", "um monstro")) as String)))
-	elif mao.is_empty():
-		_fala("Rival está com a mão vazia neste turno.")
+	elif str(escolha.get("motivo", "")) == "mao_vazia":
+		_fala("Rival esta com a mao vazia neste turno.")
 	else:
-		_fala("Rival não tem monstro na mão para invocar.")
+		_fala("Rival nao tem monstro na mao para invocar.")
 	# D53: a compra do turno é DELE, então a animação da compra é da mão DELE
 	# (que, com a D52, é o lugar de baixo da tela dele). Antes esta chamada
 	# animava a MÃO DO JOGADOR, que na tela do rival é o lugar de cima: as
@@ -2978,7 +2988,14 @@ func _rival_auto() -> void:
 			break
 		if zona[s] == null:
 			continue
-		var alvo: int = BattleSystem.first_monster_slot(_st, 0)
+		# A IA escolhe o alvo DESTE monstro agora (a cada um, porque um ataque
+		# pode destruir o monstro que seria o alvo do seguinte). `ok: false` é
+		# só "este slot não pode atacar"; alvo -1 é o ATAQUE DIRETO, que é uma
+		# escolha válida (o motor só aceita com o campo do outro lado vazio).
+		var escolha_ataque: Dictionary = _ia.escolher_ataque(_st, 1, s, 0)
+		if not bool(escolha_ataque.get("ok", false)):
+			continue
+		var alvo: int = int(escolha_ataque.get("alvo", -1))
 		var ra: Dictionary = BattleSystem.attack(_st, 1, s, 0, alvo)
 		if not bool(ra.get("ok", false)):
 			continue

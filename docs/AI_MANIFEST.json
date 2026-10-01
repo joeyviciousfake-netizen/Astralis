@@ -68,6 +68,13 @@
       "astralis/duel3d/cursor_3d.gd = o cursor de foco: moldura azul + mao branca (D63)"
     ]
   },
+  "ai_files": {
+    "owner": "runtime",
+    "purpose": "A inteligencia do RIVAL (D68). Um arquivo, UMA funcao de assunto: a IA ESCOLHE (qual carta invocar, qual alvo atacar) e a mesa EXECUTA. A IA nao conduz o turno, nao conhece a tela e nao tem metodo de execucao - se ela tivesse, a regra estaria morando nela e a R1 estaria quebrada (o `test_ia_rival.gd` trava isso). ## D55 CONTINUA VALENDO: a escolha fina NAO existe (morava no 2D, que saiu no D54/D58); o que a IA faz hoje e o primeiro monstro da mao e o primeiro monstro em campo. CONVENCAO IMPORTANTE DO MOTOR: alvo -1 significa ATAQUE DIRETO no jogador, e so e legal com o campo do outro lado vazio - nunca trate -1 como 'sem alvo'.",
+    "files": [
+      "astralis/ai/ia_rival.gd = as duas decisoes do rival (D68)"
+    ]
+  },
   "rules": [
     "R1 runtime unica verdade gameplay",
     "R2 proibido Fake engine",
