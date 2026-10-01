@@ -23,6 +23,7 @@ const BoardLayoutScript := preload("res://core/board_layout.gd")
 const Faixa2D := preload("res://duel3d/faixa_2d.gd")
 const Menus3D := preload("res://duel3d/menus_3d.gd")
 const PainelCarta3D := preload("res://duel3d/painel_carta_3d.gd")
+const Cursor3D := preload("res://duel3d/cursor_3d.gd")
 
 ## Conversão desenho 2D->3D (só desenho): campo 2D centrado em x=1158.
 ## Composição ref nova (céu azul GX, SEM MESA): câmera FIXA atrás/acima do
@@ -328,18 +329,9 @@ var _z_simetria := 0.0
 ## A mesa está girando agora: trava o controle do jogador (sem isso a carta
 ## focada voaria de um lado para o outro no meio do giro).
 var _girando := false
-var _cursor3d: Node3D = null
-## Grupo que gira com a coisa focada (a moldura e a mão são filhas dele).
-var _cursor_grupo: Node3D = null
-## Moldura do foco (4 barras) e a mão branca, no plano da focada.
-var _cursor_moldura: Node3D = null
-var _cursor_mao: Node3D = null
 ## O turno do rival está sendo conduzido agora (trava de reentrada): sem isto
 ## duas chamadas simultâneas fariam o turno dele rodar em paralelo.
 var _rival_rodando := false
-## Escala do cursor = do que ele marca (peça de vidro no campo, carta na
-## mão). O pulso do `_process` multiplica por cima.
-var _cursor_escala := 1.0
 var _flash_tela: ColorRect = null
 var _deck_pos := [Vector3(4.9, 0.6, 1.6), Vector3(-4.9, 0.6, -2.2)]
 ## D46 (prova): em qual QUADRO a foto sai (90 = o de sempre) e em quantos
@@ -507,6 +499,8 @@ var _faixa: PanelContainer = null
 var _menus: CanvasLayer = null
 ## O painel esquerdo com a carta focada: o no e o arquivo `painel_carta_3d.gd`.
 var _painel: Control = null
+## O cursor de foco (moldura azul + mao branca): o no e o arquivo `cursor_3d.gd`.
+var _cursor: Node3D = null
 var _debug := _quer_debug()
 
 
@@ -921,79 +915,16 @@ func _construir_campo() -> void:
 	# sai colada nela — na mão E no ladrilho. Antes a moldura era um
 	# quadrado chapado no chão, maior que a carta, e aparecia só como dois
 	# trilhos azuis nas laterais.
-	_cursor3d = Node3D.new()
-	_cursor3d.name = "Cursor3D"
-	_cursor3d.position = Vector3(0, TOPO, _ponto_lateral(0.0, 0.0, 4.15).z)
-	_vp.add_child(_cursor3d)
-	_cursor_grupo = Node3D.new()
-	_cursor_grupo.name = "Grupo"
-	_cursor3d.add_child(_cursor_grupo)
-	_cursor_moldura = Node3D.new()
-	_cursor_moldura.name = "Moldura"
-	_cursor_grupo.add_child(_cursor_moldura)
-	_construir_mao_cursor()
+	_cursor = Cursor3D.new()
+	_cursor.espessura_carta = GROSS_CARTA
+	_cursor.cor = COR_FOCO_AZUL
+	_cursor.mat = Callable(self, "_mat")
+	_cursor.caixa = Callable(self, "_caixa")
+	_cursor.position = Vector3(0, TOPO, _ponto_lateral(0.0, 0.0, 4.15).z)
+	_vp.add_child(_cursor)
 	_diag("Campo: 20 painéis + faixa do meio (7 itens) + Cursor3D.")
 
 
-## Redesenha a moldura do foco com o tamanho e a inclinação da focada.
-## `larg`/`alt` são as medidas da COISA focada (a carta da mão ou o
-## ladrilho) e `rot` a rotação dela; a moldura sai 6% maior, no plano da
-## carta, com a grossura proporcional (nada de moldura fininha num lado e
-## grossa no outro).
-func _moldar_foco(larg: float, alt: float, rot: Vector3, escala_mao: float) -> void:
-	_cursor_grupo.rotation_degrees = rot
-	for f in _cursor_moldura.get_children():
-		(f as Node).queue_free()
-	var w := larg * 1.06
-	var h := alt * 1.06
-	var t := maxf(larg, alt) * 0.055
-	var z := GROSS_CARTA / 2.0 + 0.012
-	var mat := _mat(COR_FOCO_AZUL, 0.85)
-	_cursor_moldura.add_child(_caixa("Aba", Vector3(w, t, 0.03), Vector3(0, h / 2.0, z), mat))
-	_cursor_moldura.add_child(_caixa("Abaixo", Vector3(w, t, 0.03), Vector3(0, -h / 2.0, z), mat))
-	_cursor_moldura.add_child(_caixa("Esq", Vector3(t, h, 0.03), Vector3(-w / 2.0, 0, z), mat))
-	_cursor_moldura.add_child(_caixa("Dir", Vector3(t, h, 0.03), Vector3(w / 2.0, 0, z), mat))
-	if _cursor_mao != null:
-		_cursor_mao.scale = Vector3.ONE * escala_mao
-		_cursor_mao.position = Vector3(0, 0, z)
-
-
-## MÃO BRANCA no centro do cursor (ref): palma + 4 dedos + polegar, feita
-## de caixas brancas. É só desenho (zero regra) e é montada na escala de
-## UMA carta (largura 1,0) — quem chama é que escala pelo tamanho da coisa
-## focada, então ela é a mesma na mão e no ladrilho.
-func _construir_mao_cursor() -> void:
-	var mao := Node3D.new()
-	mao.name = "Mao"
-	var mat := _mat(Color(1.0, 1.0, 1.0), 0.55)
-	var w := 0.048
-	# palma
-	mao.add_child(_caixa("Palma", Vector3(w * 2.2, w * 1.5, 0.02), Vector3.ZERO, mat))
-	# dedos: 4 barras curtas em cima da palma, do maior pro menor
-	var alturas := [0.100, 0.130, 0.125, 0.095]
-	for i in range(4):
-		var alt: float = float(alturas[i])
-		var x := (-1.5 + float(i)) * w * 1.05
-		mao.add_child(_caixa("Dedo%d" % i, Vector3(w * 0.80, alt, 0.02), Vector3(x, alt * 0.5 + w * 0.75, 0), mat))
-	# polegar: barra curta diagonal à esquerda da palma
-	var pol := _caixa("Polegar", Vector3(w * 0.80, w * 1.3, 0.02), Vector3(-w * 1.9, w * 0.1, 0), mat)
-	pol.rotation_degrees = Vector3(0, 0, 40)
-	mao.add_child(pol)
-	_cursor_mao = mao
-	_cursor_grupo.add_child(mao)
-
-
-
-
-## D44 (item 11): os tokens decorativos (o círculo com "X" e a bússola com
-## "N") foram REMOVIDOS do campo por ordem do usuário: "tem uns desenhos lá
-## ou ícones que eu não sei direito o que é mas está atrapalhando a visão".
-## A função e as chamadas saíram de vez, então a cena não desenha mais nada
-## solto no campo além das 4 fileiras, a faixa do meio e a mão.
-
-## Lado da PEÇA DE VIDRO em unidades de mundo (a peça é PECA_EM_CARTAS
-## larguras de carta e cresce com o campo, então a carta continua com a
-## mesma proporção dentro do vidro).
 func _peca_lado() -> float:
 	return PECA_EM_CARTAS * ESCALA_CAMPO
 
@@ -2125,8 +2056,8 @@ func _aplicar_vista_da_mao() -> void:
 		var mao: Array = ((_st.players[dono] as Dictionary)["hand"] as Array)
 		carta.position = _pos_mao_arco(int(carta.get_meta("mao_idx")), mao.size(), dono)
 		_pose_da_carta_da_mao(carta, dono)
-	if _cursor3d != null:
-		_cursor3d.visible = not _vista_invertida()
+	if _cursor != null and is_instance_valid(_cursor):
+		_cursor.visible = not _vista_invertida()
 
 
 ## Pinta a carta SEM teste de profundidade, como camada de MÃO (D3): a mão de
@@ -2153,8 +2084,16 @@ func _camada_da_mao(no: Node, sem_profundidade: bool) -> void:
 			_camada_da_mao(f, sem_profundidade)
 
 
+## Redesenha a moldura do foco. Quem sabe DESENHAR o cursor e o arquivo dele
+## (`cursor_3d.gd`): ele nao sabe o que esta focado, so recebe a medida da
+## coisa, a inclinacao dela e a escala da mao.
+func _moldar_foco(larg: float, alt: float, rot: Vector3, escala_mao: float) -> void:
+	if _cursor != null and is_instance_valid(_cursor):
+		_cursor.moldar(larg, alt, rot, escala_mao)
+
+
 func _posicionar_cursor() -> void:
-	if _cursor3d == null or _cursor_grupo == null or _st == null:
+	if _cursor == null or not is_instance_valid(_cursor) or _st == null:
 		return
 	var alvo := Vector3(0, TOPO, _ponto_lateral(0.0, 0.0, 4.15).z)
 	# A moldura é do tamanho e da INCLINAÇÃO da coisa focada (doc 15 §15.3):
@@ -2162,7 +2101,6 @@ func _posicionar_cursor() -> void:
 	# (deitado, girando junto se a carta estiver em DEFESA). Sem isso a
 	# moldura era um quadrado chapado no chão, maior que a carta, e a mão
 	# ficava fora dela.
-	_cursor_escala = 1.0
 	match _fileira:
 		FILEIRA_MAO:
 			var n: int = ((_st.players[0] as Dictionary)["hand"] as Array).size()
@@ -2187,7 +2125,7 @@ func _posicionar_cursor() -> void:
 		_:
 			_moldar_foco(_peca_prof_carta(), _peca_prof_carta(), _rot_deitada(false, 0, 0), _peca_prof_carta())
 	_foco = alvo
-	_cursor3d.position = alvo
+	_cursor.position = alvo
 
 
 ## Rotação de uma carta DEITADA no ladrilho — a mesma que `_deitar_carta`
@@ -4073,9 +4011,9 @@ func _process(delta: float) -> void:
 			_diag("Foto salva (quadro %d, volta %.0f graus): %s" % [
 				_foto_frames, _giro_campo, _foto_destino])
 			get_tree().quit()
-	if _cursor3d != null:
-		var s := (1.0 + 0.04 * sin(_pulso)) * _cursor_escala
-		_cursor3d.scale = Vector3(s, 1.0, s)
+	if _cursor != null and is_instance_valid(_cursor):
+		var s := 1.0 + 0.04 * sin(_pulso)
+		_cursor.scale = Vector3(s, 1.0, s)
 	if _st == null:
 		return
 	# Repetição do direcional (igual ao 2D). D47: nada de andar o cursor

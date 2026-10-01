@@ -432,11 +432,11 @@ func test_as_duas_maos_trocam_de_lugar_e_as_duas_aparecem() -> void:
 		"D52: a inclinação do rival é a da sua espelhada (sua %.0f, rival %.0f)." % [
 			float(mesa.get("TILT_MAO_LIVRE")), tilt_perto])
 	# --- O CURSOR SOME NA VISTA DO RIVAL (ele ficaria em cima da mão dele) ---
-	assert_false((mesa.get("_cursor3d") as Node3D).visible,
+	assert_false((mesa.get("_cursor") as Node3D).visible,
 		"D52: na vista do rival o cursor some (senão ficaria em cima da mão dele).")
 	mesa.call("_girar_campo", 0.0)
 	await wait_process_frames(2)
-	assert_true((mesa.get("_cursor3d") as Node3D).visible,
+	assert_true((mesa.get("_cursor") as Node3D).visible,
 		"D52: na sua volta o cursor volta.")
 	# --- A TROCA ACONTECE NOS 90 GRAUS (e não antes) ---
 	# 89 graus ainda é a sua vista (a sua mão embaixo, o Z de baixo = 12,7) e 91
