@@ -34,6 +34,11 @@ var gross_carta: float
 ## mesa, porque o painel esquerdo usa a MESMA janela. Sem default pelo mesmo
 ## motivo acima.
 var janela_art: Vector4
+## Raio do canto arredondado e segmentos por canto, em unidade de mundo. DONO:
+## a mesa, como a espessura. A moldura e o verso sao geometria propria, com
+## o mesmo canto do modelo 3D; sem estes numeros a face descolaria do corpo.
+var raio_carta: float
+var segmentos_arco: int
 ## Textura do projeto pelo caminho do dado (com cache de sessao).
 var textura: Callable
 ## Moldura pelo DADO, cor do atributo, arte da carta, e o material UNSHADED.
@@ -47,9 +52,10 @@ var mat: Callable
 ## ela mostra o verso e `em_defesa` se é a carta virada de lado no ladrilho.
 func montar(dado: Dictionary, face_down: bool, em_defesa: bool) -> Node3D:
 	assert(larg_carta > 0.0 and alt_carta > 0.0 and gross_carta > 0.0
-			and janela_art.z > janela_art.x and janela_art.w > janela_art.y,
-		"carta_3d: larg/alt/gross/janela_art chegam da mesa (ela e o dono da medida). "
-		+ "Vazio aqui = carta com tamanho zero em silencio.")
+			and janela_art.z > janela_art.x and janela_art.w > janela_art.y
+			and raio_carta > 0.0 and segmentos_arco >= 2,
+		"carta_3d: larg/alt/gross/janela_art/raio/segmentos chegam da mesa (ela e o "
+		+ "dono da medida). Vazio aqui = carta com tamanho zero em silencio.")
 	# Carta INTEIRA igual ao editor: moldura JPG por tipo + arte na janela +
 	# orbe + estrelas + nome/ATK na placa. Sem nada no projeto = cai na cor.
 	var no := Node3D.new()
@@ -61,9 +67,7 @@ func montar(dado: Dictionary, face_down: bool, em_defesa: bool) -> Node3D:
 	# Frente: moldura inteira (ou cor do atributo quando sem moldura).
 	var frente := MeshInstance3D.new()
 	frente.name = "Frente"
-	var qf := QuadMesh.new()
-	qf.size = Vector2(larg_carta - 0.02, alt_carta - 0.02)
-	frente.mesh = qf
+	frente.mesh = _face()
 	frente.position = Vector3(0, 0, zf + 0.001)
 	var mat_f := StandardMaterial3D.new()
 	mat_f.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
@@ -139,9 +143,7 @@ func montar(dado: Dictionary, face_down: bool, em_defesa: bool) -> Node3D:
 	# Sem nada = marrom com espiral (comportamento antigo).
 	var verso := MeshInstance3D.new()
 	verso.name = "Verso"
-	var qv := QuadMesh.new()
-	qv.size = Vector2(larg_carta - 0.02, alt_carta - 0.02)
-	verso.mesh = qv
+	verso.mesh = _face()
 	verso.position = Vector3(0, 0, -gross_carta / 2.0 - 0.001)
 	verso.rotation_degrees = Vector3(0, 180, 0)
 	var dorso := str(dado.get("card_back", "")).strip_edges()
@@ -180,6 +182,67 @@ func montar(dado: Dictionary, face_down: bool, em_defesa: bool) -> Node3D:
 	return no
 
 
+## A FOLGA da face: quantas vezes o depth buffer separa a imagem do corpo.
+##
+## A face tem de ser maior que ZERO para nao brigar com o corpo (z-fighting) e
+## Por que nao e' um QuadMesh: o QuadMesh tem 4 vertices e canto reto, e a carta
+## agora tem canto arredondado de verdade. Um quad reto do tamanho da carta
+## passaria da silhueta nos 4 cantos; um quad reduzido (o que era antes) deixava
+## a carta aparecendo em volta — 0,59 mm de lado, medido. O unico jeito de a
+## imagem acompanhar o canto do corpo e' ter o MESMO raio e o MESMO numero de
+## segmentos, e `_corpo` confere os dois contra o `.glb` antes de deixar passar.
+func _face() -> ArrayMesh:
+	var pontos := PackedVector2Array()
+	var hx := larg_carta / 2.0
+	var hy := alt_carta / 2.0
+	var segs := maxi(2, segmentos_arco)
+	# as 4 pontas do canto, em ordem anti-horaria, no plano XY
+	var cantos: Array[Vector2] = [
+		Vector2(hx - raio_carta, hy - raio_carta),
+		Vector2(-hx + raio_carta, hy - raio_carta),
+		Vector2(-hx + raio_carta, -hy + raio_carta),
+		Vector2(hx - raio_carta, -hy + raio_carta)]
+	var angulos: Array[float] = [0.0, PI * 0.5, PI, PI * 1.5]
+	for c in 4:
+		var centro: Vector2 = cantos[c]
+		var inicio: float = angulos[c]
+		for s in range(segs + 1):
+			var ang: float = inicio + (PI * 0.5) * float(s) / float(segs)
+			pontos.append(centro + Vector2(cos(ang), sin(ang)) * raio_carta)
+	# a poligonal fecha: o ultimo ponto do canto e' o primeiro do seguinte
+	if pontos.size() > 1 and pontos[0].is_equal_approx(pontos[pontos.size() - 1]):
+		pontos.remove_at(pontos.size() - 1)
+
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	# leque a partir do centro: a face e' plana, entao triangulo e' o
+	# preenchimento mais barato e sem sobra. O que importa aqui e' a BORDA, e ela
+	# e' exatamente a poligonal de `pontos`.
+	var n := pontos.size()
+	for i in range(n):
+		_uv_tri(st, Vector2.ZERO, pontos[i], pontos[(i + 1) % n], hx, hy)
+	return st.commit()
+
+
+## Um triangulo da face, com a UV pelo retangulo da carta: a imagem entra
+## inteira, sem esticar nem encurtar.
+##
+## DOIS DETALHES que aqui estao medidos, nao presumidos:
+##
+## - **V cresce para BAIXO.** No jogo Y sobe, entao o topo da carta (y = +hy) e'
+##   V = 0. Com V crescendo para cima a moldura sai de cabeca para baixo.
+## - **Afrente do Godot e' no sentido HORARIO.** Emitindo (a, b, c) com a
+##   poligonal anti-horaria, a face fica de costas e some (o corpo aparece no
+##   lugar). Emitindo (a, c, b) ela aparece. Medido, nao lembrado.
+func _uv_tri(st: SurfaceTool, a: Vector2, b: Vector2, c: Vector2, hx: float, hy: float) -> void:
+	st.set_uv(Vector2((a.x + hx) / (hx * 2.0), (hy - a.y) / (hy * 2.0)))
+	st.add_vertex(Vector3(a.x, a.y, 0.0))
+	st.set_uv(Vector2((c.x + hx) / (hx * 2.0), (hy - c.y) / (hy * 2.0)))
+	st.add_vertex(Vector3(c.x, c.y, 0.0))
+	st.set_uv(Vector2((b.x + hx) / (hx * 2.0), (hy - b.y) / (hy * 2.0)))
+	st.add_vertex(Vector3(b.x, b.y, 0.0))
+
+
 ## O CORPO da carta: a malha de `carta_de_duelo.glb`, com o canto arredondado
 ## de 2 mm e a espessura de verdade. A fonte e `astralis/assets/3d/fonte/`
 ## (`carta_de_duelo.blend`) e quem publica o artefato e
@@ -205,6 +268,7 @@ func _corpo() -> MeshInstance3D:
 		("carta_3d: a medida do .glb nao bate com a da mesa. "
 		+ "modelo=%s mesa=%s. O dono do numero e a mesa: regere o artefato com "
 		+ "tools/blender/exportar_carta.py em vez de corrigir aqui.") % [caixa, medida])
+	_conferir_o_canto(corpo)
 	# O importador do Godot embrulha o `.glb` num Node3D de raiz em volta da
 	# malha. A carta precisa do Corpo como no DIRETO de Carta3D (o mesmo lugar
 	# onde o BoxMesh ficava, e o que os testes procuram), entao a malha sobe e
@@ -217,6 +281,53 @@ func _corpo() -> MeshInstance3D:
 	corpo.name = "Corpo"
 	corpo.material_override = mat.call(Color(0.45, 0.30, 0.13))
 	return corpo
+
+
+## Confere o CANTO do `.glb` contra o da mesa. E o que garante que a moldura
+## acompanhe o corpo em vez de-o chutar.
+##
+## O raio e' MEDIDO, nao lido: num canto arredondado, o vertice mais alto do
+## arco esta a `LARG/2 - raio` do eixo. Os segmentos sao as POSICOES DISTINTAS
+## estritamente dentro da caixa do canto — o importador do Godot quebra o vertice
+## por face (normais por face), entao contar vertices contaria repetido.
+##
+## Por que os dois: com o raio certo e menos segmentos, a moldura entra para
+## dentro da silhueta e aparece um fio de carta; com mais, ela passa para fora.
+## So com os dois iguais os dois poligonos tracam a mesma linha.
+func _conferir_o_canto(corpo: MeshInstance3D) -> void:
+	var arrays: Array = corpo.mesh.surface_get_arrays(0)
+	var vs: PackedVector3Array = arrays[Mesh.ARRAY_VERTEX]
+	if vs.is_empty():
+		return
+	var topo := -INF
+	for v in vs:
+		topo = maxf(topo, v.y)
+	# a ponta do arco e' o vertice de maior |x| entre os que estao no topo: o
+	# meio da borda reta tem |x| menor e nao serve
+	var ponta := 0.0
+	for v in vs:
+		if absf(v.y - topo) < 1e-6:
+			ponta = maxf(ponta, absf(v.x))
+	var raio_medido: float = larg_carta / 2.0 - ponta
+
+	var x0: float = larg_carta / 2.0 - raio_carta
+	var y0: float = alt_carta / 2.0 - raio_carta
+	var dentro := {}
+	for v in vs:
+		if v.x > x0 + 1e-6 and v.y > y0 + 1e-6:
+			dentro["%.6f|%.6f" % [v.x, v.y]] = true
+	var segs_medidos: int = dentro.size() + 1
+
+	assert(absf(raio_medido - raio_carta) <= 0.0002,
+		("carta_3d: o raio do canto do .glb e' %.6f e a mesa pede %.6f. A moldura e' "
+		+ "uma geometria separada: com o raio errado ela passa da borda da carta "
+		+ "ou deixa a carta aparecendo em volta. Regere o artefato com "
+		+ "tools/blender/exportar_carta.py.") % [raio_medido, raio_carta])
+	assert(segs_medidos == segmentos_arco,
+		("carta_3d: o canto do .glb tem %d segmentos e a mesa pede %d. Com "
+		+ "menos, a moldura entra para dentro da silhueta; com mais, passa para "
+		+ "fora. Regere o artefato com tools/blender/exportar_carta.py.")
+			% [segs_medidos, segmentos_arco])
 
 
 ## Acha a malha em qualquer profundidade. O `.glb` pode chegar com um no de

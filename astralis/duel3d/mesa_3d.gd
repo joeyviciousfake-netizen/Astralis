@@ -258,6 +258,17 @@ const ALT_CARTA := 86.0 / 59.0
 ## 0,005 arredondado: o arredondado errava 1,69% da medida e nao batia com a
 ## caixa do asset 3D da carta (manifest.json), que e a mesma medida.
 const GROSS_CARTA := 0.30 / 59.0
+## Raio do canto arredondado da carta, na MESMA divisao: 2 mm numa largura de
+## 59 mm. E o dono do numero porque a moldura e o verso tem de ter o MESMO canto
+## do modelo 3D — e sao duas geometrias differentes, entao sem um dono so uma
+## delas mudaria e o jogo mostraria a moldura passando da borda (ou faltando
+## pedaco). A fabrica mede o raio e os segmentos do `.glb` e reclama se nao
+## bater com estes dois numeros.
+const RAIO_CARTA := 2.0 / 59.0
+## Segmentos por canto (90 graus divididos). Tem de ser o mesmo do `.glb`: com
+## menos, a moldura entra para dentro da silhueta e aparece um fio de carta; com
+## mais, ela passa para fora. O mesmo, os dois poligonos traçam a mesma linha.
+const SEGMENTOS_ARCO := 8
 
 const FILEIRA_MAO := 0
 const FILEIRA_MEU_M := 1
@@ -759,6 +770,8 @@ func _construir_ambiente() -> void:
 	_fabrica_carta.larg_carta = LARG_CARTA
 	_fabrica_carta.alt_carta = ALT_CARTA
 	_fabrica_carta.gross_carta = GROSS_CARTA
+	_fabrica_carta.raio_carta = RAIO_CARTA
+	_fabrica_carta.segmentos_arco = SEGMENTOS_ARCO
 	_fabrica_carta.janela_art = JANELA_ART
 	_fabrica_carta.textura = Callable(self, "_tex_cache")
 	_fabrica_carta.moldura_da_carta = Callable(self, "_moldura_da_carta")
