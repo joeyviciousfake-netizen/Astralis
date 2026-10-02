@@ -174,15 +174,25 @@ Não é escolha de autor, é dado:
 | `LARG_CARTA` | `1.0` | 59 mm, a largura real de uma carta |
 | `ALT_CARTA` | `86.0 / 59.0` | 86 mm de altura |
 | `GROSS_CARTA` | `0.30 / 59.0` | 0,30 mm de espessura |
+| `RAIO_CARTA` | `2.0 / 59.0` | 2 mm de raio no canto |
+| `SEGMENTOS_ARCO` | `8` | quantos lados o canto arredondado tem |
 
 O 59 e o 86 são `const` em `schemas/card_layout.schema.json` (`canvas.w` e
-`canvas.h`, em por-mil), e a espessura é a medida real do baralho. Os três vivem
+`canvas.h`, em por-mil), e a espessura é a medida real do baralho. Os cinco vivem
 na mesa, e os receptores (`carta_3d.gd`, `cursor_3d.gd`, `painel_carta_3d.gd`)
 **não têm default** — cada um tem `assert` que reclama se a medida não chegar.
 
 O motivo de não haver default: um default errado é uma armadilha silenciosa. Com
-nele, o dia que alguém montasse uma carta fora da mesa sairia 10x mais grossa sem
+ele, o dia que alguém montasse uma carta fora da mesa sairia 10x mais grossa sem
 nenhuma falha. É melhor a peça nascer do tamanho zero com grito.
+
+**O raio e os segmentos existem porque a moldura deixou de ser um retângulo.** A
+face da carta é geometria própria, montada no jogo, e ela tem de ter o **mesmo**
+canto do corpo 3D: com o raio certo e menos segmentos, a moldura entra para
+dentro da silhueta e aparece um fio de carta; com mais, ela passa para fora. Só
+com os dois iguais os dois polígonos traçam a mesma linha. `carta_3d.gd` mede o
+raio e os segmentos do `.glb` e recusa quando não batem — a D70 aplicada ao
+canto, e é o que tira o canto desse de chute.
 
 ## 15.9 PRECEDÊNCIA
 

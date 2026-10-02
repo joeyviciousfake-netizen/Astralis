@@ -7,7 +7,7 @@
 > Dono: Runtime (o `.blend` é do asset que o runtime usa). Ferramentas em
 > `tools/blender/`. A regra que manda em tudo aqui é a **R12**, e o primeiro
 > passo dela é **consultar a documentação** — este documento e o manual do
-> Blender em `blender_manual_v520_en.html/` (§17.7) — antes de fazer algo que
+> Blender em `blender_manual_v520_en.html/` (§17.8) — antes de fazer algo que
 > não se sabe ou não se tem certeza.
 
 ## 17.1 ABRIR O BLENDER COM O MCP
@@ -343,7 +343,44 @@ não fez nada":
 ```
 
 
-## 17.6 MEDIR ANTES DE CONCLUIR
+## 17.6 A MOLDURA NAO E' MAIS UM QUAD (o canto do corpo manda na face)
+
+A moldura e o verso deixaram de ser `QuadMesh` (4 vertices, canto reto) e viraram
+**retangulos arredondados do tamanho INTEIRO da carta**, montados no jogo. Dois
+motivos, os dois medidos:
+
+- O `QuadMesh` era `larg_carta - 0.02`, ou seja **0,59 mm de carta aparecendo em
+  volta** da imagem. A imagem de uma carta real vai ate o corte.
+- Com o corpo tendo canto arredondado de 2 mm, um quad **reto** do tamanho da
+  carta passaria da silhueta nos quatro cantos.
+
+**O canto da face e' o canto do corpo, e isso e' conferido.** O raio sai medido
+do `.glb` — num canto arredondado o vertice mais alto do arco esta a
+`LARG/2 - raio` do eixo — e os segmentos sao das **posicoes distintas**
+estritamente dentro da caixa do canto (o importador do Godot quebra o vertice
+por face, entao contar vertices contaria repetido). Medido no artefato atual:
+
+| | Raio | Segmentos |
+|---|---|---|
+| corpo (`carta_de_duelo.glb`) | 0,033890 (1,9995 mm) | 8 |
+| face da carta | 0,033898 (2,0000 mm) | 8 |
+
+A diferenca de 0,5 micrometro e' o que o `float32` do `.glb` permite contra o
+calculo em `double` do jogo. Com os dois numeros medidos, `carta_3d.gd` recusa
+qualquer `.glb` cujo canto nao bata — e o raio e os segmentos sao `const` da
+mesa (D70), entao existe um dono so.
+
+**Dois detalhes da face que so aparecem quando ela e' gerada, e que custaram uma
+ida e volta cada:**
+
+- **A frente do Godot e' no sentido HORARIO.** Emitindo os vertices na ordem
+  anti-horaria da poligonal, a face fica de costas, e' descartada pelo *culling* e
+  o que aparece no lugar e' o corpo marrom — o defeito parece "o modelo sumiu" e
+  nao tem nada a ver com o modelo.
+- **V cresce para BAIXO.** O jogo tem Y para cima, entao o topo da carta e'
+  `V = 0`. Com V crescendo para cima a moldura sai de cabeca para baixo.
+
+## 17.7 MEDIR ANTES DE CONCLUIR
 
 O número que vale é o **medido na malha**, não o digitado no script. Duas
 medidas que evitam erro:
@@ -378,7 +415,7 @@ aí vale investigar o modelo.
 sobrepor. Ligado por precaução, e **medido** para saber se ele apertou: se o raio
 medido bate com o raio pedido, o clamp não mexeu em nada.
 
-## 17.7 A DOCUMENTAÇÃO (primeiro passo da R12)
+## 17.8 A DOCUMENTAÇÃO (primeiro passo da R12)
 
 O manual do Blender está **na máquina**, em `blender_manual_v520_en.html/`. A
 raiz é `index.html`; o `LEIA-ME-ASTRALIS.md` de dentro explica a origem. Ele
@@ -412,7 +449,7 @@ Na internet, o mesmo manual fica em
 <https://docs.blender.org/manual/en/latest/> — mas a cópia local é a que não
 depende de conexão.
 
-## 17.8 O QUE REGISTRAR AQUI
+## 17.9 O QUE REGISTRAR AQUI
 
 Toda vez que um modelo ensina algo — uma armadilha de escala, um enum que não é
 o que o nome diz, um limite que só aparece em medida real —, o certo é **entrar
