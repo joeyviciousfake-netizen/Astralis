@@ -71,6 +71,12 @@ não existe ou excesso de tamanho. **Corrige o doc, não o portão.**
   **Decisão que ficou sem valor sai do `DECISOES.md` inteiro** — não vira
   linha de "supersedida". Se a regra nova substitui a antiga, a nova é que
   fica. Número reservado marca buraco, como a D13 e a D46.
+- R15: **Modelagem 3D é na frente da pessoa, nunca headless.** Onde o
+  trabalho é num programa com janela (Blender), abra o programa e faça nele, e
+  mostre o estado a cada passo. Headless é para o que não tem tela (o jogo pelo
+  GUT), não para o que a pessoa precisa ver. Motivo: o dono do asset precisa
+  aprovar a forma, e uma captura de tela tirada do batch é tarde demais para
+  barrar um erro de escala. Procedimento em `docs/17_BLENDER.md`.
 
 ## 3. DONOS POR PASTA (respeite)
 

@@ -47,6 +47,8 @@ docs/
   14_EXPERIENCIA_USUARIO.md Simples/Avançado, erro em PT-BR, o caminho de 5 minutos
   15_VISUAL_DUELO.md        o contrato visual da mesa e o dono de cada número
   16_PERSPECTIVA_CAMPO.md   a volta da mesa, o espelho do rival, as duas mãos
+  17_BLENDER.md             guia de trabalho do Blender: abrir com o MCP e
+                            modelar em medida real (cresce a cada modelo)
 ```
 
 ## O MAPA DO CÓDIGO (gerado, não escrito à mão)

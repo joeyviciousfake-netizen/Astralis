@@ -29,7 +29,8 @@
     { "file": "docs/13_TABULEIRO_DUELO.md", "owner": "lead", "purpose": "zonas 5+5, fases, mao, LP, win/lose + duel_setup + a arena oficial (D50 §13.10.3: UMA arena, e ela e do jogo)", "depends_on": ["02", "04", "05"] },
     { "file": "docs/14_EXPERIENCIA_USUARIO.md", "owner": "lead", "purpose": "padrao Simples/Avancado, galeria, erros PT-BR, guia 5min", "depends_on": ["01", "05", "06", "07", "08", "09", "10"] },
     { "file": "docs/15_VISUAL_DUELO.md", "owner": "lead", "purpose": "contrato visual da mesa: medida da ref, SubViewport (sem perspectiva torta), fonte de cada imagem", "depends_on": ["02", "04", "05", "13", "14"] },
-    { "file": "docs/16_PERSPECTIVA_CAMPO.md", "owner": "lead", "purpose": "o ponto de vista da mesa: a camera gira em volta do campo (D47), a vista do rival e o espelho exato (D51), as duas maos trocam de lugar (D52) e o desenho nao se mexe sem precisar (D53). Ler ANTES de mexer na mesa", "depends_on": ["13", "14", "15"] }
+    { "file": "docs/16_PERSPECTIVA_CAMPO.md", "owner": "lead", "purpose": "o ponto de vista da mesa: a camera gira em volta do campo (D47), a vista do rival e o espelho exato (D51), as duas maos trocam de lugar (D52) e o desenho nao se mexe sem precisar (D53). Ler ANTES de mexer na mesa", "depends_on": ["13", "14", "15"] },
+    { "file": "docs/17_BLENDER.md", "owner": "runtime", "purpose": "GUIA DE TRABALHO do Blender: abrir o Blender com o MCP e o passo a passo de um modelo em medida real. Cresce a cada modelo. A regra que manda e a R12", "depends_on": ["15"] }
   ],
   "contract_files": {
     "owner": "systems",

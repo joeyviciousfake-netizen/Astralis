@@ -67,6 +67,7 @@
 - **D57** | Um `.gd` = um assunto, e o assunto manda na divisão; o comentário é finalidade, invariante e dono, nunca a história. | porque: o projeto é lido por IA, e um comentário de 20 linhas de história são 20 linhas a mais em toda leitura futura, sem informação útil. | proibido: criar arquivo minúsculo só para existir, e citar `Dnn` no comentário. **Estas duas regras são R9 e R10 no `AGENTS.md` — uma casa só.**
 - **D70** | A medida da carta é a do contrato: **59 x 86 x 0,30 mm**, e a mesa é o **único dono** do número. Os receptores (`carta_3d.gd`, `cursor_3d.gd`, `painel_carta_3d.gd`) **não têm default** e cada um tem `assert` que reclama se a medida não chegar. | porque: `GROSS_CARTA` estava arredondado (0,005 em vez de 0,0050847458) e o mesmo número aparecia com valores contraditórios em 3 outros lugares; a peça nascia 10x mais grossa sem nenhuma falha. | proibido: default de medida em receptor. É melhor a peça nascer do tamanho zero com grito do que com a medida errada em silêncio.
 - **D71** | **Regra das ferramentas:** nativa do programa → pesquisa na internet → manual só em último caso. | porque: o Blender tem bevel, subdiv, remesh, snap e Geometry Nodes, e ele gera a topologia por você. | proibido: reconstruir geometria à mão sem antes perguntar "o programa já faz isso?". (= R12)
+- **D72** | **Modelagem 3D e na frente da pessoa, nunca headless.** Onde o trabalho e num programa com janela (Blender), abra o programa e faca nele, e mostre o estado a cada passo. | porque: o dono do asset precisa aprovar a forma, e uma captura de tela tirada do batch e tarde demais para barrar um erro de escala. | proibido: modelar em headless, ou guardar o resultado so para mostrar depois. O procedimento esta em `docs/17_BLENDER.md`. (= R15)
 
 ---
 
@@ -130,4 +131,5 @@ D68 A IA do rival tem arquivo proprio e so escolhe
 D69 --- (reservada)
 D70 A medida da carta e a do contrato; a mesa e o unico dono
 D71 SEMPRE usar a ferramenta do programa
+D72 Modelar na frente da pessoa, nunca headless
 ```

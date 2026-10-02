@@ -14,23 +14,17 @@ onde_estamos: "A carta de duelo é desenhada com `BoxMesh` procedural, medida no
   `python tools/checar_docs.py` recusa data, versão, contagem de teste, hash de
   commit, narrativa de mudança, caminho morto e excesso de tamanho."
 
-faz_agora: "O bug da vista do primeiro quadro: quando o rival começa, a mesa nascia na
-  sua perspectiva e girava durante o turno dele. A vista ganhou `colocar_vista`
-  (mesmo `giro_campo` e mesmo `ao_virar` da volta, sem tween) e o boot coloca a
-  mesa em 180 antes do primeiro quadro. A volta da troca de vez continua inteira."
+faz_agora: "A carta de duelo 3D esta criada no Blender, na frente da pessoa, com 59 x 86 x 0,30 mm medidos e as 4 pontas arredondadas em raio de 2,0000 mm. Falta decidir ONDE salvar o `.blend` e COMO o jogo vai pegar o modelo quando a pessoa mandar colocar: o jogo hoje monta a carta com `BoxMesh` + dois `QuadMesh` texturizados, entao ainda nao ha mapa de textura no modelo. O procedimento esta em `docs/17_BLENDER.md` e cresce a cada modelo (D72)."
 
-proximo_passo: "Dividir o `mesa_3d.gd` por assunto (R9): o orquestrador carrega
-  assunto demais, e é a maior fonte de recompilacao do projeto. Começa pelo maior
-  assunto da mesa. O motivo é duplo: a R9 pede, e o `main.rs` do Studio concentra
-  tudo, então qualquer mexida recompila o crate inteiro. No fim, `python
-  tools/checar_docs.py` tem de continuar dando `rc=0`, e a suíte GUT inteira
-  precisa passar sem cair um teste."
+
+proximo_passo: "Escolher com a pessoa ONDE o `.blend` da carta mora no repo (a pasta `assets/3d/` antiga foi removida e nao ha caminho novo definido), e se o modelo entra no jogo com MAPA DE TEXTURA ou se o jogo continua montando a carta com primitivas. So depois disso o modelo vai para o jogo, e so quando a pessoa disser que esta bom."
+
 
 travas: "R1 a R14 valem (seção 2 do AGENTS.md). Trava do domínio: a arena é do
   jogo e não tem fallback (D50); a lente nunca é deslocada e o `frustum_offset`
   é ZERO (D41, D47); a grade é 263 nas seis direções e 390 entre as fileiras de
   monstro (D49); a carta mede o contrato e a mesa é o único dono do número
-  (D70); efeito não tem motor na mesa (D30); quem manda é o usuário; a mesa nasce na vista de quem tem a vez (D47)."
+  (D70); efeito não tem motor na mesa (D30); quem manda é o usuário; a mesa nasce na vista de quem tem a vez (D47); modelar 3D e na frente da pessoa, nunca headless (D72/R15)."
 
 dividas: "Motor de efeitos (D30) é o buraco de gameplay maior. Distribuição
   `.astralis` trancada é PLANO, 0% implementado. Campanha é PLANO, 0%
