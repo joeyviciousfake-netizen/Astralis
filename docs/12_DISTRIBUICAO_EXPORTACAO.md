@@ -1,190 +1,132 @@
-# 12 — DISTRIBUIÇÃO E EXPORTAÇÃO PROTEGIDA
+# 12 — EMPACOTAMENTO E DISTRIBUIÇÃO
 
-VERSION: 1.4 (novo §12.7: pack de criação .apack V1)
-STATUS: AUTHORITATIVE
-ORIGEM: decisão de produto pós-v1.2 — fita + videogame juntos, com cadeado
+> O que existe hoje é o **`.apack`**: o arquivo único de criação de pack. A
+> distribuição trancada (`.astralis`) é **PLANO** e está marcada como tal no fim.
+> As duas implementações do `.apack` (Python e Rust) precisam bater; o GUT e o
+> `cargo test` cobrem o round-trip.
 
-## 12.1 Ideia simples
+## 12.1 OS DOIS FORMATOS (o que existe, e o que é plano)
 
-- Astralis = videogame. Exportado 1 vez pela equipe via Godot para Windows/Linux/Android.
-- Jogo do usuário = fita `.astralis`. Não é JSON solto, é binário trancado.
-- Exportar = colocar videogame + fita na mesma caixa (zip). Acaba o problema de versionamento, pois a versão certa vai junto.
-
-Usuário nunca instala Godot. Studio nunca roda export Godot. Studio só copia o player certo que já está pronto.
-
-## 12.2 Dois formatos (regra oficial)
-
-1. TRABALHO (pasta JSON editável, git-friendly):
-```text
-meu-projeto/
-  project.json (schema_version, runtime_version, author_id)
-  cards/ duelists/ decks/ fusions/ effects/ campaigns/ assets/
-```
-
-2. DISTRIBUIÇÃO (`.astralis` único, binário, não abre no bloco de notas):
-```text
-ASTR magic + schema_version + runtime_version + author_id + flags
-+ manifest (lista + SHA256 de cada recurso)
-+ data.bin (MessagePack + zlib, sem nomes óbvios)
-+ assets.bin (png/ogg empacotados)
-+ assinatura Ed25519 + watermark author_id
-```
-
-Astralis carrega em memória, valida hash/assinatura/versões, nunca cospe JSON de volta. Se hash não bate ou versão difere, recusa com erro humano + orienta re-exportar.
-
-## 12.3 Cadeado na hora do build (obrigatório no Protegido)
-
-UX: checkbox `☑ Proteger contra cópia`. Tudo automático, sem senha digitada.
-
-Na exportação o Studio:
-1. gera chave única por jogo (cadeado + chave),
-2. tranca a fita `.astralis` com ela (padrão de mercado AES/XChaCha, detalhe interno),
-3. esconde a cópia da chave dentro do Astralis que vai na caixa.
-
-Resultado:
-- aquele Astralis abre aquela fita sem o jogador perceber,
-- outro Astralis genérico não abre,
-- abrir no editor de texto só mostra lixo,
-- metadados de edição são removidos.
-
-Limite honesto: trava 99% da cópia casual. Hacker avançado olhando memória sempre consegue extrair — nenhum formato impede 100%. Por isso temos também assinatura/autoria como prova.
-
-Modos:
-- Aberto (moddable): sem cadeado, só compactado + assinado. Bom para mods.
-- Protegido (padrão p/ distribuir na internet): com cadeado como acima.
-
-## 12.4 O que vai no zip por plataforma
-
-Windows:
-```text
-MeuJogo-windows.zip
-  MeuJogo.exe       <- Astralis win vX.Y com chave embutida
-  MeuJogo.astralis  <- fita trancada
-```
-
-Linux:
-```text
-MeuJogo-linux.zip
-  MeuJogo.x86_64
-  MeuJogo.astralis
-```
-
-Android V1 (sem rebuild de APK):
-```text
-MeuJogo-android.zip
-  Astralis.apk
-  MeuJogo.astralis
-```
-Fluxo: instala APK, abre app, importa `.astralis` (V1 com auto-detecção em Download para parecer junto). Não exige SDK/keystore no PC do usuário.
-
-Android V2 (APK fundido, instalar-e-jogar): requer build server com Godot headless + templates + assinatura. Adiado para não travar V1.
-
-## 12.5 Versionamento junto
-
-Cada `.astralis` carrega `schema_version + runtime_version + author_id`.
-Cada player carrega sua `runtime_version`.
-Check no boot: `se jogo.runtime != player.runtime -> erro + peça export com player certo`.
-
-CI da equipe publica `astralis-player-win/linux/android-vX.Y` a cada release. Studio baixa/cacheia. Usuário só escolhe plataforma.
-
-## 12.7 Pack de criação `.apack` V1 (D23, Systems)
-
-O pack de criação vira ARQUIVO ÚNICO com extensão nossa `.apack`: textos +
-imagens juntos. A fita final `.astralis` continua trancada (§12.2). São TRÊS
-formatos, cada um com seu dono e sua hora:
-
-| Formato | O quê | Quando |
+| | Formato | Estado |
 |---|---|---|
-| TRABALHO (pasta JSON editável, §12.2) | `project.json + cards/ duelists/ ... + assets/` | editando no dia a dia (git-friendly) |
-| CRIAÇÃO (`.apack`, este §) | 1 zip aberto texto+imagens | passando o pack pra alguém / Importar no Studio |
-| DISTRIBUIÇÃO (`.astralis`, §12.2) | 1 binário trancado | entregando o jogo pro jogador |
+| **Trabalho** | pasta JSON, lida pelo jogo via `--project` | **existe** |
+| **Criação** | `.apack` — zip com texto e imagens num arquivo só | **existe** |
+| **Distribuição** | `.astralis` binário, com cadeado por jogo | **PLANO, 0%** |
 
-`.apack` é um ZIP comum (deflate, abre em qualquer lib: Python `zipfile`,
-Rust `zip`, 7-Zip). O "nosso" é a extensão + `manifest.json` + regras —
-NENHUM algoritmo inventado.
+O `.apack` **não** é a fita de distribuição: é o pack que o autor cria e outro
+autor importa. Ele é aberto — não tem chave nem assinatura. O `pack` é um
+projeto de edição; a fita trancada é o que o usuário final receberia.
 
-Estrutura exata do zip:
+## 12.2 O FORMATO DE TRABALHO (o que o jogo lê)
+
+O esqueleto de projeto tem 8 pastas versionadas e 2 arquivos:
 
 ```text
-meu-pack.apack
-  manifest.json            <- magic APACK + versões + contagens + SHA256
-  data/pack.json           <- O MESMO JSON legado (ex.: fm_original_pack.json)
-  assets/...               <- png/webp/jpg/jpeg + ogg (só os referenciados)
-  preview.{png,jpg,webp}   <- OPCIONAL, capa do pack (só desenho)
+cards/  duelists/  decks/  scenes/  layouts/
+assets/cards/  assets/portraits/  assets/backgrounds/
+fusions.json   effects.json          <- arquivos, nao pastas
 ```
 
-`manifest.json` (schema exato — campo a mais ou a menos = `.apack` inválido):
+Não existe `project.json`: a versão mora no `manifest` do `.apack` e o resto é
+conferido pelos schemas. Também não existem pastas `fusions/`, `effects/`,
+`campaigns/` nem `tests/` — as duas primeiras viraram arquivos, e as outras duas
+nunca existiram.
 
-| Campo | Tipo | Regra |
+**O dono do esqueleto é `PASTAS_ESQUELETO` em `astralis-studio/src-tauri/src/main.rs`**, e ele garante um `.gitkeep` em cada pasta. O `.gitkeep` não é conteúdo: é o marcador que mantém a pasta rastreável, sem ele abrir o Studio suja o repositório.
+
+`fusions.json` e `effects.json` **nascem vazios**. Fusão vazia é normal (o jogo
+funciona sem receita). Efeito vazio é aviso, não erro: o gate diz onde cadastrar.
+
+## 12.3 O `.apack` (V1, o contrato)
+
+Um **zip comum** (deflate, que abre em qualquer lib: `zipfile` do Python, crate
+`zip` do Rust, 7-Zip). O "nosso" é a extensão, o `manifest.json` e as regras —
+**nenhum algoritmo inventado**.
+
+```text
+meu_pack.apack
+  manifest.json        <- metadados e SHA-256 de cada arquivo
+  data/pack.json       <- o pack, byte-idêntico ao JSON legado
+  assets/...           <- imagens, deduplicadas por hash
+  preview.png          <- opcional (png, jpg ou webp; 2 MB)
+```
+
+### `manifest.json` (campo a mais ou a menos = `.apack` inválido)
+
+| Campo | Regra |
+|---|---|
+| `magic` | `"APACK"`, exato |
+| `format_version` | `1` |
+| `mode` | só `"aberto"` (o `"protegido"` é recusado) |
+| `author_id` | string |
+| `created_at` | ISO-8601 |
+| `preview` | nome do arquivo de preview, ou ausente |
+| `files[]` | `path` (dentro do zip), `sha256`, `bytes`, e `stored_as` quando o arquivo foi deduplicado |
+| `pack_sha256` | SHA-256 do `data/pack.json` |
+
+### As 6 regras
+
+1. **Referência por caminho estável.** `artwork` aponta para `assets/...`, e é o
+   caminho dentro do zip. Renomear no disco não quebra o pack.
+2. **Dedup por SHA-256.** Dois arquivos idênticos são gravados uma vez, e cada
+   entrada aponta para o mesmo `stored_as`.
+3. **Faltando é AVISO, não erro.** Arte que não está no zip abre o pack como
+   "sem imagens", e o jogo mostra placeholder cinza.
+4. **Pack legado `.json` = `.apack` sem assets.** O `data/pack.json` é
+   byte-idêntico ao JSON, e `pack_sha256` prova isso.
+5. **ZipSlip vale para o zip E para o manifest**, nos dois lados. Caminho
+   absoluto, com `..`, ou apontando para fora do zip é recusado — e o `check`
+   recusa **antes** de materializar qualquer arquivo.
+6. **Limites:** 5 MB por asset, 200 MB de assets somados, 250 MB no arquivo final,
+   5.000 arquivos. As mesmas constantes estão em `tools/apack.py` e em
+   `astralis-studio/src-tauri/src/apack.rs` — se um mudar, o outro muda no mesmo
+   commit, e a interop é provada por round-trip.
+
+`schema_version` continua `1`: o `.apack` é só transporte novo, **nenhum campo do
+contrato mudou** e não há migração. É por isso que ele pode existir sem tocar em
+nenhum schema.
+
+### O que o `check` recusa (`rc=1`)
+
+`magic` diferente de `APACK` · `mode: "protegido"` · `format_version: 2` · hash de
+qualquer arquivo que não bate · asset acima do teto · extensão fora da lista ·
+`files[].path` ou `stored_as` fora do zip.
+
+## 12.4 ONDE ESTÁ A IMPLEMENTAÇÃO
+
+| Lado | Arquivo | O que faz |
 |---|---|---|
-| `magic` | string | sempre `"APACK"` |
-| `format_version` | int | sempre `1` (V1) |
-| `schema_version` | int | sempre `1` (o contrato NÃO mudou, sem migração) |
-| `runtime_version` | string | info obrigatória, SEM trava V1 (a trava mora no boot do `.astralis`, §12.5) |
-| `author_id` | string | info obrigatória, SEM trava V1 |
-| `mode` | string | sempre `"aberto"` (trancado é `.astralis`, nunca `.apack`) |
-| `pack_id` / `name` | string | copiados do `pack.json` (só exibição) |
-| `counts` | objeto | `cartas/duelistas/decks/fusoes_recipes/fusoes_rules/equips/assets/assets_bytes` |
-| `files[]` | lista | 1 por arquivo: `{path, sha256, size}` + `stored_as` quando repetida (abaixo) |
-| `pack_sha256` | string | SHA256 dos bytes de `data/pack.json` (roundtrip = mesmo hash) |
-| `created_utc` / `tool` | string | carimbo + gerador (só rastro) |
+| Python | `tools/apack.py` | `pack` embrulha, `check` valida, `unpack` desempacota conferindo hash |
+| Rust | `astralis-studio/src-tauri/src/apack.rs` | o mesmo, pelo `crate zip` (deflate) e `sha2` |
+| Editor | `main.rs` | `importar_apack` / `exportar_apack` |
 
-Mínimo válido:
+O `importar_pack_valor` **não muda** por causa do `.apack`: mesmas chaves, mesmo
+filtro, mesmo backup. O port do Rust passa o valor inteiro para ele.
 
-```json
-{"magic":"APACK","format_version":1,"schema_version":1,"runtime_version":"1",
- "author_id":"fm_original","mode":"aberto","pack_id":"fm_original_pack",
- "name":"FM Original Pack","counts":{"cartas":722,"duelistas":39,"decks":39,
- "fusoes_recipes":25131,"fusoes_rules":0,"equips":4041,"assets":0,"assets_bytes":0},
- "files":[{"path":"data/pack.json","sha256":"8bad78b0…","size":2743674}],
- "pack_sha256":"8bad78b0…","created_utc":"2026-09-25T00:00:00Z","tool":"tools/apack.py V1"}
-```
+## 12.5 DISTRIBUIÇÃO TRANCADA (PLANO, 0% implementado)
 
-Inválidos (o `check` recusa, `rc=1`): `magic:"XXXX"`; `mode:"protegido"`;
-`schema_version:2`; hash de qualquer arquivo não batendo; asset acima do
-teto; extensão fora da lista; `files[].path` ou `stored_as` fora do zip
-(`../escape.txt`, absoluto, letra de unidade — regra 5).
+Isto é especificação, **não existe linha de código disto**. Nenhum `export_presets.cfg`,
+nenhuma exportação Godot, nenhum `data.bin`, nenhuma assinatura.
 
-Regras V1 (valem no Python e no port Rust):
+O que seria:
 
-1. Referência por path estável: tudo que no pack é string `assets/...`
-   (hoje `artwork`, amanhã portraits/backgrounds) resolve dentro do zip.
-2. Imagem repetida grava 1x: mesmo SHA256 = 1 entrada no zip; o manifest
-   lista cada path lógico com `stored_as` apontando pro guardado; o unpack
-   materializa TODAS as cópias.
-3. Faltando = AVISO, não erro: pack sem a imagem abre como legado
-   "sem imagens" (placeholder + aviso, igual hoje). As 722 do FM caem aqui.
-4. Pack legado `.json` = `.apack` sem assets: embrulhar o `.json` não muda
-   1 byte do dado (`pack_sha256` prova); o Importar conta igual.
-5. Trava ZipSlip: entrada absoluta, com `..`, com letra de unidade
-   (`C:...`) ou vazia = erro, nos dois lados — vale pros nomes do zip E
-   pros `files[].path`/`stored_as` do manifest, no `check` e no `unpack`
-   (espelho Python ↔ Rust `apack.rs:275-281`); nada é escrito antes de tudo validar.
-6. Limites V1 (estourar = erro): 5 MB por asset; 200 MB assets somados;
-   250 MB o `.apack`; máx 5000 assets; extensões `png/webp/jpg/jpeg/ogg`;
-   preview máx 2 MB.
+- O `.astralis` é um arquivo binário (MessagePack + zlib + hash + assinatura), e
+  o jogador nunca vê JSON de distribuição em texto (R6).
+- O cadeado é por jogo: a chave é gerada no Exportar e embutida no player.
+- Player e fita vão no mesmo zip, e o boot recusa se as versões divergirem.
+- Win e Linux: `exe` + `.astralis` lado a lado. Android V1: `APK` + `.astralis`
+  importado; fundido no APK só em V2.
+- Limite honesto: trava cópia casual, não impede extração por quem olha memória.
+  Por isso assinatura e autoria também são prova.
 
-Compat: `schema_version` continua **1** — só formato de transporte novo,
-nenhum campo do contrato mudou, nenhuma migração. O filtro das 50 `A+A`
-continua no Importar (FM real: 25131 no pack → 25081 importáveis).
+**O que decide isso:** biblioteca de serialização, assinatura, chave por jogo e
+cache de player. O Studio hoje é honesto: valida e **avisa que não empacotou**.
 
-Port Rust (Editor, 5 passos, reutilizando o que já existe):
+## 12.6 DONOS
 
-1. Abrir o zip (crate `zip`), ler `manifest.json`, recusar se `magic !=
-   APACK` ou `format_version != 1`.
-2. Conferir SHA256 de cada `files[]` (lendo `stored_as` quando houver).
-3. Pegar o texto de `data/pack.json` e passar INTEIRO pro
-   `importar_pack_valor` atual — ele NÃO muda (mesmas chaves PT/EN, mesmo
-   filtro A+A, mesmo backup).
-4. Copiar cada `assets/*` pra `projects/default/<mesmo path>` (só abaixo de
-   `assets/`, barrar `..`; repetida vira cópia em cada path).
-5. Asset faltando = aviso na lista (nunca erro); mostrar contagens do
-   manifest + "sem imagens" quando `assets == 0`.
-
-## 12.6 Responsabilidades
-
-- Systems/Data: donos do formato `.astralis`, serialização, manifest, hashes, compat.
-- Runtime: DataLoader binário, verificação, chave ofuscada, mensagens de erro, import Android.
-- Editor: tela Exportar (plataforma + aberto/protegido), geração de chave, empacotamento zip, cache de players.
-- QA: testes de matriz player x fita, tamper (hash quebrado deve falhar), retrocompat.
-- Lead: aprova mudança de formato (nova versão + migração documentada).
+| Assunto | Dono |
+|---|---|
+| o formato do `.apack` e os schemas | Systems/Data |
+| ler o projeto no jogo | Runtime |
+| importar, exportar e a tela de Exportar | Editor |
+| round-trip, `.apack` inválido, ZipSlip, limites | QA |

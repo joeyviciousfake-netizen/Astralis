@@ -1,6 +1,6 @@
 # 14 — EXPERIÊNCIA DO USUÁRIO (SIMPLES + PODEROSO)
 
-STATUS: AUTHORITATIVE V1.5 (consolida melhorias 2026-09-23, sem quebrar D01-D15)
+STATUS: AUTHORITATIVE
 OWNER: lead
 
 ## 14.1 Regra de ouro

@@ -1,63 +1,87 @@
 # ASTRALIS — ÍNDICE GERAL
 
-VERSION: 2.6
-STATUS: AUTHORITATIVE (split de `Documentação.md` v1.1 + decisões v1.2/v1.3)
+STATUS: AUTHORITATIVE
 AUDIENCE: IA
 LANGUAGE: PT-BR
 
-Este índice substitui o documento único. Cada arquivo abaixo é autoritativo no seu domínio. Em caso de conflito, vale este índice + `02_PRINCIPIOS_ARQUITETURAIS.md`.
+> IA: entrada oficial é `../AGENTS.md`. Ordem obrigatória: `AI_MANIFEST.json` →
+> este índice → `SESSAO_ATUAL.md` → `DECISOES.md` → o doc do assunto. Não leia
+> tudo de uma vez.
+>
+> **Antes de commitar o que toca `docs/`, rode `python tools/checar_docs.py`.**
 
-> IA: entrada oficial é `../AGENTS.md`. Ordem obrigatória: `AI_MANIFEST.json` → este índice → `SESSAO_ATUAL.md` → `DECISOES.md` → doc de domínio. SPEC (00-12) é estável; OPS (SESSAO/DECISOES) muda toda conversa.
+Este índice é o **roteador**: diz o que existe e o que está dentro de cada doc.
+O conteúdo de cada assunto mora no doc dele, e a razão de cada regra mora no
+`DECISOES.md`. Aqui não se repete nenhum dos dois.
 
-## Mapa estratégico
+## O QUE VALE SEMPRE (leia uma vez)
+
+| Regra | Onde está |
+|---|---|
+| DATA != LOGIC, sem motor falso, R1 a R14 | `../AGENTS.md` seção 2 |
+| Decisões que não se reabrem, com o porquê de cada | `DECISOES.md` |
+| Onde estamos e o que falta | `SESSAO_ATUAL.md` |
+| Mapa máquina (owner, depends, read order, contrato) | `AI_MANIFEST.json` |
+
+## OS DOCS POR ASSUNTO
 
 ```text
 docs/
-  00_INDICE_GERAL.md          <- você está aqui, Lead Architect
-  01_VISAO_PRODUTO.md         <- identidade, modelo, experiência, sucesso
-  02_PRINCIPIOS_ARQUITECTURAIS.md <- DATA!=LOGIC, sem motor paralelo, fontes da verdade, e a REGRA DAS FERRAMENTAS (D71: nativa do programa -> pesquisa na internet -> manual so em ultimo caso)
-  03_STACK_DISTRIBUICAO.md     <- dev stack vs product stack, modos GAME/PREVIEW/TEST/DEBUG
-  04_CONTRATO_DADOS.md         <- project data, schemas, versionamento, IDs
-  05_RUNTIME_DUELO.md          <- duel, duelist + AI presets [NOVO], deck, card
-  06_SISTEMA_FUSAO.md          <- receitas + regras com prioridade [NOVO]
-  07_SISTEMA_EFEITOS.md        <- triggers/conditions/targets/actions/flow + templates [NOVO]
-  08_CAMPANHA.md               <- grafo, scene, timeline, battle win/lose [NOVO], flags-lite [NOVO]
-  09_STUDIO_EDITOR.md          <- editores, UX, starter kit [NOVO], wizard
-  10_PREVIEW_TESTE_DEBUG.md    <- preview unificado [NOVO], test lab mínimo [NOVO], GUT, determinismo
-  11_ROADMAP.md             <- MVP, roadmap, donos por pasta, workflow
-   12_DISTRIBUICAO_EXPORTACAO.md <- fita .astralis + cadeado + bundles win/linux/android [NOVO v1.3]
-   13_TABULEIRO_DUELO.md <- zonas[5+5], fases DRAW/MAIN/BATTLE/END, mão 5/refill, LP dado, win LP+deckout [NOVO v1.4]
-    14_EXPERIENCIA_USUARIO.md <- Simples/Avançado em tudo, galeria, erro PT-BR, Play verde, guia 5min [NOVO v1.5]
-    15_VISUAL_DUELO.md       <- contrato VISUAL da mesa: medida da referência, SubViewport (campo à direita SEM perspectiva torta), de onde vem cada imagem [NOVO v1.8]
-    16_PERSPECTIVA_CAMPO.md  <- o PONTO DE VISTA DA MESA (v2.0, D47): a tela e a visao de quem esta jogando GIRANDO A CAMERA em volta do centro do campo - as cartas NAO se mexem, nada esmaece, nada teleporta. O HUD 2D nao gira: vira de carta e o conteudo troca nos 90 graus. O texto da D46 (a versao que fingia a perspectiva movendo as cartas) ficou como historico nas §§16.1-16.14. Ler antes de mexer na mesa
-  AI_MANIFEST.json          <- mapa máquina (owner, depends, read_order)
-  SESSAO_ATUAL.md           <- OPS mutável: onde paramos + próximo passo (ler sempre)
-  DECISOES.md               <- OPS append-only: travas D01-D13, não reabrir
+  AI_MANIFEST.json          mapa máquina: o que existe, de quem é, e o que depende de quê
+  SESSAO_ATUAL.md           onde estamos, o que falta, o que está travado
+  DECISOES.md               a regra travada e o motivo de cada uma (R7)
+  00_INDICE_GERAL.md        <- você está aqui, o roteador
+  01_VISAO_PRODUTO.md       identidade, o que o jogo não é, sucesso
+  02_PRINCIPIOS_ARQUITETURAIS.md  DATA!=LOGIC, sem motor paralelo, política de conteúdo, regra das ferramentas
+  03_STACK_DISTRIBUICAO.md  dev stack x product stack, os 4 modos (GAME/PREVIEW/TEST/DEBUG)
+  04_CONTRATO_DADOS.md      os 8 schemas, versionamento, IDs, .apack, o molde
+  05_RUNTIME_DUELO.md       os sistemas de duel/, a mesa 3D, a IA rival
+  06_SISTEMA_FUSAO.md       receita + regra genérica, ordem de resolução
+  07_SISTEMA_EFEITOS.md      o modelo do efeito e o que NÃO tem motor
+  08_CAMPANHA.md            PLANO, 0% implementado
+  09_STUDIO_EDITOR.md       as telas do editor e o que ele nunca faz
+  10_PREVIEW_TESTE_DEBUG.md flags, --project/--setup, GUT, Campo de Testes
+  11_ROADMAP.md             MVP, roadmap, donos por pasta, o fluxo de uma feature
+  12_DISTRIBUICAO_EXPORTACAO.md  o .apack (existe) e a distribuição trancada (PLANO)
+  13_TABULEIRO_DUELO.md     zonas, fases, mão, LP, vitória, a arena
+  14_EXPERIENCIA_USUARIO.md Simples/Avançado, erro em PT-BR, o caminho de 5 minutos
+  15_VISUAL_DUELO.md        o contrato visual da mesa e o dono de cada número
+  16_PERSPECTIVA_CAMPO.md   a volta da mesa, o espelho do rival, as duas mãos
 ```
 
-## O que mudou na v1.2 (suas sugestões aplicadas)
+## O MAPA DO CÓDIGO (gerado, não escrito à mão)
 
-1. **Flags-lite V1** (`08_CAMPANHA.md`): `flags booleanas + counters` setadas em vitória/derrota/escolha. Sem linguagem geral. Permite finais múltiplos, revanche, desbloqueio.
-2. **Battle Node com `on_win / on_lose / retry`** (`08_CAMPANHA.md`): obrigatório na V1. Sem isso campanha trava.
-3. **Fusão receita + regra** (`06_SISTEMA_FUSAO.md`): receita explícita `A+B=C` tem prioridade; regra genérica `tipo+atributo->resultado` como fallback. Continua data-driven, reduz 90% do cadastro.
-4. **AI por preset** (`05_RUNTIME_DUELO.md`): mesma base de IA, parâmetros por duelista: `agressividade, uso_fusao, protecao_lp, dificuldade`. Sem custom scripting na V1.
-5. **Effect Templates** (`07_SISTEMA_EFEITOS.md`): Modo Simples (modelos prontos) + Modo Avançado (blocos). Mesmo motor, mesma validação.
-6. **Starter Kit jogável** (`09_STUDIO_EDITOR.md`): 10 cartas, 2 duelistas, 1 duelo, 1 cena. Duplicar e editar.
-7. **Preview unificado "Jogar a partir daqui"** (`10_PREVIEW_TESTE_DEBUG.md`): um único mecanismo `launch Astralis with context {project, scene_id?, duel_setup?, seed?}`. Scene/Duel/Effect/Fusion Preview viram contextos, não 4 features separadas.
-8. **Test Lab mínimo junto do Effect Builder** (`10_PREVIEW_TESTE_DEBUG.md`): botão `Testar agora` com setup auto-sugerido + expected vs actual. UI completa depois.
-9. **Escopo V1 enxuto**: adiados `State Diff completo, Trace rico, Breakpoints, Recording, Debug Console completo`. V1 mantém: `Play Project + Validação humana + State Inspector simples`.
-10. **Exportação protegida v1.3** (`12_DISTRIBUICAO_EXPORTACAO.md`): pasta JSON de trabalho vs `.astralis` binário de distribuição; cadeado por jogo gerado no Exportar com chave embutida no player; bundles `exe + .astralis` (win/linux) e `apk + .astralis` com importação (android V1, fundido só V2); versionamento vai junto e acaba mismatch.
-11. **Ponto de vista da mesa (v2.0, D47, `16_PERSPECTIVA_CAMPO.md` §16.15)**: a tela passa a ser a visao de **quem esta jogando** como no Forbidden Memories, e agora e EXATO: a **camera da a volta** de 180 graus em torno do centro do campo (ela e filha de um pivo, que e o unico numero da volta, `_giro_campo`). **As cartas nao se mexem**: cada uma fica no seu lugar do mundo e e a camera que vai para o outro lado da mesa. Isso da de graca a fileira de cima de cabeca para baixo, a coluna de tela invertida (o espelho do rival no dado, D18, e a volta se cancelam: cada um ve a propria fileira na ordem normal) e cada mao do lado do seu dono. A lente continua no eixo e o centro do campo no mesmo x (doc 15 §15.4 intacto). O **HUD 2D nao gira**: ele vira de carta (`|cos(graus)|`, zero nos 90) e o conteudo troca nos 90 graus, quando a largura e zero - invertem os retratos, as plaquinhas de nome/LP e a ordem das 7 celulas da faixa; a barra de fases NAO inverte de proposito (ela mostra a fase real de quem joga, e espelhar dado de regra seria a tela mentir). O tempo e uma constante so (`VOLTA_DURACAO`, 1,0 s) e nao existe pular. **R1 inteiro**: motor e dado intocados, so desenho.
-12. **UMA arena so (v2.1, D48, `13_TABULEIRO_DUELO.md` §13.10.1)**: a arena oficial e o `schemas/examples/arenas/arena_starter.json` (X `632→1684` de 263 em 263; Y `p0 monstro 695 / p0 magia 958 / p1 monstro 305 / p1 magia 42` — valores do D49). A grade embutida em `core/board_layout.gd`, que entra quando o projeto nao tem `arenas/`, **deixou de ser uma segunda arena**: passou a ser os MESMOS numeros da oficial. Antes havia duas telas (a larga com o arquivo, a estreita sem ele, e a estreita com a mao em cima da fileira de baixo) porque a grade embutida, a descricao do JSON, o schema e dois testes ainda falavam de uma grade antiga que sobrou de teste. A igualdade virou trava de teste (`test_grade_embutida_igual_arena_oficial`): 20/20 slots, `SLOT + GAP == 263` e as constantes do 2D legado iguais as do `BoardLayout`.
-13. **A grade PERFEITA (v2.2, D49, `13_TABULEIRO_DUELO.md` §13.10.2)**: **um valor so, 263, nas SEIS direcoes do campo** - o passo horizontal das 4 fileiras E o vao vertical monstro->magia dos dois lados. A distancia entre a fileira de monstros do jogador e a do rival (390) fica **CONGELADA** (pedido do usuario), e por isso so as fileiras de magia se moveram. O que impedia a grade de ficar perfeita era um desvio hardcoded em `_pos_slot` (`APROXIMA_MAGIA_VOCE = 0.22` e `APROXIMA_MAGIA_RIVAL = 0.05`, resto de calibracao de tela do D44) que deslocava a fileira de magia POR CIMA do dado: medido em mundo, o vao era 2,2400 no jogador e 2,3690 no rival, contra 2,1566 do horizontal. Os dois numeros foram **removidos** e a conversao passou a ser igual para os 4 tipos de slot. A medida e **por codigo** (o jogo tem a volta da mesa da D47, e a perspectiva faz o mesmo intervalo aparecer com 276/257/220 px na tela), entao os helpers que mediam vao em pixel foram removidos e a trava nova e em unidades de mundo.
-14. **UMA arena, e ela e do jogo (v2.3, D50, `13_TABULEIRO_DUELO.md` §13.10.3)**: os numeros da mesa vivem em **UM lugar so**, o arquivo `schemas/examples/arenas/arena_starter.json`. As 7 constantes da grade que ainda existiam em `core/board_layout.gd` e as 7 duplicadas em `duel_legacy2d/duel_board.gd` foram **APAGADAS** - eram elas que deixavam o jogo cair numa tela diferente em silencio. O override por projeto tambem foi removido: o projeto do Studio nao tem mais pasta `arenas/`, o `arena_id` do `duel_setup` e lido e **ignorado** (o dado FM traz `arena_starter`, que e a mesma), uma pasta `arenas/` encontrada num projeto e IGNORADA com aviso, e arquivo faltando ou quebrado e **erro honesto**: o log avisa e a mesa nao desenha o campo, porque nao existe mais para onde cair. O que se perde: um projeto nao pode mais ter mesa propria (capacidade V2 do D24 que nunca teve editor) - escolha do usuario.
-15. **A visao do rival e o espelho exato da sua (v2.4, D51, `16_PERSPECTIVA_CAMPO.md` 16.16)**: a faixa 2D do meio saia do vao entre as fileiras de monstros na visao do rival (na sua vez ela fica certa), e o usuario mandou resolver pela CAMERA, sem reposicionar a faixa e sem mudar nada da sua visao. A causa medida: o pivo da volta esta na origem (0,0,0), mas o **plano de simetria do campo** (a media das duas fileiras de monstro da arena oficial) esta em z = -0,398 - as fileiras da arena sao simetricas em torno de y=500 e o CENTRO_Y do codigo e 540. Girando 180 em torno da origem, a camera do rival chegava 2 x 0,398 = 0,796 perto demais da mesa, e o campo saia 57 px mais baixo. Agora a camera do rival cai no **espelho exato** da camera do jogador em relacao ao plano do campo, medido do dado (`_medir_plano_de_simetria` + `_z_local_da_camera`): as duas fileiras ocupam o mesmo retangulo de tela, com as de cima e de baixo trocadas, e o vao e o mesmo numero nas duas vistas (erro 0,00 px). **A sua visao nao muda** (CAM_POS intacto, e a foto A/B antes x depois da 100,0000% de pixels iguais na regiao do campo) e a faixa 2D nao ganhou nenhum codigo de reposicionamento. A varredura que o usuario pediu (8 alturas x 6 distancias x 6 pontos de mira) mostrou que a altura nao era a solucao: o melhor resultado de todos e o espelho exato.
-16. **As DUAS maos, uma em cada lugar, nas DUAS vistas (v2.5, D52, `16_PERSPECTIVA_CAMPO.md` 16.17)**: o usuario pediu (itens 1, 2 e 3 dele) que na visao do rival as cartas da **sua mao** aparecessem do outro lado da tela "igual as do inimigo aparecem na minha rodada", e que as cartas do rival aparecessem "posicionadas exatamente como as minhas" mas **tapadas**. A regra: **quem esta jogando ocupa o lugar de baixo e o outro o de cima**, e na visao do rival cada lugar e o **espelho** do mesmo lugar na sua visao - que a D51 ja deixou possivel, porque as duas vistas passaram a ser espelhos uma da outra (e por isso nenhuma medida teve de ser refeita: o lugar de baixo fica a 8,2 unidades da camera nas duas vistas, ou seja o mesmo tamanho de carta na tela). A troca acontece nos **90 graus**, que e o instante em que a tela nao mostra nada. Na visao do rival as DUAS maos mostram o verso e ficam de pe, porque **o verso de uma carta nao e o espelho da frente dela** (virada de cabeca para baixo mostraria a arte da sua carta). O **cursor some** na visao do rival (ele ficaria em cima da mao dele denunciando a carta que voce combina). As cartas do **campo** continuam paradas (a trava da D47 intacta) e a sua visao ficou byte a byte. As constantes `MAO_P0_*`/`MAO_P1_*` viraram `LUGAR_PERTO_*`/`LUGAR_LONGE_*` (depois da D52 elas sao do lugar, e nao do jogador nem do rival) e o boot agora resolve a altura e o X dos dois lugares antes de qualquer carta ser desenhada, para o caso de o rival comecar o duelo.
-17. **Um desenho que se mexe sem precisar (v2.6, D53, `16_PERSPECTIVA_CAMPO.md` 16.18)**: o usuario viu as cartas da mao do outro lado do campo "se movimentarem junto" enquanto navegava na sua. Medindo antes de mexer, a **navegacao em si nao move nada** (0 pixel de diferenca e a posicao de tela da mao de cima identica depois de 8 acoes) - mas havia **tres defeitos** da mesma familia: a **compra animada estava na mao errada** (fixa na do jogador, entao na vez do RIVAL a compra dele arrastava a sua mao - que na tela dele e o lugar de cima - pelo meio do campo; e a invocacao animava a mao sem ter comprado nada); a **chacoalhada da falha da fusao sacudia a mesa inteira** (`_sacudir(_no_cartas)`, o guarda-chuva das 20+ cartas, com as DUAS mao dentro - as cartas andavam juntas); e **andar na mao redesenhava a tela 3D inteira** a cada tecla (`_redesenhar` recria as 20+ cartas; no mesmo passo os filhos iam de 10 para 20). Agora a compra e da mao que comprou, a chacoalhada e da carta do slot (com a trava DENTRO da funcao, para ninguem reintroduzir), e o passo de cursor so mexe o cursor e o painel. E as duas animacoes perderam a trava de "so com render" de proposito, para o teste passar a **ver quem animou** - era isso que deixava o defeito invisivel para o GUT.
+- **Jogo** `astralis/` — `duel/` sistemas de regra · `duel3d/` a tela em 8
+  arquivos · `ai/` a IA rival · `core/` carregador e layout · `ui/` a carta 2D ·
+  `testing/` o GUT
+- **Editor** `astralis-studio/` — `src-tauri/` Rust (validação, `.apack`,
+  lançar o jogo) · `src/` Svelte (as telas)
+- **Contrato** `schemas/` — 8 schemas + `examples/` (dado de teste)
+- **Ferramentas** `tools/` — `fm_import.py` (o pack de referência),
+  `apack.py` (o formato do pack), `checar_docs.py` (o portão de doc)
+- **Dados do editor** `astralis-studio/projects/default/` — abre vazio, só por
+  Importar (D29)
 
-## Regras que NÃO mudaram
+## REGRAS QUE NÃO SE REABREM (resumo; o texto está no `DECISOES.md`)
 
-- Astralis = runtime, única fonte da verdade de gameplay.
-- Astralis Studio = editor, nunca implementa gameplay, nunca calcula resultado.
-- Preview e Test Lab usam o mesmo código do Astralis. Proibido `FakeDuelEngine`.
-- `Documentação.md` v1.1 original mantida como legado. Se divergir, valem os `docs/`.
+- Astralis = runtime, única verdade de gameplay. O Studio monta dado e lança o
+  jogo; nunca calcula resultado.
+- Proibido motor falso, inclusive em preview e teste.
+- A arena é do jogo e tem um dono só, sem fallback.
+- A lente da mesa nunca é deslocada.
+- As cartas do campo não se mexem: quem gira é a câmera.
+- Efeito não tem motor na mesa; o dado existe e é validado.
+- Quem manda no projeto é o usuário.
+
+## O QUE NÃO EXISTE (para não procurar)
+
+- **Campanha** (D07): 0% implementado. Sem `CampaignManager`, sem schema, sem
+  pasta no esqueleto do projeto. O editor de cenas grava um formato simples que o
+  jogo não lê.
+- **Motor de efeitos** (D30): o dado existe e é validado; a mesa não executa.
+- **Distribuição trancada** (D03-D06): 0% implementado. Só existe `.apack`,
+  que é aberto.
+- **Test Lab** (D12): o que existe é o Campo de Testes (`test_state`).
+- `SaveSystem`, `EventBus`, `AudioManager`, `StateInspector`, `TestHarness` e
+  `EffectSystem`: **não existem**. O que existe é o GUT.
+- `ai_preset` está no contrato e no Studio, e o **runtime não lê**.

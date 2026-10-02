@@ -1,44 +1,87 @@
 # 07 — SISTEMA DE EFEITOS
 
-ORIGEM: spec v1.1 seções 20-30, 93
+> **O que existe:** o contrato (`schemas/effect.schema.json`), a validação no
+> Studio e a galeria de 4 modelos.
+> **O que não existe:** o motor. Não há `EffectSystem` nem `EffectResolver` em
+> `astralis/`, e a mesa **não executa** efeito (D30). Ativar magia na zona avisa.
+> O editor mostra o aviso fixo "execução vem depois" e **não** tem botão de Play.
+>
+> Isto é o contrato e o desenho. O vocabulário abaixo é o que está no schema —
+> se divergirem, vale o schema.
 
-## 7.1 Modelo
-
-Efeito permite liberdade dentro do que Astralis suporta. Usuário combina blocos declarativos, não programa:
+## 7.1 O MODELO
 
 ```text
 TRIGGER -> CONDITIONS -> TARGET -> ACTIONS -> FLOW
 ```
 
-Uma carta pode ter múltiplos efeitos. Texto humano é derivado, não fonte da lógica. Ex.:
-dados `trigger=card_summoned, target=enemy_monster, action=modify_attack -500 até fim do turno`
--> "Quando invocada, reduza o ATK de 1 monstro do oponente em 500 até o fim do turno."
+O **texto humano é derivado**, nunca a fonte da lógica. O campo `description` é
+só exibição: trocar o texto não muda o que o efeito faz, e mudar o dado não exige
+reescrever a frase.
 
-## 7.2 Vocabulário V1
+## 7.2 O VOCABULÁRIO (é o `enum` do schema, fechado)
 
-Triggers MVP: `card_summoned, card_destroyed, turn_started, turn_finished, attack_started, damage_dealt`.
-Lista completa futura inclui `attack_finished, damage_received, card_drawn, card_sent_to_graveyard, fusion_performed, card_equipped`, etc. Regra: Studio só mostra trigger que Astralis sabe executar.
+**Triggers (6):** `card_summoned`, `card_destroyed`, `turn_started`,
+`turn_finished`, `attack_started`, `damage_dealt`.
 
-Conditions ex.: `attack >/ < value, defense >/ <, attribute == X, monster_type == X, card_in_field/hand/graveyard, player_lp > X, opponent_lp < X, exists_card(X)`.
-Targets ex.: `self, ally_monster, enemy_monster, all_ally/enemy_monsters, random/selected_card, card_in_graveyard/hand`. Targets têm compatibilidade declarada com Actions.
-Actions MVP: `modify_attack, modify_defense, damage, heal, destroy, draw, discard`. Futuro: `summon, change_position/attribute/type, equip, add_to_hand, remove_from_field`.
-Flow V1: `multiple actions + sequence`. Condicional `if/else/repeat/stop` só após base estável. Não virar linguagem geral.
+**Targets (11):** `self`, `self_player`, `opponent`, `ally_monster`,
+`enemy_monster`, `all_ally_monsters`, `all_enemy_monsters`, `selected_card`,
+`random_card`, `card_in_graveyard`, `card_in_hand`.
 
-Nova Action exige: 1.schema 2.runtime 3.editor UI 4.validação 5.testes 6.docs.
+`self_player` e `opponent` são os alvos de LP, e são **obrigatórios** para
+`damage` e `heal`. `draw` tem que mirar `self_player`.
 
-## 7.3 Níveis de complexidade
+**Conditions:** `field` + `operator` + `value`. Os `field` que o Studio oferece
+são `opponent_monster_attack`, `player_lp`, `opponent_lp`, `attribute` e
+`monster_type`. O **schema não fecha esse conjunto** (`field` é string livre),
+porque nenhuma condição está implementada ainda — fechar a lista agora seria
+travar o contrato sem base.
 
-L1: Trigger->Action. L2: +Condition+Target. L3: +Conditions+Targets+Multiple Actions+Flow. Astralis tem modelo unificado; Studio esconde complexidade.
+Os operadores são `>`, `<`, `>=`, `<=`, `==` e `!=`.
 
-Builder é contextual: `modify_attack` mostra target/value/duration; `draw` mostra amount; `destroy` mostra target. Sem campos irrelevantes.
+**Actions:** `damage`, `heal`, `destroy`, `draw`, `discard`,
+`modify_attack`, `modify_defense`.
 
-Validação: Studio faz UX, Astralis valida ao carregar/executar. Estados VALID/WARNING/ERROR. ERROR ex.: trigger/action inexistente, target incompatível, campo ausente, ref inexistente. Nunca erro crítico silencioso.
+**Flow V1:** `mode` só aceita `"sequence"`, e `actions` é uma lista executada em
+ordem. `if`/`else`/`repeat` só depois da base, para o flow não virar linguagem
+geral (R3).
 
-## 7.4 [MELHORIA V1.2] Effect Templates (Modo Simples)
+## 7.3 A REGRA QUE NÃO PODE QUEBRAR
 
-Problema: montar TRIGGER->... do zero assusta. Solução sem mudar motor:
+**O Studio só mostra o que o Astralis executa.**
 
-- Modo Simples: galeria de modelos: `[Dano ao invocar] [Enfraquecer inimigo] [Comprar carta] [Destruir ao morrer]`. Usuário escolhe, preenche 2-3 campos, Studio gera o bloco declarativo padrão.
-- Modo Avançado: edita blocos completos.
+Enquanto não houver motor, isso significa duas coisas concretas:
 
-Mesmo schema, mesma validação, mesma execução. Template é só atalho de autoria. Smart Test Setup sugere cenário a partir do template (ex.: precisa de inimigo com 2000 ATK), mas resultado sempre vem do Astralis.
+1. O Studio **não** calcula efeito. Ele monta o bloco, valida contra o schema e
+   salva.
+2. O botão de **Play/Testar** **não pode existir** no editor de efeitos. Ele já
+   traz um aviso fixo no lugar, e o aviso é a implementação da regra.
+
+Uma `Action` nova só existe depois de passar por tudo: **1.** o schema,
+**2.** o runtime que a executa, **3.** a UI do editor, **4.** a validação,
+**5.** o teste, **6.** o doc. Começar pela UI é o caminho que produz "funciona no
+editor e não no jogo".
+
+## 7.4 SIMPLES E AVANÇADO
+
+O **Modo Simples** é a galeria de 4 modelos — `Dano ao invocar`, `Enfraquecer
+inimigo`, `Comprar carta`, `Destruir ao morrer`. O usuário escolhe o modelo,
+preenche 2-3 campos, e o Studio **gera o bloco** do Modo Avançado a partir dele.
+
+O template é **atalho de autoria**, não um tipo separado: o resultado é o mesmo
+`Effect` do schema, validado pelo mesmo caminho. Por isso os dois modos não
+divergem.
+
+## 7.5 O QUE FALTA PARA EXISTIR
+
+| Falta | Quem faz |
+|---|---|
+| `EffectSystem` que resolve `TRIGGER→...` durante o duelo | Runtime |
+| os `field` de condition fechados no schema | Systems |
+| `if`/`else`/`repeat` no `flow` | Systems + Runtime |
+| a botón de Testar no editor | Editor, **depois** do motor |
+| GUT do resolver, com o Astralis real | QA |
+
+O **`effects.json` nasce vazio** e isso é o estado normal. Sem efeitos cadastrados
+o gate dá **aviso** (diz onde cadastrar); com efeitos cadastrados e um id fora
+do catálogo, dá **erro**.

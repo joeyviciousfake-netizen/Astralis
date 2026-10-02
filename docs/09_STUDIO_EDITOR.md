@@ -1,12 +1,11 @@
 # 09 — ASTRALIS STUDIO (EDITOR)
 
-ORIGEM: spec v1.1 seções 8, 37, 38, 39, 66, 67, 68, 69, 70, 71
 
 STACK: Rust + Tauri + Svelte.
 
 ## 9.1 O que o Studio faz
 
-Criar/abrir/editar projetos; cartas, duelistas (com AI presets V1.2), decks, fusões (receitas+regras), efeitos (templates), campanhas, cenas, importar assets, validar, executar Astralis em preview, criar/executar testes via Astralis.
+Criar/abrir/editar projetos; cartas, duelistas (com AI presets), decks, fusões (receitas+regras), efeitos (templates), campanhas, cenas, importar assets, validar, executar Astralis em preview, criar/executar testes via Astralis.
 
 V1: Project Manager, Card/Duelist/Deck/Fusion Editor, Effect Builder, Campaign/Scene Editor, Asset Manager, Validation, Preview foundation, Test Lab foundation. Preview avançado e Debug UI depois.
 
@@ -24,27 +23,43 @@ Autoria visual é aberta por padrão: o Studio não mantém blacklist por person
 
 Matriz: Studio cria/edita, Astralis interpreta/executa. Ex.: effect definition Studio cria, Astralis executa; battle rules Astralis responsável, Studio não implementa; preview/teste Astralis executa, Studio controla/inicia.
 
-## 9.3 [MELHORIA V1.2] Starter Kit + Wizard
+## 9.3 Starter Kit + Wizard
 
-Todo `New Project` vem com kit jogável mínimo:
-- 10 cartas, 2 duelistas (1 fácil/agressivo baixo, 1 normal), 2 decks, 3 fusões (2 receitas + 1 regra), 2 efeitos modelo, 1 campanha com 2 cenas + 1 batalha com win/lose, assets placeholder.
+> **PLANO.** O wizard de 3 passos não existe. O kit que existe é
+> `schemas/starter_backup/`: 40 cartas custom, 2 duelistas, 2 decks e 3 receitas
+> de fusão. **Não** tem efeito modelo nem campanha. E o `New Project` abre
+> **vazio** por decisão (D29): o conteúdo vem só por Importar pack.
 
-Wizard 3 passos: `1. Duplicar carta -> 2. Montar deck -> 3. Play`. Reduz fricção de tela em branco e já valida pipeline Studio->Astralis no dia 1.
+O wizard seria `1. Duplicar carta → 2. Montar deck → 3. Play`, depois de importar.
+A ideia é reduzir a tela em branco e validar o caminho Studio→Astralis no dia 1.
 
-## 9.4 [MELHORIA V1.5] Padrão Simples/Avançado em tudo + galeria
+## 9.4 Padrão Simples/Avançado em tudo + galeria
 
-O Modo Simples/Avançado do efeito (doc 07) vira padrão de todos os editores:
+O Modo Simples/Avançado é o padrão de todos os editores. **Todo editor abre no
+Simples (2-3 campos) com botão `Avançado` que libera o resto** — mesmo dado,
+mesma validação, só muda o que aparece.
 
-- Todo editor abre no Simples (2-3 campos) com botão `Avançado` que libera o resto. Mesmo dado, mesma validação, só muda o que mostra.
-- Fusão: Simples = só lista de receitas `A+B=C` + botão `Testar fusão`; Avançado = aba Regras com selects e prioridade.
-- Duelista: Simples = nome, retrato, deck, vida + arquétipo num clique (`Bravo | Equilibrado | Defensor`); Avançado = 3 sliders + dropdown de dificuldade.
-- Campanha: Simples = modelos de cena e batalha com win/lose já ligado; Avançado = grafo + timeline completos.
-- Duelo: Simples = escolher os 2 duelistas + vida + Play; Avançado = seed, arena, ordem de turno.
+| Editor | Simples | Avançado |
+|---|---|---|
+| Carta | o essencial, com preview ao vivo | todos os campos do schema |
+| Fusão | só a lista de receitas `A+B=C` + `Testar fusão` | a aba de Regras, com selects e prioridade |
+| Duelista | nome, retrato, deck, vida e o arquétipo num clique (`Bravo / Equilibrado / Defensor`) | os sliders e o dropdown de dificuldade |
+| Duelo | escolher os 2 duelistas, vida e Play | seed, arena, ordem de turno |
+| Efeito | a galeria de modelos, 2-3 campos | os blocos `TRIGGER→...` |
+| Campanha | **PLANO** (doc 08) | **PLANO** |
 
-Galeria de prontos (um clique, tudo duplicável): 10 efeitos modelo, 5 fusões famosas, 3 duelistas arquétipo, 3 campanhas modelo (rival clássico, torneio, final múltiplo). Galeria usa os mesmos schemas; item da galeria é só dado inicial.
+> **`Testar fusão` não joga.** O comando existe e valida o **dado**, com a
+> mensagem "validado no dado, sem jogar". Isso é o R1: sem motor no runtime, o
+> editor não pode executar.
+>
+> O botão de Play **não** existe no editor de efeitos: sem motor de efeito no
+> jogo, o botão seria uma mentira. Por isso `EffectsStudio.svelte` traz um aviso
+> fixo no lugar dele.
 
-Duplicar e editar é a ação principal de toda lista (antes de Criar do zero). Nunca tela em branco.
+**Duplicar e editar é a ação principal de toda lista**, antes de Criar do zero.
+Nunca tela em branco. A convenção está implementada em `DecksStudio` e
+`DuelistsStudio`, que imprimem "Duplicar antes de criar".
 
-Assets arrasta e solta: arrastar PNG/JPG/OGG para dentro importa, converte e referencia sozinho; valida tamanho/formato com aviso em PT-BR; se faltar arte, usa placeholder cinza automático para não travar o Play.
-
-Botão verde Jogar em todo editor (carta, deck, duelo, efeito, fusão, cena): salva + lança Astralis com o contexto daquilo (doc 10). Erro de validação aparece em PT-BR simples com botão `Consertar pra mim` quando houver correção segura.
+Assets arrasta e solta: arrastar PNG/JPG/OGG para dentro importa, converte e
+referencia sozinho; valida tamanho e formato com aviso em PT-BR; se faltar arte,
+usa placeholder cinza para não travar o Play.

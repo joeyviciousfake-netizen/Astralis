@@ -1,6 +1,5 @@
 # 10 — PREVIEW, TEST LAB, DEBUG
 
-ORIGEM: spec v1.1 seções 40-65, 97, 98, 99
 
 > Resposta direta: testes no editor usam o mesmo código do Astralis. Studio monta dado de teste, Astralis executa com sistemas reais e devolve resultado. Por isso nunca dá "funcionou no editor mas não no jogo" — editor não tem motor próprio.
 
@@ -10,7 +9,7 @@ Preview = "ver conteúdo funcionando" (experimentação visual/interativa).
 Test Lab = "verificar automaticamente se está correto" (determinístico/repetível).
 Ambos usam Astralis. Nenhum tem gameplay independente.
 
-## 10.2 [MELHORIA V1.2] Preview unificado
+## 10.2 Preview unificado
 
 Antes: 6 modos (Play, Scene, Duel, Effect, Fusion) como fases separadas. Agora: um mecanismo:
 
@@ -27,31 +26,54 @@ Studio -> save Project Data -> launch Astralis with context
 
 ## 10.3 Test Lab (usa Astralis real)
 
-Modelo: `TEST: SETUP/GIVEN/WHEN/THEN`. Ex.: GIVEN enemy ATK 2000 WHEN summon Fire Warrior THEN ATK==1500. Usuário monta visual, sem código.
+> **O que existe hoje é o Campo de Testes** (descrito no fim desta seção). O
+> `TestHarness`, o cenário de teste, o botão `Testar agora` e o trace rico são
+> **PLANO** e não têm linha de código. O que está escrito abaixo como modelo é o
+> desenho do que seria, não o que é.
 
-Setup inicializa GameState (LP, mão, campo, grave, deck, duelistas, fase, turno, cena). Actions pedem operações ao Astralis (summon, attack, activate, end turn, draw, fuse, advance scene, choose). Assertions comparam EXPECTED vs ACTUAL (`player_lp==4000, card_attack(X)==1500, fusion_result==...`). Studio não calcula, só compara.
+Modelo: `TEST: SETUP/GIVEN/WHEN/THEN`. Ex.: GIVEN enemy ATK 2000 WHEN summon Fire Warrior THEN ATK==1500. O usuário monta visual, sem código.
 
-Fluxo: `Studio Test Scenario -> Astralis TestHarness.create/inject/set/emit/execute/advance/capture -> Real Game Systems -> Assertions -> TestResult -> Studio`.
+O setup inicializaria o `GameState` (LP, mão, campo, cemitério, baralho,
+duelistas, fase, turno). As actions pediriam operações ao Astralis (summon,
+attack, activate, end turn, draw, fuse). As assertions comparam EXPECTED vs
+ACTUAL. O Studio não calcula, só compara.
 
-Regra do Harness: PROIBIDO `custom_damage/fusion/effect`. CORRETO `prepare_state() + call_real_*() + capture_result()`.
+A regra do harness, quando existir: **PROIBIDO** `custom_damage/fusion/effect`.
+O certo é `prepare_state()` + chamar o sistema real + capturar o resultado. É a
+mesma regra do R1 aplicada ao teste: sem duble, senão o teste prova o duble.
 
-[MELHORIA V1.2] Test Lab mínimo na V1: botão `Testar agora` no Effect/Card/Fusion Editor com setup auto-sugerido (ex.: efeito precisa de inimigo -> cria Test Monster 2000 ATK) + seed fixa para determinismo (`seed=12345`, mesmo cenário = mesmo resultado). UI completa, trace rico, state diff completo, recording, breakpoints, campaign debugger (Play/Pause/Step) ficam pós-V1.
+Falha mostra: expected, actual, trace, estado antes e depois, e o erro.
 
-**Campo de Testes (tab nova, contrato V1):** é o Test Lab mínimo com cara de mesa — monta `my_hand` + `p0/p1 monster/spell` (doc 04.6), clica Iniciar teste, e o duelo real começa sempre na MINHA fase da mão (`turn_order: first_p1`, fase da mão D24). Contrato: tudo opcional, mão máx 5, slots exatos 5+5 por lado, `face_up?/attack_position?` ausentes = `true`. Validação em PT-BR no Studio (`checar_test_state`); execução no runtime (ler `test_state` e posicionar antes do turno 1 — pendente, ver retorno do Systems ao Lead). O GIVEN/WHEN/THEN completo segue sem schema (só o context de campo+mão está contratado).
+**Campo de Testes (tab Testes):** é o Test Lab mínimo com cara de mesa — monta
+`my_hand` + `p0/p1 monster/spell` (doc 04.6), clica Iniciar teste, e o duelo real
+começa sempre na MINHA fase da mão (`turn_order: first_p1`, fase da mão D24).
+Contrato: tudo opcional, mão máx 5, slots exatos 5+5 por lado,
+`face_up?/attack_position?` ausentes = `true`. Validação em PT-BR no Studio
+(`checar_test_state` em `main.rs`) e **execução no runtime**
+(`_aplicar_test_state` em `astralis/duel/duel_manager.gd`). O GIVEN/WHEN/THEN
+completo segue sem schema (só o contexto de campo+mão está contratado).
 
-Falha mostra: expected, actual, trace real, state_before/after, events, erro — para debug humano e por IA.
+O botão `Testar agora` com setup sugerido, e o Test Lab completo, são **PLANO**:
+não existem. O que existe é o Campo de Testes e o botão verde Jogar.
 
 ## 10.4 Camadas e ferramentas
 
 - L1 Project Validation: sem gameplay, checa schema/IDs/refs/assets/tipos.
-- L2 Astralis Test Lab: gameplay real, checa effects/duel/fusion/campaign.
-- L3 GUT (v9.7.1, testes em `astralis/testing/`, hoje 12 testes): código interno (DataLoader, Validation, GameState, Turn/Battle/Damage/Fusion/Effect, CampaignRunner, Save). Prioridade nesses sistemas.
+- L2 Campo de Testes: gameplay real, com `test_state` — só o que o `duel_setup`
+  já permite.
+- L3 GUT (v9.7.1, em `astralis/testing/`): código interno (DataLoader,
+  Validation, GameState, Turn/Battle/Damage/Fusion, a tela da mesa 3D, a IA
+  rival e a carta). **Effect, Save e Campaign não têm motor**, então não há
+  teste deles.
 
-GUT = dev-oriented ("EffectResolver processa X"). Test Lab = autor-oriented ("esta carta deveria destruir este monstro"). Complementares. Para sistemas críticos: SPEC->TEST->IMPLEMENT->RUN->FIX->REGRESSION; bug vira teste permanente.
+GUT = dev-oriented ("o `BattleSystem.can_attack` recusa no turno 1"). Campo de
+Testes = autor-oriented ("esta carta deveria destruir este monstro"). São
+complementares. Para sistemas críticos: SPEC→TEST→IMPLEMENT→RUN→FIX→REGRESSION;
+**bug vira teste permanente**.
 
 Debug V1: State Inspector simples (scene, turn, LP, field, hand, grave, active effects, event queue). Adiado V1: State Diff completo, Trace rico, Breakpoints, Recording, DebugConsole completo. Infra (GameState, EventBus, Snapshot, Data/Asset loader) deve ser compartilhada desde cedo para não exigir reescrita.
 
-## 10.5 [MELHORIA V1.5] Erro como gente + Testar agora em tudo + Play verde
+## 10.5 Erro como gente + Testar agora em tudo + Play verde
 
 Validação fala PT-BR simples, sem termo técnico: em vez de `target incompatível`, mostra `essa carta precisa de um inimigo no campo`. Todo erro mostra onde clicar para consertar; quando a correção é segura (ex.: preencher vida vazia com 8000, ligar on_lose esquecido), botão `Consertar pra mim`.
 

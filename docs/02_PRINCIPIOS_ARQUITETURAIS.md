@@ -1,6 +1,5 @@
 # 02 — PRINCÍPIOS ARQUITETURAIS
 
-ORIGEM: spec v1.1 seções 4, 5, 6, 100, 101, 106, 107, 109
 
 ## 2.1 DATA != LOGIC — regra absoluta
 

@@ -1,13 +1,12 @@
 # 11 — MVP E ROADMAP
 
-ORIGEM: spec v1.1 seções 80-91, 96, 102, 103, 105
 
 ## 11.1 MVP
 
-Runtime: carregar projeto/cartas/duelistas/decks, duelo, turn/summon/attack/damage, victory/defeat, fusion (receita+regra V1.2), effect inicial, save/load.
+Runtime: carregar projeto/cartas/duelistas/decks, duelo, turn/summon/attack/damage, victory/defeat, fusion (receita + regra genérica, D08), effect inicial, save/load.
 Efeito MVP: triggers `card_summoned/destroyed, turn_started/finished, attack_started, damage_dealt`; actions `modify_attack/defense, damage, heal, destroy, draw, discard`; targets `self, ally/enemy_monster, all_ally/enemy_monsters`.
 Editor primeiro: Project/Card/Duelist/Deck/Fusion/Effect/Validation. Depois: Campaign/Preview/Test Lab mínimo. Preview avançado não é prioridade inicial.
-Campanha MVP: Scene/Dialogue/Character/Background/Choice/Battle(win/lose V1.2)/Transition/Wait/Sound/Music/Next + flags-lite V1.2. Sem variables completas.
+Campanha MVP: Scene/Dialogue/Character/Background/Choice/Battle(win/lose)/Transition/Wait/Sound/Music/Next + flags-lite V1.2. Sem variables completas.
 
 ## 11.2 Roadmap
 

@@ -1,6 +1,5 @@
 # 01 — VISÃO DE PRODUTO
 
-ORIGEM: spec v1.1 seções 1, 2, 103, 104, 110
 STATUS: AUTHORITATIVE
 
 ## 1.1 Identidade
@@ -35,7 +34,7 @@ Instala Studio -> New Project -> Create Cards/Duelists/Decks/Fusions/Effects/Cam
 
 Usuário não precisa saber: Godot, GDScript, Rust, Tauri, Svelte, MCP, GUT.
 
-[MELHORIA V1.2]: todo New Project já vem com Starter Kit jogável (ver `09_STUDIO_EDITOR.md`). Primeira coisa que o usuário faz é `Play`, depois duplica e edita.
+: todo New Project já vem com Starter Kit jogável (ver `09_STUDIO_EDITOR.md`). Primeira coisa que o usuário faz é `Play`, depois duplica e edita.
 
 ## 1.4 Definição final
 
@@ -62,6 +61,6 @@ Arquitetura vence quando:
 7. editor e runtime usam contrato compatível;
 8. projeto evolui sem Godot instalado no usuário.
 
-## 1.6 [MELHORIA V1.5] Guia 5 minutos (Play primeiro)
+## 1.6 Guia 5 minutos (Play primeiro)
 
 Primeira experiência oficial: `1. Play no Starter Kit (30 seg) -> 2. Duplicar 1 carta e mudar ATK/arte -> 3. Montar deck com ela -> 4. Play de novo -> 5. Exportar`. Nenhum passo exige ler manual. Todo doc de editor deve respeitar essa ordem: jogar, duplicar, editar, testar, distribuir.

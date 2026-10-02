@@ -1,6 +1,5 @@
 # 04 — CONTRATO DE DADOS
 
-ORIGEM: spec v1.1 seções 9, 10, 11, 12
 
 ## 4.1 Project Data
 
@@ -10,12 +9,18 @@ TRABALHO (pasta JSON editável):
 
 ```text
 project/
-  project.json
-  cards/ duelists/ decks/ fusions/ effects/ campaigns/ tests/ layouts/
-  assets/cards/ characters/ portraits/ backgrounds/ music/ sfx/ ui/
+  cards/ duelists/ decks/ scenes/ layouts/
+  assets/cards/ assets/portraits/ assets/backgrounds/
+  fusions.json   effects.json        <- arquivos na raiz, nao pastas
 ```
 
-DISTRIBUIÇÃO (`.astralis` único, binário trancado, não abre em texto): gerado no Exportar com manifest + hashes + assinatura + chave por jogo.
+Não existe `project.json` nem pasta `campaigns/` nem `tests/`. O dono do
+esqueleto é `PASTAS_ESQUELETO` em `astralis-studio/src-tauri/src/main.rs`, e ele
+é a fonte: se a lista mudar, muda lá e o doc segue.
+
+DISTRIBUIÇÃO (`.astralis` binário trancado): **PLANO, 0% implementado** — ver
+`12_DISTRIBUICAO_EXPORTACAO.md` §12.5. O que existe é o `.apack`, que é
+transporte de criação e é aberto.
 
 Arquivos podem evoluir. Princípio obrigatório: dados separados da lógica.
 
@@ -59,7 +64,7 @@ Tab "Campo de Testes" do Studio: o usuário monta mão + campo meu e do inimigo,
 
 - Contrato (`schemas/duel_setup.schema.json`, `schema_version` continua 1): campo opcional `test_state` com `my_hand[0-5]` (Card IDs), `p0_monster[5] + p0_spell[5] + p1_monster[5] + p1_spell[5]` (cada slot: `null` = vazio, ou `{card_id + face_up? + attack_position?}` — ausentes = `true`, o mínimo que o runtime já sabe mapear p/ `face_down/position` dele, sem mecânica nova), tudo opcional. Slots seguem o padrão `p0/p1 m/s 0-4` (doc 13.10); mão máx 5 (doc 13.3); IDs estáveis referenciando cartas.
 - LP/seed/ordem NÃO se duplicam: valem `starting_lp/seed/turn_order` do topo. Quando `test_state` está presente, `turn_order` tem que ser `first_p1` (schema `allOf/if-then` + Studio `checar_test_state`) e o duelo começa na fase da mão de p0 (D24) — documentado aqui, executado no runtime.
-- Ausente = duelo normal (dado FM `duel_fm_abertura` continua válido, sem tocar). Mudança compatível, sem migração (04.3). Validação espelhada no Studio (`checar_test_state` + `validar_projeto`); `tools/fm_import.py --check` segue verde (722/39/39/25081 intactos).
+- Ausente = duelo normal (dado FM `duel_fm_abertura` continua válido, sem tocar). Mudança compatível, sem migração (04.3). Validação espelhada no Studio (`checar_test_state` + `validar_projeto`); `tools/fm_import.py --check` segue verde (o pack passa inteiro nos schemas).
 
 ## 4.7 Pack de criação `.apack` V1 (D23, Systems — COMPATÍVEL, `schema_version` continua 1)
 
@@ -103,8 +108,8 @@ texto 6%/74%/88%x21%; rodapé 96-98,5).
   vem depois no plano do Lead (contrato → jogo desenha → editor visual →
   testes → docs). V1 = contrato + default + validação; nada muda no jogo
   nem no editor hoje.
-- Validação espelhada no Studio (`checar_card_layout` + 7 testes Rust);
-  `tools/fm_import.py --check` segue verde (722/39/39/25081 intactos).
+- Validação espelhada no Studio (`checar_card_layout` em `main.rs`);
+  `tools/fm_import.py --check` segue verde (o pack passa inteiro nos schemas).
 
 ## 4.9 Verso da carta — `card.card_back` (COMPATÍVEL, `schema_version` continua 1)
 
@@ -121,4 +126,4 @@ apenas alcança o dado (R3/R4): nenhum motor, nenhuma regra nova.
 - Dado FM existente (722 cartas sem `card_back`) continua válido, sem
   migração (04.3). Validação espelhada no Studio (`checar_carta` aceita
   ausente/string, recusa não-string); `tools/fm_import.py --check` segue
-  verde (722/39/39/25081 intactos).
+  verde (o pack passa inteiro nos schemas).

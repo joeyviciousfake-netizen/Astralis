@@ -1,35 +1,32 @@
 # 05 — RUNTIME E DUELO
 
-ORIGEM: spec v1.1 seções 7, 13, 14, 15, 16, 17, 18, 92
 
 ## 5.1 Astralis runtime
 
-Desenvolvido em Godot, distribuído como executável independente. Usuário usa Astralis, não Godot.
+Desenvolvido em Godot, distribuído como executável independente. O usuário usa
+Astralis, não Godot.
 
-Deve: carregar Project Data válido, campanha, duelos, cartas/duelistas/decks, fusões, efeitos, IA, save/load, áudio, UI, modos especiais de dev.
-
-Módulos conceituais (nomes podem mudar, responsabilidades não):
+Módulos, pelo que cada um é dono de saber:
 
 ```text
-EXISTE (v2.0):
-  core:     DataLoader, ProjectLoader, RuntimeValidator, BoardLayout (só desenho),
-            Asset3D (carregador de .glb, só desenho)
+EXISTE:
+  core:     DataLoader, ProjectLoader, RuntimeValidator, BoardLayout (arena),
+            card_layout (lê layouts/ do projeto; o default embutido é fallback)
   duel:     GameState, DuelManager, TurnManager, SummonSystem, BattleSystem,
             DamageSystem, PositionSystem, FusionSystem  <- SISTEMAS DE REGRA (R1)
-  duel3d:   a TELA do duelo em 8 arquivos, UM ASSUNTO CADA (D54-D67):
+  duel3d:   a TELA do duelo em 8 arquivos, UM ASSUNTO CADA:
             mesa_3d.gd (orquestrador + dono das medidas),
             painel_carta_3d.gd, faixa_2d.gd, carta_3d.gd (fábrica),
             menus_3d.gd, vista_3d.gd, campo_3d.gd, cursor_3d.gd
-            -> o mapa com o dono de cada número está no doc 15 §15.8
+            -> o mapa com o dono de cada número está no doc 15 §15.7
   ai:       ia_rival.gd (a IA ESCOLHE carta e alvo; a mesa EXECUTA, D68)
-  ui:       CardView (a carta 2D/molde; a mesa 2D e o DuelTable saíram no D54/D58)
-  testing:  suíte GUT
-NÃO EXISTE AINDA (V1 em atraso, ver docs/11 roadmap):
+  ui:       card_view.gd (a carta 2D pelo molde)
+  testing:  a suíte GUT
+NÃO EXISTE:
+  duel:     EffectSystem (o dado é carregado e validado, não há motor — D30),
+            AIController (a IA de hoje é TEMPORÁRIA de propósito, D55)
   core:     SaveSystem, EventBus
-  duel:     EffectSystem (dado carregado, nenhum motor),
-            AIController (a IA de hoje é TEMPORÁRIA de propósito, D55 — a
-            escolha fina morava na mesa 2D, que saiu no D54/D58)
-  campaign: CampaignManager, CampaignRunner, SceneRunner, Dialogue/Choice/BattleTransition
+  campaign: CampaignManager, CampaignRunner, SceneRunner, Dialogue/Choice
   ui:       AudioManager, AssetLoader/ResourceCache
   debug:    DebugConsole, StateInspector
   testing:  TestHarness/Runner/Reporter (o que existe é o GUT)
@@ -62,9 +59,10 @@ Deck (data): `id, name, cards[]` (20-60 ids) referenciando Card IDs.
 Duelist (data-driven):
 `id, name, portrait, sprite, deck_id, starting_lp (só sugestão), music, arena, dialogue refs, reward config` + `ai_preset` (ver 5.4).
 
-## 5.4 [MELHORIA V1.2] AI por preset
+## 5.4 AI por preset
 
-V1.1 dizia: todos usam mesma base. Mantido que IA é runtime-owned, sem custom scripting na V1. Adição:
+A IA é **runtime-owned**, sem custom scripting. O preset dá identidade sem
+código:
 
 ```text
 Duelist.ai_preset:
@@ -74,25 +72,31 @@ Duelist.ai_preset:
   protecao_lp: 0-100
 ```
 
-Studio expõe como 3 sliders + dropdown. Runtime interpreta. Dá identidade (ex.: Kaiba agressivo/fusionador, Joey equilibrado) sem código. Futuro: AI profiles/behavior params completos.
+O Studio expõe como 3 sliders + dropdown.
 
-> **Estado real em v1.5:** o `ai_preset` está no contrato e o Studio edita, mas o
-> runtime **ainda não lê** os 4 números. **D54/D55:** a mesa 2D onde a escolha
-> fina da IA vivia (FindKiller + FindBestAttack, a regra do original: direto com o
-> mais forte, kill com o mais fraco que vence, melhor margem contra ATK virado
-> para cima) foi removida, e o usuário chamou essa IA de **temporária** — vai
-> mudar como ela "pensa" na jogada. **D68:** a escolha de hoje mora em
-> `astralis/ai/ia_rival.gd`, com DUAS decisões e nada mais — `escolher_invocacao`
-> (o índice do monstro na mão) e `escolher_ataque` (o índice do alvo, sendo `-1` o
-> ataque direto no jogador). O rival invoca o primeiro monstro e ataca o primeiro
-> monstro em campo; a mesa é quem **executa**, pelo mesmo caminho da jogada do
-> jogador. Dado pronto, motor pendente — e quando ele for feito, a escolha mora
-> em `duel/` (sistema real, testado sem mesa), nunca dentro de um arquivo de tela.
+> **Estado real:** o `ai_preset` está no contrato e o Studio edita, mas o
+> runtime **não lê** os 4 números. A escolha da IA é **temporária** e a escolha
+> fina não foi portada (D55); a escolha de hoje mora em
+> `astralis/ai/ia_rival.gd` e é só "primeiro monstro da mão" e "primeiro alvo"
+> (D68). Ver 5.5.
 
-## 5.5 MVP Runtime
+## 5.5 A IA DO RIVAL HOJE
 
-Carregar projeto/cartas/duelistas/decks, iniciar duelo, turn flow, summon/attack/damage, victory/defeat, fusion, effect engine inicial, save/load.
+`astralis/ai/ia_rival.gd` tem **duas decisões e nada mais**:
 
-## 5.6 [MELHORIA V1.5] Duelista Simples/Avançado + arquétipos
+- `escolher_invocacao()` — o índice do monstro na mão.
+- `escolher_ataque()` — o índice do alvo. `target_slot` **menor que zero é ataque
+  direto** no jogador (e só é legal com o campo do outro lado vazio), nunca
+  "sem alvo".
+
+O rival invoca o primeiro monstro e ataca o primeiro monstro em campo. A mesa é
+quem **executa**, pelo mesmo caminho da jogada do jogador. A IA não conduz o
+turno, não conhece a tela e não tem método de execução — se tivesse, a regra
+estaria morando nela e a R1 estaria quebrada (o GUT trava isso).
+
+Dado pronto, motor pendente. Quando o motor for feito, a escolha mora em
+`duel/` (sistema real, testado sem mesa), **nunca dentro de um arquivo de tela**.
+
+## 5.6 Duelista Simples/Avançado + arquétipos
 
 Studio no Simples mostra só: nome, retrato, deck, vida + 3 arquétipos num clique (`Bravo: agressivo+fusão alta | Equilibrado | Defensor: protege LP`). Cada arquétipo preenche os 4 params do preset (dificuldade, agressividade, uso_fusao, protecao_lp). Avançado libera os sliders + dropdown. Runtime não muda: só interpreta os números. Mesma validação nos dois modos.

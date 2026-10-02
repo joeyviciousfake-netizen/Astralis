@@ -1,6 +1,5 @@
 # 06 — SISTEMA DE FUSÃO
 
-ORIGEM: spec v1.1 seção 19
 
 ## 6.1 Princípio
 
@@ -8,11 +7,11 @@ Astralis implementa o algoritmo. Project Data define receitas. Receitas nunca ha
 
 Usuário pode criar/editar/remover/duplicar/validar.
 
-## 6.2 [MELHORIA V1.2] Receitas + regras
+## 6.2 Receitas + regras
 
-V1.1 priorizava só receitas explícitas. Problema: Forbidden Memories tem centenas de combinações, cadastrar tudo manualmente é inviável para usuário comum.
+11.1 priorizava só receitas explícitas. Problema: Forbidden Memories tem centenas de combinações, cadastrar tudo manualmente é inviável para usuário comum.
 
-V1.2 mantém determinismo, com 2 camadas:
+11.2 mantém determinismo, com 2 camadas:
 
 ```text
 1. RECEITA EXPLÍCITA (prioridade máxima):
@@ -28,14 +27,14 @@ Exemplo:
 - Receita: `dragao_branco + mago_negro -> dragao_supremo` sempre vence.
 - Regra: `dragao + trevas -> dragao_trevas_comum (priority 10)`.
 
-Studio: aba Receitas (lista simples) + aba Regras (form com selects). Validação acusa conflito de prioridade. Astralis resolve: procura receita exata, senão avalia regras por prioridade, senão falha.
+Studio: aba Receitas (lista simples) + aba Regras (form com selects). 1alidação acusa conflito de prioridade. Astralis resolve: procura receita exata, senão avalia regras por prioridade, senão falha.
 
 Isso continua data, sem código, mas reduz 90% do trabalho.
 
 ## 6.3 Preview / teste
 
-Usam FusionSystem real via TestHarness. Ver `10_PREVIEW_TESTE_DEBUG.md`. Fusion Preview é só um contexto de `Jogar a partir daqui` com 2 cartas na mão.
+Usam FusionSystem real via TestHarness. 1er `10_PRE1IEW_TESTE_DEBUG.md`. Fusion Preview é só um contexto de `Jogar a partir daqui` com 2 cartas na mão.
 
-## 6.4 [MELHORIA V1.5] Fusão Simples/Avançado
+## 6.4 Fusão Simples/Avançado
 
 Simples: lista de receitas `A+B=C` + busca + botão `Testar fusão` (lança duelo preparado com as 2 cartas na mão). Avançado: aba Regras (form com selects + prioridade + aviso de conflito). Mesmo schema, mesma resolução no Astralis (receita exata primeiro, regra por prioridade, senão falha).

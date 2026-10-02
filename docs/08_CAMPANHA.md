@@ -1,60 +1,84 @@
-# 08 — CAMPANHA (VISUAL NOVEL)
+# 08 — CAMPANHA
 
-ORIGEM: spec v1.1 seções 31-36, 95
+> **PLANO. 0% implementado.** Não existe `CampaignManager`, `CampaignRunner`,
+> `SceneRunner`, `Dialogue`, `Choice` nem schema de campanha. A pasta
+> `campaign/` do repositório tem só um README, e `astralis/campaign/` tem só um
+> `.gitkeep`. Nada aqui está no jogo: o `ScenesStudio.svelte` do editor grava um
+> JSON simples em `projects/default/scenes/` e avisa em comentário que o jogo
+> **não lê esse formato** (R4).
+>
+> O modelo é o do original e está abaixo para servir de referência quando for
+> implementado. As decisões são D07 e D10.
 
-## 8.1 Modelo
+## 8.1 O MODELO
 
-Campanha é Visual Novel 2D data-driven. Usuário controla história, ordem, diálogos, personagens, backgrounds, escolhas, transições, batalhas, fluxo.
+Duas visões, e elas não se misturam:
 
-Duas visões:
-- GRAPH: fluxo global (Scenes, branching, transitions, battle nodes).
-- SCENE/TIMELINE: conteúdo ordenado dentro da cena.
-
-```text
-Scene A -> Dialogue -> Choice -> Scene B / Scene C -> Battle -> Scene D
-```
-
-Scene: `id, background, music, elements[]`.
-Elements V1: `dialogue, character, image, choice, battle, transition, sound, music, wait, jump, next scene`. Sem variables completas na V1 (ver 8.3).
-
-Timeline define o que acontece; Graph define para onde ir.
-
-## 8.2 [MELHORIA V1.2] Battle Node com vitória/derrota
-
-V1.1 citava `battle` mas sem saídas. Obrigatório na V1.2:
+- **GRAPH** — para onde ir. Grafo de nós: cena → diálogo → escolha → cena.
+- **SCENE-TIMELINE** — o que acontece dentro de uma cena, em ordem linear.
 
 ```text
-BattleNode:
-  duelist_id
-  deck_override?
-  on_win: -> scene_id
-  on_lose: -> scene_id
-  allow_retry: bool
-  flags_on_win: [...]
-  flags_on_lose: [...]
+Scene A -> Dialogue -> Choice -> Battle -> Scene B
+Choice: "Sim" -> scene_b | "Não" -> scene_c
+Scene: { id, background, music, elements[] }
 ```
 
-Sem isso campanha trava no primeiro Game Over. Studio mostra 2 setas coloridas no grafo. Astralis decide vencedor e faz o jump.
+**A regra que não pode quebrar:** a timeline define o que acontece, o grafo
+define para onde ir. O Studio mostra as 2 setas no grafo; **o Astralis decide o
+vencedor e faz o salto**. Se o editor decidisse, a regra estaria no editor.
 
-## 8.3 [MELHORIA V1.2] Flags-lite (em vez de zero variables)
+## 8.2 O NÓ DE BATALHA
 
-V1.1 adiava tudo. Problema: Choice sem memória não permite progressão.
-
-V1.2 permite só o mínimo, sem linguagem:
+Uma batalha dentro da campanha é um nó com saídas, porque sem elas a campanha
+trava — não há como continuar depois de perder:
 
 ```text
-flags: booleanas (ex.: venceu_kaiba, visitou_castelo)
-counters: inteiros simples (ex.: vitorias: 0..99)
+battle: {
+  duel_setup,        -> mesmo contrato do duelo normal
+  on_win:   <nó de destino>,
+  on_lose:  <nó de destino>,
+  allow_retry: bool,
+  flags_on_win:  [flags],
+  flags_on_lose: [flags]
+}
 ```
 
-- Setadas por: vitória/derrota em BattleNode, escolha em ChoiceNode, visita de Scene.
-- Usadas como: condição de desbloqueio de transição `requires_flag: venceu_kaiba` ou `requires_counter >= 3`.
-- UI: checkbox + número. Sem expressão arbitrária, sem string vars, sem quests/inventory/reputation na V1.
+`on_lose` é **obrigatório**. `allow_retry` devolve ao mesmo nó.
 
-Suficiente para finais múltiplos, revanche, caminho secreto. Variables completas (bool/int/string, conditions avançadas) ficam para futuro, após runtime/campanha/editor/preview estáveis.
+## 8.3 FLAGS-LITE (V1)
 
-Choices V1: `"Sim" -> scene_b / "Não" -> scene_c`, opcionalmente setando flag.
+Só o mínimo, sem virar linguagem de programação:
 
-## 8.4 [MELHORIA V1.5] Campanha Simples/Avançado + modelos
+```text
+flags:   { nome: bool }
+counters:{ nome: int }
+```
 
-Simples: 3 campanhas modelo duplicáveis (`Rival clássico: 2 cenas + 1 batalha | Torneio: fila de batalhas com revanche | Final múltiplo: 1 escolha + 2 finais via flag`). Cena modelo já vem com batalha win/lose ligada e flags exemplo. Avançado: grafo + timeline completos. Mesmos schemas, mesma execução no Astralis.
+Gatilho de nó: `requires_flag: [nome]` e `requires_counter: { nome: >= N }`.
+
+O motivo de não ter `variables` é que progressão não precisa de Turing: flags e
+contadores dão final múltiplo, revanche e desbloqueio sem transformar a
+campanha em interpretador. `variables` completas só depois que runtime, campanha
+e preview estiverem estáveis.
+
+## 8.4 SIMPLES E AVANÇADO
+
+- **Simples**: modelos de cena e de batalha com `on_win`/`on_lose` já ligado; o
+  usuário escolhe o modelo e preenche os nomes.
+- **Avançado**: o grafo e a timeline editáveis, com o battle node completo.
+
+Mesmo schema e mesma validação nos dois. Nenhum dos dois modos é motor separado
+(R1, R2).
+
+## 8.5 O QUE FALTA PARA EXISTIR
+
+| Falta | Quem faz |
+|---|---|
+| o schema de campanha e o de cena | Systems |
+| `CampaignManager` / `SceneRunner` em `astralis/campaign/` | Runtime |
+| o grafo e a timeline no editor, e o formato que o jogo lê | Editor |
+| playthrough do `duel_setup` a partir de um nó de batalha | Runtime |
+| GUT do runner e do round-trip | QA |
+
+Enquanto isso não existir, o botão de jogar cena **não pode** aparecer no editor.
+Prometer Play de cena sem runtime é o defeito que o R4 existe para evitar.
