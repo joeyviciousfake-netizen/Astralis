@@ -22,6 +22,24 @@ Dono: QA/Integration. Scripts de validação, conversão e manutenção (nunca g
   python tools/checar_docs.py --relatorio   # só o inventário (KB, teto, linhas)
   python tools/checar_docs.py               # o portão; rc=1 = não commitar
   ```
+- `limpar_cache.ps1` — apaga o cache de compilação do Studio (o `target/` do
+  Cargo). **Dono: QA.** É a R12 aplicada ao disco: o script faz o trabalho
+  repetitivo, não a mão.
+  O Cargo cria uma subpasta de sessão nova em
+  `target/debug/incremental/<crate>-<hash>/` a cada compilação, e apaga a
+  anterior **só quando a sessão termina limpa**. Build interrompido (o app
+  fechado, Ctrl+C, crash) deixa a sessão velha no disco para sempre — e como o
+  `main.rs` concentra o Studio, cada mudança nele recria a sessão inteira.
+  O script **recusa rodar** se houver `cargo`, `rustc` ou o Studio aberto, porque
+  apagar cache no meio de uma compilação corrompe a sessão. Ele mexe só em
+  `incremental/` (cache puro: o próximo build recompila o crate uma vez e o
+  resultado é idêntico) e **nunca** em `deps/`, que tem o artefato real.
+  ```powershell
+  pwsh tools/limpar_cache.ps1 -DryRun         # só mostra o que apagaria
+  pwsh tools/limpar_cache.ps1                 # só o incremental (barato)
+  pwsh tools/limpar_cache.ps1 -Tudo           # + release + backups do Importar
+  ```
+  Medido: `-Tudo` devolveria 4,2 GB, e o `cargo check` seguinte compilou em 21 s.
 - `apack.py` — pack de criação `.apack` V1 (Systems, só stdlib, spec em
   `docs/12_DISTRIBUICAO_EXPORTACAO.md` §12.7):
   `pack` embrulha pack.json+assets num zip único; `check` valida formato+hashes+dado (reusa `fm_import.check_card`);

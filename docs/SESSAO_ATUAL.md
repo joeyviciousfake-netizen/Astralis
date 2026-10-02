@@ -22,12 +22,11 @@ faz_agora: "Limpeza dos documentos pela R14. Cada doc fica só com a regra viva,
   commit, narrativa de mudança, caminho morto e excesso de tamanho. Esta
   passagem é o resto: 16, 15, 13, 00, 12, 10, 09, 08, 07, 06, 05, 04."
 
-proximo_passo: "Escrever o doc 13 e o doc 15 com o que vale hoje: a grade (263
-  nas seis direções, 390 congelado), a arena sem fallback (D50), a volta da mesa
-  (D47, D51, D52) e a faixa 2D (D45) — sem o 'o que existia' e sem citação do
-  usuário. Depois o 00, que ainda tem o changelog de versões, e o 12, que ainda
-  tem 86 linhas de distribuição trancada que não existe no código. No fim,
-  `python tools/checar_docs.py` tem de dar `rc=0`."
+proximo_passo: "Dividir o `mesa_3d.gd` por assunto (R9): ele tem 3.702 linhas
+  contra o alvo de 700, e é a maior fonte de recompilacao do projeto. Comeca
+  pelo maior assunto da mesa. O motivo éduplo: a R9 pede, e o `main.rs` do
+  Studio concentra tudo, então qualquer mexida recompila o crate inteiro. No
+  fim, `python tools/checar_docs.py` tem de continuar dando `rc=0`."
 
 travas: "R1 a R14 valem (seção 2 do AGENTS.md). Trava do domínio: a arena é do
   jogo e não tem fallback (D50); a lente nunca é deslocada e o `frustum_offset`
