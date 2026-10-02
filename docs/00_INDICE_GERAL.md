@@ -75,13 +75,13 @@ docs/
 
 ## O QUE NÃO EXISTE (para não procurar)
 
-- **Campanha** (D07): 0% implementado. Sem `CampaignManager`, sem schema, sem
+- **Campanha**: 0% implementado. Sem `CampaignManager`, sem schema, sem
   pasta no esqueleto do projeto. O editor de cenas grava um formato simples que o
   jogo não lê.
 - **Motor de efeitos** (D30): o dado existe e é validado; a mesa não executa.
 - **Distribuição trancada** (D03-D06): 0% implementado. Só existe `.apack`,
   que é aberto.
-- **Test Lab** (D12): o que existe é o Campo de Testes (`test_state`).
+- **Test Lab**: o que existe é o Campo de Testes (`test_state`).
 - `SaveSystem`, `EventBus`, `AudioManager`, `StateInspector`, `TestHarness` e
   `EffectSystem`: **não existem**. O que existe é o GUT.
 - `ai_preset` está no contrato e no Studio, e o **runtime não lê**.

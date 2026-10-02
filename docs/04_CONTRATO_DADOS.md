@@ -71,7 +71,7 @@ Tab "Campo de Testes" do Studio: o usuário monta mão + campo meu e do inimigo,
 O pack de criação é 1 arquivo único `.apack` (textos + imagens juntos, D23).
 É formato de TRANSPORTE, não contrato novo: nenhum campo/tipo/enum mudou,
 nenhuma migração. Especificação exata em `docs/12_DISTRIBUICAO_EXPORTACAO.md`
-§12.7; validador em `tools/apack.py` (`pack`/`unpack`/`check`).
+§12.3; validador em `tools/apack.py` (`pack`/`unpack`/`check`).
 
 Resumo do contrato: zip comum com `manifest.json` (magic `APACK`,
 `format_version` 1, `schema_version` 1, `runtime_version` + `author_id` como

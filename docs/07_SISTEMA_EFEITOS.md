@@ -79,7 +79,7 @@ divergem.
 | `EffectSystem` que resolve `TRIGGER→...` durante o duelo | Runtime |
 | os `field` de condition fechados no schema | Systems |
 | `if`/`else`/`repeat` no `flow` | Systems + Runtime |
-| a botón de Testar no editor | Editor, **depois** do motor |
+| o botão de Testar no editor | Editor, **depois** do motor |
 | GUT do resolver, com o Astralis real | QA |
 
 O **`effects.json` nasce vazio** e isso é o estado normal. Sem efeitos cadastrados

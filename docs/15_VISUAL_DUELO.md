@@ -161,9 +161,9 @@ a "altura do chão" na tela é uma faixa, não uma linha. Em 2D a posição é o
 3. **A UI nunca guarda cópia do estado.** Ela pergunta ao dono na hora de
    desenhar. Guardar cópia faz a tela mostrar turno velho depois que o duelo muda.
 
-**Estado atual:** os oito cumprem o alvo, menos a `mesa_3d.gd`, que tem 3.702
-linhas e 141 funções — o orquestrador ainda carrega assunto demais. A divisão
-pelo assunto é o resto do trabalho (ver as dívidas no `SESSAO_ATUAL.md`).
+**Estado atual:** os oito cumprem a regra, menos a `mesa_3d.gd`, cujo
+orquestrador ainda carrega assunto demais. A divisão pelo assunto é o resto do
+trabalho (ver as dívidas no `SESSAO_ATUAL.md`).
 
 ## 15.8 A MEDIDA DA CARTA É A DO CONTRATO (D70)
 

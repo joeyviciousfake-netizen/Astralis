@@ -14,10 +14,11 @@ astralis/
   project.godot            <- projeto "Astralis" (3D, 1920x1080, cena inicial = duel3d/mesa_3d)
   main.tscn / main.gd      <- simulação automática do duelo no console (STP; não é o boot)
   core/                    <- data_loader, project_loader, runtime_validator,
-                              board_layout (arena) e asset_3d (carregador de .glb)
+                              card_layout (lê layouts/ do projeto) e
+                              board_layout (arena)
   duel/                    <- game_state, duel_manager, turn_manager, summon/battle/damage/
                               position/fusion_system (REGRA — a única verdade de gameplay)
-  duel3d/                  <- A TELA do duelo em 8 arquivos, UM ASSUNTO CADA (D57/D59-D67):
+  duel3d/                  <- A TELA do duelo em 8 arquivos, UM ASSUNTO CADA (D57):
                               mesa_3d (orquestrador + dono das medidas), painel_carta_3d,
                               faixa_2d, carta_3d (fabrica), menus_3d, vista_3d (camera e a
                               volta), campo_3d (os 20 paineis), cursor_3d
@@ -26,7 +27,6 @@ astralis/
   testing/                 <- testes GUT + astralis_test_base.gd (base comum)
   campaign/ debug/         <- vazias por enquanto (.gitkeep)
   assets/                  <- 17 assets de carta embutidos (frames/attributes/estrelas/backs)
-                              + assets/3d/ (manifest.json = fonte unica dos numeros, D61/D62)
   addons/gut/              <- framework de testes (único addon)
 ```
 
@@ -71,8 +71,8 @@ Na raiz do repo, no PowerShell:
 .\Godot\Godot_v4.7.2-stable_win64_console.exe --headless --path astralis --quit-after 30
 ```
 
-O boot abre **sempre** a mesa 3D, que é a única tela do duelo. Saída real, medida
-em 2026-09-30 sem nenhuma flag:
+O boot abre **sempre** a mesa 3D, que é a única tela do duelo. Saída real sem
+nenhuma flag:
 
 ```text
 [MESA3D] Duelo: Simon Muran x Jono.
@@ -106,5 +106,4 @@ override por projeto, e o `arena_id` do `duel_setup` é lido e ignorado com
 aviso. Arquivo faltando ou quebrado = erro honesto: o log avisa e a mesa não
 desenha o campo em vez de inventar uma mesa.
 
-Testes: ver `tests/README.md` (**183/183, 3495 asserts**, ~112 s) — tem o
-comando exato e o passo `--import`.
+Testes: ver `tests/README.md` — tem o comando exato e o passo `--import`.

@@ -9,9 +9,9 @@ Usuário pode criar/editar/remover/duplicar/validar.
 
 ## 6.2 Receitas + regras
 
-11.1 priorizava só receitas explícitas. Problema: Forbidden Memories tem centenas de combinações, cadastrar tudo manualmente é inviável para usuário comum.
-
-11.2 mantém determinismo, com 2 camadas:
+A resolução tem 2 camadas, e é determinística nas duas. A camada da regra genérica
+existe porque o FM tem centenas de combinações e cadastrar todas é inviável para o
+usuário comum:
 
 ```text
 1. RECEITA EXPLÍCITA (prioridade máxima):
@@ -27,13 +27,13 @@ Exemplo:
 - Receita: `dragao_branco + mago_negro -> dragao_supremo` sempre vence.
 - Regra: `dragao + trevas -> dragao_trevas_comum (priority 10)`.
 
-Studio: aba Receitas (lista simples) + aba Regras (form com selects). 1alidação acusa conflito de prioridade. Astralis resolve: procura receita exata, senão avalia regras por prioridade, senão falha.
+Studio: aba Receitas (lista simples) + aba Regras (form com selects). Validação acusa conflito de prioridade. Astralis resolve: procura receita exata, senão avalia regras por prioridade, senão falha.
 
 Isso continua data, sem código, mas reduz 90% do trabalho.
 
 ## 6.3 Preview / teste
 
-Usam FusionSystem real via TestHarness. 1er `10_PRE1IEW_TESTE_DEBUG.md`. Fusion Preview é só um contexto de `Jogar a partir daqui` com 2 cartas na mão.
+A fusão é resolvida pelo `FusionSystem` real. O botão `Testar fusão` do Studio **confere o dado** (receita exata vence, regra genérica é o fallback) e devolve "validado no dado, sem jogar" — ele não executa jogo. Fusion Preview é só um contexto de `Jogar a partir daqui` com 2 cartas na mão. Ver `10_PREVIEW_TESTE_DEBUG.md`.
 
 ## 6.4 Fusão Simples/Avançado
 

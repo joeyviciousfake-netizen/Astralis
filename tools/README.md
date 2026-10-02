@@ -41,6 +41,6 @@ Dono: QA/Integration. Scripts de validação, conversão e manutenção (nunca g
   ```
   Medido: `-Tudo` devolveria 4,2 GB, e o `cargo check` seguinte compilou em 21 s.
 - `apack.py` — pack de criação `.apack` V1 (Systems, só stdlib, spec em
-  `docs/12_DISTRIBUICAO_EXPORTACAO.md` §12.7):
+  `docs/12_DISTRIBUICAO_EXPORTACAO.md` §12.3):
   `pack` embrulha pack.json+assets num zip único; `check` valida formato+hashes+dado (reusa `fm_import.check_card`);
   `unpack` desempacota conferindo hashes. Legado `.json` = `.apack` sem assets (só aviso "sem imagens").

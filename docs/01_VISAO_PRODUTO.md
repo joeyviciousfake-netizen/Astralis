@@ -34,7 +34,7 @@ Instala Studio -> New Project -> Create Cards/Duelists/Decks/Fusions/Effects/Cam
 
 Usuário não precisa saber: Godot, GDScript, Rust, Tauri, Svelte, MCP, GUT.
 
-: todo New Project já vem com Starter Kit jogável (ver `09_STUDIO_EDITOR.md`). Primeira coisa que o usuário faz é `Play`, depois duplica e edita.
+O `New Project` abre **vazio** e o conteúdo entra por Importar pack (D29, doc 09 §9.3). Primeira coisa que o usuário faz é `Play`, depois duplica e edita.
 
 ## 1.4 Definição final
 

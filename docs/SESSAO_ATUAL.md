@@ -9,24 +9,21 @@
 onde_estamos: "A carta de duelo é desenhada com `BoxMesh` procedural, medida no
   valor do contrato (59 x 86 x 0,30 mm), e a mesa é a única dona do número
   (D70). A mesa 3D tem 8 arquivos, um assunto cada, e a volta de 180° é da
-  câmera, não das cartas. O pipeline de asset 3D saiu do projeto junto com o
-  doc 17; a carta de papel continua sendo 2D, desenhada pelo molde em dado.
-  Falta a limpeza dos documentos: o 16, o 15, o 13, o 00, o 04, o 05, o 08, o
-  09 e o 12 ainda guardam o texto anterior a muitas regras."
+  câmera, não das cartas. A carta de papel é 2D, desenhada pelo molde em dado.
+  Cada doc tem só a regra viva, e o que é derivável do código é gerado:
+  `python tools/checar_docs.py` recusa data, versão, contagem de teste, hash de
+  commit, narrativa de mudança, caminho morto e excesso de tamanho."
 
-faz_agora: "Limpeza dos documentos pela R14. Cada doc fica só com a regra viva,
-  e o que é derivável do código passa a ser gerado. Já foram: o
-  `docs/DECISOES.md` (91 KB -> 20 KB, as decisões que foram registro de
-  substituição saíram inteiras) e o `docs/SESSAO_ATUAL.md` (129 KB -> 4 KB).
-  O `tools/checar_docs.py` recusa data, versão, contagem de teste, hash de
-  commit, narrativa de mudança, caminho morto e excesso de tamanho. Esta
-  passagem é o resto: 16, 15, 13, 00, 12, 10, 09, 08, 07, 06, 05, 04."
+faz_agora: "A limpeza dos documentos pela R14, doc a doc: o que mudou é
+  reescrito no lugar e o que nunca esteve é escrito novo. O portão é
+  `python tools/checar_docs.py`, e ele tem de continuar dando `rc=0`."
 
-proximo_passo: "Dividir o `mesa_3d.gd` por assunto (R9): ele tem 3.702 linhas
-  contra o alvo de 700, e é a maior fonte de recompilacao do projeto. Comeca
-  pelo maior assunto da mesa. O motivo éduplo: a R9 pede, e o `main.rs` do
-  Studio concentra tudo, então qualquer mexida recompila o crate inteiro. No
-  fim, `python tools/checar_docs.py` tem de continuar dando `rc=0`."
+proximo_passo: "Dividir o `mesa_3d.gd` por assunto (R9): o orquestrador carrega
+  assunto demais, e é a maior fonte de recompilacao do projeto. Começa pelo maior
+  assunto da mesa. O motivo é duplo: a R9 pede, e o `main.rs` do Studio concentra
+  tudo, então qualquer mexida recompila o crate inteiro. No fim, `python
+  tools/checar_docs.py` tem de continuar dando `rc=0`, e a suíte GUT inteira
+  precisa passar sem cair um teste."
 
 travas: "R1 a R14 valem (seção 2 do AGENTS.md). Trava do domínio: a arena é do
   jogo e não tem fallback (D50); a lente nunca é deslocada e o `frustum_offset`
@@ -41,17 +38,17 @@ dividas: "Motor de efeitos (D30) é o buraco de gameplay maior. Distribuição
   e nenhum dos 39 duelistas tem retrato. Faltam também a cidade de fundo e a
   barra de fases da referência. A mesa não chama o `RuntimeValidator` e ignora
   `load_errors`, então projeto corrompido entra no jogo em silêncio. `ai_preset`
-  está no contrato e no Studio, e o runtime não lê. `mesa_3d.gd` tem 3.702
-  linhas contra o alvo de 700: a R9 pede a divisão pelo assunto, e ela é o
-  resto do trabalho de organização do código."
+  está no contrato e no Studio, e o runtime não lê. A `mesa_3d.gd` ainda
+  carrega assunto demais: a R9 pede a divisão pelo assunto, e ela é o resto do
+  trabalho de organização do código."
 
 estado: "O contrato tem 8 schemas. O dado de exemplo tem 722 cartas, 39
   duelistas e 39 decks. A suíte GUT está em `astralis/testing/` e passa inteira
   (rode `Godot --headless --path astralis -s
   res://addons/gut/gut_cmdln.gd -gdir=res://testing -gexit`; a contagem exata
   não é escrita aqui porque envelhece — o número sai do comando). O jogo lê
-  projeto por `--project` e o log de boot é contrato (R11). A árvore está limpa
-  no git."
+  projeto por `--project` e o log de boot é contrato (R11). Nenhuma linha de
+  código mudou nesta leva: só documento."
 
 data_utc: "2026-10-01"
 ```

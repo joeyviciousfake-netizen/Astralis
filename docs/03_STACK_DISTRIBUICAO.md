@@ -43,4 +43,4 @@ Mesmos sistemas de gameplay, muda inicialização/observabilidade/controle:
 - TEST: setup + actions + assertions + trace + snapshots + resultado estruturado.
 - DEBUG: logs, state, events, timing, AI, diagnostics (dev do Astralis).
 
-: PREVIEW/TEST/DEBUG compartilham o mesmo `launch with context`. Não são 3 binários/motores, são flags do mesmo runtime.
+PREVIEW/TEST/DEBUG compartilham o mesmo `launch with context`. Não são 3 binários/motores, são flags do mesmo runtime.

@@ -7,8 +7,8 @@
 > JSON simples em `projects/default/scenes/` e avisa em comentário que o jogo
 > **não lê esse formato** (R4).
 >
-> O modelo é o do original e está abaixo para servir de referência quando for
-> implementado. As decisões são D07 e D10.
+> O modelo abaixo é o do original e serve de referência para quando for
+> implementado.
 
 ## 8.1 O MODELO
 
