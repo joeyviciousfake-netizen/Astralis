@@ -18,7 +18,7 @@ onde_estamos: "A carta de duelo é desenhada com `BoxMesh` procedural, medida no
   (D71). O manual do Blender é uma pasta na máquina, fora do git, com um README
   dentro que diz de onde veio e como se busca dentro dela."
 
-faz_agora: "A R12 mudou: agora a DOCUMENTAÇÃO vem antes da ferramenta nativa, e o passo 1 é o `docs/17_BLENDER.md` mais a cópia local do manual do Blender. A carta de duelo 3D esta criada no Blender, na frente da pessoa, com 59 x 86 x 0,30 mm medidos e as 4 pontas arredondadas em raio de 2,0000 mm. Falta decidir ONDE salvar o `.blend` e COMO o jogo vai pegar o modelo quando a pessoa mandar colocar: o jogo hoje monta a carta com `BoxMesh` + dois `QuadMesh` texturizados, entao ainda nao ha mapa de textura no modelo. O procedimento esta em `docs/17_BLENDER.md` e cresce a cada modelo (D72)."
+faz_agora: "A R12 mudou: agora a DOCUMENTAÇÃO vem antes da ferramenta nativa, e o passo 1 é o `docs/17_BLENDER.md` mais a cópia local do manual do Blender. A carta de duelo 3D esta criada no Blender, na frente da pessoa, com 59 x 86 x 0,30 mm medidos e as 4 pontas arredondadas em raio de 2,0000 mm e 8 segmentos por canto. A R16 entrou: tri e quad entram, n-gon nao, e a face e medida antes de exportar. O Bevel entregava a tampa como uma face de 36 lados; agora so ela e triangular, e a conta `triangulos = 16 x segmentos + 12` diz o que cada segmento custa. Falta decidir ONDE salvar o `.blend` e COMO o jogo vai pegar o modelo quando a pessoa mandar colocar: o jogo hoje monta a carta com `BoxMesh` + dois `QuadMesh` texturizados, entao ainda nao ha mapa de textura no modelo. O procedimento esta em `docs/17_BLENDER.md` e cresce a cada modelo (D72)."
 
 
 proximo_passo: "Escolher com a pessoa ONDE o `.blend` da carta mora no repo (a pasta `assets/3d/` antiga foi removida e nao ha caminho novo definido), e se o modelo entra no jogo com MAPA DE TEXTURA ou se o jogo continua montando a carta com primitivas. So depois disso o modelo vai para o jogo, e so quando a pessoa disser que esta bom."
@@ -28,7 +28,7 @@ travas: "R1 a R14 valem (seção 2 do AGENTS.md). Trava do domínio: a arena é 
   jogo e não tem fallback (D50); a lente nunca é deslocada e o `frustum_offset`
   é ZERO (D41, D47); a grade é 263 nas seis direções e 390 entre as fileiras de
   monstro (D49); a carta mede o contrato e a mesa é o único dono do número
-  (D70); efeito não tem motor na mesa (D30); quem manda é o usuário; a mesa nasce na vista de quem tem a vez (D47); modelar 3D e na frente da pessoa, nunca headless (D72/R15); consultar a documentação antes do que nao se sabe, e a nativa gera a topologia (D71/R12)."
+  (D70); efeito não tem motor na mesa (D30); quem manda é o usuário; a mesa nasce na vista de quem tem a vez (D47); modelar 3D e na frente da pessoa, nunca headless (D72/R15); consultar a documentação antes do que nao se sabe, e a nativa gera a topologia (D71/R12); tri e quad entram, n-gon nao, e a face e medida (D73/R16)."
 
 dividas: "Motor de efeitos (D30) é o buraco de gameplay maior. Distribuição
   `.astralis` trancada é PLANO, 0% implementado. Campanha é PLANO, 0%

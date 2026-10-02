@@ -7,7 +7,7 @@
 > Dono: Runtime (o `.blend` é do asset que o runtime usa). Ferramentas em
 > `tools/blender/`. A regra que manda em tudo aqui é a **R12**, e o primeiro
 > passo dela é **consultar a documentação** — este documento e o manual do
-> Blender em `blender_manual_v520_en.html/` (§17.6) — antes de fazer algo que
+> Blender em `blender_manual_v520_en.html/` (§17.7) — antes de fazer algo que
 > não se sabe ou não se tem certeza.
 
 ## 17.1 ABRIR O BLENDER COM O MCP
@@ -157,7 +157,7 @@ bev = carta.modifiers.new("Pontas", 'BEVEL')
 bev.limit_method = 'WEIGHT'      # respeita a marcação: só as 4 pontas
 bev.offset_type = 'OFFSET'      # em OFFSET, o valor é o próprio raio
 bev.width = 0.002                # 2 mm
-bev.segments = 12
+bev.segments = 8
 bev.miter_outer = 'MITER_ARC'
 bev.use_clamp_overlap = True
 ```
@@ -170,6 +170,25 @@ faz melhor.
 Depois de aplicar o modificador, **apague o atributo `bevel_weight_edge`**: ele
 só existia para o Bevel achar as arestas, e um atributo morto não deve ir para o
 `.glb`.
+
+**As tampas saem n-gon do Bevel, e é aí que a carta tem que ser consertada.** O
+Bevel troca cada canto por um arco e a face grande que ficava ao lado vira uma
+única face de `4 × (segmentos + 1)` lados. Com 8 segmentos são **duas faces de 36
+lados**. A correção é triangular **só essas duas**, nunca a malha toda, senão os
+quads da parede viram triângulos e o custo sobe:
+
+```python
+bm = bmesh.new(); bm.from_mesh(me)
+ngons = [f for f in bm.faces if len(f.verts) > 4]
+if ngons:
+    bmesh.ops.triangulate(bm, faces=ngons,
+                          quad_method='BEAUTY', ngon_method='BEAUTY')
+bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+bm.to_mesh(me); bm.free()
+```
+
+O `8` de `segments` não é gosto, é a conta de §17.5: cada segmento a mais custa
+16 triângulos na carta inteira.
 
 **O sombreamento.** As faces planas (frente, verso, laterais) têm de continuar
 planas e só o arco ficar redondo:
@@ -200,7 +219,87 @@ vem traduzido e a busca por nome volta vazio.
 bsdf = next(n for n in mat.node_tree.nodes if n.type == 'BSDF_PRINCIPLED')
 ```
 
-## 17.5 MEDIR ANTES DE CONCLUIR
+## 17.5 A MALHA ENTRA SANA: TRI OU QUAD, NUNCA NGON (R16)
+
+Toda face da malha que vai para o jogo tem **3 ou 4 lados**. Triângulo e quad são
+válidos; **n-gon é proibido**.
+
+**Por que o n-gon é proibido — e a medida, não o gosto.** Num contorno côncavo as
+diagonais de uma face de N lados **não estão em lugar nenhum**: quem exporta escolhe
+na hora de triangular, então a mesma fonte entregue a ferramentas diferentes (o
+import do Godot, um otimizador, outro exportador) produz geometrias diferentes. A
+área fecha e o render sai certo, então **nenhuma medida de área, caixa ou
+triângulo acusa o problema** — o defeito é **irreprodutibilidade**, e ela é
+invisível justamente porque a geometria está certa.
+
+**Onde o n-gon nasce.** Não é erro de modelagem, é o modificador entregando: o
+Bevel troca o canto por um arco e a face grande ao lado vira uma face só, de
+`4 x (segmentos + 1)` lados. Onde houver Bevel, Solidify ou qualquer coisa que
+engorde o contorno, **a face grande é a suspeita**. Corrija triangular só ela.
+
+**A conta do custo — e por que ela não tem escapatória.** Numa peça arredondada,
+o total de triângulos do artefato sai da topologia, não do gosto:
+
+```
+triangulos = 16 x segmentos + 12
+```
+
+A parede lateral precisa de um quad por segmento de arco (`4N + 4`), e cada tampa é
+um polígono de `4N + 4` lados, que leva `4N + 2` triângulos para não ser n-gon.
+Um polígono de K lados **sempre** leva K-2 triângulos, e a parede **sempre** leva um
+quad por segmento. Então o segmento do arco é o **único botão**, e ele se escolhe
+sabendo o que cada um custa:
+
+| Segmentos | Erro maximo do arco | % do raio | Triangulos |
+|---|---|---|---|
+| 2 | 0,152 mm | 7,6% | 44 |
+| 4 | 0,038 mm | 1,9% | 76 |
+| 6 | 0,017 mm | 0,86% | 108 |
+| 8 | 0,010 mm | 0,48% | 140 |
+| 12 | 0,004 mm | 0,21% | 204 |
+
+O erro do arco e a distancia entre a corda e a circunferencia de verdade, num canto
+de 90 graus: `raio x (1 - cos(90 / 2 x segmentos))`. **Nao justifique pelo pixel** —
+a carta na tela e um argumento de tela, e a regra e da malha. O numero que vale e o
+erro em % do raio, porque e isso que o formato mantem.
+
+**O portao: a malha e medida antes de sair.** Um portao que recusa malha serve
+para provar a regra, nao para ser o metodo (a acao e o modelar direito). O que
+falha e so a entrega:
+
+```python
+def medir_malha(ob):
+    import bmesh
+    from collections import Counter
+    bm = bmesh.new(); bm.from_mesh(ob.data)
+    lados = Counter(len(f.verts) for f in bm.faces)
+    arestas = {}
+    for f in bm.faces:
+        for e in f.edges:
+            arestas[e] = arestas.get(e, 0) + 1
+    ngons = {n: q for n, q in lados.items() if n > 4}
+    fechada = set(arestas.values()) == {2}      # toda aresta em 2 faces
+    tri = sum(max(0, len(f.verts) - 2) for f in bm.faces)
+    bm.free()
+    return {"faces": len(ob.data.polygons), "quads": lados.get(4, 0),
+            "tris": lados.get(3, 0), "ngons": ngons, "fechada": fechada,
+            "triangulos": tri}
+```
+
+O que o portao recusa: **n-gon** (erro), **malha aberta ou nao-manifold** (erro —
+`fechada` falso), **face degenerada de area 0** (erro). O que ele nao recusa:
+triangulo. Triangulo e uma face legitima e, numa tampa plana, ele e **mais barato**
+que o quad: um polígono de K lados leva K-2 triangulos, enquanto o mesmo
+contorno em quads leva K/2 quads — que sao K triangulos. Para a mesma silhueta,
+**triangular e mais barato que quad**.
+
+**Grid Fill nao serve para a tampa arredondada.** O manual diz que ele preenche um
+loop "roughly rectangular", e o contorno de uma peca arredondada nao e: sao 4
+lados longos de 1 aresta e 4 arcos de N arestas. Ele recusa e devolve a malha sem
+preencher, e o escopo fica aberto. Nao gaste tempo com ele aqui: **triangular a
+face grande e mais barato e mais honesto**.
+
+## 17.6 MEDIR ANTES DE CONCLUIR
 
 O número que vale é o **medido na malha**, não o digitado no script. Duas
 medidas que evitam erro:
@@ -235,7 +334,7 @@ aí vale investigar o modelo.
 sobrepor. Ligado por precaução, e **medido** para saber se ele apertou: se o raio
 medido bate com o raio pedido, o clamp não mexeu em nada.
 
-## 17.6 A DOCUMENTAÇÃO (primeiro passo da R12)
+## 17.7 A DOCUMENTAÇÃO (primeiro passo da R12)
 
 O manual do Blender está **na máquina**, em `blender_manual_v520_en.html/`. A
 raiz é `index.html`; o `LEIA-ME-ASTRALIS.md` de dentro explica a origem. Ele
@@ -269,7 +368,7 @@ Na internet, o mesmo manual fica em
 <https://docs.blender.org/manual/en/latest/> — mas a cópia local é a que não
 depende de conexão.
 
-## 17.7 O QUE REGISTRAR AQUI
+## 17.8 O QUE REGISTRAR AQUI
 
 Toda vez que um modelo ensina algo — uma armadilha de escala, um enum que não é
 o que o nome diz, um limite que só aparece em medida real —, o certo é **entrar

@@ -92,6 +92,11 @@ não existe ou excesso de tamanho. **Corrige o doc, não o portão.**
   GUT), não para o que a pessoa precisa ver. Motivo: o dono do asset precisa
   aprovar a forma, e uma captura de tela tirada do batch é tarde demais para
   barrar um erro de escala. Procedimento em `docs/17_BLENDER.md`.
+- R16: **Malha que vai para o jogo: triângulo e quad entram, n-gon não.** Toda
+  face tem 3 ou 4 lados, e o total de faces é **medido** antes de exportar — o
+  custo sai da topologia (`triângulos = 16 × segmentos + 12` numa peça
+  arredondada), então o segmento do arco é o único botão e se escolhe sabendo o
+  que custa. Medição, conta e receita em `docs/17_BLENDER.md` §17.5.
 
 ## 3. DONOS POR PASTA (respeite)
 
