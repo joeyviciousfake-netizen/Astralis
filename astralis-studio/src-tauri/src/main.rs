@@ -223,7 +223,7 @@ fn garantir_projeto(proj: &std::path::Path) -> Result<(), String> {
         // (para ele é um arquivo comum). Pasta vazia = pasta que some do
         // git: então todo `git status` mostrava os .gitkeep como DELETADOS
         // só de ABRIR o Studio — o app sujava o repositório sozinha e fazia
-        // um agente futuro concluir que alguém tinha mexido no conteúdo.
+        // alguém concluir que tinha mexido no conteúdo.
         // O .gitkeep NÃO é conteúdo: é o marcador que mantém a pasta
         // rastreável. Por isso o esqueleto volta COM ele. Só cria se não
         // existir; nunca sobrescreve nada.

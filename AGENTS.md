@@ -19,7 +19,7 @@ Se o usuário disser só "continue", retome de `SESSAO_ATUAL.próximo_passo`.
 - R2: Proibido `FakeDuelEngine/Effect/Fusion/Campaign`. Preview/Test usam Astralis real.
 - R3: DATA != LOGIC. Novo conteúdo = dado, não código. Sem script por carta.
 - R4: Studio só expõe o que Astralis sabe executar. Feature nova: contrato → Astralis → Studio → testes → docs.
-- R5: Não ampliar escopo, não genericizar engine, não criar micro-agentes.
+- R5: Não ampliar escopo, não genericizar engine.
 - R6: `.astralis` de distribuição é binário trancado (ver doc 12). Nunca exponha JSON de distribuição em texto.
 - R7: Não reabra decisão travada em DECISOES.md sem pedir ao usuário.
 - R8: **Regra das ferramentas (D71, 2026-10-01):** para qualquer trabalho no Blender, a ordem é **ferramenta nativa → pesquisa na internet → manual, só em último caso.** O Blender já tem bevel, subdiv, remesh, snap, Geometry Nodes etc. e **ele gera a topologia por você** — não reconstrua geometria na mão sem antes perguntar "o Blender já faz isso?". Se não souber qual ferramenta existe ou como se usa, pesquise na internet antes de inventar. Manual é para o que a ferramenta realmente não faz, e com a topologia medida antes de gravar. Isso veio de 6 construções de malha escritas à mão que o portão recusou (D69/D71), quando `bmesh.ops.bevel` resolvia em minutos.

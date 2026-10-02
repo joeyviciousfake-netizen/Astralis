@@ -27,7 +27,7 @@ Project, Card, Duelist, Deck, Fusion, Effect, Arena (D24: slot_id fixo + x/y só
 Schema define: tipos, campos, referências, enums, estruturas, versões.
 Studio usa para edição/validação UX. Astralis usa para carregamento/validação execução.
 
-Owner do contrato: Systems/Data Engineer. Mudança compartilhada deve ser coordenada (ver `11_ROADMAP_AGENTES.md`).
+Owner do contrato: Systems/Data Engineer. Mudança compartilhada deve ser coordenada (ver `11_ROADMAP.md`).
 
 ## 4.3 Versionamento
 

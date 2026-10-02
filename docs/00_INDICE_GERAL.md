@@ -2,7 +2,7 @@
 
 VERSION: 2.6
 STATUS: AUTHORITATIVE (split de `Documentação.md` v1.1 + decisões v1.2/v1.3)
-AUDIENCE: AI AGENTS
+AUDIENCE: IA
 LANGUAGE: PT-BR
 
 Este índice substitui o documento único. Cada arquivo abaixo é autoritativo no seu domínio. Em caso de conflito, vale este índice + `02_PRINCIPIOS_ARQUITETURAIS.md`.
@@ -24,7 +24,7 @@ docs/
   08_CAMPANHA.md               <- grafo, scene, timeline, battle win/lose [NOVO], flags-lite [NOVO]
   09_STUDIO_EDITOR.md          <- editores, UX, starter kit [NOVO], wizard
   10_PREVIEW_TESTE_DEBUG.md    <- preview unificado [NOVO], test lab mínimo [NOVO], GUT, determinismo
-  11_ROADMAP_AGENTES.md        <- MVP, roadmap, agentes, workflow
+  11_ROADMAP.md             <- MVP, roadmap, donos por pasta, workflow
    12_DISTRIBUICAO_EXPORTACAO.md <- fita .astralis + cadeado + bundles win/linux/android [NOVO v1.3]
    13_TABULEIRO_DUELO.md <- zonas[5+5], fases DRAW/MAIN/BATTLE/END, mão 5/refill, LP dado, win LP+deckout [NOVO v1.4]
     14_EXPERIENCIA_USUARIO.md <- Simples/Avançado em tudo, galeria, erro PT-BR, Play verde, guia 5min [NOVO v1.5]
