@@ -130,6 +130,9 @@ RE_CAMINHO_ABS = re.compile(
 RE_LINHA = re.compile(
     r"`(?P<a>(?:[\w.-]+/)*[\w.-]+\.[A-Za-z0-9]+):(?P<n>\d+)`"
 )
+# Data que e contrato do arquivo e nao data de prosa: a chave `data_utc` do
+# caderno. E a unica data que entra em doc, e ela e obrigatoria.
+RE_DATA_CONTRATO = re.compile(r"^\s*data_utc\s*:")
 
 
 def tamanho_kb(caminho: Path) -> float:
@@ -169,6 +172,10 @@ def checar_data_e_conteudo(caminho: Path, rel: str, achados: list[dict]) -> None
         return
 
     for n, linha in enumerate(linhas, 1):
+        # A data do caderno e CONTRATO do arquivo, nao data de prosa: e o unico
+        # lugar onde a IA precisa saber de quando e o estado. Ver R14.
+        if RE_DATA_CONTRATO.search(linha):
+            continue
         # O cabecalho de versao so faz sentido na primeira linha util.
         for cod, regex, msg in PADROES:
             alvo = linha if cod != "VERSAO" or n <= 6 else ""
@@ -189,9 +196,15 @@ def checar_caminhos(caminho: Path, rel: str, achados: list[dict]) -> None:
 
     base = caminho.parent
     for n, linha in enumerate(texto.splitlines(), 1):
+        # Path DENTRO de um arquivo comprimido nao existe no disco: e parte do
+        # .apack. Sem esta ressalva o portao acusaria o contrato do pack.
+        dentro_de_pacote = bool(re.search(r"(?i)\.apack|\bpack\b|\bzip\b", linha))
+
         # Relativo com barra: docs/NUM.md, astralis/duel/duel_manager.gd
         for achado in RE_CAMINHO_REL.finditer(linha):
             alvo = achado.group("c")
+            if dentro_de_pacote:
+                continue
             if (REPO / alvo).exists():
                 continue
             # Pode ser relativo a pasta do proprio doc (ex.: schemas/README.md
