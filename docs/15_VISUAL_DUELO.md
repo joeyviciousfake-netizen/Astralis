@@ -1,311 +1,190 @@
-# 15 — VISUAL DA MESA DE DUELO (espelho da referência)
+# 15 — VISUAL DA MESA DE DUELO
 
-VERSION: 2.0 (D54-D67: a tela do duelo em 8 arquivos, um assunto cada)
-STATUS: AUTHORITATIVE (contrato visual, owner: lead)
-ORIGEM: pedido do usuário 2026-09-28 — "deixar o visual do nosso duelo idêntico a essa imagem"
-REFERÊNCIA: `C:\Users\Max\Downloads\Screenshot-2021-05-05-214047-e1620266990864.webp` (1024x583)
-ESCOPO: **SÓ O DESENHO.** Nenhuma mecânica de duelo muda (R1).
+> O contrato visual da mesa: o que é medido, de onde vem cada imagem, e quem é o
+> dono de cada número do desenho. **Escopo: só desenho.** Nenhuma regra de duelo
+> muda aqui (R1). As decisões são D37, D38, D41, D45 e D70; o porquê de cada uma
+> está no `DECISOES.md`.
 
-## 15.0 D45 — a leva de correções do usuário (2026-09-28)
+## 15.1 O QUE MUDA E O QUE NÃO
 
-Oito pedidos do usuário depois de jogar, todos de DESENHO:
+**Não muda** (se mexer aqui, você quebrou regra): as zonas 5+5, a ordem das fases,
+a mão 5 com refill, a invocação, o ataque, o dano, a fusão, o menu da estrela, a
+vitória e a derrota, e o controle 100% por joypad (D19).
 
-| # | Pedido | Onde mora |
+**A barra de fases mostra a fase real do motor** (`DRAW/MAIN/BATTLE/END`). As
+mesas de fase da referência não existem no nosso duelo; mostrá-las seria inventar
+mecânica.
+
+**A tela não tem barra de "START ? Help".** A ação continua no joypad (D19), e a
+mesa tem um comentário que registra isso.
+
+## 15.2 DE ONDE VEM CADA IMAGEM (R3 — nada é inventado)
+
+| O quê | De onde |
+|---|---|
+| 6 molduras de carta | `astralis/assets/frames/`, byte-idênticas ao `static/frames/` do Studio (D38) |
+| 9 orbes de atributo | `astralis/assets/attributes/` |
+| estrela de nível | `astralis/assets/estrelas/` |
+| verso da carta | `astralis/assets/backs/` |
+| arte da carta | `artwork` do dado; 722 PNGs em `schemas/examples/assets/fm/` |
+| retrato do duelista | `portrait` do dado; **vazio no pack do FM** → placeholder cinza |
+| fundo do tabuleiro | gerado em código, sem imagem |
+
+A cascata é: projeto (`--project` → `_base_dir`) → embutido em `astralis/assets/`
+→ Studio em `astralis-studio/static/`. Os 17 pares embutidos são comparados por
+**SHA-256** em `astralis/testing/test_assets_embutidos.gd`, e sabotar 1 byte faz
+o teste falhar.
+
+**O duelo nunca escreve nome, ATK, DEF, atributo ou nível hardcoded.** Vem sempre
+do estado real. Se falta arte, mostra placeholder cinza — **nunca inventa**.
+
+## 15.3 A PERSPECTIVA (o ponto crítico, D41)
+
+**Problema:** deslocar a lente achata um lado e estica o outro, então a
+perspectiva fica torta na hora que o campo é puxado para a direita.
+
+**Solução:** a câmera **não se desloca** e o campo é que ganha uma **janela**.
+
+| Medida | Valor | Por quê |
 |---|---|---|
-| 1 | Retratos bem na beirada de cima, mesmo espaço nas 3 laterais, e o bloco de nome com o TOPO na MESMA LINHA do topo da foto | `RETRATO_MARGEM` (14 px) + `RETRATO_*_Y` + placa de nome no mesmo `y` |
-| 2 | A faixa do meio (deck/cemitério/LP/turno) **virou 2D** no vão entre as fileiras | `HUD/Faixa2D` (§15.7) |
-| 3 | Blocos **limpos**: sem as palavras (DECK, CEMITÉRIO, SEU LP, TURNO, LP RIVAL) e sem ícone de pilha | `_celula_faixa_2d` só tem número + foto |
-| 4 | Todo número da faixa em **branco** | `FAIXA2D_COR_NUM` |
-| 5 | Cor do **cemitério**: borda preta (que não é preta escura) e interior preto mais claro | `COR_PRETO_BORDA` / `COR_PRETO_FUNDO` |
-| 6 | **Foto da última carta do cemitério** num quadrado perfeito: ponta esquerda no seu, ponta direita no do rival | `_carta_do_cemiterio` + `_arte_real` + `Caixa/Arte` |
-| 7 | A célula do **turno** alterna a cor com quem está jogando (azul = você, vermelho = rival) | `_tingir_turno` (lê `current_player`) |
-| 8 | A carta comprada entra sempre na 5ª posição: você à direita, o rival pela esquerda (ele joga do outro lado da mesa) | arco do rival ESPELHADO em `_pos_mao_arco` |
-| 9 | A mão do rival entre o topo da tela e o topo dos slots de magia dele | `_y_da_mao` (altura resolvida da câmera) |
-| 10 | Sua mão colada na linha de baixo da sua fileira de magia | idem (topo da carta = base da fileira + 5 px) |
-| 11 | Espaço entre as cartas da sua mão (não podem se atravessar) | `MAO_P0_PASSO` = 1,08 (> 1,0 = vão de verdade) |
-| 12 | "START ? Help" fora da tela | removido; a ação continua no joypad (D19) |
+| `CAM_POS.x` | `0` | a lente fica no eixo |
+| `frustum_offset` | `Vector2.ZERO` | sem deslocamento de lente |
+| `PAINEL_ESQ_L` | `562` px | o campo começa depois do painel 2D (29,3% da tela) |
+| `JANELA_CAMPO_L` | `1358` px | 70,7% da tela — a janela do SubViewport |
+| `ESCALA_CAMPO` | `1.23` | transform de apresentação, sobre o layout da arena |
+| `DESLOC_CAMPO` | `Vector2(0.0, -0.07)` | idem |
 
-**Por que a faixa foi para 2D (§15.7).** Em 3D, a posição de um objeto no chão
-é a soma de três números que precisam concordar (o z da fileira, metade da
-profundidade do ladrilho e a profundidade do próprio objeto), e "a altura do
-chão" na tela é uma **faixa** (o ladrilho é um plano visto de lado), não uma
-linha. Era por isso que a base entrava e saía do lugar a cada ajuste. Em 2D a
-posição é o pixel: uma linha, um número, e dá para fazer bonito de verdade.
+O centro do campo cai em **64,6%** da tela, e a simetria nas 4 fileiras é exata.
 
-**Ferramenta de conferência visual (novo, D45).** Ligar com
-`--mesa3d-calib=1`: a tela ganha um quadrado vermelho grande com a **linha de
-cima na altura dos slots** (tudo que entrar dentro dele está afundado na
-mesa) e as linhas das outras fileiras com o nome e o valor em pixels. Só
-desenho, zero regra, e fora disso a tela fica limpa.
+**A tríade que garante a perspectiva simétrica:** `CAM_POS.x == 0`, alvo no centro
+do campo e `frustum_offset == Vector2.ZERO`. Mover a câmera **não** é o problema;
+o deslocamento de lente é que era.
 
-## 15.1 O que muda e o que NÃO muda
+**Proibições:**
 
-MUDA (desenho): enquadramento da câmera, posição do campo na tela, aparência dos
-painéis de vidro, aparência das cartas, barra de LP/turno, painel lateral de
-informação, contador de deck, moldura de foco, START/Help, mão.
+- **Não** mexer em `frustum_offset`.
+- **Não** deslocar a câmera em X.
+- **Não** mover o campo no mundo.
+- **Não** aplicar escala não uniforme — quebra a perspectiva do trapézio, e há
+  teste para isso.
 
-NÃO MUDA (regra — é do motor, em `astralis/duel/`): zonas 5+5, ordem das fases
-FM (DRAW/MAIN/BATTLE/END), mão 5 + refill, invocação, ataque, dano, fusão, menu
-da estrela, IA do rival, vitória/derrota, controle 100% joypad (D19).
+Se parecer torto, a solução é mudar o **retângulo do SubViewport**, nunca a
+câmera.
 
-> **Conflito conhecido com a referência:** a imagem é do Tag Force e mostra a
-> barra de fases `DP SP MP1 BP MP2 EP`. Nosso duelo é Forbidden Memories, que
-> **não tem essas fases** (foram removidas por ordem do usuário em 2026-09-28).
-> A barra continua existindo com o MESMO visual metálico, mas o conteúdo é a
-> fase REAL do motor. Mostrar DP/SP/MP1/BP/MP2/EP seria inventar mecânica.
+## 15.4 MEDIÇÕES-ALVO DA REFERÊNCIA
 
-## 15.2 Fonte de cada imagem (R1/R3 — nada inventado no duelo)
+São **alvos** de composição (em % da tela), não medidas do que existe:
 
-| Elemento na tela | De onde vem | Status |
-|---|---|---|
-| Arte da carta (ilustração) | `card.artwork` do pack (dado) | 722 PNGs 408x384 existem |
-| Moldura da carta | `assets/frames/{normal,effect,spell,trap,ritual,fusion}.jpg` | 6 JPGs originais do usuário (D38, PROIBIDO editar) |
-| Orbe do atributo | `assets/attributes/<attribute>.png` | 9 PNGs |
-| Estrelas do nível | `assets/estrelas/estrela.png` (repetida = `level`) | 1 PNG |
-| Verso (carta virada) | `assets/backs/verso_padrao.png` / `card_back` da carta | 1 PNG |
-| Nome, tipo, ATK/DEF, descrição, tipo de monstro | dado do pack (texto) | description do FM é `""` (结构性) |
-| Retrato do duelista | `duelist.portrait` do pack | dado |
-| Nome do duelista, LP, turno, fase | estado REAL do `GameState` | dado em tempo real |
+| Região | Alvo |
+|---|---|
+| área do campo (SubViewport) | x 29,3%..100%, altura toda |
+| painel esquerdo (2D) | x 0..29,3% |
+| retrato | 7,5% de largura, margem igual nos 3 lados |
+| nome do duelista | alinhado ao topo da foto |
+| faixa do meio | entre as fileiras, no vão |
 
-**Regra dura:** o duelo NUNCA escreve nome/ATK/DEF/atributo/nível hardcoded.
-Vem sempre do estado real. Se falta arte, mostra placeholder cinza (doc 09.4) —
-nunca inventa.
+O que **não** pode ficar igual à referência é falta de **dado**, não de código: os
+39 retratos dos duelistas, as 722 descrições das cartas, a cidade de fundo e a
+barra de fases da referência.
 
-**Onde esses arquivos moram (decisão Lead 2026-09-28):** o jogo tenta primeiro o
-PROJETO (`--project`, via `_base_dir`); se não achar, cai no **embutido do
-jogo** em `astralis/assets/` (mesmos caminhos `assets/frames/...` etc.). O
-código já faz essa cascata, só faltavam os arquivos. O Studio continua com os
-seus em `astralis-studio/static/` — as duas cópias são **byte-idênticas** e um
-teste de compatibilidade (padrão já usado em `test_card_layout.gd`) trava isso,
-para o editor e o jogo nunca divergirem.
+## 15.5 FERRAMENTAS DE PROVA
 
-## 15.3 Medições da referência (medidas na imagem, 1024x583)
+| Flag | O que faz |
+|---|---|
+| `--mesa3d-calib=1` | quadrado vermelho com a linha de topo na altura dos slots: **tudo que entrar dentro dele está afundado** na mesa, mais as linhas das outras fileiras com nome e valor em pixel |
+| `--mesa3d-foto=<caminho.png>` | grava a tela num PNG |
+| `--mesa3d-foto-frame=N` | grava o quadro N da volta |
+| `--mesa3d-auto-passa=s` | roda `s` segundos de duelo e tira a foto sozinho |
+| `-- --debug` | diagnóstico por log (o log de boot é contrato e sai sempre, R11) |
 
-Tudo em % da largura/altura da tela. Sirvem de alvo; o ajuste fino é por
-comparação de screenshot até bater.
+Fora da flag a tela fica limpa. `--mesa3d-calib` foi o que mostrou o "afundado"
+das placas sem depender de medir pixel por pixel.
+
+## 15.6 A FAIXA DO MEIO (2D, D45)
+
+A faixa do meio é **2D, no HUD**, dentro do vão entre as fileiras de monstros.
+
+**As 7 células, na ordem:**
 
 ```text
-PAINEL ESQUERDO (2D):   x 0,0% .. 29,3% (0..300 px)   altura toda
-  carta focada:         x 1,5% .. 29,5%   y 1,5% .. 52%
-  ATK/DEF + 2 orbes:    y 52% .. 60%, alinhado à esquerda
-  contador "x4":        y 55% .. 60%, à direita
-  NOME (amarelo):       y 62% .. 70%
-  TIPO (verde):         y 70% .. 74%
-  DESCRIÇÃO (branco):   y 75% .. 100%, barra de rolagem laranja na direita
-BARRA SUPERIOR (2D):    x 29,3% .. 100%   y 0 .. 8,6%
-  placa azul esq (LP/nome): x 30,7% .. 50% ; aba "Single" abaixo
-  caixa central TURN:      x 62% .. 76%
-  placa vermelha dir:      x 76% .. 100%
-CAMPO 3D (vidro):       x 29,3% .. 100% (o trapézio encosta na borda direita)
-  fileiras (de cima p/ baixo): magia rival, monstro rival, [barra de fases], monstro meu, magia minha
-  centro do campo:       x ~63,5% da tela (NÃO no meio) — é o ponto do conflito
-  painéis: vidro azul escuro translúcido, mais largo embaixo, afunila p/ cima
-RETRATOS (2D):          jogador x 31%..40% y 6%..15% ; rival x 92%..99% y 6%..15%
-CONTADOR DE DECK:       "36" x 40%..46% y 24%..30% (placa escura inclinada)
-                        "3"  x 84%..89% y 24%..30%
-ÍCONES LATERAIS (2D):   coluna x 31%..39% y 32%..48% ; coluna x 85%..94% y 32%..48%
-FOCO:                   retângulo azul brilhante em volta do painel escolhido,
-                        com a mão branca (cursor) no centro
-MÃO:                    y 78% .. 100%, cartas em arco leve, de pé, cortadas embaixo
-START / Help:           x 84%..98% y 96%..100%
+[ FOTO | DECK | SEU LP | TURNO | LP RIVAL | DECK | FOTO ]
 ```
 
-## 15.4 O problema da perspectiva — e a solução (o ponto crítico)
+- **Deck**: só a contagem, sempre virado para baixo.
+- **Cemitério**: contagem + a **foto da última carta** que foi para lá, num
+  quadrado perfeito — à **esquerha** no meu, à **direita** no do rival. O corte é
+  quadrado, a imagem nunca distorce. Cemitério vazio **não** mostra foto
+  inventada.
+- **Turno**: alterna a cor com quem está jogando (azul na sua vez, vermelho na do
+  rival).
+- **Todos os números são brancos**, e os blocos **não têm palavra nem ícone**:
+  dentro de cada célula é só o número e, no cemitério, a foto.
 
-**O problema:** para colocar o campo à direita da tela, a tentativa anterior
-moveu a LENTE (`CAM_OFFSET_X = 0.16` em `mesa_3d.gd`). Isso é uma projeção
-*fora do eixo*: o lado direito da tela é esticado e o esquerdo comprimido, e
-tudo fica com cara de torto. Não adianta aumentar a tela — o problema é a
-matemática, não o tamanho.
+**Três conjuntos de cor**, e o mesmo conjunto no bloco do nome do topo e no bloco
+do LP daquele lado:
 
-**A solução: não move a câmera. Move a JANELA.**
+| Cor | Serve a |
+|---|---|
+| azul | você |
+| vermelho | rival |
+| preto (borda preta, interior mais claro) | os dois cemitérios |
 
-O mundo 3D é renderizado num `SubViewport` que ocupa só a região do campo
-(x de 29,3% até 100% da tela). A câmera fica **exatamente como está hoje** —
-olhando o centro do campo, sem deslocamento nenhum. Depois o resultado é
-exibido nessa região, e a tela toda é dividida assim:
+**A posição é medida, não chutada.** O vão vem das bordas **reais** das duas
+fileiras (`_borda_da_fileira_px`) e a largura da extensão real
+(`_extensao_da_fileira_px`); a barra é centrada no vão e nunca invade fileira
+nenhuma. O GUT trava as duas coisas.
 
-```text
-+----------------+--------------------------------+
-|                |                                |
-|  PAINEL 2D     |   SubViewport 3D              |
-|  ESQUERDO      |   (câmera CENTRADA, sem       |
-|  0%..29,3%     |    deslocamento = perspectiva |
-|                |    igual à de "no meio")      |
-|                |        centro do campo        |
-|                |        = 64,6% da tela  ✓     |
-+----------------+--------------------------------+
-        HUD 2D por cima de tudo (barra de LP/turno, foco, START/Help)
-```
+O porquê de 2D: em 3D a base de um objeto depende de três números que precisam
+concordar (z da fileira, meia profundidade do ladrilho, profundidade do objeto) e
+a "altura do chão" na tela é uma faixa, não uma linha. Em 2D a posição é o pixel.
 
-Porque a câmera não muda, a perspectiva é **idêntica** à de quando o campo
-está no meio — por construção, não por ajuste. O centro do campo cai em
-29,3% + 70,7%/2 = **64,6%** da tela; na referência ele está em ~63,5%.
-Batemos quase de graça.
+## 15.7 ONDE O DESENHO MORA: OS 8 ARQUIVOS
 
-**O que o mundo 3D ganha:** o céu/cidade e os pilares de vidro passam a existir
-só na região do campo. O painel 2D esquerdo ganha o fundo escuro dele, como na
-referência. Isso é o efeito colateral Aceito.
-
-**Proibições desta fase:** NÃO usar `frustum_offset`, NÃO deslocar a câmera em
-X, NÃO mover o campo no mundo para "empurrar" para a direita, NÃO aplicar
-escala/rotação na textura do SubViewport. Se parecer torto, a solução é
-mudar o retângulo do SubViewport, nunca a câmera.
-
-## 15.5 Fases de execução (cada uma com PROVA de screenshot)
-
-| Fase | Entrega | Portão | Estado 2026-09-28 |
-|---|---|---|---|
-| 1 | SubViewport + câmera intacta + campo à direita (15.4) | screenshot com o campo em ~64,6%, perspectiva simétrica | **FEITA** — 64,64% medido, simetria exata nas 4 fileiras |
-| 2 | Campo com a cara da referência: vidro escuro translúcido, trapézio, ordem das fileiras, cartas deitadas com a CARTA REAL | screenshot do campo isolado | **FEITA** — desvio máx 3,6% de altura; largura encostando na direita (99,9%) |
-| 3 | HUD 2D: barra de LP/turno, painel esquerdo completo, contadores, moldura de foco, START/Help | screenshot da tela cheia | **FEITA** |
-| 4 | Mão no estilo da referência + cursor/joypad batendo | screenshot + GUT | **FEITA** |
-| 5 | QA: testes que travam o enquadramento e a perspectiva | GUT verde | **FEITA** — 136 testes / 3275 asserts / 0 falha |
-| 6 | Polimento: moldura de foco, carta de DEF dentro do ladrilho, mão do rival, contadores, linha "LUZ", moldura do retrato | 2 fotos (mão + campo) | **FEITA** — commit `b4041cc` |
-
-Ponto de restauração anterior a tudo isso: branch `antes-visual-tagforce` +
-tag `restaurar-antes-tagforce` (commit `fd89783`).
-
-### Decisões que arose no meio (não reabrir sem o Lead)
-
-- **A câmera pode livremente mudar** (posição Y/Z, altura, FOV). A tríade que
-  garante a perspectiva simétrica é: `CAM_POS.x == 0`, alvo no centro do campo
-  e `frustum_offset == Vector2.ZERO`. Mover a câmera NÃO é o problema de
-  perspectiva — o deslocamento de lente (frustum) que era.
-- **O campo tem transform de apresentação** (`ESCALA_CAMPO` + `DESLOC_CAMPO`):
-  escala uniforme + deslocamento aplicado ao layout da arena. A arena continua
-  mandando na composição e no espelho (D17/D18); o transform só muda o tamanho
-  e a posição na janela. Não se pode usar escala não-uniforme (quebra a
-  perspectiva do trapézio) — há teste.
-- **Assets embutidos no jogo**: `astralis/assets/` tem as 6 molduras, 9 orbes,
-  a estrela e o verso, byte-idênticos ao `astralis-studio/static/`. O jogo
-  tenta o projeto primeiro, cai no embutido. Teste de compatibilidade Studio x
-  jogo trava os 17 (SHA-256). Motivo: sem isso o jogo nunca mostra a carta
-  real sozinho.
-- **A aba "Single" foi removida**: era texto inventado; nosso contrato não tem
-  modo de duelo declarado (R3).
-
-### O que NÃO pode ficar igual à referência (falta dado, não falta código)
-
-1. **Retratos dos duelistas**: os 39 duelistas do FM têm `portrait` vazio e o
-   pack não traz imagem. Fica placeholder com moldura. Para igualar, o pack
-   precisa das 39 fotos.
-2. **Descrição das cartas**: as 722 do FM vêm com `description: ""`. O painel
-   mostra a área de texto (com barra de rolagem) mas vazia. Para igualar, o
-   pack precisa das descrições.
-3. **Cidade do fundo**: a referência tem uma cidade 3D; aqui é céu procedural
-   com gradiente. Não há imagem de fundo no pack. Decisão pendente do usuário:
-   usar uma imagem de fundo ou manter o céu.
-4. **Barra de fases**: mostra DRAW/MAIN/BATTLE/END (§15.1), não DP/SP/MP1/BP/MP2/EP.
-
-
-## 15.6 Ferramenta de prova
-
-O jogo já sai com `-- --mesa3d-foto=<caminho.png>` (salva o viewport e sai)
-e com `--mesa3d-calib=1` (liga o quadrado de calibração do §15.0). É o jeito de
-olhar a tela real e comparar com a referência. Usar em toda fase.
-
-`-- --debug` liga o **log de diagnóstico** da mesa (D56): janela do campo em
-pixel, posição/FOV da câmera, vão das fileiras, calibração das duas mãos e o
-que a fila de fusão está fazendo. Sem a flag o jogo só imprime o **log de
-boot** (arena, fusões, duelo montado, avisos) e a fala do jogo — porque esse
-trecho é contrato do `test_project_arg`, que roda o jogo de verdade e lê o que
-saiu. Medir em pixel por foto não funciona com a volta da mesa: use `--debug`
-ou os helpers de `test_volta_mesa.gd`, que medem em unidades de mundo.
-
-Para a arte aparecer, o jogo precisa de um projeto com os assets: dá para
-apontar `--project` para uma cópia descompactada do
-`studio_pack_20260925_180627_COMPLETO.apack` (722 cartas, 59 MB, tem as artes).
-Isso é sonda de desenvolvimento em pasta temporária, não vai para o repo.
-
-## 15.7 A faixa do meio em 2D (D45, item 2)
-
-A faixa continua no MEIO da tela, entre a fileira de monstros do rival e a
-sua, mas agora é **2D** (filha do HUD, por cima do campo 3D). Sete células na
-ordem que o usuário ditou (D44; em D45 o **cemitério e o baralho trocaram de
-lugar**):
-
-```text
-[ FOTO 2 ][ DECK 40 ][ SEU LP 8000 ][ TURNO 1 ][ LP RIVAL 8000 ][ DECK 35 ][ 1 FOTO ]
-```
-
-- **Deck**: só a CONTAGEM de cartas do baralho real.
-- **Cemitério**: a CONTAGEM + a **FOTO da última carta que foi para lá**, num
-  **quadrado perfeito** preenchendo a ponta **esquerda** (a sua) ou
-  **direita** (a do rival). É um *corte* quadrado da arte real (a imagem nunca
-  distorce) e vem pelo cache de textura. Cemitério vazio = sem foto (nunca
-  uma imagem inventada).
-- **LP e turno**: número do GameState real, sempre **branco**. A célula do
-  **turno muda de cor com quem está jogando** (o `current_player` do motor):
-  azul na sua vez, vermelho na vez dele.
-- **Sem palavra e sem ícone** dentro dos blocos (D45, item 3): a informação
-  sozinha, com a plaquinha identificada pela cor.
-- **Três conjuntos de cor**, cada um com borda escura e interior mais claro:
-
-| Conjunto | Borda | Interior | Onde |
-|---|---|---|---|
-| azul | `COR_AZUL_BORDA` | `COR_AZUL_FUNDO` | seu deck, seu LP, bloco do **seu nome** (topo), turno na sua vez |
-| vermelho | `COR_VERM_BORDA` | `COR_VERM_FUNDO` | deck e LP do rival, bloco do **nome do rival** (topo), turno na vez dele |
-| preto | `COR_PRETO_BORDA` (preto que não é preto escuro) | `COR_PRETO_FUNDO` (preto mais claro) | os **dois cemitérios** |
-
-- **Posição**: medida, não chutada. O vão vem das bordas REAIS das duas
-  fileiras de monstros (`_borda_da_fileira_px`, dado + câmera) e a largura vem
-  da extensão real da fileira (`_extensao_da_fileira_px`). A barra é
-  **centrada no vão** e nunca invade nenhuma das duas fileiras.
-- **Zero regra** (R1/R3): a faixa só lê o estado. O `Campo/Faixa` 3D do D44
-  foi REMOVIDO por inteiro (pilhas, placas, fatias de carta, `_construir_faixa`).
-
-O que essa faixa **não** é: não é o tabuleiro, não calcula nada, e o Godot
-continua sendo o dono de LP, compra, descarte e vitória.
-
-## 15.8 Onde o desenho mora: os 8 arquivos da tela
-
-A tela do duelo **não é um arquivo**: desde o D59 ela foi dividida por assunto
-(D54-D67). Quem implementa o desenho deste doc mora em `astralis/duel3d/`:
-
-| Arquivo | Assunto | Dono do que ele decide |
+| Arquivo | Assunto | O que ele decide |
 |---|---|---|
-| `mesa_3d.gd` | a mesa: estado do duelo e **orquestração** | o estado e as medidas (posição de slot, altura da mão, extensão de fileira, plano de simetria) |
-| `painel_carta_3d.gd` | o painel esquerdo com a carta focada | nada: ele pergunta o que exibir |
-| `faixa_2d.gd` | a faixa do meio (§15.7) | nada: só lê o `GameState` |
-| `carta_3d.gd` | **fábrica** da carta 3D (corpo, arte, orbe, estrelas, nome, ATK, verso) | o desenho da carta, nunca onde ela fica |
-| `menus_3d.gd` | os menus 3D do centro e da seleção | nada: só escreve o que a mesa montou |
-| `vista_3d.gd` | a câmera no pivô e a volta de 180° (doc 16) | o **número do giro** (0 = seu, 180 = do rival) e o plano de simetria |
-| `campo_3d.gd` | os 20 painéis de vidro | o **tamanho** do vidro (o dado dá a posição) |
-| `cursor_3d.gd` | o cursor de foco: moldura azul + mão branca | nada: a mesa mede a coisa focada |
+| `astralis/duel3d/mesa_3d.gd` | a mesa: orquestrador | o estado do duelo, o boot, o redesenho, e é o **dono das medidas** |
+| `astralis/duel3d/vista_3d.gd` | a vista e a volta | câmera, pivô e `giro_campo` (doc 16) |
+| `astralis/duel3d/campo_3d.gd` | o campo de vidro | onde os 20 painéis de vidro ficam |
+| `astralis/duel3d/carta_3d.gd` | a fábrica de carta | corpo, arte, ATK e verso de uma carta 3D |
+| `astralis/duel3d/cursor_3d.gd` | o cursor de foco | a moldura azul e a mão branca |
+| `astralis/duel3d/faixa_2d.gd` | a faixa do meio | as 7 células, as cores e as fotos |
+| `astralis/duel3d/painel_carta_3d.gd` | o painel esquerdo | molde, arte, ATK/DEF, nome, descrição |
+| `astralis/duel3d/menus_3d.gd` | os menus 3D | o menu do LP e o da estrela |
 
-Três regras que atravessam os oito (ver D57, D59, D64, D65):
+**Três regras atravessam os oito (R9, D57):**
 
-1. **Um arquivo = um assunto.** Alvo de 700 linhas, e a divisão é pelo assunto,
-   nunca pela contagem.
-2. **Número com um dono só.** Quem mede é a mesa; o assunto **recebe por
-   parâmetro** (`larg_carta`, `gross_carta`, `janela_art`, `escala_campo`) ou
-   por `Callable` (`pos_slot`, `caixa`, `vidro`, `mat`). Nenhum assunto copia
-   número de outro. **Na prática isso é sem default no receptor** (D70): a mesa
-   passa, e o receptor tem um `assert` que reclama se a medida não chegar — é
-   melhor a peça nascer do tamanho zero com grito do que nascer com a medida
-   errada em silêncio. Foi assim que a espessura sobreviveu escrita como `0,05`
-   (10×) num arquivo e `0,005` arredondado no outro.
-3. **UI não guarda cópia do estado.** Faixa, painel e menus **perguntam** ao
-   dono a cada atualização; não existe segunda cópia do `GameState`.
+1. **Um arquivo = um assunto**, e o assunto manda na divisão — nunca a contagem,
+   e nunca criar arquivo minúsculo só para existir.
+2. **Número com um dono só.** Quem mede é a mesa; o assunto **recebe por parâmetro
+   ou `Callable`** e nunca copia o número de outro. E o receptor **não tem
+   default**: se a medida não chegar, ele nasce do tamanho zero e grita (D70).
+3. **A UI nunca guarda cópia do estado.** Ela pergunta ao dono na hora de
+   desenhar. Guardar cópia faz a tela mostrar turno velho depois que o duelo muda.
 
-### 15.8.1 A medida da carta é a do contrato, não uma escolha (D70)
+**Estado atual:** os oito cumprem o alvo, menos a `mesa_3d.gd`, que tem 3.702
+linhas e 141 funções — o orquestrador ainda carrega assunto demais. A divisão
+pelo assunto é o resto do trabalho (ver as dívidas no `SESSAO_ATUAL.md`).
 
-A medida da carta em unidades de mundo vem do **contrato**, não do olho:
+## 15.8 A MEDIDA DA CARTA É A DO CONTRATO (D70)
 
-| No mundo | Const na mesa | Medida real | De onde |
-|---|---|---|---|
-| largura | `LARG_CARTA := 1.0` | 59 mm | 1 unidade = 1 largura |
-| altura | `ALT_CARTA := 86.0 / 59.0` | 86 mm | `card_layout.schema.json` → `canvas.h = 86` |
-| espessura | `GROSS_CARTA := 0.30 / 59.0` | **0,30 mm** | o papel, escrito como divisão |
+Não é escolha de autor, é dado:
 
-O 59 e o 86 já eram `const` no schema (`canvas.w = 59`, `canvas.h = 86`,
-`unit: per_mil`, doc 04 §4.8) — a medida da carta nunca foi uma decisão de
-cabeça, era dado. A espessura é a única que o olho não vê, e por isso foi a
-primeira a ser escrita errada: `0,005` é o 0,30/59 **arredondado** (o
-verdadeiro é `0,0050847458`, 1,69% maior). O asset 3D da carta mede
-`0,0050847458` e a mesa agora usa o mesmo número.
+| Símbolo | Valor | De onde |
+|---|---|---|
+| `LARG_CARTA` | `1.0` | 59 mm, a largura real de uma carta |
+| `ALT_CARTA` | `86.0 / 59.0` | 86 mm de altura |
+| `GROSS_CARTA` | `0.30 / 59.0` | 0,30 mm de espessura |
 
-Nada disso muda uma linha do contrato visual: é a mesma tela, com o desenho
-dividido. Se este doc e o código divergirem, o doc está errado até prova em
-contrário (regra do `AI_MANIFEST.json`).
+O 59 e o 86 são `const` em `schemas/card_layout.schema.json` (`canvas.w` e
+`canvas.h`, em por-mil), e a espessura é a medida real do baralho. Os três vivem
+na mesa, e os receptores (`carta_3d.gd`, `cursor_3d.gd`, `painel_carta_3d.gd`)
+**não têm default** — cada um tem `assert` que reclama se a medida não chegar.
+
+O motivo de não haver default: um default errado é uma armadilha silenciosa. Com
+nele, o dia que alguém montasse uma carta fora da mesa sairia 10x mais grossa sem
+nenhuma falha. É melhor a peça nascer do tamanho zero com grito.
+
+## 15.9 PRECEDÊNCIA
+
+Se este doc e o código divergirem, **o código está certo e o doc está errado** até
+prova em contrário: o schema e o teste mandam.
