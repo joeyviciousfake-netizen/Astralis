@@ -22,7 +22,50 @@ Se o usuário disser só "continue", retome de `SESSAO_ATUAL.próximo_passo`.
 - R5: Não ampliar escopo, não genericizar engine.
 - R6: `.astralis` de distribuição é binário trancado (ver doc 12). Nunca exponha JSON de distribuição em texto.
 - R7: Não reabra decisão travada em DECISOES.md sem pedir ao usuário.
-- R8: **Regra das ferramentas (D71, 2026-10-01):** para qualquer trabalho no Blender, a ordem é **ferramenta nativa → pesquisa na internet → manual, só em último caso.** O Blender já tem bevel, subdiv, remesh, snap, Geometry Nodes etc. e **ele gera a topologia por você** — não reconstrua geometria na mão sem antes perguntar "o Blender já faz isso?". Se não souber qual ferramenta existe ou como se usa, pesquise na internet antes de inventar. Manual é para o que a ferramenta realmente não faz, e com a topologia medida antes de gravar. Isso veio de 6 construções de malha escritas à mão que o portão recusou (D69/D71), quando `bmesh.ops.bevel` resolvia em minutos.
+- R8: Nada solto — arquivo novo nasce na pasta do dono com nome claro;
+  teste descartável vive e morre na mesma sessão (cria, mostra, apaga);
+  sem `.tmp`/`.log`/pasta velha no repo; `git status` limpo todo fim.
+- R9: Um `.gd` = um assunto, e a divisão é pelo assunto (nunca pela contagem,
+  nunca arquivo minusculo só para existir).
+- R10: Comentário = o que é, quem é o dono do número, a invariante e o porquê
+  quando não for óbvio. Sem história, sem citação do usuário, sem número de
+  decisão (que já está em DECISOES.md).
+- R11: O log de BOOT do jogo é contrato (o `test_project_arg` lê). Diagnóstico
+  só com `-- --debug`.
+- R12: **Regra das ferramentas:** em qualquer programa, a ordem é **ferramenta nativa → pesquisa na internet → manual, só em último caso.** O Blender já tem bevel, subdiv, remesh, snap e Geometry Nodes, e ele **gera a topologia por você**. Antes de reconstruir geometria à mão, pergunte "o programa já faz isso?". Se não souber qual ferramenta existe ou como se usa, pesquise na internet. Manual é só para o que a ferramenta realmente não faz, e com a topologia medida antes de gravar. Vale para qualquer programa, não só Blender.
+- R13: Antes de anexar uma decisão `Dnn` em DECISOES.md, olhe a MAIOR que já
+  existe lá e use a seguinte. Ela entra no corpo **e** no índice do fim do
+  arquivo.
+- R14: **COMO SE ESCREVE DOCUMENTO.** Vale para `docs/` e para comentário de
+  código. O projeto é lido e escrito por IA; doc não é para humano ler.
+
+  **D1 — MUDOU, SUBSTITUI.** Se algo já está no doc e mudou, **apague o texto
+  antigo e escreva o novo no lugar.** Não guarde o antes, não registre a
+  mudança, não escreva "antes era", "agora é", "passou a", "virou", "mudou
+  de", "saiu no Dnn". Se mudou, é porque o usuário mandou. Ponto final.
+
+  **D2 — NOVO, ESCREVE.** Se nunca esteve no doc, escreve novo.
+
+  **D3 — POR QUÊ SIM, MUDANÇA NÃO.** O motivo de uma regra é atemporal e se
+  escreve: "X é Y porque Z, senão W". O que não se escreve é a transição
+  entre um estado e outro. Mesmo fato, duas formas:
+  - **fica** — "A lente nunca é deslocada (`frustum_offset` = ZERO, x = 0):
+    deslocar achata um lado e estica o outro. Se parecer torto, muda o
+    retângulo do SubViewport."
+  - **sai** — "Antes a solução movia a lente (CAM_OFFSET_X = 0,16) e deformava
+    o lado direito; agora a câmera está no eixo."
+
+  **NUNCA entra em doc:** data, número de versão, changelog, citação do
+  usuário, hash de commit, contagem de teste ("183 testes"), "estado em
+  2026-09-28", o que se perdeu, o que foi tentado antes. Tudo isso está no
+  `git log`, e o `git log` é o histórico.
+
+  **SEMPRE entra:** a regra como ela é, o número com o dono do número, o
+  caminho do dado, o motivo (D3), e o que não pode ser feito.
+
+  **Decisão que ficou sem valor sai do `DECISOES.md` inteiro** — não vira
+  linha de "supersedida". Se a regra nova substitui a antiga, a nova é que
+  fica. Número reservado marca buraco, como a D13 e a D46.
 
 ## 3. DONOS POR PASTA (respeite)
 
@@ -35,14 +78,11 @@ Se o usuário disser só "continue", retome de `SESSAO_ATUAL.próximo_passo`.
 
 Mudança compartilhada (schema, protocolo, formato .astralis) exige atualizar MANIFEST + doc dono + SESSAO.
 
-## 3.1 MAPA + R8 (organização, regra dura)
+## 3.1 MAPA (organização)
 
 - `astralis/duel|core|ui|campaign|debug` runtime; `astralis/testing` qa;
   `schemas/` systems; `tools/ ci/ tests/` qa; `docs/` lead.
-- R8: nada solto — arquivo novo nasce na pasta do dono com nome claro;
-  teste descartável vive e morre na mesma sessão (cria, mostra, apaga);
-  sem `.tmp`/`.log`/pasta velha no repo; `git status` limpo todo fim.
-- R9: commit + push no fim de toda tarefa (ordem do usuário). Nunca acumule trabalho sem commitar.
+- R8, R9 e R10 acima valem para tudo, sem exceção.
 
 ## 4. PROTOCOLO DE SESSÃO (anti-perda de contexto)
 
@@ -53,8 +93,8 @@ Mudança compartilhada (schema, protocolo, formato .astralis) exige atualizar MA
   onde_estamos / acabamos_de_fazer / próximo_passo / travas / data_utc
   ```
   Nunca termine sem atualizar. Nunca deixe próximo_passo vazio.
-- FIM (obrigatório): commit + push (R9) — confira `git status`, `git diff`, commite por área, `git push`.
-- Decisão nova do usuário → anexe em `docs/DECISOES.md` como `Dnn: <decisão> | motivo | impacto | data`.
+- FIM (obrigatório): commit + push (R10) — confira `git status`, `git diff`, commite por área, `git push`.
+- Decisão nova do usuário → anexe em `docs/DECISOES.md` como `Dnn: <decisão> | motivo | impacto`.
 
 ## 5. FORMATO DE RESPOSTA PARA HUMANO
 
