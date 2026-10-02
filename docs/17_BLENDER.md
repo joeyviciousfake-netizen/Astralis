@@ -299,6 +299,50 @@ lados longos de 1 aresta e 4 arcos de N arestas. Ele recusa e devolve a malha se
 preencher, e o escopo fica aberto. Nao gaste tempo com ele aqui: **triangular a
 face grande e mais barato e mais honesto**.
 
+### 17.5.1 PUBLICAR O ARTEFATO (o `.glb` que o jogo carrega)
+
+A fonte fica em `astralis/assets/3d/fonte/carta_de_duelo.blend`, com
+`.gdignore` na pasta — sem ele o Godot trata `.blend` como cena e tenta
+importar. O artefato é `astralis/assets/3d/carta_de_duelo.glb`, e quem publica
+é `tools/blender/exportar_carta.py`, que roda o portão da R16 **antes** de
+exportar e confere o `.glb` **depois**.
+
+```powershell
+blender --background astralis\assets\3d\fonte\carta_de_duelo.blend `
+         --python tools\blender\exportar_carta.py
+```
+
+**O artefato entra normalizado e centrado**, e essa é a parte que não é óbvia:
+
+| O que | Quem | Por quê |
+|---|---|---|
+| largura 1,0 | o exportador, pela **largura medida** | o jogo trabalha na unidade em que a largura da carta é 1,0; a fonte está em milímetro real e sem normalizar o `.glb` chega **16,95x pequeno** |
+| volume centrado na origem | o exportador | o corpo da carta no jogo é um `BoxMesh`, que vem **centrado**; a fonte tem a base apoiada em Z = 0 |
+| nós com a identidade | o exportador | o `.glb` leva a transformação do nó **junto com a malha** |
+
+**Centralizar no Blender não basta, e é a armadilha que custou uma volta
+inteira.** Recentrar a malha e deixar o objeto em `(0, 0, 0,043)` produz um
+`.glb` cujos vértices estão centrados e o nó **não** — e o jogo recebia a peça
+deslocada em 0,086 (a altura da carta), com a faixa marrom aparecendo **acima**
+da moldura enquanto a imagem ficava no lugar certo. Centralizar a malha e zerar
+o `location` são **as duas** coisas, e o portão confere o arquivo porque foi
+exatamente o que a memória do Blender deixava passar.
+
+**O portão confere os vértices do `.glb`, sem passar pelo importador**, e recusa
+o artefato quando o centro desvia, quando a largura não é 1,0, ou quando algum
+nó tem transformação. É a prova de que a trava pega: deslocar os vértices do
+arquivo à mão faz o portão devolver `desvio=0.086`.
+
+**Depois de regerar o `.glb`, force a reimportação.** O Godot guarda o
+importado em `.godot/imported/` e um `--script` não reimporta sozinho — o jogo
+continua carregando o artefato velho, que é silencioso e parece "a exportação
+não fez nada":
+
+```powershell
+.\Godot\Godot_v4.7.2-stable_win64_console.exe --headless --path astralis --import
+```
+
+
 ## 17.6 MEDIR ANTES DE CONCLUIR
 
 O número que vale é o **medido na malha**, não o digitado no script. Duas
