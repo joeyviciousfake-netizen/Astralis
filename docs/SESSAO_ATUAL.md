@@ -46,10 +46,13 @@ dividas: "Motor de efeitos (D30) é o buraco de gameplay maior. Distribuição
   linhas contra o alvo de 700: a R9 pede a divisão pelo assunto, e ela é o
   resto do trabalho de organização do código."
 
-estado: "GUT tem 183 funções de teste em 20 arquivos de `astralis/testing/`. O
-  contrato tem 8 schemas. O dado de exemplo tem 722 cartas, 39 duelistas e 39
-  decks. O jogo lê projeto por `--project` e o log de boot é contrato (R11). A
-  árvore está limpa no git."
+estado: "O contrato tem 8 schemas. O dado de exemplo tem 722 cartas, 39
+  duelistas e 39 decks. A suíte GUT está em `astralis/testing/` e passa inteira
+  (rode `Godot --headless --path astralis -s
+  res://addons/gut/gut_cmdln.gd -gdir=res://testing -gexit`; a contagem exata
+  não é escrita aqui porque envelhece — o número sai do comando). O jogo lê
+  projeto por `--project` e o log de boot é contrato (R11). A árvore está limpa
+  no git."
 
 data_utc: "2026-10-01"
 ```
