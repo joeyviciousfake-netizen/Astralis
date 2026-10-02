@@ -30,7 +30,6 @@ docs/
     14_EXPERIENCIA_USUARIO.md <- Simples/Avançado em tudo, galeria, erro PT-BR, Play verde, guia 5min [NOVO v1.5]
     15_VISUAL_DUELO.md       <- contrato VISUAL da mesa: medida da referência, SubViewport (campo à direita SEM perspectiva torta), de onde vem cada imagem [NOVO v1.8]
     16_PERSPECTIVA_CAMPO.md  <- o PONTO DE VISTA DA MESA (v2.0, D47): a tela e a visao de quem esta jogando GIRANDO A CAMERA em volta do centro do campo - as cartas NAO se mexem, nada esmaece, nada teleporta. O HUD 2D nao gira: vira de carta e o conteudo troca nos 90 graus. O texto da D46 (a versao que fingia a perspectiva movendo as cartas) ficou como historico nas §§16.1-16.14. Ler antes de mexer na mesa
-    17_ASSETS_3D.md        <- o PIPELINE 3D (v1.0, D61): .blend (fonte) -> .glb (artefato) + manifest.json (fonte unica dos numeros). Convencoes (1 unidade = 1 largura de carta, Y para cima, origem deitada OU em_pe (D70), no sem transform), como autorar, e os DOIS medidores independentes do mesmo artefato (Blender e Godot). Ler antes de mexer em qualquer 3D
   AI_MANIFEST.json          <- mapa máquina (owner, depends, read_order)
   SESSAO_ATUAL.md           <- OPS mutável: onde paramos + próximo passo (ler sempre)
   DECISOES.md               <- OPS append-only: travas D01-D13, não reabrir

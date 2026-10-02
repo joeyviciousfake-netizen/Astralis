@@ -84,14 +84,8 @@ ordem e' a regra:
    faz, e medindo a topologia antes de gravar.
 
 **Por que isso e' principio e nao conselho:** um teste que RECUSA entrada errada
-(como o portao de malha do D69) e' rede de seguranca, nao metodo de trabalho.
-Ele so age depois que voce ja construiu a coisa errada. A regra move o erro
-para antes.
-
-**O que aconteceu quando isso nao existia:** os cantos arredondados da carta
-custaram uma sessao inteira porque 6 construcoes de malha escritas a mao foram
-recusadas pelo portao (Euler negativo, aresta fora de 2 faces, face
-degenerada), enquanto `bmesh.ops.bevel` resolvia em minutos e passava de
-primeira. Detalhe em `docs/17_ASSETS_3D.md` §17.12 e em `DECISOES.md` D71.
+e' rede de seguranca, nao metodo de trabalho. Ele so age depois que voce ja
+construiu a coisa errada. A regra move o erro para antes — e um portao que
+recusa malha serve para provar a regra, nao para ser o metodo.
 
 Vale para qualquer programa com ferramenta boa, nao so para o Blender.

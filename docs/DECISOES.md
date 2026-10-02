@@ -65,10 +65,7 @@
 - **D39** | O MCP é o do Coding-Solo; o MCP não tem nenhuma ferramenta de editar `.gd`. | porque: a ponte do Godot não escreve código — `.gd` se edita por arquivo. | proibido: "corrigir" o `.gd` pela ponte.
 - **D56** | O log de BOOT é contrato, e só ele sai sempre; diagnóstico vai atrás de `-- --debug`. | porque: `astralis/testing/test_project_arg.gd` roda o jogo como processo filho e prova o `--project` lendo a saída, então o log é interface. | proibido: `push_error` no caminho de boot (o GUT conta como erro inesperado) — use `push_warning` + `print`.
 - **D57** | Um `.gd` = um assunto, e o assunto manda na divisão; o comentário é finalidade, invariante e dono, nunca a história. | porque: o projeto é lido por IA, e um comentário de 20 linhas de história são 20 linhas a mais em toda leitura futura, sem informação útil. | proibido: criar arquivo minúsculo só para existir, e citar `Dnn` no comentário. **Estas duas regras são R9 e R10 no `AGENTS.md` — uma casa só.**
-- **D61** | No pipeline 3D, `.blend` é a **fonte**, `.glb` é o **artefato** e `manifest.json` é a **fonte única dos números**, conferidos por **dois medidores independentes** (o exportador no Blender e `astralis/testing/test_assets_3d.gd` no Godot). | porque: um número repetido no teste diverge sozinho, e medir reimportando o `.glb` no Blender devolveria os eixos do Blender — a trava passaria errado. | proibido: número do manifesto escrito à mão dentro do teste; asset de projeto sobrescrever o do jogo; `.import` gerado versionado.
-- **D62** | O render do projeto é **Cycles na GPU** (OptiX, medido nesta máquina), com o dispositivo **CPU desligado** — sem isso o render "da GPU" escorrega para o processador sem falar. A prévia oficial mede em vez de prometer: `--comparar` faz o A/B pixel a pixel. | porque: a soma em float do kernel na GPU não é associativa, então não há bit-exato entre execuções. | proibido: afirmar "mesma cena, mesmos bytes". A garantia é a **geometria**, não a imagem.
-- **D69** | A malha da **fonte** é quad, e o exportador recusa n-gon, degenerada, face repetida, vértice solto, aberta e não-manifold. O portão roda na `.blend` (com `bmesh`), não no `.glb`. | porque: em contorno côncavo as diagonais de um n-gon não estão em lugar nenhum, o exportador escolhe na hora de triangular e nenhuma medida de área, caixa ou triângulo pega isso. | proibido: forçar n-gon para fechar um vão — quando a conta `4F ≡ 2 (mod 4)` não tem solução inteira, insira vértices. Triângulo **não** é erro; n-gon é.
-- **D70** | A medida da carta é a do contrato: **59 x 86 x 0,30 mm**, e a mesa é o **único dono** do número. Os receptores (`carta_3d.gd`, `cursor_3d.gd`, `painel_carta_3d.gd`) **não têm default** e cada um tem `assert` que reclama se a medida não chegar. | porque: `GROSS_CARTA` estava arredondado (0,005 em vez de 0,0050847458) e o mesmo número aparecia com valores contraditórios em 3 outros lugares; a peça nascia 10x mais grossa sem nenhuma falha. | proibido: default de medida em receptor. É melhor a peça nascer do tamanho zero com grito do que com a medida errada em silêncio. A peça **em pé** é centrada em Y; **deitada** apoia em `y=0` — cada asset declara qual é, em `topologia.origem`.
+- **D70** | A medida da carta é a do contrato: **59 x 86 x 0,30 mm**, e a mesa é o **único dono** do número. Os receptores (`carta_3d.gd`, `cursor_3d.gd`, `painel_carta_3d.gd`) **não têm default** e cada um tem `assert` que reclama se a medida não chegar. | porque: `GROSS_CARTA` estava arredondado (0,005 em vez de 0,0050847458) e o mesmo número aparecia com valores contraditórios em 3 outros lugares; a peça nascia 10x mais grossa sem nenhuma falha. | proibido: default de medida em receptor. É melhor a peça nascer do tamanho zero com grito do que com a medida errada em silêncio.
 - **D71** | **Regra das ferramentas:** nativa do programa → pesquisa na internet → manual só em último caso. | porque: o Blender tem bevel, subdiv, remesh, snap e Geometry Nodes, e ele gera a topologia por você. | proibido: reconstruir geometria à mão sem antes perguntar "o programa já faz isso?". (= R12)
 
 ---
@@ -127,10 +124,10 @@ D54 --- (reservada)
 D56 O log de BOOT e contrato; o resto so com -- --debug
 D57 Um .gd = um assunto; comentario nunca e historia (= R9/R10)
 D58 --- (reservada)
-D61 .blend fonte, .glb artefato, manifest fonte unica, 2 medidores
-D62 Render e CYCLES na GPU; a previa e medida, nao prometida
+D61 --- (reservada)
+D62 --- (reservada)
 D68 A IA do rival tem arquivo proprio e so escolhe
-D69 A malha da FONTE e quad; o exportador recusa malha ruim
+D69 --- (reservada)
 D70 A medida da carta e a do contrato; a mesa e o unico dono
 D71 SEMPRE usar a ferramenta do programa
 ```
