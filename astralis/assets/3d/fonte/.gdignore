@@ -1,0 +1,8 @@
+# Esta pasta e a FONTE do modelo 3D (o .blend), e nao o artefato.
+#
+# O .gdignore existe porque o Godot trata .blend como CENA e tenta importar,
+# o que gera um .blend.import orfao. Ele fica versionado porque, sem ele, um
+# clone novo volta a tentar importar o .blend. O .glb do asset fica um nivel
+# acima, fora desta pasta, e e ele que o jogo carrega.
+#
+# Quem publica o artefato: tools/blender/exportar_carta.py

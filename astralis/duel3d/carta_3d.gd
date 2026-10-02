@@ -15,6 +15,12 @@ extends RefCounted
 ## As texturas e as cores chegam por Callable da mesa porque o PAINEL 2D do
 ## HUD usa as MESMAS (e o dono delas continua sendo a mesa, um so lugar).
 
+## O corpo da carta em 3D: o canto arredondado de 2 mm e a espessura de verdade.
+## E ARTEFATO, nao fonte — quem edita e a `.blend` em `assets/3d/fonte/`, e quem
+## publica este `.glb` e `tools/blender/exportar_carta.py`, que roda o portao da
+## R16 (n-gon proibido, malha fechada, face contada) ANTES de exportar.
+const MODELO_CARTA := preload("res://assets/3d/carta_de_duelo.glb")
+
 ## Tamanho da carta em unidades de mundo (1 unidade = a largura, que e 59 mm).
 ## O DONO destes numeros e a mesa, que mede e passa. Aqui nao ha default de
 ## proposito: um valor escrito neste arquivo seria a segunda fonte da mesma
@@ -48,12 +54,7 @@ func montar(dado: Dictionary, face_down: bool, em_defesa: bool) -> Node3D:
 	# orbe + estrelas + nome/ATK na placa. Sem nada no projeto = cai na cor.
 	var no := Node3D.new()
 	no.name = "Carta3D"
-	var corpo := MeshInstance3D.new()
-	corpo.name = "Corpo"
-	var malha := BoxMesh.new()
-	malha.size = Vector3(larg_carta, alt_carta, gross_carta)
-	corpo.mesh = malha
-	corpo.material_override = mat.call(Color(0.45, 0.30, 0.13))
+	var corpo := _corpo()
 	no.add_child(corpo)
 	var zf := gross_carta / 2.0
 	var tex_moldura: Texture2D = textura.call(moldura_da_carta.call(dado))
@@ -177,6 +178,58 @@ func montar(dado: Dictionary, face_down: bool, em_defesa: bool) -> Node3D:
 	if face_down:
 		no.rotation_degrees = Vector3(0.0, 180.0, 0.0)
 	return no
+
+
+## O CORPO da carta: a malha de `carta_de_duelo.glb`, com o canto arredondado
+## de 2 mm e a espessura de verdade. A fonte e `astralis/assets/3d/fonte/`
+## (`carta_de_duelo.blend`) e quem publica o artefato e
+## `tools/blender/exportar_carta.py`; o `.glb` ja sai com a largura 1,0 e a
+## mesma orientacao que o `BoxMesh` que ele substitui (largura em X, altura em Y,
+## espessura em Z).
+##
+## O `assert` abaixo e a trava da D70 pelo lado do artefato: a medida e DA MESA,
+## e o `.glb` nao pode trazer a dele. Sem a trava, uma fonte reescalada chegaria
+## com a carta 17x menor e ninguem veria — foi o que a espessura fez quando
+## chegou a 0,05 num arquivo e a 0,005 arredondado no outro.
+func _corpo() -> MeshInstance3D:
+	var raiz := MODELO_CARTA.instantiate()
+	var corpo := _primeira_malha(raiz)
+	assert(corpo != null and corpo.mesh != null,
+		"carta_3d: o .glb de assets/3d tem de conter uma MeshInstance3D. "
+		+ "Vazio aqui = artefato corrompido ou importacao quebrada.")
+	if corpo == null or corpo.mesh == null:
+		return MeshInstance3D.new()
+	var caixa := corpo.mesh.get_aabb().size
+	var medida := Vector3(larg_carta, alt_carta, gross_carta)
+	assert(caixa.is_equal_approx(medida),
+		("carta_3d: a medida do .glb nao bate com a da mesa. "
+		+ "modelo=%s mesa=%s. O dono do numero e a mesa: regere o artefato com "
+		+ "tools/blender/exportar_carta.py em vez de corrigir aqui.") % [caixa, medida])
+	# O importador do Godot embrulha o `.glb` num Node3D de raiz em volta da
+	# malha. A carta precisa do Corpo como no DIRETO de Carta3D (o mesmo lugar
+	# onde o BoxMesh ficava, e o que os testes procuram), entao a malha sobe e
+	# o embrulho vai junto — a transformacao do embrulho e composta nela para
+	# nao perder pose.
+	var embrulho := corpo.get_parent()
+	corpo.transform = (embrulho as Node3D).transform * corpo.transform
+	embrulho.remove_child(corpo)
+	raiz.free()
+	corpo.name = "Corpo"
+	corpo.material_override = mat.call(Color(0.45, 0.30, 0.13))
+	return corpo
+
+
+## Acha a malha em qualquer profundidade. O `.glb` pode chegar com um no de
+## raiz em volta, e o nome do no interno depende do exportador — o que nao pode
+## mudar e a MEDIDA, e ela e conferida em `_corpo`.
+func _primeira_malha(no: Node) -> MeshInstance3D:
+	for c in no.get_children():
+		if c is MeshInstance3D:
+			return c as MeshInstance3D
+		var achado := _primeira_malha(c)
+		if achado != null:
+			return achado
+	return null
 
 
 ## Rótulo 3D do texto da carta (nome, ATK/DEF, selo). `width` do Label3D é em
