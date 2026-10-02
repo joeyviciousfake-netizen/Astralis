@@ -415,39 +415,43 @@ aí vale investigar o modelo.
 sobrepor. Ligado por precaução, e **medido** para saber se ele apertou: se o raio
 medido bate com o raio pedido, o clamp não mexeu em nada.
 
-## 17.8 A DOCUMENTAÇÃO (primeiro passo da R12)
+## 17.8 A DOCUMENTAÇÃO (primeiro passo da R12 e da R17)
 
-O manual do Blender está **na máquina**, em `blender_manual_v520_en.html/`. A
-raiz é `index.html`; o `LEIA-ME-ASTRALIS.md` de dentro explica a origem. Ele
-**não está no git** (1,3 GB, 5.547 arquivos, material de terceiro), e a R12
-existe justamente para ele ser consultado sem depender de internet.
+A documentação de tudo o que se usa fica **na máquina**, fora do git, e a R17
+obriga a lê-la antes de mexer no código.
 
-**Como achar a página.** A árvore do manual é enorme e o menu se repete em
-toda página, então o caminho é **mais rápido que a busca**: vá direto pelo
-caminho do arquivo sob a pasta. O que o Bevel usa, por exemplo, é
+| O quê | Onde | Tamanho |
+|---|---|---|
+| Godot | `Godot Documentation/` (`godot-docs`, branch `master`) | 3.605 arquivos, 443 MB |
+| Blender | `blender_manual_v520_en.html/` | o manual inteiro |
 
-```text
-blender_manual_v520_en.html/modeling/modifiers/generate/bevel.html
+As duas são de terceiro: ficam no disco para consulta e **fora do git**, e o
+portão de documento não as lê (material de outra pessoa não cobra a R14).
+
+**Nenhum dos dois tem um manual na raiz que ajude:**
+no Godot a página inicial é um índice gigante e o caminho do arquivo é mais rápido
+que a busca; no Blender o mesmo. E a pasta do manual do Blender tem um
+`LEIA-ME-ASTRALIS.md` dizendo de onde veio e como se busca dentro dela.
+
+### A cópia local do Godot é do master, e o motor é da `project.godot`
+
+A cópia local documenta a **versão de desenvolvimento**; o motor do projeto é o
+da `project.godot`. Então a documentação **ensina** e **o motor decide**: a
+documentação pode descrever método que ainda não existe na versão que roda.
+
+**Antes de usar qualquer API que a doc marque como recente, confira no motor:**
+
+```gdscript
+ClassDB.class_has_method("MeshInstance3D", "set_surface_override_material")
 ```
 
-Quando a página é grande demais para ler inteira, **grepe o termo** em vez de
-carregar tudo — o menu é o mesmo HTML repetido, então `Select-String` pelo
-assunto resolve.
+O `false` é o aviso: a doc descreve, o motor não tem, e escrever o código assim é
+levar o jogo para um caminho que só funciona na versão de amanhã. Conferido nesta
+máquina: o motor é 4.7.2 e a cópia local já menciona 4.8.
 
-O que o manual do Bevel confirma, e que muda o resultado:
-
-- **Limit Method / Weight** — usa o atributo, e peso `0.0` não arredonda nada.
-  É o que permite arredondar só as 4 pontas sem tocar no resto da carta.
-- **Width Type / Offset** — a distância da aresta nova até a original. Num
-  canto de 90 graus isso **é o raio**, que é o que a carta usa.
-- **Loop Slide** (ligado por padrão) — quando uma aresta arredondada encontra
-  uma que não foi, o bevel escorrega pela vizinha; desligar dá largura mais
-  uniforme.
-- **Miter Shape** não tem efeito com menos de 2 segmentos.
-
-Na internet, o mesmo manual fica em
-<https://docs.blender.org/manual/en/latest/> — mas a cópia local é a que não
-depende de conexão.
+**Escreva o caminho da doc no comentário, não a API de memória.** A API muda de
+nome e de assinatura entre versões; o caminho `Godot Documentation/classes/class_meshinstance3d.rst`
+continua apontando para a verdade.
 
 ## 17.9 O QUE REGISTRAR AQUI
 

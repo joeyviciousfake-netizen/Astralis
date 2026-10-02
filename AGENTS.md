@@ -97,6 +97,17 @@ não existe ou excesso de tamanho. **Corrige o doc, não o portão.**
   custo sai da topologia (`triângulos = 16 × segmentos + 12` numa peça
   arredondada), então o segmento do arco é o único botão e se escolhe sabendo o
   que custa. Medição, conta e receita em `docs/17_BLENDER.md` §17.5.
+- R17: **Documentação antes do código.** Antes de escrever ou mexer em código,
+  ler a documentação do que se vai usar — o motor muda o tempo todo, e o jeito
+  fácil já existe quase sempre. Onde: `Godot Documentation/` para o Godot
+  (`classes/class_<classe>.rst`), `docs/17_BLENDER.md` para o Blender, e a
+  internet só quando a cópia local não responder.
+  **A cópia local do Godot é do `master`, que documenta a versão de
+  desenvolvimento; o motor do projeto é o da `project.godot`.** Então a
+  documentação ensina e **o motor decide**: `ClassDB.class_has_method(classe,
+  metodo)` diz se a API existe na versão que roda. Confira antes de usar
+  qualquer coisa que a doc marque como recente, e escreva o caminho em vez de
+  adivinhar a API.
 
 ## 3. DONOS POR PASTA (respeite)
 

@@ -42,3 +42,9 @@ __pycache__/
 # consultar a documentacao antes de fazer algo que nao se sabe. Como buscar
 # dentro dela esta em `docs/17_BLENDER.md`.
 blender_manual_v520_en.html/
+
+# Documentacao do Godot (godot-docs, branch master = 4.8-dev). Fica NA MAQUINA
+# para consulta e NAO no git: sao 3.605 arquivos e 443 MB de material de terceiro.
+# A regra que manda e a R17: ler a documentacao antes de mexer no codigo. Onde
+# procurar esta em `docs/17_BLENDER.md`.
+Godot Documentation/

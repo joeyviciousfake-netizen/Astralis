@@ -9,28 +9,184 @@
     "docs/DECISOES.md"
   ],
   "ops_files": {
-    "SESSAO_ATUAL.md": { "mutable": "every_turn", "purpose": "onde paramos + proximo passo" },
-    "DECISOES.md": { "mutable": "append_only_by_user_decision", "purpose": "travas, nao reabrir" }
+    "SESSAO_ATUAL.md": {
+      "mutable": "every_turn",
+      "purpose": "onde paramos + proximo passo"
+    },
+    "DECISOES.md": {
+      "mutable": "append_only_by_user_decision",
+      "purpose": "travas, nao reabrir"
+    }
   },
   "spec_files": [
-    { "file": "docs/00_INDICE_GERAL.md", "owner": "lead", "purpose": "mapa + changelog", "depends_on": [] },
-    { "file": "docs/01_VISAO_PRODUTO.md", "owner": "lead", "purpose": "identidade, modelo, sucesso", "depends_on": ["00"] },
-    { "file": "docs/02_PRINCIPIOS_ARQUITETURAIS.md", "owner": "lead", "purpose": "inviolaveis DATA!=LOGIC, sem motor paralelo", "depends_on": ["00", "01"] },
-    { "file": "docs/03_STACK_DISTRIBUICAO.md", "owner": "lead", "purpose": "dev vs produto, modos", "depends_on": ["02"] },
-    { "file": "docs/04_CONTRATO_DADOS.md", "owner": "systems", "purpose": "schemas, versionamento, IDs", "depends_on": ["02"] },
-    { "file": "docs/05_RUNTIME_DUELO.md", "owner": "runtime", "purpose": "duelo, carta, deck, duelista + AI preset", "depends_on": ["02", "04"] },
-    { "file": "docs/06_SISTEMA_FUSAO.md", "owner": "runtime+systems", "purpose": "receita + regra", "depends_on": ["04", "05"] },
-    { "file": "docs/07_SISTEMA_EFEITOS.md", "owner": "runtime+systems+editor", "purpose": "trigger/condition/target/action/flow + templates", "depends_on": ["04", "05"] },
-    { "file": "docs/08_CAMPANHA.md", "owner": "campaign", "purpose": "grafo, cena, battle win/lose, flags-lite", "depends_on": ["04"] },
-    { "file": "docs/09_STUDIO_EDITOR.md", "owner": "editor", "purpose": "editores, UX, starter kit, wizard", "depends_on": ["04", "05", "06", "07", "08"] },
-    { "file": "docs/10_PREVIEW_TESTE_DEBUG.md", "owner": "qa+runtime+editor", "purpose": "preview unificado, test lab minimo, GUT", "depends_on": ["05", "06", "07", "08"] },
-    { "file": "docs/11_ROADMAP.md", "owner": "lead", "purpose": "mvp, roadmap, donos por pasta, workflow", "depends_on": ["00"] },
-    { "file": "docs/12_DISTRIBUICAO_EXPORTACAO.md", "owner": "systems+runtime+editor", "purpose": ".astralis binario + cadeado + bundles", "depends_on": ["03", "04"] },
-    { "file": "docs/13_TABULEIRO_DUELO.md", "owner": "lead", "purpose": "zonas 5+5, fases, mao, LP, win/lose + duel_setup + a arena oficial (D50 §13.10.3: UMA arena, e ela e do jogo)", "depends_on": ["02", "04", "05"] },
-    { "file": "docs/14_EXPERIENCIA_USUARIO.md", "owner": "lead", "purpose": "padrao Simples/Avancado, galeria, erros PT-BR, guia 5min", "depends_on": ["01", "05", "06", "07", "08", "09", "10"] },
-    { "file": "docs/15_VISUAL_DUELO.md", "owner": "lead", "purpose": "contrato visual da mesa: medida da ref, SubViewport (sem perspectiva torta), fonte de cada imagem", "depends_on": ["02", "04", "05", "13", "14"] },
-    { "file": "docs/16_PERSPECTIVA_CAMPO.md", "owner": "lead", "purpose": "o ponto de vista da mesa: a camera gira em volta do campo (D47), a vista do rival e o espelho exato (D51), as duas maos trocam de lugar (D52) e o desenho nao se mexe sem precisar (D53). Ler ANTES de mexer na mesa", "depends_on": ["13", "14", "15"] },
-    { "file": "docs/17_BLENDER.md", "owner": "runtime", "purpose": "GUIA DE TRABALHO do Blender: abrir o Blender com o MCP e o passo a passo de um modelo em medida real. Cresce a cada modelo. A regra que manda e a R12", "depends_on": ["15"] }
+    {
+      "file": "docs/00_INDICE_GERAL.md",
+      "owner": "lead",
+      "purpose": "mapa + changelog",
+      "depends_on": []
+    },
+    {
+      "file": "docs/01_VISAO_PRODUTO.md",
+      "owner": "lead",
+      "purpose": "identidade, modelo, sucesso",
+      "depends_on": [
+        "00"
+      ]
+    },
+    {
+      "file": "docs/02_PRINCIPIOS_ARQUITETURAIS.md",
+      "owner": "lead",
+      "purpose": "inviolaveis DATA!=LOGIC, sem motor paralelo",
+      "depends_on": [
+        "00",
+        "01"
+      ]
+    },
+    {
+      "file": "docs/03_STACK_DISTRIBUICAO.md",
+      "owner": "lead",
+      "purpose": "dev vs produto, modos",
+      "depends_on": [
+        "02"
+      ]
+    },
+    {
+      "file": "docs/04_CONTRATO_DADOS.md",
+      "owner": "systems",
+      "purpose": "schemas, versionamento, IDs",
+      "depends_on": [
+        "02"
+      ]
+    },
+    {
+      "file": "docs/05_RUNTIME_DUELO.md",
+      "owner": "runtime",
+      "purpose": "duelo, carta, deck, duelista + AI preset",
+      "depends_on": [
+        "02",
+        "04"
+      ]
+    },
+    {
+      "file": "docs/06_SISTEMA_FUSAO.md",
+      "owner": "runtime+systems",
+      "purpose": "receita + regra",
+      "depends_on": [
+        "04",
+        "05"
+      ]
+    },
+    {
+      "file": "docs/07_SISTEMA_EFEITOS.md",
+      "owner": "runtime+systems+editor",
+      "purpose": "trigger/condition/target/action/flow + templates",
+      "depends_on": [
+        "04",
+        "05"
+      ]
+    },
+    {
+      "file": "docs/08_CAMPANHA.md",
+      "owner": "campaign",
+      "purpose": "grafo, cena, battle win/lose, flags-lite",
+      "depends_on": [
+        "04"
+      ]
+    },
+    {
+      "file": "docs/09_STUDIO_EDITOR.md",
+      "owner": "editor",
+      "purpose": "editores, UX, starter kit, wizard",
+      "depends_on": [
+        "04",
+        "05",
+        "06",
+        "07",
+        "08"
+      ]
+    },
+    {
+      "file": "docs/10_PREVIEW_TESTE_DEBUG.md",
+      "owner": "qa+runtime+editor",
+      "purpose": "preview unificado, test lab minimo, GUT",
+      "depends_on": [
+        "05",
+        "06",
+        "07",
+        "08"
+      ]
+    },
+    {
+      "file": "docs/11_ROADMAP.md",
+      "owner": "lead",
+      "purpose": "mvp, roadmap, donos por pasta, workflow",
+      "depends_on": [
+        "00"
+      ]
+    },
+    {
+      "file": "docs/12_DISTRIBUICAO_EXPORTACAO.md",
+      "owner": "systems+runtime+editor",
+      "purpose": ".astralis binario + cadeado + bundles",
+      "depends_on": [
+        "03",
+        "04"
+      ]
+    },
+    {
+      "file": "docs/13_TABULEIRO_DUELO.md",
+      "owner": "lead",
+      "purpose": "zonas 5+5, fases, mao, LP, win/lose + duel_setup + a arena oficial (D50 §13.10.3: UMA arena, e ela e do jogo)",
+      "depends_on": [
+        "02",
+        "04",
+        "05"
+      ]
+    },
+    {
+      "file": "docs/14_EXPERIENCIA_USUARIO.md",
+      "owner": "lead",
+      "purpose": "padrao Simples/Avancado, galeria, erros PT-BR, guia 5min",
+      "depends_on": [
+        "01",
+        "05",
+        "06",
+        "07",
+        "08",
+        "09",
+        "10"
+      ]
+    },
+    {
+      "file": "docs/15_VISUAL_DUELO.md",
+      "owner": "lead",
+      "purpose": "contrato visual da mesa: medida da ref, SubViewport (sem perspectiva torta), fonte de cada imagem",
+      "depends_on": [
+        "02",
+        "04",
+        "05",
+        "13",
+        "14"
+      ]
+    },
+    {
+      "file": "docs/16_PERSPECTIVA_CAMPO.md",
+      "owner": "lead",
+      "purpose": "o ponto de vista da mesa: a camera gira em volta do campo (D47), a vista do rival e o espelho exato (D51), as duas maos trocam de lugar (D52) e o desenho nao se mexe sem precisar (D53). Ler ANTES de mexer na mesa",
+      "depends_on": [
+        "13",
+        "14",
+        "15"
+      ]
+    },
+    {
+      "file": "docs/17_BLENDER.md",
+      "owner": "runtime",
+      "purpose": "GUIA DE TRABALHO do Blender: abrir o Blender com o MCP, o passo a passo de um modelo em medida real e a topologia que entra no jogo. E ONDE VIVE A DOCUMENTACAO de terceiro (manual do Blender e godot-docs), fora do git, para consulta. A regra que manda e a R12, e a R17",
+      "depends_on": [
+        "15"
+      ]
+    }
   ],
   "contract_files": {
     "owner": "systems",
@@ -75,7 +231,7 @@
       "astralis/ai/ia_rival.gd = as duas decisoes do rival (D68)"
     ]
   },
-"rules": [
+  "rules": [
     "R1 runtime unica verdade gameplay",
     "R2 proibido Fake engine",
     "R3 DATA != LOGIC",
@@ -89,7 +245,10 @@
     "R11 o log de BOOT do jogo e contrato (o test_project_arg le); o diagnostico so com `-- --debug`",
     "R12 regra das ferramentas: nativa do programa -> pesquisa na internet -> manual so em ultimo caso",
     "R13 antes de anexar uma decisao Dnn em DECISOES.md, olhe a MAIOR que ja existe la (o indice do fim do arquivo e as entradas `**Dxx:` no corpo) e use a seguinte: duas IA escrevendo no mesmo repositorio colidem no numero, e o Dnn e o indice do projeto. A decisao tambem entra no INDICE do fim do arquivo, nao so no corpo",
-    "R14 COMO SE ESCREVE DOC (vale tambem p/ comentario de codigo): D1 mudou -> apaga o texto antigo e escreve o novo no lugar, sem explicar a mudanca; D2 o que nunca esteve -> escreve novo; D3 o motivo e atemporal e se escreve ('X e Y porque Z, senão W'), a transicao entre um estado e outro nao; NUNCA entra data, versao, changelog, citacao do usuario, hash de commit, contagem de teste, 'o que se perdeu' ou 'o que foi tentado antes' (tudo isso esta no git log); SEMPRE entra a regra como ela e, o numero com o dono do numero, o caminho do dado, o motivo e o que nao pode ser feito; decisao que ficou sem valor SAI do DECISOES.md inteiro, sem linha de 'supersedida' (numero reservado marca buraco, como a D13 e a D46)"
+    "R14 COMO SE ESCREVE DOC (vale tambem p/ comentario de codigo): D1 mudou -> apaga o texto antigo e escreve o novo no lugar, sem explicar a mudanca; D2 o que nunca esteve -> escreve novo; D3 o motivo e atemporal e se escreve ('X e Y porque Z, senão W'), a transicao entre um estado e outro nao; NUNCA entra data, versao, changelog, citacao do usuario, hash de commit, contagem de teste, 'o que se perdeu' ou 'o que foi tentado antes' (tudo isso esta no git log); SEMPRE entra a regra como ela e, o numero com o dono do numero, o caminho do dado, o motivo e o que nao pode ser feito; decisao que ficou sem valor SAI do DECISOES.md inteiro, sem linha de 'supersedida' (numero reservado marca buraco, como a D13 e a D46)",
+    "R15 modelagem 3D na frente da pessoa, nunca headless: onde o trabalho e' num programa com janela, abre o programa e mostra o estado a cada passo",
+    "R16 tri e quad entram em malha de jogo, n-gon nao; face medida antes de exportar",
+    "R17 documentacao antes do codigo: ler a doc do que se vai usar, e o motor arbitra a versao (ClassDB.class_has_method) porque a copia local e' do master"
   ],
   "change_protocol": {
     "schema_ou_protocolo": "mudar contract_files exige: 1) atualizar este manifest 2) atualizar docs/04 e o README de schemas/ 3) espelhar a mesma regra no Studio (checar_* em main.rs) 4) rodar tools/fm_import.py --check 5) registrar em DECISOES.md e SESSAO_ATUAL.md",

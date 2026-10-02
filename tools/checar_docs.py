@@ -150,12 +150,18 @@ def teto_kb(rel: str) -> float:
 
 
 def achar_docs() -> list[Path]:
-    """Todos os .md do repo, menos build e pasta de dependencia."""
+    """Todos os .md do repo, menos build, dependencia e doc de terceiro."""
     achados: list[Path] = []
     for padrao in ("**/*.md", "AGENTS.md"):
         for p in REPO.glob(padrao):
             partes = set(p.parts)
             if partes & {"node_modules", "target", ".godot", ".svelte-kit", "Godot"}:
+                continue
+            # Documentacao de TERCEIRO que fica na maquina para consulta (R17):
+            # o manual do Blender e o godot-docs. Sao .rst/.md de outra pessoa,
+            # com data, versao e changelog de sobra — o portao nao pode cobrar a
+            # R14 delas, e o tamanho delas nao e orcamento nosso.
+            if partes & {"blender_manual_v520_en.html", "Godot Documentation"}:
                 continue
             if p.is_file() and p not in achados:
                 achados.append(p)
@@ -200,10 +206,17 @@ def checar_caminhos(caminho: Path, rel: str, achados: list[dict]) -> None:
         # .apack. Sem esta ressalva o portao acusaria o contrato do pack.
         dentro_de_pacote = bool(re.search(r"(?i)\.apack|\bpack\b|\bzip\b", linha))
 
+        # Documentacao de TERCEIRO (R17): o caminho e' real, mas vive numa pasta
+        # que NAO esta no git, entao num clone novo ela nao existe e o portao
+        # acusaria um caminho legitimo. Accepto o caminho quando a primeira
+        # pasta e' uma dessas, sem checar em disco.
+        de_terceiro = bool(re.search(
+            r"(?i)\b(?:Godot Documentation|blender_manual_v520_en\.html)/", linha))
+
         # Relativo com barra: docs/NUM.md, astralis/duel/duel_manager.gd
         for achado in RE_CAMINHO_REL.finditer(linha):
             alvo = achado.group("c")
-            if dentro_de_pacote:
+            if dentro_de_pacote or de_terceiro:
                 continue
             if (REPO / alvo).exists():
                 continue
