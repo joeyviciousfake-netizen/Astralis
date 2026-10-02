@@ -59,7 +59,7 @@ if ($Blend) { $argumentos += @("--", $Blend) }
 # O Blender e um app GUI: o stdout dele morre com o processo, entao nao ha como
 # "ver o que ele Prints" sem sequestrar o console de alguem. Tres formas foram
 # testadas nesta maquina e duas quebram:
-#   sem nada          -> o aviso some (foi assim que o D62 passou meses sem ninguem ver)
+#   sem nada          -> o aviso some (foi assim que o aviso de GPU passou meses sem ninguem ver)
 #   -NoNewWindow      -> o Blender divide o console do shell: encerrar o Blender
 #                        derruba junto o shell que o lancou
 #   -Redirect...      -> trava o PowerShell
@@ -86,7 +86,7 @@ if (Test-Path $status) {
     if ($s.backend -and $s.backend -ne "nenhum") {
         Write-Host ("Cycles: backend {0} | {1}" -f $s.backend, ($s.gpus -join ", ")) -ForegroundColor Cyan
     } else {
-        Write-Host "Cycles: NENHUMA GPU — o projeto NAO renderiza em CPU (D62)." -ForegroundColor Red
+        Write-Host "Cycles: NENHUMA GPU — o projeto NAO renderiza em CPU." -ForegroundColor Red
     }
     if ($s.mcp) {
         Write-Host ("MCP do Blender: NO AR na porta {0} (arquivo: {1})" -f $s.porta, $s.arquivo) -ForegroundColor Green

@@ -12,13 +12,13 @@ como nao-confiavel e quem manda no inicio e ESTE arquivo.
 O QUE ELE FAZ, em ordem:
   1. habilita o add-on, se ainda nao estiver (idempotente);
   2. abre o `.blend` pedido (o arquivo que a pessoa vai editar), se houver;
-  3. FORCA o Cycles na GPU (D62) — o backend e preferencia de maquina, nao mora
+  3. FORCA o Cycles na GPU — o backend e preferencia de maquina, nao mora
      no `.blend`, entao quem escolhe e este arquivo;
   4. sobe o servidor MCP na porta ASTRALIS_MCP_PORT (padrao 9876);
   5. imprime a linha de confirmacao — se ela nao aparecer, o MCP esta fora.
 
 O PROJETO RENDERIZA EM CYCLES NA GPU E NAO EM CPU. Isso nao e preferencia,
-e a invariante do D62: um render "de GPU" que escorrega para a CPU em silencio
+e a invariante: um render "de GPU" que escorrega para a CPU em silencio
 nao prova nada, que e a mesma familia do defeito que o D50 apagou. Entao, se
 nenhuma GPU for encontrada, o script AVISA em vez de seguir calado.
 
@@ -26,9 +26,9 @@ COMO RODAR (e o que o `abrir_blender.ps1` faz por voce):
     & "C:\\Program Files\\Blender Foundation\\Blender 5.2\\blender.exe" `
         --python tools/blender/iniciar_blender.py -- "caminho.blend"
 
-NAO E' o jogo: aqui nao mora regra nenhuma (R1). E' a mao que o runtime usa
-para produzir `assets/3d/*.glb` — e o unico caminho de entrada do Blender
-para o repositorio (o outro lado e o exportador).
+NAO E' o jogo: aqui nao mora regra nenhuma (R1). E' a ferramenta que abre o
+Blender com o socket do MCP no ar, para modelar e exportar o que o runtime
+usa.
 """
 
 import json
@@ -65,7 +65,7 @@ def registrar(**campos):
 
 
 def deixar_cycles_na_gpu():
-    """D62: o projeto renderiza em CYCLES, na GPU. A maquina tem RTX 5060 e o
+    """O render do projeto e em CYCLES, na GPU. A maquina tem RTX 5060 e o
     backend medido e OPTIX (Blender 5.2.2 LTS ve a 5060 em OPTIX e em CUDA).
 
     O backend e preferencia de MAQUINA (nao mora no .blend), entao e aqui que
@@ -96,7 +96,7 @@ def deixar_cycles_na_gpu():
         print("[ASTRALIS] Cycles: backend %s | %s" % (backend, ", ".join(d.name for d in gpus)))
         return backend, [d.name for d in gpus]
     print("[ASTRALIS] ATENCAO: NENHUMA GPU encontrada para o Cycles (OPTIX/CUDA/HIP/ONEAPI). "
-          "O projeto NAO renderiza em CPU (D62): se o render saiu do mesmo jeito, o backend "
+          "O projeto NAO renderiza em CPU: se o render saiu do mesmo jeito, o backend "
           "esta errado e a previa nao serve como prova.")
     return "nenhum", []
 
@@ -166,7 +166,7 @@ def main():
     registrar(addon=True, mcp=mcp, porta=porta(), backend=backend, gpus=gpus,
               arquivo=bpy.data.filepath or "(vazio)")
     if not abrir:
-        print("[ASTRALIS] Dica: passe o .blend depois de '--', ex.: --python iniciar_blender.py -- assets/3d/fonte/x.blend")
+        print("[ASTRALIS] Dica: passe o arquivo depois de '--', ex.: --python iniciar_blender.py -- modelo.blend")
 
 
 main()

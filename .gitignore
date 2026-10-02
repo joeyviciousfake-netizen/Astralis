@@ -32,6 +32,6 @@ Desktop.ini
 __pycache__/
 *.pyc
 
-# Blender: backup automatico que o proprio Blender cria ao salvar por cima
-# (o .blend da FONTE e' versionado de proposito, doc 17; o .blend1 e' lixo)
+# Blender: backup automático que o próprio Blender cria ao salvar por cima
+# de um arquivo. É lixo sempre: o dono do arquivo é quem decide a versão.
 *.blend1
