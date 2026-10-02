@@ -15,6 +15,11 @@ Se o usuário disser só "continue", retome de `SESSAO_ATUAL.próximo_passo`.
 
 ## 2. REGRAS DURAS (nunca violar)
 
+Antes de commitar o que toca `docs/`, rode o portão: `python tools/checar_docs.py`.
+É a R14 virando trava (regex contra o disco, sem IA). `rc=1` significa que o doc
+guarda data, versão, contagem de teste, hash, narrativa de mudança, caminho que
+não existe ou excesso de tamanho. **Corrige o doc, não o portão.**
+
 - R1: Astralis = runtime, única verdade de gameplay. Studio nunca calcula resultado.
 - R2: Proibido `FakeDuelEngine/Effect/Fusion/Campaign`. Preview/Test usam Astralis real.
 - R3: DATA != LOGIC. Novo conteúdo = dado, não código. Sem script por carta.
