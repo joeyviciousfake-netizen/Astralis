@@ -5,9 +5,10 @@
 > direto e sem história.
 >
 > Dono: Runtime (o `.blend` é do asset que o runtime usa). Ferramentas em
-> `tools/blender/`. A regra que manda em tudo aqui é a **R12**: nativa do
-> programa → internet → manual, e manual só para o que a ferramenta não faz,
-> com a topologia medida antes de gravar.
+> `tools/blender/`. A regra que manda em tudo aqui é a **R12**, e o primeiro
+> passo dela é **consultar a documentação** — este documento e o manual do
+> Blender em `blender_manual_v520_en.html/` (§17.6) — antes de fazer algo que
+> não se sabe ou não se tem certeza.
 
 ## 17.1 ABRIR O BLENDER COM O MCP
 
@@ -234,27 +235,43 @@ aí vale investigar o modelo.
 sobrepor. Ligado por precaução, e **medido** para saber se ele apertou: se o raio
 medido bate com o raio pedido, o clamp não mexeu em nada.
 
-## 17.6 ONDE ESTÁ O MANUAL
+## 17.6 A DOCUMENTAÇÃO (primeiro passo da R12)
 
-`https://docs.blender.org/manual/en/latest/` — a página é o índice giant de
-menu, então va pela URL direta da seção. A do Bevel, que é a que mais importa
-aqui:
+O manual do Blender está **na máquina**, em `blender_manual_v520_en.html/`. A
+raiz é `index.html`; o `LEIA-ME-ASTRALIS.md` de dentro explica a origem. Ele
+**não está no git** (1,3 GB, 5.547 arquivos, material de terceiro), e a R12
+existe justamente para ele ser consultado sem depender de internet.
 
-<https://docs.blender.org/manual/en/latest/modeling/modifiers/generate/bevel.html>
+**Como achar a página.** A árvore do manual é enorme e o menu se repete em
+toda página, então o caminho é **mais rápido que a busca**: vá direto pelo
+caminho do arquivo sob a pasta. O que o Bevel usa, por exemplo, é
 
-Ela confirma o modo `WEIGHT` (usa o atributo, e peso `0.0` não arredonda nada) e
-que em `Offset` o valor é a distância da aresta nova até a original — num canto de
-90° isso **é** o raio.
+```text
+blender_manual_v520_en.html/modeling/modifiers/generate/bevel.html
+```
 
-Duas coisas do manual que mudam o resultado:
+Quando a página é grande demais para ler inteira, **grepe o termo** em vez de
+carregar tudo — o menu é o mesmo HTML repetido, então `Select-String` pelo
+assunto resolve.
 
-- **Loop Slide** (ligado por padrão): quando uma aresta arredondada encontra uma
-  que não foi, o bevel escorrega pela vizinha. Desligar dá largura mais uniforme.
+O que o manual do Bevel confirma, e que muda o resultado:
+
+- **Limit Method / Weight** — usa o atributo, e peso `0.0` não arredonda nada.
+  É o que permite arredondar só as 4 pontas sem tocar no resto da carta.
+- **Width Type / Offset** — a distância da aresta nova até a original. Num
+  canto de 90 graus isso **é o raio**, que é o que a carta usa.
+- **Loop Slide** (ligado por padrão) — quando uma aresta arredondada encontra
+  uma que não foi, o bevel escorrega pela vizinha; desligar dá largura mais
+  uniforme.
 - **Miter Shape** não tem efeito com menos de 2 segmentos.
+
+Na internet, o mesmo manual fica em
+<https://docs.blender.org/manual/en/latest/> — mas a cópia local é a que não
+depende de conexão.
 
 ## 17.7 O QUE REGISTRAR AQUI
 
-Toda vez que um modelo teach algo — uma armadilha de escala, um enum que não é
+Toda vez que um modelo ensina algo — uma armadilha de escala, um enum que não é
 o que o nome diz, um limite que só aparece em medida real —, o certo é **entrar
 neste documento** como regra, com o motivo, e não como memória do que deu errado.
 O histórico é o `git log`; aqui é o que vale.

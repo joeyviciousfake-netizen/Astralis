@@ -69,22 +69,36 @@ Teste descartável vive e morre na mesma sessão: cria isolado, mostra, apaga.
 
 Auditoria: todo fim de sessão, `git status` só mostra trabalho intencional.
 
-## 2.8 Usar a ferramenta antes de refazer a mao (D71)
+## 2.8 Consultar a documentacao antes de refazer a mao (D71)
 
-Antes de escrever qualquer coisa na mao, perguntar se ja existe ferramenta. A
-ordem e' a regra:
+Antes de escrever qualquer coisa na mao, e' a documentacao que responde se ja
+existe ferramenta. A ordem e' a regra:
 
-1. **Ferramenta nativa** — use o que o programa ja tem. O Blender tem bevel,
+1. **Documentacao, quando nao se sabe ou nao se tem certeza** — o
+   `docs/17_BLENDER.md` e o manual do programa (a copia local quando existe).
+   Consultar antes e' o caminho curto; consultar depois de errar e' registro
+   de erro. E' o passo que responde a pergunta "isto ja existe?", e por isso
+   vem antes de qualquer ferramenta.
+2. **Ferramenta nativa** — use o que o programa ja tem. O Blender tem bevel,
    subdiv, remesh, snap, proportional edit, boolean e Geometry Nodes: ele
    **gera a topologia por voce**. Nao e' vergonha usar; e' o caminho curto.
-2. **Pesquisa** — se nao sabe qual ferramenta existe ou como se usa, pesquise
-   na internet antes de inventar. Nada de reconstruir por deducao.
-3. **Manual** — so em ultimo caso, so para o que a ferramenta realmente nao
+3. **Pesquisa** — se a documentacao nao respondeu e voce nao sabe qual
+   ferramenta existe ou como se usa, pesquise na internet antes de inventar.
+   Nada de reconstruir por deducao.
+4. **Manual** - so em ultimo caso, so para o que a ferramenta realmente nao
    faz, e medindo a topologia antes de gravar.
 
-**Por que isso e' principio e nao conselho:** um teste que RECUSA entrada errada
+**Por que 1 e 4 nao sao a mesma coisa, mesmo quando o arquivo e' o mesmo:** no
+Blender a copia local e' a documentacao E o manual. O que muda e' a intencao. No
+passo 1 a documentacao e' **a busca** da resposta - "isto ja existe?" - e essa
+leitura vem antes de qualquer acao. No passo 4 o manual e' a **ultima tentativa**
+para o que a ferramenta comprovadamente nao faz, e so vem depois de medir a
+topologia para provar que o nativo chegou no limite.
+
+**Por que isto e' principio e nao conselho:** um teste que RECUSA entrada errada
 e' rede de seguranca, nao metodo de trabalho. Ele so age depois que voce ja
-construiu a coisa errada. A regra move o erro para antes — e um portao que
-recusa malha serve para provar a regra, nao para ser o metodo.
+construiu a coisa errada — e a documentacao e' o que move o erro para antes, sem
+nem chegar a construir. Um portao que recusa malha serve para provar a regra,
+nao para ser o metodo.
 
 Vale para qualquer programa com ferramenta boa, nao so para o Blender.

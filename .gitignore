@@ -35,3 +35,10 @@ __pycache__/
 # Blender: backup automático que o próprio Blender cria ao salvar por cima
 # de um arquivo. É lixo sempre: o dono do arquivo é quem decide a versão.
 *.blend1
+
+# Documentacao do Blender 5.2 (o manual inteiro, do site docs.blender.org).
+# Fica NA MAQUINA para consulta, e nao no git: sao 5.547 arquivos e 1,3 GB, e o
+# repositorio nao versiona material de terceiro. A regra que manda e a R12:
+# consultar a documentacao antes de fazer algo que nao se sabe. Como buscar
+# dentro dela esta em `docs/17_BLENDER.md`.
+blender_manual_v520_en.html/

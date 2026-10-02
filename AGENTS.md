@@ -37,7 +37,22 @@ não existe ou excesso de tamanho. **Corrige o doc, não o portão.**
   decisão (que já está em DECISOES.md).
 - R11: O log de BOOT do jogo é contrato (o `test_project_arg` lê). Diagnóstico
   só com `-- --debug`.
-- R12: **Regra das ferramentas:** em qualquer programa, a ordem é **ferramenta nativa → pesquisa na internet → manual, só em último caso.** O Blender já tem bevel, subdiv, remesh, snap e Geometry Nodes, e ele **gera a topologia por você**. Antes de reconstruir geometria à mão, pergunte "o programa já faz isso?". Se não souber qual ferramenta existe ou como se usa, pesquise na internet. Manual é só para o que a ferramenta realmente não faz, e com a topologia medida antes de gravar. Vale para qualquer programa, não só Blender.
+- R12: **Regra das ferramentas:** em qualquer programa, a ordem é
+  **documentação → ferramenta nativa → pesquisa na internet → manual, só em
+  último caso.**
+  1. **Documentação, antes de fazer o que não se sabe ou não se tem certeza:**
+     o `docs/17_BLENDER.md` e o manual do programa (a cópia local quando
+     existe, ver `blender_manual_v520_en.html/`). Consultar antes é o caminho
+     curto; consultar depois de errar é registro de erro.
+  2. **Ferramenta nativa** — o que o programa já tem. O Blender tem bevel,
+     subdiv, remesh, snap e Geometry Nodes, e ele **gera a topologia por
+     você**. Antes de reconstruir geometria à mão, pergunte "o programa já faz
+     isso?".
+  3. **Pesquisa na internet** — quando não se sabe qual ferramenta existe ou
+     como se usa.
+  4. **Manual, só em último caso** — só para o que a ferramenta realmente não
+     faz, e com a topologia medida antes de gravar.
+  Vale para qualquer programa, não só Blender.
 - R13: Antes de anexar uma decisão `Dnn` em DECISOES.md, olhe a MAIOR que já
   existe lá e use a seguinte. Ela entra no corpo **e** no índice do fim do
   arquivo.
