@@ -148,6 +148,25 @@ func girar_para(alvo: float) -> void:
 	ao_virar.call()
 
 
+## COLOCA a mesa em `alvo` sem a volta animada, e avisa a mesa pelo mesmo
+## `ao_vivar` do giro — só não há tween. É o que o BOOT usa quando o motor já
+## disse que o RIVAL começa: a tela é o ponto de vista de quem joga, então ela
+## tem de NASCER na vista dele. Sem isto a mesa aparece na sua frente e gira
+## depois, e o primeiro quadro do duelo mente sobre quem está jogando.
+##
+## Não é pular a volta (que na troca de vez do meio do duelo é obrigatória e
+## continua passando por `girar_para`): aqui não existe "volta" porque nunca
+## houve um lado anterior — a mesa sempre esteve, e desde o primeiro quadro, na
+## vista de quem tem a vez.
+func colocar_vista(alvo: float) -> void:
+	if cam == null:
+		return
+	giro_campo = alvo
+	girando = false
+	aplicar()
+	ao_virar.call()
+
+
 ## Um passo da volta (0..1 do caminho). O pivo gira na MESMA proporcao, a camera
 ## recua junto (D51), as MAOS trocam de lugar nos 90° (D52) e o HUD 2D
 ## acompanha pelo `escala_do_virar`.

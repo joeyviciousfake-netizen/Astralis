@@ -14,9 +14,10 @@ onde_estamos: "A carta de duelo é desenhada com `BoxMesh` procedural, medida no
   `python tools/checar_docs.py` recusa data, versão, contagem de teste, hash de
   commit, narrativa de mudança, caminho morto e excesso de tamanho."
 
-faz_agora: "A limpeza dos documentos pela R14, doc a doc: o que mudou é
-  reescrito no lugar e o que nunca esteve é escrito novo. O portão é
-  `python tools/checar_docs.py`, e ele tem de continuar dando `rc=0`."
+faz_agora: "O bug da vista do primeiro quadro: quando o rival começa, a mesa nascia na
+  sua perspectiva e girava durante o turno dele. A vista ganhou `colocar_vista`
+  (mesmo `giro_campo` e mesmo `ao_virar` da volta, sem tween) e o boot coloca a
+  mesa em 180 antes do primeiro quadro. A volta da troca de vez continua inteira."
 
 proximo_passo: "Dividir o `mesa_3d.gd` por assunto (R9): o orquestrador carrega
   assunto demais, e é a maior fonte de recompilacao do projeto. Começa pelo maior
@@ -29,7 +30,7 @@ travas: "R1 a R14 valem (seção 2 do AGENTS.md). Trava do domínio: a arena é 
   jogo e não tem fallback (D50); a lente nunca é deslocada e o `frustum_offset`
   é ZERO (D41, D47); a grade é 263 nas seis direções e 390 entre as fileiras de
   monstro (D49); a carta mede o contrato e a mesa é o único dono do número
-  (D70); efeito não tem motor na mesa (D30); quem manda é o usuário (R7)."
+  (D70); efeito não tem motor na mesa (D30); quem manda é o usuário; a mesa nasce na vista de quem tem a vez (D47)."
 
 dividas: "Motor de efeitos (D30) é o buraco de gameplay maior. Distribuição
   `.astralis` trancada é PLANO, 0% implementado. Campanha é PLANO, 0%

@@ -526,9 +526,15 @@ func _iniciar_turno_do_duelo() -> void:
 		_fala("Duelo já acabou.")
 		return
 	if int(_st.current_player) != 0:
-		# O RIVAL COMEÇOU (o motor sorteou ele). A tela conduz o turno dele
-		# e devolve a vez — nada de esperar o jogador apertar START, porque
-		# o START é dele e ninguém ia apertar.
+		# O RIVAL COMEÇOU (o motor sorteou ele). A tela é o ponto de vista de
+		# QUEM ESTÁ JOGANDO, então ela tem de nascer na vista DELE: quem
+		# começou é o motor (D42), e a mesa é montada depois disso. Sem esta
+		# colocação o primeiro quadro é a sua frente e a volta vem DEPOIS,
+		# durante o turno dele — a tela mentindo sobre quem joga no primeiro
+		# quadro do duelo.
+		_vista.colocar_vista(180.0)
+		# A tela conduz o turno dele e devolve a vez — nada de esperar o
+		# jogador apertar START, porque o START é dele e ninguém ia apertar.
 		_fala("O rival começou o duelo. Ele vai comprar e jogar o turno dele.")
 		_rival_auto()
 		return

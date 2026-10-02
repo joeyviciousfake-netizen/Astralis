@@ -26,6 +26,28 @@ A tela é a visão de **quem está jogando**, e a troca de lado é a **câmera**
 O porquê de mexer nas cartas por perspectiva ser o caminho errado: é mais código
 para o mesmo resultado, e a troca de lado vira espelho.
 
+## 16.1.1 A MESA NASCE NA VISTA DE QUEM TEM A VEZ
+
+Quem tem a vez é quem se vê, **inclusive no primeiro quadro**. A tela monta o
+duelo depois do motor decidir, e a decisão dele é o número que manda: quando o
+rival começa, a mesa é **colocada** na vista de 180 antes de qualquer quadro
+passar, pelo mesmo `giro_campo` e pelo mesmo `ao_virar` da volta — sem tween.
+
+**Não é pular a volta.** Na troca de vez do meio do duelo a volta é obrigatória e
+continua passando por `girar_para`. No boot não existe volta porque nunca houve um
+lado anterior: a mesa sempre esteve, e desde o primeiro quadro, na vista de quem
+joga. Girar até lá mostra a perspectiva de quem **não** está jogando enquanto o
+rival já compra e joga por baixo dela, e a tela mente sobre o dono do turno no
+primeiro segundo do duelo.
+
+| Momento | Quem manda | Como a vista é posta |
+|---|---|---|
+| o boot, com o rival começou | o `current_player` do motor | `colocar_vista(180)` na vista, sem tween |
+| a troca de vez do meio do duelo | o START | `girar_para(180)`, com a volta inteira |
+
+Quem coloca é a vista (`colocar_vista`) e quem chama é a mesa
+(`_iniciar_turno_do_duelo`), porque ela é a que sabe o que o motor devolveu.
+
 ## 16.2 O QUE A CORREÇÃO PRECISA CONTINUAR SATISFEZENDO
 
 A vista do rival é o **espelho exato** da sua, e isso é medido, não estimado.
@@ -119,12 +141,13 @@ ficava invisível; com ela removida, o GUT **vê quem animou**.
 
 | Assunto | Dono |
 |---|---|
-| câmera, pivô, `giro_campo`, `z_simetria`, `girando`, `girar_para()` | `astralis/duel3d/vista_3d.gd` |
+| câmera, pivô, `giro_campo`, `z_simetria`, `girando`, `girar_para()`, `colocar_vista()` | `astralis/duel3d/vista_3d.gd` |
 | `CAM_POS`, `VOLTA_DURACAO`, `ESCALA_CAMPO`, `DESLOC_CAMPO`, janela do SubViewport | `astralis/duel3d/mesa_3d.gd` (a vista **recebe** esses números) |
 | traduzir slot do dado em XZ de mundo | `mesa_3d.gd`, em `pos_slot` (passado por `Callable` para a vista) |
 | lugar das mãos, pose, arco, aquecimento no boot | `mesa_3d.gd`: `_dono_do_lugar_perto`, `_pose_da_mao`, `_pos_mao_arco`, `_aquecer_a_mao` |
 | orquestrar mão e HUD a cada passo da volta | `mesa_3d.gd`: `_aplicar_vista_da_mao_entao_hud` |
 | a porta que o START e os testes chamam | `mesa_3d.gd`: `_girar_campo(alvo)` |
+| colocar a mesa na vista de quem tem a vez, no boot | `mesa_3d.gd`: `_iniciar_turno_do_duelo` chama `colocar_vista` na vista |
 
 A vista **não** conhece a mão nem o HUD: a cada passo ela chama `ao_virar`, e a
 mesa aplica os dois assuntos na ordem da D52.
@@ -143,8 +166,11 @@ mesa aplica os dois assuntos na ordem da D52.
   mãos passa por `_aplicar_vista_da_mao_entao_hud`, e é um lugar só.
 - **Não dar à mão uma segunda cópia do número da vista**, nem resolver a pose de
   uma vez e lembrar (ver 16.4).
-- **Não existe pular a volta.** Ela roda sempre inteira, e o controle fica
-  travado enquanto ela gira.
+- **Não existe pular a volta.** Na troca de vez do meio do duelo ela roda sempre
+  inteira, e o controle fica travado enquanto ela gira.
+- **Não nascer na vista de quem não tem a vez.** A mesa não pode aparecer na sua
+  perspectiva e girar depois quando o rival começou: no boot a vista é *colocada*
+  (`colocar_vista`), e a volta continua sendo só da troca de vez (ver 16.1.1).
 
 ## 16.8 MEDIR
 
@@ -155,5 +181,9 @@ mesa faz o mesmo intervalo de mundo aparecer com 276, 257 e 220 px na tela
 - `python tools/checar_docs.py` não diz nada de vista; o que trava é o GUT.
 - As flags de prova do jogo são `--mesa3d-foto-frame=N`, `--mesa3d-auto-passa=s`
   e `--mesa3d-calib` (doc 15).
-- A trava é `astralis/testing/test_volta_mesa.gd`, que fala com o **nó** da vista
-  por um helper, nunca por dentro da mesa.
+- A volta é travada por `astralis/testing/test_volta_mesa.gd`, que fala com o
+  **nó** da vista por um helper, nunca por dentro da mesa.
+- A vista do primeiro quadro é travada por
+  `astralis/testing/test_turno_quem_comeca.gd`, que **força o caminho com
+  render**: sem render a volta pularia direto para 180 e o defeito seria
+  invisível para o teste.

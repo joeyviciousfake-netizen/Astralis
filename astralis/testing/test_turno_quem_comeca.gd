@@ -107,6 +107,65 @@ func _resumo(st) -> Dictionary:
 
 # ---------- (1) first_p2: O RIVAL COMEÇA E O DUELO ANDA ----------
 
+## A VISTA DO PRIMEIRO QUADRO: quem tem a vez é quem se vê. Com o rival
+## começando, a mesa tem de NASCE na vista dele — não aparecer na sua e girar
+## depois, porque durante essa volta a tela mostra a perspectiva de quem NÃO
+## está jogando enquanto o rival já está comprando e jogando por baixo dela.
+##
+## POR QUE ESTE TESTE FORÇA O CAMINHO COM RENDER: sem render a volta antiga
+## pulava direto para 180 (o `girar_para` tem atalho headless), então o bug
+## seria invisível aqui e o teste passaria com a mesa errada. Forçando o render,
+## a volta vira um tween de um segundo e a mesa errada fica em 0 por esse tempo
+## todo — que é exatamente o que o jogador via. O `giro_campo` é lido no MESMO
+## instante em que o boot devolve, sem esperar quadro nenhum: se a mesa tivesse
+## de girar, ela ainda estaria em 0 aqui.
+func test_rival_comecador_a_mesa_nasce_na_vista_dele() -> void:
+	var par := await _mesa_com_ordem("first_p2")
+	var mesa: Node = par[0]
+	var vista: Node = mesa.get("_vista")
+	# O motor sorteou o rival, então a tela tem de estar na vista DELE já no
+	# primeiro quadro. 180 = visão do rival (o mesmo número da volta).
+	assert_eq(int(par[1].current_player), 1,
+		"Preparo: quem começa é o RIVAL (o motor sorteou, a tela não).")
+	# Render ligado: agora a mesa errada (que gira) ficaria em 0.
+	vista.set("sem_render", Callable(self, "_render_ligado"))
+	vista.set("giro_campo", 0.0)
+	vista.call("aplicar")
+	mesa.call("_iniciar_turno_do_duelo")
+	assert_eq(float(vista.get("giro_campo")), 180.0,
+		"A mesa NASCE na vista do rival: quem tem a vez é quem se vê (sem girar antes).")
+	assert_false(bool(vista.get("girando")),
+		"Não há volta em curso no primeiro quadro (a mesa já nasceu na vista certa).")
+	assert_eq((mesa.get_node("Camada3D/JanelaCampo/Viewport3D/PivoMesa") as Node3D).rotation_degrees.y, 180.0,
+		"O pivô já está nos 180 do rival (a câmera girou junto, sem volta).")
+	# E o número que manda no lugar de baixo é o dono do turno: com a mesa na
+	# vista do rival, quem joga embaixo é o RIVAL (D52). Se isto devolvesse 0,
+	# a sua mão estaria no lugar de quem está jogando.
+	assert_eq(int(mesa.call("_dono_do_lugar_perto")), 1,
+		"O lugar de BAIXO é o do rival (quem tem a vez), então a mão dele fica na frente.")
+	# As DUAS mãos existem e as duas estão de pé de costas na vista do rival
+	# (D52): o verso de uma carta não é o espelho da frente, então virar de
+	# cabeça para baixo mostraria a arte do jogador.
+	var cartas: Node3D = mesa.get_node("Camada3D/JanelaCampo/Viewport3D/Cartas")
+	var p0 := 0
+	var p1 := 0
+	for f in cartas.get_children():
+		if not (f as Node3D).has_meta("mao_dono"):
+			continue
+		if int((f as Node3D).get_meta("mao_dono")) == 0:
+			p0 += 1
+		else:
+			p1 += 1
+	assert_true(p0 > 0, "A sua mão continua desenhada na vista do rival (as duas mãos existem).")
+	assert_true(p1 > 0, "A mão do rival continua desenhada na vista do rival (as duas mãos existem).")
+
+
+## Diz à vista que HÁ RENDER, para o teste acima medir a mesa no instante em que
+## o boot devolve — que é onde a volta errada ainda estaria no meio do caminho.
+func _render_ligado() -> bool:
+	return false
+
+
 func test_first_p2_rival_comeca_compra_joga_e_devolve_a_vez() -> void:
 	# (1) O BUG. first_p2 = o motor diz que o RIVAL começa. Antes a tela
 	# assumia que o primeiro era você, entrava no fluxo da fase da mão e
