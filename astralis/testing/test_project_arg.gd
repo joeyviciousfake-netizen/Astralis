@@ -139,10 +139,13 @@ func after_each() -> void:
 func _rodar_jogo(args_usuario: Array) -> String:
 	# Lança o jogo real com os args de usuário e devolve tudo que ele imprimiu.
 	# `saida` volta como Array de linhas (a última costuma vir sem \n).
+	# Orçamento de quadros do processo filho: o boot abre a distribuição e,
+	# num duelo de moeda, a moeda e a entrega antes do "Duelo começou". Com
+	# pouco quadro o filho sai antes da linha que estes testes leem.
 	var cmd := PackedStringArray([
 		"--headless",
 		"--path", ProjectSettings.globalize_path("res://"),
-		"--quit-after", "60",
+		"--quit-after", "180",
 		"--",
 	])
 	cmd.append_array(PackedStringArray(args_usuario))

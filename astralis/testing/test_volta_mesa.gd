@@ -33,6 +33,7 @@ extends "res://testing/astralis_test_base.gd"
 ## Sem Fake (R2): a cena 3D real + o GameState real do DuelManager.
 
 const SummonSys := preload("res://duel/summon_system.gd")
+const TurnManager := preload("res://duel/turn_manager.gd")
 
 const CARTAS := "Camada3D/JanelaCampo/Viewport3D/Cartas"
 const PIVO := "Camada3D/JanelaCampo/Viewport3D/PivoMesa"
@@ -293,34 +294,109 @@ func test_andar_na_mao_nao_move_a_mao_do_outro_lado() -> void:
 		"D53: e a mao do outro lado nao mudou de lugar (%.3f -> %.3f)." % [
 			x_rival_antes, (rival_depois as Node3D).position.x])
 	assert_eq(int(mesa.get("_col")), 1, "D53: o cursor andou uma carta para a direita.")
-	# --- (a) a compra animada e da mao que COMPROU (medido na hora, sem esperar
-	#     o tween correr, que em headless anda na velocidade do process) ---
+	# --- (a) a compra animada e da mao que COMPROU, e so da carta que COMPROU
+	#     (medido na hora, sem esperar o tween correr, que em headless anda na
+	#     velocidade do process) ---
+	#     A mao tem que CRESCER de verdade, e quem compra e o MOTOR: encher a mao
+	#     na mao faria a entrada achar que nada entrou, e o teste mediria uma tela
+	#     parada fingindo que animou.
 	var deck: Array = mesa.get("_deck_pos")
+	var mao_rival: Array = ((st.players[1] as Dictionary)["hand"] as Array)
+	mao_rival.pop_back()                                   # em 4, como apos invocar
+	var n_antes_rival: int = mao_rival.size()
+	mesa.call("_redesenhar", false)
+	st.set("current_player", 1)
+	TurnManager.draw_for_current(st)
+	var idx_nova_rival: int = mao_rival.size() - 1
 	mesa.call("_redesenhar", true, 1) # compra do RIVAL
+	var nova_rival := _carta_da_mao(mesa, idx_nova_rival, 1) as Node3D
 	var dele := _carta_da_mao(mesa, 0, 1) as Node3D
 	var eu := _carta_da_mao(mesa, 0, 0) as Node3D
-	assert_almost_eq(dele.position.x, float(deck[1].x), 0.001,
-		"D53: na compra do RIVAL a mao DELE e que sai do baralho DELE (x %.2f)." % float(deck[1].x))
+	assert_almost_eq(nova_rival.position.x, float(deck[1].x), 0.001,
+		"D53: na compra do RIVAL a carta QUE COMPROU e que sai do baralho DELE (x %.2f)." % float(deck[1].x))
+	# As OUTRAS nao saem do baralho: elas estao onde a mao as tinha e vao
+	# DESLIZAR ate o lugar novo. Medir o comeco do deslize (e nao o fim) e o que
+	# prova que elas andam — no fim as duas medidas dariam o mesmo numero.
+	assert_almost_eq(dele.position.x, (mesa.call("_pos_mao_arco", 0, n_antes_rival, 1) as Vector3).x, 0.0001,
+		"D53: as OUTRAS cartas da mao dele nao saem do baralho, elas DESLIZAM (x %.3f = lugar antigo)." % dele.position.x)
+	assert_true(dele.position.distance_to(Vector3(deck[1].x, deck[1].y, deck[1].z)) > 1.0,
+		"D53: e nenhuma delas ficou no baralho.")
 	assert_almost_eq(eu.position.x, (mesa.call("_pos_mao_arco", 0, n0, 0) as Vector3).x, 0.0001,
 		"D53: e a SUA mao fica no lugar dela (x %.3f) - antes ela era a que animava, e na tela do rival ela e o LUGAR DE CIMA." % eu.position.x)
+	var mao_jog: Array = ((st.players[0] as Dictionary)["hand"] as Array)
+	mao_jog.pop_back()
+	mesa.call("_redesenhar", false)
+	st.set("current_player", 0)
+	TurnManager.draw_for_current(st)
+	var idx_nova_jog: int = mao_jog.size() - 1
 	mesa.call("_redesenhar", true, 0) # compra do JOGADOR
 	dele = _carta_da_mao(mesa, 0, 1) as Node3D
-	eu = _carta_da_mao(mesa, 0, 0) as Node3D
+	eu = _carta_da_mao(mesa, idx_nova_jog, 0) as Node3D
 	assert_almost_eq(eu.position.x, float(deck[0].x), 0.001,
-		"D53: na compra do JOGADOR a mao DELE e que sai do baralho dele (x %.2f)." % float(deck[0].x))
-	assert_almost_eq(dele.position.x, (mesa.call("_pos_mao_arco", 0, n1, 1) as Vector3).x, 0.0001,
+		"D53: na compra do JOGADOR a carta QUE COMPROU e que sai do baralho dele (x %.2f)." % float(deck[0].x))
+	assert_almost_eq(dele.position.x, (mesa.call("_pos_mao_arco", 0, mao_rival.size(), 1) as Vector3).x, 0.0001,
 		"D53: e a mao do rival nao mexe.")
 	# --- (b) a chacoalhada NUNCA e da mesa inteira (trava dentro do `_sacudir`) ---
+	var x_rival_agora: float = (_carta_da_mao(mesa, 0, 1) as Node3D).position.x
 	var x_mesa: float = no_cartas.position.x
 	mesa.call("_sacudir", no_cartas)
 	await wait_process_frames(4)
 	assert_almost_eq(no_cartas.position.x, x_mesa, 0.0001,
 		"D53: a mesa inteira (o guarda-chuva das 20+ cartas) NUNCA sacode - era o que movia as DUAS maos juntas (x %.4f)." % no_cartas.position.x)
-	assert_almost_eq((_carta_da_mao(mesa, 0, 1) as Node3D).position.x, x_rival_antes, 0.0001,
+	assert_almost_eq((_carta_da_mao(mesa, 0, 1) as Node3D).position.x, x_rival_agora, 0.0001,
 		"D53: e a mao do outro lado continua no lugar depois da chacoalhada.")
 	# --- e nada disso encostou no DADO (R1) ---
 	assert_eq(((st.players[0] as Dictionary)["hand"] as Array).size(), n0,
-		"D53: nada disso encostou na mao do dado (so desenho).")
+		"R1: a compra mexeu so no desenho - o DADO da mao esta do tamanho de antes, porque o motor trocou uma carta por outra.")
+
+
+## A COMPRA DO RIVAL SÓ CAI DEPOIS QUE A CÂMERA PAROU NA PERSPECTIVA DELE.
+## O motor troca o jogador e compra na MESMA chamada de fase, então o tempo da
+## compra é escolhido pela MESA: se ela entrasse antes da volta, a carta nova do
+## rival aparecia na mão dele com a câmera ainda na sua frente, e o jogador via a
+## compra alheia na tela errada.
+##
+## O teste passa o turno de verdade e olha, a CADA QUADRO, o giro da câmera e o
+## tamanho da mão do rival — e afirma que o primeiro quadro em que a mão cresce
+## já é com a câmera parada nos 180.
+func test_a_compra_do_rival_so_cai_depois_que_a_camera_parou() -> void:
+	var mesa: Node = await _mesa3d_nova()
+	var st = mesa.get("_st")
+	var vista := _vista(mesa)
+	# Prepara: vez do JOGADOR, fora da fase da mão (START é bloqueado nela), e a
+	# mão do RIVAL em 4 — só assim o motor compra algo para ele.
+	st.set("current_player", 0)
+	st.set("phase", "BATTLE")
+	mesa.set("_fase_jogador", 1) # FASE_CAMPO
+	var mao_rival: Array = ((st.players[1] as Dictionary)["hand"] as Array)
+	mao_rival.pop_back()
+	var alvo_n: int = mao_rival.size()
+	mesa.call("_redesenhar", false)
+	var primeiro_crescimento := -1
+	var girando_no_crescimento := true
+	var giro_no_crescimento := 0.0
+	mesa.call("_passar_turno")   # sem await: o turno roda e o teste observa
+	var guarda := 0
+	while guarda < 400:
+		guarda += 1
+		await wait_process_frames(1)
+		var n: int = ((st.players[1] as Dictionary)["hand"] as Array).size()
+		if n > alvo_n and primeiro_crescimento < 0:
+			primeiro_crescimento = guarda
+			girando_no_crescimento = bool(vista.get("girando"))
+			giro_no_crescimento = float(vista.get("giro_campo"))
+		if primeiro_crescimento >= 0 and not bool(vista.get("girando")) and n > alvo_n:
+			break
+		if not is_instance_valid(mesa):
+			break
+	assert_true(primeiro_crescimento > 0,
+		"A mao do rival cresceu durante o turno (o motor comprou): %d -> %d." % [alvo_n,
+			((st.players[1] as Dictionary)["hand"] as Array).size()])
+	assert_false(girando_no_crescimento,
+		"A compra do rival NAO acontece com a mesa girando (giro %.1f, girando=%s)." % [
+			giro_no_crescimento, girando_no_crescimento])
+	assert_almost_eq(giro_no_crescimento, 180.0, 0.5,
+		"E acontece com a camera JA PARADA na perspectiva do rival: giro %.1f." % giro_no_crescimento)
 
 
 ## Retângulo de tela (topo, base) de uma fileira de monstro, sem depender de

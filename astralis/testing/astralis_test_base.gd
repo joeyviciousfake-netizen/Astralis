@@ -90,10 +90,31 @@ func _garantir_monstros_na_mao(st, player_idx: int, quantos: int) -> void:
 # A mesa OFICIAL desde o D40. Mesma ideia da 2D: instancia a cena real e
 # espera o boot montar o duelo e o desenho.
 
+# A entrada da mão, pelo MESMO caminho da cena real. É o dono do tempo do voo,
+# e a teste de compra já usa (D78: a distribuição inicial é a mesma animação).
+const EntradaMao3DRef := preload("res://duel3d/entrada_mao_3d.gd")
+const Moeda3DRef := preload("res://duel3d/moeda_3d.gd")
+
+
 func _mesa3d_nova():
 	var mesa: Node = Mesa3DScene.instantiate()
 	add_child_autofree(mesa)
-	await wait_process_frames(6)
+	# D78/D80: o boot ANIMA a distribuicao inicial (5 cartas por mao) e, num duelo
+	# de moeda, toca a moeda depois; o turno so abre quando a ULTIMA carta
+	# assenta. Seis quadros nao chegam nem perto disso, e um teste que lesse o
+	# estado nesse ponto mediria um duel ainda por comecar. A espera soma os
+	# TEMPOS dos DONOS das animacoes (nenhum numero escrito aqui) mais uma folga:
+	# um teto escrito neste arquivo cortaria a carta no ar ou leria o meio do
+	# giro.
+	#
+	# O tempo da MOEDA entra so quando o DUELO tem moeda, e quem diz e o DADO
+	# (`turn_order`, R3/D42) — nao o estado da tela, que e a coisa sob teste. E o
+	# LADO que comeca que escolhe a duracao, porque a meia volta extra e do rival.
+	var st = mesa.get("_st")
+	var moeda := 0.0
+	if str(st.turn_order) == "moeda":
+		moeda = Moeda3DRef.duracao_total(0 if int(st.current_player) == 0 else 1)
+	await wait_seconds(EntradaMao3DRef.duracao_total(5) + moeda + 0.15)
 	return mesa
 
 

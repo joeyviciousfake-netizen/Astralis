@@ -42,7 +42,8 @@ func test_mover_para_a_fileira_do_rival_nao_derruba_o_jogo() -> void:
 	# `_confirmar_meu_campo3d` -> `_posicionar_cursor` -> `_em_defesa`, com o
 	# cursor indo para a fileira do rival. Se sobrar qualquer leitura de chave
 	# divergente, o GUT marca "Unexpected Errors" e o teste reprova.
-	var mesa: Node = await _mesa_3d_real()
+	# Boot inteiro: a invocação do preparo é só na MAIN, que abre depois da moeda.
+	var mesa: Node = await _mesa3d_nova()
 	assert_true(mesa.get("_st") != null, "Duelo real carregado na mesa 3D.")
 	# Prepara o caminho: um atacante seu INVOCADO de verdade, para o
 	# `_confirmar_meu_campo3d` ter o que escolher (sistemas reais).

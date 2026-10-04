@@ -13,6 +13,7 @@ extends "res://testing/astralis_test_base.gd"
 
 const TurnManager := preload("res://duel/turn_manager.gd")
 const FusionSystem := preload("res://duel/fusion_system.gd")
+const EntradaMao3D := preload("res://duel3d/entrada_mao_3d.gd")
 # ProjectLoaderScript/DuelManagerScript/SummonSystem/MesaScene vêm da base.
 
 
@@ -258,3 +259,65 @@ func test_animacao_headless_ok_sem_render() -> void:
 	await wait_process_frames(2)
 	assert_eq(((st.players[0] as Dictionary)["hand"] as Array).size(), mao_antes, "Fila vazia/curta não mexe em nada.")
 	assert_false(bool(mesa.get("_fusao_animando")), "Trava segue solta após animações headless.")
+
+
+## A CARTA COMPRADA TERMINA NO LUGAR DELA. Este é o defeito que a entrada tinha:
+## o trajeto era um método que devolvia a posição sem escrever na carta, então o
+## `tween_method` não tinha o que mover, a carta ficava parada no baralho FORA da
+## mão, e ela só aparecia no desenho seguinte (quando o jogador mexia em algo).
+## O teste deixa a entrada CORRER e mede onde a carta foi parar — medir no
+## primeiro quadro não prova nada, porque a carta começa no baralho de propósito.
+func test_a_carta_comprada_termina_no_lugar_dela() -> void:
+	for dono in [0, 1]:
+		var mesa = await _mesa3d_nova()
+		var st = mesa.get("_st")
+		st.set("current_player", dono)
+		var mao: Array = (st.players[dono] as Dictionary)["hand"] as Array
+		mao.pop_back()                                    # a mao em 4, como apos invocar
+		mesa.call("_redesenhar", false)
+		var r: Dictionary = TurnManager.draw_for_current(st)
+		assert_eq(int(r.get("compradas", 0)), 1, "O motor comprou 1 carta para o dono %d." % dono)
+		var alvo: Vector3 = mesa.call("_pos_mao_arco", mao.size() - 1, mao.size(), dono) as Vector3
+		mesa.call("_redesenhar", true, dono)
+		# Deixa a entrada terminar. O tempo e' do arquivo da animacao, e a espera
+		# usa o mesmo numero: um teto escrito aqui cortaria a carta no ar.
+		var espera: float = EntradaMao3D.duracao_total(1) + 0.15
+		await wait_seconds(espera)
+		var carta := _carta_da_mao(mesa, mao.size() - 1, dono) as Node3D
+		assert_true(carta != null and is_instance_valid(carta),
+			"A carta comprada continua desenhada na mao do dono %d." % dono)
+		assert_almost_eq(carta.position.x, alvo.x, 0.01,
+			"A carta comprada TERMINOU no lugar dela (dono %d): x %.3f, alvo %.3f." % [dono, carta.position.x, alvo.x])
+		assert_almost_eq(carta.position.y, alvo.y, 0.01,
+			"A carta comprada TERMINOU na altura dela (dono %d): y %.3f, alvo %.3f." % [dono, carta.position.y, alvo.y])
+		assert_almost_eq(carta.position.z, alvo.z, 0.01,
+			"A carta comprada TERMINOU na profundidade dela (dono %d): z %.3f, alvo %.3f." % [dono, carta.position.z, alvo.z])
+		assert_almost_eq(carta.scale.x, 1.0, 0.001,
+			"A carta comprada volta na escala 1 (dono %d): %.3f." % [dono, carta.scale.x])
+		var deck: Array = mesa.get("_deck_pos")
+		assert_true(carta.position.distance_to(Vector3(deck[dono].x, deck[dono].y, deck[dono].z)) > 0.5,
+			"A carta comprada nao ficou presa no baralho (dono %d)." % dono)
+		mesa.queue_free()
+		await wait_process_frames(2)
+
+
+## O tempo da entrada e' do ARQUIVO DELA. Quem escreve um numero parece aqui
+## cria a segunda fonte da mesma medida, e o corte aparece como a carta parando no
+## ar; este teste amarra as duas pontas.
+func test_o_tempo_da_entrada_e_o_do_arquivo_da_animacao() -> void:
+	var mesa = await _mesa3d_nova()
+	var st = mesa.get("_st")
+	st.set("current_player", 0)
+	var mao: Array = (st.players[0] as Dictionary)["hand"] as Array
+	mao.pop_back()
+	mesa.call("_redesenhar", false)
+	TurnManager.draw_for_current(st)
+	mesa.call("_redesenhar", true, 0)
+	var voando := float(mesa.call("_duracao_da_entrada"))
+	assert_almost_eq(voando, EntradaMao3D.duracao_total(1), 0.0001,
+		"A mesa guarda o tempo do arquivo da animação, e não um número parecido: %.3f." % voando)
+	assert_almost_eq(float(mesa.call("_duracao_da_entrada")), 0.0, 0.0001,
+		"O tempo da entrada se lê UMA VEZ: quem espera limpa o número, senão uma pausa que não era de compra atrasaria o duelo.")
+	assert_true(EntradaMao3D.duracao_total(2) > EntradaMao3D.duracao_total(1),
+		"Duas cartas levam mais que uma (o escalonamento é o dono do acréscimo).")
+	assert_almost_eq(EntradaMao3D.duracao_total(0), 0.0, 0.0001, "Sem compra, não há tempo de entrada.")

@@ -104,9 +104,9 @@ func test_jogo_acha_o_vertido_e_a_moldura_sem_project() -> void:
 ## orbe + estrelas + nome + ATK/DEF impressos, tudo do DADO real).
 func test_carta_deitada_no_campo_igual_a_da_mao_com_nome_e_atkdef() -> void:
 	var SummonSys := preload("res://duel/summon_system.gd")
-	var mesa: Node = Mesa3DScene.instantiate()
-	add_child_autofree(mesa)
-	await wait_process_frames(6)
+	# Boot inteiro: a invocação é só na MAIN e a MAIN só abre depois da
+	# distribuição e da moeda, então a mesa de 6 quadros ainda está na DRAW.
+	var mesa: Node = await _mesa3d_nova()
 	var st = mesa.get("_st")
 	# Prepara: o sistema REAL invoca a 1a carta da mão no p0_m0.
 	var idx: int = _indice_monstro_na_mao(st, 0)

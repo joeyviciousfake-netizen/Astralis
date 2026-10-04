@@ -819,10 +819,7 @@ func test_painel_esquerdo_carta_focada() -> void:
 	# do [TIPO] vem direto a descrição. O atributo continua visível como
 	# ORBE (asset real) na faixa de ATK/DEF e no canto da carta; o que
 	# muda aqui é só o texto que não pode mais existir.
-	for caminho in ["HUD/PainelCarta/CartaMolde", "HUD/PainelCarta/CartaMolde/Moldura",
-			"HUD/PainelCarta/CartaMolde/FocoArte", "HUD/PainelCarta/CartaMolde/FocoCor",
-			"HUD/PainelCarta/CartaMolde/FocoNomeMolde", "HUD/PainelCarta/CartaMolde/FocoOrbe",
-			"HUD/PainelCarta/CartaMolde/FocoEstrelasBox", "HUD/PainelCarta/FocoFaixa",
+	for caminho in ["HUD/PainelCarta/FocoFaixa",
 			"HUD/PainelCarta/FocoFaixa/FocoAttrIcon", "HUD/PainelCarta/FocoFaixa/FocoStats",
 			"HUD/PainelCarta/FocoFaixa/FocoOrbeFaixa", "HUD/PainelCarta/FocoFaixa/FocoOrbeTipo",
 			"HUD/PainelCarta/FocoFaixa/FocoCopias", "HUD/PainelCarta/FocoNome",
@@ -832,13 +829,47 @@ func test_painel_esquerdo_carta_focada() -> void:
 		assert_true(mesa.get_node_or_null(NodePath(caminho)) != null, "Painel tem: " + caminho)
 	assert_true(mesa.get_node_or_null(NodePath("HUD/PainelCarta/BlocoDesc/FocoAttr")) == null,
 		"D5: sem linha de atributo em texto (só o orbe real).")
-	# As faixas da ref: a carta preserva a proporção da moldura real
-	# (832x1248 = 0,667) e fica entre y 16 e 562.
-	var molde := mesa.get_node("HUD/PainelCarta/CartaMolde") as Control
-	assert_eq(molde.position.y, 16, "Carta começa em y 16 como na ref.")
-	assert_true(molde.size.y <= 546, "Carta cabe na faixa y 16..562 da ref: %d." % int(molde.size.y))
-	assert_true(molde.size.x < 502.0, "Carta com a proporção da moldura (não esticada na faixa): %d." % int(molde.size.x))
-	assert_true(molde.position.x + molde.size.x <= 562, "Carta dentro da faixa do painel, sem vazar.")
+	# --- A CARTA DO PAINEL E A CARTA 3D (a imagem 2D que imitasse a carta saiu) ---
+	# A regra travada: o painel nao tem NENHUM no 2D que finja ser a carta. A
+	# carta dele e a peca 3D, montada pela mesma fabrica do campo, vista por uma
+	# janela 3D propria com camera ortogonal de frente.
+	for caminho in ["HUD/PainelCarta/CartaMolde", "HUD/PainelCarta/CartaMolde/Moldura",
+			"HUD/PainelCarta/CartaMolde/FocoArte", "HUD/PainelCarta/CartaMolde/FocoCor",
+			"HUD/PainelCarta/CartaMolde/FocoNomeMolde", "HUD/PainelCarta/CartaMolde/FocoOrbe",
+			"HUD/PainelCarta/CartaMolde/FocoEstrelasBox"]:
+		assert_true(mesa.get_node_or_null(NodePath(caminho)) == null,
+			"Sem carta 2D no painel (a imagem que imitasse a carta nao existe mais): " + caminho)
+	var janela := mesa.get_node("HUD/PainelCarta/Carta3DJanela") as SubViewportContainer
+	var vp := mesa.get_node("HUD/PainelCarta/Carta3DJanela/Carta3DViewport") as SubViewport
+	var mundo := mesa.get_node("HUD/PainelCarta/Carta3DJanela/Carta3DViewport/Carta3DMundo") as Node3D
+	var cam := mesa.get_node("HUD/PainelCarta/Carta3DJanela/Carta3DViewport/Carta3DCam") as Camera3D
+	assert_true(janela.stretch and janela.stretch_shrink == 1, "Janela 3D em textura 1:1 (sem esticar a imagem).")
+	assert_true(vp.own_world_3d, "Janela da carta tem mundo PROPRIO: nao herda o campo, que gira a camera 180.")
+	assert_true(vp.transparent_bg, "Fundo transparente: o azul-marinho do painel aparece atras.")
+	# A vista e RETA e de frente: ortogonal, sem deslocamento, olhando a frente.
+	assert_eq(cam.projection, Camera3D.PROJECTION_ORTHOGONAL, "Camera ortogonal: o painel e lugar de informacao, nao de perspectiva.")
+	assert_eq(cam.keep_aspect, Camera3D.KEEP_HEIGHT, "A altura da carta e a altura da janela.")
+	assert_eq(cam.rotation_degrees, Vector3.ZERO, "Camera de frente, sem inclinacao.")
+	assert_eq(cam.frustum_offset, Vector2.ZERO, "Sem deslocamento de lente (vale aqui como na mesa).")
+	assert_true(cam.current, "A camera da janela e a atual do mundo dela.")
+	# O retangulo tem a PROPORCAO REAL da carta (59 x 86), e cabe na faixa da ref.
+	var alt_px := float(janela.size.y)
+	var prop := janela.size.x / alt_px
+	var prop_carta := float(mesa.get("LARG_CARTA")) / float(mesa.get("ALT_CARTA"))
+	assert_almost_eq(prop, prop_carta, 0.002, "Janela com a proporcao real da carta: %.4f (carta %.4f)." % [prop, prop_carta])
+	assert_almost_eq(alt_px, 546.0, 0.5, "Carta na faixa y 16..562 da ref: %.1f." % alt_px)
+	assert_almost_eq(janela.position.y, 16.0, 0.5, "Carta comeca em y 16 como na ref.")
+	assert_true(janela.position.x >= 0.0 and janela.position.x + janela.size.x <= 562.0,
+		"Carta dentro da faixa do painel, sem vazar: %d..%d." % [int(janela.position.x), int(janela.position.x + janela.size.x)])
+	# A JANELA ENQUADRA A CARTA INTEIRA. Camera ortogonal com KEEP_HEIGHT mostra
+	# `size` de altura de mundo; a largura visivel sai da proporcao do retangulo.
+	# Se ela for menor que a carta, o canto arredondado sai cortado — e o
+	# numero que decide isso e o dono, nao o olho.
+	var larg_mundo := ALT_CARTA_TESTE * prop
+	assert_true(larg_mundo >= float(mesa.get("LARG_CARTA")) - 0.001,
+		"A janela mostra a largura INTEIRA da carta: %.4f >= %.4f." % [larg_mundo, float(mesa.get("LARG_CARTA"))])
+	assert_almost_eq(cam.size, float(mesa.get("ALT_CARTA")), 0.000001,
+		"A altura visivel e a altura da carta (o mesmo numero da mesa).")
 	# Faixa ATK/DEF fica logo abaixo da carta, como na ref.
 	var faixa := mesa.get_node("HUD/PainelCarta/FocoFaixa") as Control
 	assert_true(faixa.position.y >= 562 and faixa.position.y + faixa.size.y <= 648, "Faixa ATK/DEF na faixa y 562..648: %d." % int(faixa.position.y))
@@ -892,11 +923,37 @@ func test_painel_esquerdo_carta_focada() -> void:
 	assert_true(bloco.custom_minimum_size.y > 0 and bloco.size.y > 0, "Bloco de descrição tem tamanho fixo.")
 	assert_true((mesa.get_node("HUD/PainelCarta/BlocoDesc/FocoDesc") as Label).clip_text, "Descrição corta com clip (não estoura o bloco).")
 	assert_true(bloco.position.y + bloco.size.y <= 1080.0, "Bloco de descrição não estoura a tela.")
-
-
+	# --- A CARTA DA JANELA E A MESMA CARTA QUE A FABRICA MONTA ---
+	# A prova nao e "o no tem o nome Carta3D": e a peca ser IGUAL a que a
+	# fabrica monta para o mesmo dado. Comparando as pecas das duas, qualquer
+	# desenho proprio do painel (um orbe a mais, uma arte deslocada) aparece
+	# aqui como diferenca.
+	assert_true(janela.visible, "Com carta focada, a janela 3D aparece.")
+	assert_eq(mundo.get_child_count(), 1, "A janela tem uma carta, e so.")
+	var carta := mundo.get_child(0) as Node3D
+	assert_eq(carta.name, "Carta3D", "A janela tem a peca da fabrica (carta_3d.gd), nao uma imitação 2D.")
+	assert_true(_dentro_de(carta, mundo), "A carta mora no mundo da janela do painel.")
+	var gabarito := mesa.call("_fazer_carta", dado_foco, false, false) as Node3D
+	assert_eq(_pecas(carta), _pecas(gabarito),
+		"A carta do painel tem EXATAMENTE as pecas que a fabrica monta para o mesmo dado.")
+	gabarito.free()
+	var virada := mesa.call("_fazer_carta", {}, true, false) as Node3D
+	assert_eq(virada.rotation_degrees, Vector3(0.0, 180.0, 0.0),
+		"Sem dado, a carta vira de costas: o verso e o que se ve (nada de dado inventado).")
+	virada.free()
 	assert_true(_n3d(mesa, "Ceu") != null, "Céu azul existe.")
 	var filhos_ceu := (_n3d(mesa, "Ceu") as Node3D).get_child_count()
 	assert_true(filhos_ceu >= 24, "Céu com pilares + nuvens (10 + 14): %d." % filhos_ceu)
+
+
+## Os nomes das pecas de uma carta, na ordem em que a fabrica as cria. E o que o
+## GUT compara para dizer que duas cartas sao a MESMA peca e nao duas cartas
+## parecidas: um orbe a mais ou uma arte deslocada aparece aqui como diferenca.
+func _pecas(carta: Node3D) -> PackedStringArray:
+	var out := PackedStringArray()
+	for c in carta.get_children():
+		out.append(str(c.name))
+	return out
 
 
 ## ---- D44/D45: A FAIXA DO MEIO (2D) e a limpeza da tela -------------------
@@ -1086,6 +1143,10 @@ func test_d45_cor_do_turno_alterna_com_quem_esta_jogando() -> void:
 	var verm_borda := Color(mesa.get("COR_VERM_BORDA"))
 	var verm_fundo := Color(mesa.get("COR_VERM_FUNDO"))
 	var cel := _celula(mesa, "Turno")
+	# D80: a celula do turno recebe a COR DE LADO porque este duelo NAO tem
+	# moeda na tela — num duelo de moeda ela e a cor da espera (o roxo da
+	# pergunta) ate a resposta, porque o motor ja sabe quem comeca e a cor de
+	# lado daria a resposta antes do giro.
 	st.current_player = 0
 	mesa.call("_atualizar_faixa")
 	var e := _estilo_de(cel)
@@ -1250,7 +1311,15 @@ func test_d45_faixa_2d_lp_e_turno_vem_do_estado_real() -> void:
 		"A faixa tem as 3 placas de número (LP seu, LP rival, turno).")
 	assert_eq(str(lp_meu.text), str(int((st.players[0] as Dictionary)["lp"])), "Meu LP com o valor real do estado.")
 	assert_eq(str(lp_rival.text), str(int((st.players[1] as Dictionary)["lp"])), "LP do rival com o valor real do estado.")
-	assert_eq(str(turno.text), str(int(st.turn_number)), "Turno com o número real do estado.")
+	# D80: este duelo e `first_p1` (o gate de `data_loader` cai no
+	# `schemas/examples` no headless), entao NAO tem moeda na tela e o TURNO ja e
+	# o numero desde o primeiro quadro: a marca de espera e uma representacao da
+	# moeda, e sem moeda nao existe pergunta para marcar. O `?` e o roxo da
+	# espera tem como dono `test_moeda.gd`.
+	assert_eq(str(turno.text), str(int(st.turn_number)),
+		"Sem moeda na tela o TURNO mostra o numero real do estado.")
+	assert_false(bool(mesa.get("_aguardando_sorteio")),
+		"Um duelo sem moeda nao abre a espera (o que nao esta na tela nao esconde).")
 	# O valor muda quando o estado muda (a trava pega número travado).
 	var lp_antes := int((st.players[0] as Dictionary)["lp"])
 	(st.players[0] as Dictionary)["lp"] = lp_antes - 1500
@@ -1260,6 +1329,13 @@ func test_d45_faixa_2d_lp_e_turno_vem_do_estado_real() -> void:
 	assert_eq(str(lp_meu.text), str(lp_antes - 1500), "Meu LP seguiu a mudança do estado.")
 	assert_eq(str(lp_rival.text), "1234", "LP do rival seguiu a mudança do estado.")
 	assert_eq(str(turno.text), "7", "Turno seguiu a mudança do estado.")
+	# D79: e o numero e BRANCO, nunca cinza. O pulso do `?` escreve em
+	# `modulate`, e um `modulate` de sobrevida deixaria o numero com alpha baixo
+	# sobre o fundo escuro da celula — que e cinza, nao branco.
+	assert_almost_eq((turno as Label).get_theme_color("font_color").r, 1.0, 0.02,
+		"O numero do turno e branco (a cor da fonte, sem alpha herdado).")
+	assert_almost_eq((turno as Label).modulate.a, 1.0, 0.001,
+		"O numero do turno nao herda o alpha do pulso do '?'.")
 	# Fim de jogo: a célula do turno mostra VITÓRIA/DERROTA (estado real).
 	(st.players[0] as Dictionary)["lp"] = lp_antes
 	(st.players[1] as Dictionary)["lp"] = 8000

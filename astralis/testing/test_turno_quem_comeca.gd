@@ -77,8 +77,20 @@ func _mesa_com_ordem(ordem: String) -> Array:
 	add_child_autofree(mesa)
 	await wait_process_frames(6)
 	var duelo = _duelo_com_ordem(ordem)
+	# O boot abriu distribuicao (5+5 cartas voando) e esta esperando a ultima
+	# assentar antes da moeda. O redesenho abaixo libera essas cartas no meio
+	# do voo: o pouso delas nunca chega e o sinal nunca vem. Zera a contagem
+	# para a abertura do teste nao esperar um sinal que nao existe mais. O
+	# boot pendente fica esperando (morre com a mesa); quem abre o turno do
+	# teste e a chamada de cada teste.
+	mesa.set("_cartas_voando", 0)
+	mesa.set("_distribuicao_ativa", false)
 	mesa.set("_duel", duelo)
 	mesa.set("_st", duelo.get_state())
+	mesa.set("_aguardando_sorteio", mesa.call("_tem_sorteio_na_tela"))
+	var faixa: Node = mesa.get("_faixa") as Node
+	if faixa != null and is_instance_valid(faixa):
+		faixa.call("esperar_sorteio", mesa.get("_aguardando_sorteio"))
 	mesa.call("_redesenhar", false)
 	return [mesa, duelo.get_state()]
 
@@ -208,6 +220,11 @@ func test_first_p2_rival_comeca_compra_joga_e_devolve_a_vez() -> void:
 	# D44 (item 6): a barra de fases SAIU da tela por ordem do usuário, e o
 	# turno agora é lido na FAIXA DO MEIO (que em D45 virou 2D, no HUD), com
 	# o valor real do motor.
+	#
+	# D80: este duelo e `first_p1`, sem moeda na tela, entao a faixa ja esta
+	# Mostrando o numero do motor desde o primeiro quadro. Este teste mede a
+	# ORDEM do turno e nao o desenho da espera — o `?` tem como dono
+	# `test_moeda.gd`.
 	var txt := str((mesa.get_node("HUD/Faixa2D/Celulas/Turno/Caixa/Numero") as Label).text)
 	assert_eq(txt, str(int(fim["turno"])), "Faixa do meio com o turno real do motor (%s)." % txt)
 	assert_true(mesa.get_node_or_null(NodePath("HUD/BarraFases")) == null, "Sem barra de fases na tela (D44).")
