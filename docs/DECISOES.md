@@ -71,9 +71,10 @@
 - **D78** | **A DISTRIBUIÇÃO INICIAL usa a MESMA animação da compra** (`entrada_mao_3d.gd`), e as DUAS mãos animam juntas: as 5 cartas do jogador embaixo e as 5 do rival em cima, uma por uma. A ordem do boot e **distribuição -> moeda**. | porque: quem abre o duelo precisa ver a mao se encher antes de saber de quem e a vez, e um tempo novo de distribuicao seria uma segunda fonte da mesma medida do voo. | proibido: tempo de distribuicao escrito fora de `entrada_mao_3d.gd`, animar so uma mao na distribuicao, e a moeda antes das cartas chegarem.
 - **D80** | **A ESPERA E UMA COISA SO, E A MESA QUE DIZ QUE ELA EXISTE:** existe moeda na tela quando o DADO do duelo e `turn_order: "moeda"` (ou a flag de prova), e dai vem o PAINEL em branco e a NAVEGACAO travada. A janela cobre a distribuicao E a moeda, e acaba com a resposta. | porque: o motor ja sabe quem comeca (D42) e a tela ainda nao virou, entao o cursor esta no LUGAR da mao de quem ganhou; e sem moeda nao ha o que esconder. | proibido: carta ou verso no painel, cursor andando na espera, e espera em duelo sem moeda.
 - **D81** | A ordem da tela e fundo, campo, HUD e menus: fundo na -2 e campo transparente no vao. | porque: camada vale para a tela toda. | proibido: campo opaco, e segurada em outra camada.
-- **D82** | Cada lado tem 2 pilhas no campo: baralho a direita (`d0`) e cemiterio a esquerda (`g0`), no meio entre as fileiras e ENCOSTADOS nos slots das pontas (os paineis de slot tem exato o passo da grade, sem vao). O vidro da pilha tem o tamanho da carta em ataque e o cursor nao anda nelas. | porque: a pilha e desenho da lista que ja existe no estado, e carta de pilha nunca fica em defesa. | proibido: zona nova no estado para a pilha, e pilha quadrada de slot de monstro.
+- **D82** | Cada lado tem 2 pilhas no campo: baralho a direita (`d0`) e cemiterio a esquerda (`g0`), no meio entre as fileiras e junto dos slots das pontas. O vidro da pilha tem o tamanho da carta em ataque e o cursor nao anda nelas. | porque: a pilha e desenho da lista que ja existe no estado, e carta de pilha nunca fica em defesa. | proibido: zona nova no estado para a pilha, e pilha quadrada de slot de monstro.
+- **D83** | A escolha do slot e vista DE CIMA: no passo do slot a camera sobe e olha para baixo, e desce ANTES da estrela. | porque: o slot se escolhe vendo o campo inteiro, e o palco da segurada e calculado da camera. | proibido: segurada e menu com a camera voando, e volta sem descer do topo.
 
-# ÍNDICE (R13: a maior decisão que existe é a **D82**)
+# ÍNDICE (R13: a maior decisão que existe é a **D83**)
 
 ```text
 D01 DATA != LOGIC
@@ -142,5 +143,6 @@ D78 A distribuicao inicial usa a animacao da compra
 D79 --- (reservada)
 D80 A espera e uma coisa so, decidida pela mesa
 D81 Fundo, campo, HUD e menus: a carta passa por cima sem trocar de camada
-D82 As 2 pilhas de cada lado, encostadas nos slots das pontas
+D82 As 2 pilhas de cada lado, junto dos slots das pontas
+D83 A escolha do slot e vista de cima, e desce antes da estrela
 ```

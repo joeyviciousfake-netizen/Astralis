@@ -48,6 +48,14 @@ primeiro segundo do duelo.
 Quem coloca é a vista (`colocar_vista`) e quem chama é a mesa
 (`_iniciar_turno_do_duelo`), porque ela é a que sabe o que o motor devolveu.
 
+## 16.1.2 O TOPO NA ESCOLHA DO SLOT
+
+No passo do slot a câmera sobe para cima do centro do campo e olha para baixo:
+o slot se escolhe vendo o campo inteiro de cima. É outro ponto de vista, não
+outra volta — as cartas não se mexem e o giro continua valendo. A câmera desce
+ANTES da estrela, porque o palco da segurada é calculado dela; e a volta desce
+antes de girar. A subida e a descida travam o controle como a volta.
+
 ## 16.2 O QUE A CORREÇÃO PRECISA CONTINUAR SATISFEZENDO
 
 A vista do rival é o **espelho exato** da sua, e isso é medido, não estimado.
