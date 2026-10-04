@@ -6,50 +6,75 @@
 > **onde estamos, o que falta, o que está travado.**
 
 ```yaml
-onde_estamos: "A carta de duelo é desenhada com `BoxMesh` procedural, medida no
-  valor do contrato (59 x 86 x 0,30 mm), e a mesa é a única dona do número
-  (D70). A mesa 3D tem 8 arquivos, um assunto cada, e a volta de 180° é da
-  câmera, não das cartas. A carta de papel é 2D, desenhada pelo molde em dado.
-  Cada doc tem só a regra viva, e o que é derivável do código é gerado:
-  `python tools/checar_docs.py` recusa data, versão, contagem de teste, hash de
-  commit, narrativa de mudança, caminho morto e excesso de tamanho. A regra das
-  ferramentas é a R12: documentação (o doc 17 e a cópia local do manual) ANTES de
-  fazer o que não se sabe, depois nativa, internet, e manual só em último caso
-  (D71). O manual do Blender é uma pasta na máquina, fora do git, com um README
-  dentro que diz de onde veio e como se busca dentro dela."
+onde_estamos: "A mesa 3D tem 11 arquivos, um assunto cada. O DUELO DE MOEDA e um
+  fluxo so: a distribuicao inicial usa a animacao da compra (as 5 cartas de cada
+  lado, uma por uma) e so depois a moeda entra na frente da camera. A moeda e IRMA
+  do pivo, cresce no lugar com um clarao, tomba em torno do eixo vertical da tela e
+  para na face: estrela = jogador, losango = rival, e nao ha nome escrito. Ela
+  COMECA sempre na estrela e o rival ganha meia volta a mais, feita no instante de
+  maior velocidade, entao os dois veem a mesma velocidade no primeiro instante e so
+  terminam diferentes. A tela NAO vira: perspectiva, cartas e painel ficam a coluna
+  inteira, e quem gira a mesa depois da resposta e a mesma `_girar_campo` de toda
+  volta. Nao existe pulo nem tempo curto. A ESPERA (D80) e uma coisa so, e a MESA
+  que diz que ela existe: existe moeda na tela quando o DADO do duelo e
+  `turn_order: \"moeda\"`, e e dessa resposta que vem o painel em branco (sem carta
+  e sem verso), a navegacao travada (teclado e analogico) e o `?` ambar no roxo. A
+  janela cobre a distribuicao E a moeda, e acaba com a resposta. Sem moeda no dado
+  nao ha espera: nao ha o que esconder, e o painel responde desde o primeiro quadro.
+  O tamanho e a altura da moeda sao FRACOES da tela e nao unidades de mundo,
+  porque a camera e de perspectiva (FOV 20). Cada doc tem so a regra viva, e o que e
+  derivavel do codigo e gerado: `python tools/checar_docs.py` recusa data, versao,
+  contagem de teste, hash, narrativa de mudanca, caminho morto e excesso de
+  tamanho. A regra das ferramentas e a R12: documentacao (o doc 17 e a copia local
+  do manual) ANTES de fazer o que nao se sabe, depois nativa, internet, e manual so
+  em ultimo caso (D71)."
 
-faz_agora: "A documentacao de terceiro esta NA MAQUINA e fora do git: `Godot Documentation/` (godot-docs, master) e `blender_manual_v520_en.html/`. A R17 passa a exigir ler a documentacao ANTES de mexer no codigo, e como a copia local do Godot e' do master enquanto o motor e' o da `project.godot`, quem arbitra a versao da API e' `ClassDB.class_has_method`. A R12 mudou: agora a DOCUMENTAÇÃO vem antes da ferramenta nativa, e o passo 1 é o `docs/17_BLENDER.md` mais a cópia local do manual do Blender. A carta de duelo 3D esta no JOGO: o corpo e o artefato `astralis/assets/3d/carta_de_duelo.glb`, publicado em `assets/3d/` com a fonte ao lado, com a fonte em `assets/3d/fonte/` e o publicador em `tools/blender/exportar_carta.py`, que roda o portao da R16 antes de exportar e confere o `.glb` depois. Medido no arquivo: centro (0,0,0), tamanho 1,0 x 1,457627 x 0,005085 — os numeros da mesa, 104 faces (36 quads, 68 triangulos), 0 n-gon, malha fechada. A R16 entrou: tri e quad entram, n-gon nao, e a face e medida antes de exportar. O Bevel entregava a tampa como uma face de 36 lados; agora so ela e triangular, e a conta `triangulos = 16 x segmentos + 12` diz o que cada segmento custa. A face (moldura e verso) e' um retangulo ARREDONDADO do tamanho inteiro da carta, com o raio e os segmentos medidos no `.glb` e conferidos por `assert` (D70): raio 2,0000 mm contra 1,9995 mm do corpo, 8 segmentos contra 8. A arte continua vindo do jogo em `QuadMesh` texturizados colados no corpo, entao o modelo nao leva UV de textura (a `UVMap` que ele tem e a projecao padrao do cubo, e o material do corpo e cor solida). O que falta: as posicoes das imagens ainda sao literais no `.gd` e nao vem do `card_layout`, que e o que da a opcao de editor para mexer na arte. O procedimento esta em `docs/17_BLENDER.md` e cresce a cada modelo (D72)."
+faz_agora: "A espera da moeda esta fechada e conferida nas tres telas: a ESPERA
+  (painel em branco, `?` roxo, moeda girando na estrela), a rota do JOGADOR (sem
+  giro, marcador azul com o numero, painel com a carta sob o cursor) e a rota do
+  RIVAL (giro para 180, mao do rival embaixo, painel no neutro do D46b). A espera e
+  uma resposta so, de `_tem_sorteio_na_tela()`, e as tres travas saem dela. O GUT
+  passa inteiro."
 
+ proximo_passo: "Fazer `carta_3d.gd` ler o `card_layout` em vez dos literais
+  (orbe, estrela, nome, ATK/DEF estao no `.gd`, e o molde em por-mil so alimenta o
+  `CardView` 2D). E o que da a opcao de editor para mover a foto do monstro ou as
+  estrelas — e a carta do painel passa a ler o mesmo molde, entao o ganho e na tela
+  e no editor ao mesmo tempo."
+ travas: "R1 a R14 valem (seção 2 do AGENTS.md). Trava do domínio: a arena é do
+   jogo e não tem fallback (D50); a lente nunca é deslocada e o `frustum_offset`
+   é ZERO (D41, D47); a grade é 263 nas seis direções e 390 entre as fileiras de
+   monstro (D49); a carta mede o contrato e a mesa é o único dono do número
+   (D70); a carta do painel é a peça 3D e a janela dela é reta, com mundo próprio
+   (D75); a entrada da mão é só da carta comprada, e a compra só é mostrada na
+   tela de quem comprou, depois que a câmera parou nela (D76); a espera da moeda é
+   uma coisa só e a mesa que diz que ela existe — sem `turn_order: "moeda"` no dado
+   não há espera, e teste não liga a espera na mão para provocá-la (D80); efeito não tem motor na mesa (D30); quem manda é o usuário; a mesa nasce na vista de quem tem a vez (D47); modelar 3D e na frente da pessoa, nunca headless (D72/R15); o canto da face e' o canto do corpo, medido e conferido (D70); documentacao antes do codigo e o motor arbitra a versao (D74/R17); consultar a documentação antes do que nao se sabe, e a nativa gera a topologia (D71/R12); tri e quad entram, n-gon nao, e a face e medida (D73/R16)."
 
-proximo_passo: "Fazer `carta_3d.gd` ler o `card_layout` em vez dos literais: orbe em (0,3805, 0,6173), estrela com passo 0,0537, nome em (-0,43, 0,6434) e ATK/DEF em (0, -0,48) estao escritos no `.gd`, e o molde em por-mil que existe para isto so alimenta o `CardView` 2D. E o que da a opcao de editor para mover a foto do monstro ou as estrelas."
+ dividas: "Motor de efeitos (D30) é o buraco de gameplay maior. Distribuição
+   `.astralis` trancada é PLANO, 0% implementado. Campanha é PLANO, 0%
+   implementado. Save/load, AudioManager e assets reais não existem: as 722
+   cartas têm `description` vazio e `artwork` apontando para arquivo inexistente,
+   e nenhum dos 39 duelistas tem retrato. Faltam também a cidade de fundo e a
+   barra de fases da referência. A mesa não chama o `RuntimeValidator` e ignora
+   `load_errors`, então projeto corrompido entra no jogo em silêncio. `ai_preset`
+   está no contrato e no Studio, e o runtime não lê. A `mesa_3d.gd` ainda
+   carrega assunto demais: a R9 pede a divisão pelo assunto, e ela é o resto do
+   trabalho de organização do código. A janela 3D do painel é um `SubViewport`
+   com `UPDATE_ALWAYS`: ela redesenha todo quadro mesmo sem carta focada, e o
+   jeito de só atualizar quando a carta troca ainda não foi medido."
 
+ estado: "O contrato tem 8 schemas. O dado de exemplo tem 722 cartas, 39
+   duelistas e 39 decks. A suíte GUT está em `astralis/testing/` e passa inteira
+   (rode `Godot --headless --path astralis -s
+   res://addons/gut/gut_cmdln.gd -gdir=res://testing -gexit`; a contagem exata
+   não é escrita aqui porque envelhece — o número sai do comando). O jogo lê
+   projeto por `--project` e o log de boot é contrato (R11). O painel esquerdo é
+   a única tela do duelo, e a carta dele é a peça 3D: `--mesa3d-foto=<arquivo>`
+   tira a prova na tela."
 
-travas: "R1 a R14 valem (seção 2 do AGENTS.md). Trava do domínio: a arena é do
-  jogo e não tem fallback (D50); a lente nunca é deslocada e o `frustum_offset`
-  é ZERO (D41, D47); a grade é 263 nas seis direções e 390 entre as fileiras de
-  monstro (D49); a carta mede o contrato e a mesa é o único dono do número
-  (D70); efeito não tem motor na mesa (D30); quem manda é o usuário; a mesa nasce na vista de quem tem a vez (D47); modelar 3D e na frente da pessoa, nunca headless (D72/R15); o canto da face e' o canto do corpo, medido e conferido (D70); documentacao antes do codigo e o motor arbitra a versao (D74/R17); consultar a documentação antes do que nao se sabe, e a nativa gera a topologia (D71/R12); tri e quad entram, n-gon nao, e a face e medida (D73/R16)."
+  data_utc: "2026-10-04"
 
-dividas: "Motor de efeitos (D30) é o buraco de gameplay maior. Distribuição
-  `.astralis` trancada é PLANO, 0% implementado. Campanha é PLANO, 0%
-  implementado. Save/load, AudioManager e assets reais não existem: as 722
-  cartas têm `description` vazio e `artwork` apontando para arquivo inexistente,
-  e nenhum dos 39 duelistas tem retrato. Faltam também a cidade de fundo e a
-  barra de fases da referência. A mesa não chama o `RuntimeValidator` e ignora
-  `load_errors`, então projeto corrompido entra no jogo em silêncio. `ai_preset`
-  está no contrato e no Studio, e o runtime não lê. A `mesa_3d.gd` ainda
-  carrega assunto demais: a R9 pede a divisão pelo assunto, e ela é o resto do
-  trabalho de organização do código."
-
-estado: "O contrato tem 8 schemas. O dado de exemplo tem 722 cartas, 39
-  duelistas e 39 decks. A suíte GUT está em `astralis/testing/` e passa inteira
-  (rode `Godot --headless --path astralis -s
-  res://addons/gut/gut_cmdln.gd -gdir=res://testing -gexit`; a contagem exata
-  não é escrita aqui porque envelhece — o número sai do comando). O jogo lê
-  projeto por `--project` e o log de boot é contrato (R11). Nenhuma linha de
-  código mudou nesta leva: só documento."
-
-data_utc: "2026-10-02"
 ```
 
 ## O QUE ESTÁ TRAVADO (leia antes de mexer em qualquer coisa)

@@ -2,7 +2,7 @@
 
 > O que a tela do duelo mostra e de onde ela olha. Leia antes de mexer em
 > `astralis/duel3d/vista_3d.gd` ou em qualquer coisa que anime a mesa.
-> As regras aqui são D47, D51, D52 e D53; o porquê de cada uma está no
+> As regras aqui são D47, D51, D52, D53, D76 e D75; o porquê de cada uma está no
 > `DECISOES.md` e não se repete.
 
 ## 16.1 A REGRA
@@ -123,21 +123,50 @@ lados. Memorizar por `instance_id` da câmera e resolver na vista do jogador dá
 errado quando o **rival** começa o duelo — por isso `_aquecer_a_mao()` resolve
 os dois lugares no boot, antes de qualquer carta ser desenhada.
 
-## 16.5 UM DESENHO QUE SE MEXE SEM PRECISAR
+## 16.5 A COMPRA DE CADA UM (D76)
+
+A entrada da carta comprada é um assunto só, e ele mora em
+`astralis/duel3d/entrada_mao_3d.gd`. São **dois** movimentos no mesmo instante:
+
+1. a(s) carta(s) que comprou **voa** do baralho até o lugar novo, em arco,
+   tombada, entrando menor e assentando com um pastelhinho de escala a mais; e
+2. as que já estavam na mão **deslizam** para o lugar novo delas.
+
+**Por que as duas:** a mão é centrada, então comprar uma carta muda o lugar de
+**todas** as outras. Sem o deslize elas aparecem no lugar novo de um quadro para o
+outro, e é esse salto — não o voo — que faz a compra parecer quebrada. Uma compra
+pode trazer duas cartas, e elas saem **escalonadas**: é o que faz parecer que
+alguém está repartindo, em vez de um bloco só.
+
+**A entrada é de quem comprou, e só da carta que comprou.** O dono vem da mesa
+(é ela que sabe de que mão é a compra), e a carta nova é a que apareceu depois do
+tamanho de mão do desenho anterior.
+
+**A compra só é mostrada depois que a câmera parou na perspectiva de quem
+comprou.** O motor troca o jogador e compra na **mesma** chamada de fase, então
+o tempo da compra é escolhido pela mesa: `_passar_turno` avança só até o `END` do
+jogador, dá a volta, e **só então** entrega a vez. E o dono da tela para a volta
+de volta também espera, antes de abrir o fluxo do jogador.
+
+O **tempo do voo é do arquivo da entrada**, e quem espera a mão assentar lê
+dele (`EntradaMao3D.duracao_total`): um teto escrito no chamador seria a segunda
+fonte da mesma medida, e o corte apareceria como a carta parando no ar.
+
+## 16.6 UM DESENHO QUE SE MEXE SEM PRECISAR
 
 Três defeitos da mesma família, e as três travas:
 
 | O que | A regra |
 |---|---|
-| A compra animada | É da mão **que comprou** (`_animar_compra(carta, dono, ...)`). A invocação não anima: a carta desce da mão, e não sai voando do baralho. |
+| A compra animada | É da mão **que comprou** e só da carta que comprou; as outras deslizam, e nada acontece antes de a câmera parar na perspectiva de quem comprou (16.5). |
 | A chacoalhada da fusão | É da **carta do slot**, e nunca sacode a mesa inteira. A trava está **dentro** de `_sacudir`, para ninguém reintroduzir. |
 | O passo de cursor | Só reposiciona o cursor e o painel. `_redesenhar` recria as 20+ cartas e é caro; chamá-lo a cada tecla redesenhava a tela 3D inteira. |
 
-**Regra de teste que acompanha as três:** `_sacudir` e `_animar_compra` perderam
-a trava de "só com render" **de propósito**. Sem ela o teste passava e o defeito
-ficava invisível; com ela removida, o GUT **vê quem animou**.
+**Regra de teste que acompanha as três:** a entrada da mão e o `_sacudir`
+perderam a trava de "só com render" **de propósito**. Sem ela o teste passava e o
+defeito ficava invisível; com ela removida, o GUT **vê quem animou**.
 
-## 16.6 ONDE VIVE CADA COISA
+## 16.7 ONDE VIVE CADA COISA
 
 | Assunto | Dono |
 |---|---|
@@ -145,8 +174,11 @@ ficava invisível; com ela removida, o GUT **vê quem animou**.
 | `CAM_POS`, `VOLTA_DURACAO`, `ESCALA_CAMPO`, `DESLOC_CAMPO`, janela do SubViewport | `astralis/duel3d/mesa_3d.gd` (a vista **recebe** esses números) |
 | traduzir slot do dado em XZ de mundo | `mesa_3d.gd`, em `pos_slot` (passado por `Callable` para a vista) |
 | lugar das mãos, pose, arco, aquecimento no boot | `mesa_3d.gd`: `_dono_do_lugar_perto`, `_pose_da_mao`, `_pos_mao_arco`, `_aquecer_a_mao` |
+| de quem é a compra, quantas cartas entraram e de onde elas saem | `mesa_3d.gd`: `_preparar_entrada`, `_marcar_entrada`, `_tocar_entrada` |
+| o trajeto, o escalonamento e o TEMPO da entrada na mão | `astralis/duel3d/entrada_mao_3d.gd` |
 | orquestrar mão e HUD a cada passo da volta | `mesa_3d.gd`: `_aplicar_vista_da_mao_entao_hud` |
 | a porta que o START e os testes chamam | `mesa_3d.gd`: `_girar_campo(alvo)` |
+| quando a vez é entregue (e a compra com ela) | `mesa_3d.gd`: `_passar_turno` e `_rival_auto` esperam a volta **antes** de `_redesenhar(true, dono)` |
 | colocar a mesa na vista de quem tem a vez, no boot | `mesa_3d.gd`: `_iniciar_turno_do_duelo` chama `colocar_vista` na vista |
 
 A vista **não** conhece a mão nem o HUD: a cada passo ela chama `ao_virar`, e a
@@ -155,11 +187,15 @@ mesa aplica os dois assuntos na ordem da D52.
 `aplicar()` é o **único** dono do 3D na volta — pivô e câmera saem do mesmo
 `giro_campo`, e ninguém ajusta o pivô por conta própria.
 
-## 16.7 O QUE NÃO PODE
+## 16.8 O QUE NÃO PODE
 
 - **Não deslocar a câmera** e **não mexer em `frustum_offset`**. Deslocar a lente
   achata um lado e estica o outro. Se parecer torto, muda o retângulo do
   SubViewport (doc 15), nunca a câmera.
+- **A trava é da câmera do CAMPO.** O painel esquerdo tem a janela 3D dele, com
+  a câmera dele, e ela é ortogonal de propósito (doc 15 §15.9): olho de painel
+  não é olho de mesa. O que não existe é deslocar ou entortar a lente **do
+  campo**.
 - **Não guardar o ponto de vista em variável de estado.** Ele vem do dono da vez
   a cada quadro (R1); guardar é a forma de a tela mentir.
 - **Não espalhar o "de que lado eu desenho"** por cada animação. A troca das
@@ -171,8 +207,11 @@ mesa aplica os dois assuntos na ordem da D52.
 - **Não nascer na vista de quem não tem a vez.** A mesa não pode aparecer na sua
   perspectiva e girar depois quando o rival começou: no boot a vista é *colocada*
   (`colocar_vista`), e a volta continua sendo só da troca de vez (ver 16.1.1).
+- **Não entregar a vez antes de a volta acabar**, nem por volta de lado: a compra
+  de cada um é mostrada na tela de quem comprou (ver 16.5).
 
-## 16.8 MEDIR
+## 16.9 MEDIR
+
 
 **Meça em unidades de mundo, por código, nunca por pixel de foto.** A volta da
 mesa faz o mesmo intervalo de mundo aparecer com 276, 257 e 220 px na tela
@@ -187,3 +226,9 @@ mesa faz o mesmo intervalo de mundo aparecer com 276, 257 e 220 px na tela
   `astralis/testing/test_turno_quem_comeca.gd`, que **força o caminho com
   render**: sem render a volta pularia direto para 180 e o defeito seria
   invisível para o teste.
+- A compra cair só depois da volta é travada por
+  `astralis/testing/test_volta_mesa.gd`, que passa o turno de verdade e olha o
+  giro da câmera e o tamanho da mão **a cada quadro**.
+- A entrada terminar no lugar é travada por
+  `astralis/testing/test_compra_fila.gd`, para os **dois** lados: medir no
+  primeiro quadro não prova nada, porque a carta começa no baralho de propósito.

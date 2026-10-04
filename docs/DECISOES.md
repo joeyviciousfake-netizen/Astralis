@@ -3,16 +3,14 @@
 > Só vale o que está aqui. Cada regra **uma vez só**, em uma linha:
 > `Dnn: REGRA | porque: MOTIVO | proibido: O QUE NAO PODE SER FEITO`.
 >
-> **Motivo é atemporal** ("X porque Z, senão W"). Mudança não entra: quem
-> substitui uma regra escreve a nova, e a antiga sai do arquivo inteiro
-> (R14/D1). O que ficou sem valor não vira linha de "supersedida".
+> **Motivo é atemporal** ("X porque Z, senão W"). Como trocar uma regra e o que
+> fazer com a que ficou sem valor é R14 no `AGENTS.md`.
 >
-> **Buraco é intencional.** `D13` e `D46` foram reservadas e as decisões
-> sumiram; nada se renumera, o índice marca o buraco. `D45b` foi fundida na
-> `D45`. O motivo de não existirem está no `git log`.
+> **Buraco é intencional:** nada se renumera e o índice marca o buraco (`D13`,
+> `D46` reservadas; `D45b` fundida na `D45`). O motivo está no `git log`.
 >
-> A lista de regras de processo e convenção de código é o **`AGENTS.md` seção 2**
-> (R1-R14). Decisão que já é regra ali **não** se repete aqui.
+> Regra de processo e convenção de código é o **`AGENTS.md` seção 2** (R1-R14) e
+> **não** se repete aqui.
 
 ## Dado, contrato e distribuição
 
@@ -42,20 +40,21 @@
 - **D30** | Efeitos **não** são executados na mesa. O dado existe e é validado (`effects.json`, contrato fechado) e o Studio edita e valida, mas não há motor no runtime: a zona de magia navega e ativar magia avisa. | porque: sem motor no runtime, o editor não pode executar (R4), e um editor que finge é pior que um editor que avisa. | proibido: o Studio calcular efeito, ou o GUT "provar" um motor que não existe.
 - **D33** | Campo de Testes com `duel_setup.test_state` V1: minha mão 0-5 + 4 zonas de 5 slots (meu e do rival), e "Iniciar teste" abre o Astralis real por `--project` + `--setup`. | porque: testar carta com o jogo de verdade, não com um duble. | proibido: campo de teste com estado inicial falso.
 - **D34** | Com `test_state` o turno 1 **pode** atacar (`is_test`); no duelo normal continua fechado. | porque: o campo de testes existe para bater na carta já de cara. | proibido: liberar o turno 1 no duelo normal.
-- **D41** | A mesa segue a referência do Tag Force, e é **só desenho**. O campo é um SubViewport à direita (x 29,3%..100%) com a câmera **sem deslocamento** e `frustum_offset = ZERO`; o campo ganha transform de apresentação (escala uniforme + deslocamento) sobre o layout da arena. | porque: deslocar a lente achata um lado e estica o outro. | proibido: mexer em `CAM_POS.x`, em `frustum_offset`, ou aplicar escala não uniforme. Se parecer torto, muda o retângulo do SubViewport, nunca a câmera.
+- **D41** | A tela segue a referencia do Tag Force, e e **so desenho**. O campo e a cena da referencia; a lente fica no eixo e nunca e deslocada (doc 15). | porque: a referencia e o alvo visual, e qualquer numero de layout e do dado. | proibido: numero de campo no codigo, e lente deslocada.
 - **D42** | `duel_setup.seed = 0` (ou ausente) é **sem semente**, sorteio de verdade; `seed != 0` é semente fixa para determinismo. A tela honra o `current_player` do motor, inclusive quando o rival começa, e conduz o turno dele pelo mesmo caminho real da jogada do jogador. | porque: quem começou o duelo é **dado do motor** (R3); semente fixa no Studio fazia o "aleatório" dar sempre o mesmo. | proibido: hardcode de "sempre jogador 0".
 - **D43** | Ninguém ataca enquanto o contador de turno for 1. | porque: a trava é pelo **contador**, não pelo lado — quem começou joga o turno 1 inteiro. | proibido: filtrar `can_attack` por `attacker_player`.
-- **D28/D55/D68** | A IA do rival é **temporária** e a escolha fina não é portada: ela escolhe o primeiro monstro da mão e o primeiro alvo, e só isso. A escolha mora em `astralis/ai/ia_rival.gd` e a **mesa executa**, pelo mesmo caminho da jogada do jogador. | porque: a escolha fina morava no 2D, que saiu, e a IA vai mudar quando o duelo parar de mudar. | proibido: a IA conduzir o turno, conhecer a tela, ou ter método de execução — se tivesse, a regra estaria morando nela e a R1 estaria quebrada. `target_slot` menor que zero é **ataque direto**, nunca "sem alvo".
+- **D28/D55/D68** | A IA do rival e **temporaria**: escolhe o primeiro monstro e o primeiro alvo, e a **mesa executa** pelo mesmo caminho da jogada do jogador. | porque: escolher carta e alvo e **regra**, e regra mora no `duel/` — escolha fina na tela ja e a R1 quebrada. | proibido: a IA conduzir o turno, conhecer a tela, ou ter metodo de execucao. `target_slot` < 0 e **ataque direto**.
 
 ## Mesa (o ponto de vista)
 
-- **D45** | A faixa do meio é **2D**, no HUD, dentro do vão entre as fileiras de monstros. Ordem das 7 células: meu cemitério, meu deck, meu LP, turno, LP rival, deck rival, cemitério rival. Deck é só contagem; cemitério mostra a foto da última carta, à esquerda no meu e à direita no do rival, em corte quadrado. Três conjuntos de cor (azul = você, vermelho = rival, preto = os dois cemitérios), todo número branco, e a célula do turno tinge com quem está jogando. | porque: em 3D a base depende de três números que precisam concordar e a "altura do chão" na tela é uma faixa, não uma linha — em 2D a posição é o pixel. | proibido: palavra ou ícone nos blocos, e inventar foto de cemitério vazio. A posição vem das bordas reais das fileiras, nunca chutada.
-- **D47** | A tela é o ponto de vista de **quem está jogando**, girando a **câmera** 180° em torno do centro do campo. A câmera é filha de um pivô e nunca se move nem gira: quem gira é o pivô, e `giro_campo` (0 = você, 180 = rival) é o número único da volta. As cartas do campo **não se mexem**. | porque: mexer nas cartas por perspectiva é mais código para o mesmo resultado, e a troca de lado vira espelho. | proibido: perspectiva por carta, esmaecer, carta viajando, ou guardar o ponto de vista em variável (é o dono da vez, R1). O HUD 2D não gira: vira de carta com `abs(cos(graus))` e troca o conteúdo nos 90°, quando a largura é zero — **a barra de fases não inverte**, porque mostra a fase real de quem joga e espelhar dado de regra seria a tela mentir. Não existe pular a volta. A mesa **nasce** na vista de quem tem a vez: quando o rival começa, o boot COLOCA a vista em 180 (`colocar_vista`, sem tween) em vez de nascer na sua e girar, porque quem tem a vez é quem se vê já no primeiro quadro.
-- **D49** | A grade do campo é perfeita: **um valor só, 263, nas seis direções** (o passo horizontal das 4 fileiras e o vão vertical monstro→magia dos dois lados). A distância entre as fileiras de monstro fica **congelada em 390**. | porque: com a volta da mesa o mesmo intervalo de mundo aparece com 276, 257 e 220 px na tela, então a medida é em **unidades de mundo**, nunca em pixel. | proibido: número de grid escondido no código por cima do dado. Se o vão ficar feio, muda o JSON.
-- **D50** | **A arena é do jogo.** Os números da mesa vivem em um lugar só, `schemas/examples/arenas/arena_starter.json`; `default_pos`/`default_layout` devolvem nulo e o chamador decide. O `arena_id` do `duel_setup` é lido e **ignorado**; uma pasta `arenas/` num projeto é ignorada com aviso. | porque: existiam três cópias dos mesmos números, e a que servia de fallback fazia o jogo cair numa mesa diferente **em silêncio**. | proibido: constante de grade, fallback de arena, ou mesa por projeto. Arquivo faltando ou quebrado é **erro honesto**: o log avisa e a mesa não desenha o campo.
-- **D51** | A vista do rival é o **espelho exato** da sua: `z_local = cam_pos.z - 2 * z_simetria * (giro / 180)`, com `z_simetria` medido do dado (a média das 10 posições de monstro da arena oficial). | porque: o plano de simetria do campo não está na origem, então girar em torno dela chega perto demais da mesa e o campo sai enviesado. | proibido: reposicionar a faixa 2D por vista, e mudar a perspectiva da sua vez. A correção tem de estar em 0° **exatamente** como `cam_pos.z`.
-- **D52** | Quem está jogando ocupa o lugar de **baixo** e o outro o de **cima**; na vista do rival cada lugar é o espelho do mesmo lugar na sua vista. A troca acontece nos 90°, e as duas mãos ficam de pé mostrando o verso. O cursor some na vista do rival. As cartas do campo continuam paradas. | porque: o verso de uma carta não é o espelho da frente dela, então virar de cabeça para baixo mostraria a arte do jogador. | proibido: guardar a pose da mão por `instance_id` da câmera (ela não muda na volta) — o boot resolve os dois lugares antes de qualquer carta.
-- **D53** | A compra animada é da mão que comprou; a chacoalhada é da carta do slot e **nunca** sacode a mesa inteira; o passo de cursor só reposiciona cursor e painel. | porque: um desenho que se mexe sem precisar denuncia escolha errada. | proibido: reintroduzir a trava dentro de `_sacudir` e `_animar_compra` para testá-los — as duas perderam a trava de "só com render" de propósito, para o GUT **ver quem animou**.
+- **D45** | A faixa do meio e **2D**, no HUD, dentro do vao entre as fileiras, com 7 celulas na ordem do D45b (MeuCemiterio, MeuDeck, LpVoce, **Turno** no meio, LpRival, DeckRival, CemRival). Todo numero e BRANCO. A posicao nao e chutada: a barra se encaixa nas bordas REAIS das fileiras, medidas do dado + da camera. | porque: em 3D a posicao de um objeto e a soma de tres numeros e a "altura do chao" e uma faixa, nao uma linha; em 2D a posicao e o pixel. | proibido: hardcode de posicao da faixa, e cor de numero fora do branco (doc 15 15.6).
+- **D47** | A tela e o ponto de vista de **quem esta jogando**, girando a **camera** 180 em torno do centro do campo. A camera e filha de um pivo e nunca se move nem gira: quem gira e o pivo, e `giro_campo` (0 = voce, 180 = rival) e o numero unico da volta. As cartas do campo **nao se mexem**. | porque: mexer nas cartas por perspectiva e mais codigo para o mesmo resultado. | proibido: perspectiva por carta, esmaecer, carta viajando, ou guardar o ponto de vista em variavel (o dono da vez e o R1). O HUD 2D nao gira: vira de carta com `abs(cos(graus))` e troca o conteudo nos 90, quando a largura e zero - **a barra de fases nao inverte**, porque mostra a fase real de quem joga. Nao existe pular a volta. A mesa **nasce** na vista de quem tem a vez: quando o rival comeca, o boot coloca a vista em 180 (`colocar_vista`, sem tween).
+- **D49** | A grade do campo e **perfeita**: **um valor so, 263**, nas seis direcoes (EXCETO o 390 entre as fileiras de monstros, que vem da outra medida da arena). | porque: dois numeros iguais escritos em lugares diferentes divergem no primeiro ajuste de layout. | proibido: um segundo valor de vao.
+- **D50** | **A arena e do jogo.** Os numeros da mesa vivem em `schemas/`, e a pasta `arenas/` do projeto e IGNORADA com aviso. | porque: duas arenas sao duas mesas, e numero de mesa em dois lugares diverge sozinho. | proibido: `arenas/` no projeto, e a mesa ler layout de fora do dado.
+- **D51** | A vista do rival é o **espelho exato** da sua: `z_local = cam_pos.z - 2 * z_simetria * (giro / 180)`, com `z_simetria` medido do dado (a média das posições de monstro da arena oficial). | porque: o plano de simetria do campo não está na origem, então girar em torno dela chega perto demais da mesa e o campo sai enviesado. | proibido: reposicionar a faixa 2D por vista, e mudar a perspectiva da sua vez. A correção tem de estar em 0° **exatamente** como `cam_pos.z`.
+- **D52** | Quem está jogando ocupa o lugar de **baixo** e o outro o de **cima**; na vista do rival cada lugar é o espelho do mesmo lugar na sua vista. A troca acontece nos 90°, as duas mãos ficam de pé mostrando o verso e o cursor some na vista do rival. As cartas do campo param. | porque: o verso de uma carta não é o espelho da frente dela, então virar de cabeça para baixo mostraria a arte do jogador. | proibido: guardar a pose da mão por `instance_id` da câmera (ela não muda na volta) — o boot resolve os dois lugares antes de qualquer carta.
+- **D53** | A compra animada é da mão que comprou; a chacoalhada é da carta do slot e **nunca** sacode a mesa inteira; o passo de cursor só reposiciona cursor e painel. | porque: um desenho que se mexe sem precisar denuncia escolha errada. | proibido: reintroduzir a trava de "só com render" na entrada da mão e no `_sacudir` para testá-los — as duas perderam a trava de propósito, para o GUT **ver quem animou**.
+- **D76** | A entrada da carta comprada é de QUEM COMPROU e só da carta que COMPROU: as outras da mão DESLIZAM para o lugar novo, e a compra só é mostrada DEPOIS que a câmera parou na perspectiva de quem comprou. | porque: a mão é centrada, então comprar uma carta muda o lugar de todas, e o salto delas é o que faz a compra parecer quebrada; e compra mostrada na tela de outro é a tela mentindo sobre de quem é a vez. | proibido: animar a mão inteira de uma vez, e entregar a vez (e a compra) antes de a volta acabar.
 
 ## Processo, ferramentas e assets
 
@@ -65,57 +64,62 @@
 - **D39** | O MCP é o do Coding-Solo; o MCP não tem nenhuma ferramenta de editar `.gd`. | porque: a ponte do Godot não escreve código — `.gd` se edita por arquivo. | proibido: "corrigir" o `.gd` pela ponte.
 - **D56** | O log de BOOT é contrato, e só ele sai sempre; diagnóstico vai atrás de `-- --debug`. | porque: `astralis/testing/test_project_arg.gd` roda o jogo como processo filho e prova o `--project` lendo a saída, então o log é interface. | proibido: `push_error` no caminho de boot (o GUT conta como erro inesperado) — use `push_warning` + `print`.
 - **D57** | Um `.gd` = um assunto, e o assunto manda na divisão; o comentário é finalidade, invariante e dono, nunca a história. | porque: o projeto é lido por IA, e um comentário de 20 linhas de história são 20 linhas a mais em toda leitura futura, sem informação útil. | proibido: criar arquivo minúsculo só para existir, e citar `Dnn` no comentário. **Estas duas regras são R9 e R10 no `AGENTS.md` — uma casa só.**
-- **D70** | A medida da carta é a do contrato: **59 x 86 x 0,30 mm**, e a mesa é o **único dono** do número. Os receptores (`carta_3d.gd`, `cursor_3d.gd`, `painel_carta_3d.gd`) **não têm default** e cada um tem `assert` que reclama se a medida não chegar. | porque: `GROSS_CARTA` estava arredondado (0,005 em vez de 0,0050847458) e o mesmo número aparecia com valores contraditórios em 3 outros lugares; a peça nascia 10x mais grossa sem nenhuma falha. | proibido: default de medida em receptor. É melhor a peça nascer do tamanho zero com grito do que com a medida errada em silêncio.
-- **D71** | **Regra das ferramentas:** documentação (o `docs/17_BLENDER.md` e o manual do programa, a cópia local quando existe) ANTES de fazer o que não se sabe ou não se tem certeza; depois nativa do programa, pesquisa na internet, e manual só em último caso. | porque: consultar a documentação antes é o caminho curto, e consultar depois de errar é registro de erro; e o Blender tem bevel, subdiv, remesh, snap e Geometry Nodes, e ele gera a topologia por você. | proibido: reconstruir geometria à mão sem antes consultar a documentação e perguntar "o programa já faz isso?", e gravar no manual sem medir a topologia. (= R12)
-- **D74** | **A documentacao e' lida ANTES do codigo, e o motor arbitra quando elas discordam.** Antes de escrever ou mexer em codigo, ler a documentacao do que se vai usar; e como a copia local do Godot e' do `master` (versao de desenvolvimento) enquanto o motor e' o da `project.godot`, conferir a API no motor com `ClassDB.class_has_method` antes de usar. | porque: o motor muda o tempo todo, e o jeito facil ja existe quase sempre — sem isso a IA quebra a cabeca com o que a doc ja responde, ou escreve codigo que so funciona na versao de amanha. | proibido: mexer em codigo de motor sem ter lido a documentacao, e usar API que a doc marca como recente sem conferir no motor. Onde procurar e' `docs/17_BLENDER.md` §17.8. (= R17)
+- **D70** | A medida da carta e a do contrato (**59 x 86 x 0,30 mm**) e a mesa e o **unico dono**; os receptores nao tem default e cada um grita se a medida nao chegar. | porque: medida em dois lugares diverge sozinha, e a peca nasce errada sem nenhuma falha. | proibido: default de medida em receptor.
+- **D71** | **Regra das ferramentas:** documentacao (o `docs/17_BLENDER.md` e o manual, a copia local quando existe) ANTES do que nao se sabe; depois nativa, internet, manual so em ultimo caso. | porque: consultar a doc antes e o caminho curto, e depois de errar e registro de erro. | proibido: reconstruir geometria a mao sem consultar a doc e perguntar "o programa ja faz isso?". (= R12)
+- **D74** | **A documentacao e lida ANTES do codigo, e o motor arbitra quando elas discordam:** ler a doc do que se vai usar e, como a copia local do Godot e do `master` enquanto o motor e o da `project.godot`, conferir a API no motor com `ClassDB.class_has_method`. | porque: o motor muda o tempo todo e o jeito facil ja existe quase sempre. | proibido: mexer em codigo de motor sem ler a doc, e usar API que a doc marca como recente sem conferir no motor. (= R17)
+- **D75** | **A carta do painel esquerdo e a CARTA 3D de verdade, nao uma imagem 2D** (doc 15 §15.9). | porque: uma segunda carta so para o painel seria um duble do que a mesa mostra. | proibido: carta desenhada so no painel, e janela do painel em perspectiva ou deslocada (D41/D47 travam a camera do CAMPO).
+- **D77** | **A moeda do sorteio e um desenho NA FRENTE DA CAMERA, e ela NAO some o jogo:** perspectiva, cartas, painel e marcador ficam a coluna inteira. Ela e IRMA do pivo (nao filha), cresce com clarao, tomba em torno do eixo VERTICAL da tela e para na face — estrela = jogador, losango = rival, a face e a resposta, e **nao ha nome escrito nem pulo**. E **UNSHADED** (a cena nao tem luz) e cabe INTEIRA no vao entre o cemiterio de cima e o marcador (doc 15 15.10). | porque: um sorteio que vira a mesa de lado faz o jogador perder as proprias cartas no instante em que vai jogar; e a face se le em um quinto de segundo e um nome em um segundo. | proibido: moeda dentro do pivo, girar na normal da face (o giro sumiria), moeda fora do vao (some atras das cartas), e material PBR (sai preto sem luz).
+- **D78** | **A DISTRIBUIÇÃO INICIAL usa a MESMA animação da compra** (`entrada_mao_3d.gd`), e as DUAS mãos animam juntas: as 5 cartas do jogador embaixo e as 5 do rival em cima, uma por uma do baralho. A ordem do boot e **distribuição -> moeda**. | porque: quem abre o duelo precisa ver a mao se encher antes de saber de quem e a vez, e um tempo novo de distribuicao seria uma segunda fonte da mesma medida do voo. | proibido: tempo de distribuicao escrito fora de `entrada_mao_3d.gd`, animar so uma mao na distribuicao, e a moeda antes das cartas chegarem.
+- **D79** | **O TURNO E PERGUNTA durante a espera: `?` ambar no ROXO, e o numero branco so depois.** | porque: o motor ja sabe quem comeca antes do giro, entao a cor de lado dava a resposta ANTES da hora; e o numero precisa ser branco de verdade, nao cinza. | proibido: celula na cor de lado antes da resposta, e herdar o `modulate` do pulso (alpha baixo sobre fundo escuro = cinza).
+- **D80** | **A ESPERA E UMA COISA SO, E A MESA QUE DIZ QUE ELA EXISTE:** existe moeda na tela quando o DADO do duelo e `turn_order: "moeda"` (ou a flag de prova), e dai vem o PAINEL em branco (sem carta e sem verso), a NAVEGACAO travada (teclado e analogico) e o marcador. A janela cobre a distribuicao E a moeda, e acaba com a resposta. | porque: o motor ja sabe quem comeca (D42) e a tela ainda nao virou, entao o cursor esta no LUGAR da mao de quem ganhou: painel, cor da celula e botao andando entregavam a resposta antes da moeda; e sem moeda nao ha o que esconder. | proibido: `?`, carta ou verso no painel, cursor andando na espera, e espera em duelo sem moeda.
 
-# ÍNDICE (R13: a maior decisão que existe é a **D74**)
+# ÍNDICE (R13: a maior decisão que existe é a **D80**)
 
 ```text
 D01 DATA != LOGIC
 D02 Proibido motor falso
 D08 Fusao = receita explicita + regra generica
-D03/D04/D05/D06 Distribuicao trancada: PLANO, 0% implementado
+D03/D04/D05/D06 Distribuicao trancada: PLANO
 D11 --- (reservada)
 D12 --- (reservada)
 D13 --- (reservada)
 D14 Ferramentas oficiais: godot-mcp + GUT 9.7.1
-D15 Mao 5, refill ate 5, deck 40, 5+5 slots por lado
+D15 Mao 5, deck 40, 5+5 slots
 D16 Resolucao fixa 1920x1080
-D17 Slot com ID fixo; posicao no arquivo da arena, sem fallback
+D17 Slot com ID fixo; posicao no dado
 D18 O lado 1 do dado ja vem espelhado
 D19 100% controle, zero mouse e teclado
-D20 Referencia versionada = 100% FM original
-D21 starting_lp do setup manda; o do duelista e sugestao
-D22 Studio e Tauri 2; Jogar lanca o Godot de verdade
+D20 Referencia = 100% FM original
+D21 starting_lp do setup manda
+D22 Studio e Tauri 2
 D23 Quem manda e o usuario
-D24 Fluxo fiel: mao -> centro -> face -> slot -> estrela -> Ataque
-D25 Mao reta centralizada; fusao fiel
-D26 Mao sempre 5; deckout perde; fusao em fila
+D24 Fluxo fiel do turno
+D25 Mao reta; fusao fiel
+D26 Mao 5; deckout perde
 D27 Slot escolhido antes da fusao
-D28/D55/D68 IA do rival e TEMPORARIA; ela SO ESCOLHE, a mesa executa
-D29 Studio abre SEMPRE vazio; o jogo le via --project
-D30 Efeitos NAO sao executados na mesa (dado existe, motor nao)
+D28/D55/D68 IA SO ESCOLHE; a mesa executa
+D29 Studio abre vazio; --project
+D30 Efeitos sem motor na mesa
 D31 Contrato apertado
 D32 Reload no dev nao zera; abrir o app zera
-D33 Campo de Testes com duel_setup.test_state V1
+D33 Campo de Testes (test_state)
 D34 Com test_state o turno 1 pode atacar
 D35 Pack de criacao e um .apack
-D36 Layout da carta e molde em dado
+D36 Layout da carta em dado
 D37 --- (reservada)
-D38 As 6 molduras ORIGINAIS do usuario, proibido editar
+D38 As 6 molduras do usuario
 D39 MCP e o do Coding-Solo; nao edita .gd
 D40 --- (reservada)
-D41 Mesa segue o Tag Force; SubViewport, frustum_offset = ZERO
-D42 seed 0 = sem semente; a tela honra current_player
+D41 SubViewport, lente nunca deslocada
+D42 seed 0 = sem semente
 D43 Sem ataque enquanto o turno for 1 (pelo contador)
 D44 --- (reservada)
-D45 Faixa do meio 2D no HUD, 7 celulas, 3 conjuntos de cor
+D45 Faixa do meio 2D no HUD
 D46 --- (reservada)
-D47 A tela gira a CAMERA 180 em torno do campo; as cartas nao se mexem
+D47 A tela gira a CAMERA 180
 D48 --- (reservada)
 D49 Grade perfeita: 263 nas seis direcoes, 390 congelado
-D50 A arena e DO JOGO: zero numero de arena no codigo
+D50 A arena e do jogo
 D51 A vista do rival e o ESPELHO EXATO da sua
 D52 As DUAS maos, uma em cada lugar, nas duas vistas
 D53 Um desenho que se mexe sem precisar
@@ -125,11 +129,16 @@ D57 Um .gd = um assunto; comentario nunca e historia (= R9/R10)
 D58 --- (reservada)
 D61 --- (reservada)
 D62 --- (reservada)
-D68 A IA do rival tem arquivo proprio e so escolhe
 D69 --- (reservada)
-D70 A medida da carta e a do contrato; a mesa e o unico dono
-D71 Documentação primeiro, depois a ferramenta do programa
+D70 Medida da carta: a mesa e o dono
+D71 Documentacao, depois a ferramenta
 D72 Modelar na frente da pessoa, nunca headless
-D73 Tri e quad entram, n-gon nao; face medida antes de exportar
-D74 Documentacao antes do codigo; o motor arbitra a versao da API
+D73 Tri e quad entram, n-gon nao
+D74 Documentacao antes do codigo
+D75 A carta do painel e a CARTA 3D de verdade
+D76 A entrada e so da carta comprada, na tela de quem comprou
+D77 A moeda e um desenho na frente da camera, sem virar a tela
+D78 A distribuicao inicial usa a animacao da compra
+D79 O marcador pergunta durante a espera
+D80 A espera e uma coisa so, decidida pela mesa
 ```

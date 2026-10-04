@@ -14,10 +14,11 @@ EXISTE:
             card_layout (lê layouts/ do projeto; o default embutido é fallback)
   duel:     GameState, DuelManager, TurnManager, SummonSystem, BattleSystem,
             DamageSystem, PositionSystem, FusionSystem  <- SISTEMAS DE REGRA (R1)
-  duel3d:   a TELA do duelo em 8 arquivos, UM ASSUNTO CADA:
+  duel3d:   a TELA do duelo em 9 arquivos, UM ASSUNTO CADA:
             mesa_3d.gd (orquestrador + dono das medidas),
             painel_carta_3d.gd, faixa_2d.gd, carta_3d.gd (fábrica),
-            menus_3d.gd, vista_3d.gd, campo_3d.gd, cursor_3d.gd
+            entrada_mao_3d.gd, menus_3d.gd, vista_3d.gd, campo_3d.gd,
+            cursor_3d.gd
             -> o mapa com o dono de cada número está no doc 15 §15.7
   ai:       ia_rival.gd (a IA ESCOLHE carta e alvo; a mesa EXECUTA, D68)
   ui:       card_view.gd (a carta 2D pelo molde)

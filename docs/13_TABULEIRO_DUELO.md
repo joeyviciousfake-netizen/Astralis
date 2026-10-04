@@ -91,7 +91,21 @@ conduz o turno dele pelo mesmo caminho real da jogada do jogador.
 
 Validações que importam: `decks.p0` e `decks.p1` precisam existir e apontar para
 um duelista com aquele deck; `starting_lp` é inteiro positivo até 99999;
-`turn_order` só aceita `first_p1`, `first_p2` ou `random`; `seed` é inteiro.
+`turn_order` só aceita `first_p1`, `first_p2`, `random` ou `moeda`; `seed` é
+inteiro. `random` e `moeda` são **o mesmo sorteio** no motor — a diferença é que
+`moeda` faz a tela MOSTRAR o sorteio (o desenho em `moeda_3d.gd`, doc 15 secao
+15.10); `moeda` com `test_state` é `first_p1`.
+
+`turn_order` também decide se a tela tem **ESPERA**: existe moeda na tela quando o
+dado é `moeda`, e é daí que vem o painel em branco e a navegação travada (D80,
+doc 15 secao 15.10). Sem `moeda` não há espera — não há o que esconder.
+
+O duelo **DEV** (o que o editor abre sem `--project`) é sempre `moeda`: o sorteio
+na tela é o assunto que se está olhando, e um sorteio que só sai em uma partida de
+três é sorteio que quase ninguém vê. As outras duas ordens continuam alcançáveis
+pelo setup de um projeto e pelo Studio. O headless (GUT/CI) **não** usa o duelo DEV
+— ele cai no `schemas/examples`, e é por isso que a seed fixa dos testes continua
+dando o mesmo primeiro jogador.
 
 **`test_state`** (V1, opcional, D33) é o estado inicial do Campo de Testes:
 `my_hand` de 0 a 5 cartas, e 4 zonas de 5 slots (`p0/p1_monster`, `p0/p1_spell`),
