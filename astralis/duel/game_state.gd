@@ -22,9 +22,21 @@ var over: bool = false
 var normal_summon_used: bool = false
 var starting_lp: int = 4000
 var is_test: bool = false
+## COMO a ordem de turno foi decidida, não só QUEM começou. É o valor do
+## `duel_setup.turn_order`: `first_p1`/`first_p2` fixos, `random` sorteado sem
+## desenho, `moeda` sorteado e MOSTRADO (a tela honra o número, D42 — a moeda
+## representa a decisão, nunca a toma). A tela precisa disto para saber se tem
+## moeda no duelo: sem este campo ela teria que reler o `duel_setup` e o dado
+## passaria a ter dois leitores.
+var turn_order: String = "first_p1"
+## A SEMENTE do duel, a mesma que o motor usou para embaralhar e para sortear.
+## É o dado de que o sorteio foi tirado, e a tela precisa dela para o desenho do
+## sorteio cair sempre igual com a mesma semente — inclusive o número de voltas
+## da moeda, que é o único número do trajeto que o sorteio mexe.
+var seed: int = 0
 
 
-static func create(p0_deck: Array, p1_deck: Array, lp: int, first: int, p_is_test: bool = false):
+static func create(p0_deck: Array, p1_deck: Array, lp: int, first: int, p_is_test: bool = false, p_turn_order: String = "first_p1", p_seed: int = 0):
 	# load() em vez de DuelGameState.new(): funciona mesmo com cache frio de class_name.
 	var s = (load("res://duel/game_state.gd") as GDScript).new()
 	s.starting_lp = lp
@@ -36,6 +48,8 @@ static func create(p0_deck: Array, p1_deck: Array, lp: int, first: int, p_is_tes
 	s.over = false
 	s.normal_summon_used = false
 	s.is_test = p_is_test
+	s.turn_order = p_turn_order
+	s.seed = p_seed
 	return s
 
 

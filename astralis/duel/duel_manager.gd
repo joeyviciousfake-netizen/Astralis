@@ -61,13 +61,20 @@ func _montar(setup: Dictionary, decks: Dictionary, cards: Dictionary) -> void:
 	var baralho2: Array = _construir_baralho(_ids_do_deck(str(d2.get("deck_id", ""))))
 	_embaralhar(baralho1)
 	_embaralhar(baralho2)
+	# COMO a ordem foi decidida viaja no estado (GameState.turn_order), porque a
+	# tela precisa saber se o duelo TEM moeda antes de desenhar qualquer coisa.
+	# `moeda` e `random` SÃO O MESMO SORTEIO aqui no motor: a moeda é a
+	# REPRESENTAÇÃO da decisão, nunca a decisão (R1/D42). Se a moeda decidisse,
+	# o sorteio viraria regra de tela e a semente fixa deixaria de reproduzir o
+	# mesmo duelo.
+	var ordem := str(setup.get("turn_order", "first_p1"))
 	var primeiro := 0
-	match str(setup.get("turn_order", "first_p1")):
+	match ordem:
 		"first_p1":
 			primeiro = 0
 		"first_p2":
 			primeiro = 1
-		"random":
+		"random", "moeda":
 			primeiro = rng.randi_range(0, 1)
 		_:
 			primeiro = 0
@@ -79,6 +86,10 @@ func _montar(setup: Dictionary, decks: Dictionary, cards: Dictionary) -> void:
 		teste = setup.get("test_state", {})
 	if not teste.is_empty():
 		primeiro = 0
+		# E a ORDEM vira `first_p1` junto: quem decidiu foi o dado de teste, e
+		# mandar a tela mostrar uma moeda para um sorteio que não aconteceu seria
+		# a tela inventando o que o motor não fez.
+		ordem = "first_p1"
 	# Uma linha de log do MOTOR: como a semente foi tratada e QUEM COMECA
 	# (o sorteio e do motor, R3; a tela so honra esse numero). ASCII puro de
 	# proposito: a saida do jogo lido como processo filho (o --setup /
@@ -88,7 +99,7 @@ func _montar(setup: Dictionary, decks: Dictionary, cards: Dictionary) -> void:
 		"sem semente, sorteio de verdade" if seed_val == 0 else "semente fixa, deterministico",
 		"p0 (voce)" if primeiro == 0 else "p1 (rival)",
 	])
-	state = GameState.create(baralho1, baralho2, lp, primeiro, not teste.is_empty())
+	state = GameState.create(baralho1, baralho2, lp, primeiro, not teste.is_empty(), ordem, seed_val)
 	if teste.is_empty():
 		for i in range(5):
 			for pi in [0, 1]:

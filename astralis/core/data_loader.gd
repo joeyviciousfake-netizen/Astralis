@@ -107,14 +107,21 @@ static func _dev_setup_json(duelistas: Array) -> Dictionary:
 		guarda += 1
 	var d1: Dictionary = duelistas[i1] as Dictionary
 	var d2: Dictionary = duelistas[i2] as Dictionary
-	var ordens := ["first_p1", "first_p2", "random"]
+	# A ordem de turno do duelo DEV é SEMPRE a moeda (D77). Este duelo é o que
+	# quem abre o jogo no EDITOR vê, e o sorteio na tela é o assunto que se está
+	# olhando: um sorteio que só aparece em uma partida de três é sorteio que
+	# quase ninguém vê. As outras duas ordens continuam alcançáveis pelo setup de
+	# um projeto e pelo Studio, que é onde quem monta duelo escolhe a ordem.
+	# O headless (GUT/CI) NÃO usa este duelo: o gate duplo de `load_starter_kit`
+	# cai no `schemas/examples`, e é por isso que a seed fixa dos testes continua
+	# dando o mesmo primeiro jogador.
 	return {
 		"schema_version": 1,
 		"duel_id": "duel_dev_random",
 		"duelist1": {"duelist_id": str(d1.get("id", "")), "deck_id": str(d1.get("deck_id", ""))},
 		"duelist2": {"duelist_id": str(d2.get("id", "")), "deck_id": str(d2.get("deck_id", ""))},
 		"starting_lp": 8000,
-		"turn_order": ordens[randi_range(0, 2)],
+		"turn_order": "moeda",
 		"seed": randi(),
 		"arena_id": "arena_starter",
 		"win": {"on_lp_zero": true, "on_deckout": true},
