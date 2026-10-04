@@ -280,13 +280,13 @@ func _acha_corpo(no: Node) -> MeshInstance3D:
 
 
 ## A COR VIVA: a moeda no mesmo modo de sombreamento do resto da tela.
-## O dono do comportamento e a CASA (todas as cartas, o vidro, o ceu e a nuvem sao
+## O dono do comportamento e a CASA (cartas e vidro sao
 ## `SHADING_MODE_UNSHADED`); aqui so o que se faz com o material da peca.
 ##
 ## O `.glb` traz o metal como PBR de verdade (`roughness` 0.25 com clearcoat), e
 ## PBR sem luz e preto: a cena do duelo nao tem iluminacao e nao vai ter, entao o
 ## material importado sairia escuro e sem a cor do Blender. `UNSHADED` e o modo
-## do RESTO da tela (a carta, o vidro, o ceu, a nuvem) e por isso que a moeda e
+## do RESTO da tela (a carta e o vidro) e por isso que a moeda e
 ## a unica peca que estava destoando. A luz que acompanha a moeda continua
 ## existindo, mas nao para iluminar o metal: e o brilho do ESTOURO final.
 func _pintar_sem_luz(corpo: MeshInstance3D) -> void:

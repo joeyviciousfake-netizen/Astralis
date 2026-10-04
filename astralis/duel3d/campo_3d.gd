@@ -3,7 +3,7 @@ extends Node3D
 ## campo_3d — O CAMPO DE VIDRO: os 20 painéis flutuantes que recebem as
 ## cartas, mais o guarda-chuva das laterais. Um assunto so: onde o vidro fica.
 ##
-## O vidro é a peça ESCURA e translúcida (dá pra ver o céu por baixo, como na
+## O vidro é a peça ESCURA e translúcida (dá pra ver o fundo por baixo, como na
 ## ref) com um aro fininho de luz (na ref é um fio, não um wireframe). Na
 ## perspectiva da câmera fixa os 20 viram os trapezoides da ref.
 ##
@@ -49,7 +49,7 @@ func _ready() -> void:
 
 
 ## Um painel de vidro = a PEÇA DE VIDRO da ref (doc 15 §15.3): vidro azul
-## ESCURO translúcido (dá pra ver o céu/frente através), com aro fino mais
+## ESCURO translúcido (dá pra ver o fundo através), com aro fino mais
 ## claro em volta e ESPAÇO entre as peças (na ref são ladrilhos soltos, não
 ## um wireframe colado). O lado acompanha o campo, então a fresta entre as
 ## peças continua a mesma em qualquer escala.

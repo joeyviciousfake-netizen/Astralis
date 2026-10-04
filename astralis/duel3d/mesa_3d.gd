@@ -1,10 +1,10 @@
 extends Node3D
 
 ## mesa_3d — CAMPO 3D OFICIAL do duelo (D23/D40, cena principal do projeto).
-## Céu azul estilo GX, SEM MESA: nada de tampo, moldura, emblema ou vazio
-## estrelado — só DESENHA o estado real
+## Fundo sólido escuro, SEM MESA: nada de tampo, moldura, emblema, vazio
+## estrelado ou céu — só DESENHA o estado real
 ## (DuelManager/GameState + sistemas reais Summon/Battle/Position/Turn/
-## Fusion) flutuando no céu azul com painéis de vidro azul. Zero regra
+## Fusion) flutuando com painéis de vidro azul. Zero regra
 ## aqui (R1): cada jogada chama o sistema real e redesenha.
 ## Controle 100% joypad (D19): só as 11 ações custom, sem mouse/teclado.
 ## Uso headless p/ validação: `-- --mesa3d-sair=5` sai sozinho após N segundos.
@@ -32,13 +32,12 @@ const Moeda3D := preload("res://duel3d/moeda_3d.gd")
 const IaRival := preload("res://ai/ia_rival.gd")
 
 ## Conversão desenho 2D->3D (só desenho): campo 2D centrado em x=1158.
-## Composição ref nova (céu azul GX, SEM MESA): câmera FIXA atrás/acima do
-## seu campo olhando o rival longe (profundidade); céu azul com nuvens e
-## pilares de vidro ao fundo; 20 painéis de VIDRO AZUL flutuantes (5+5 por
-## lado); carta virada = marrom com espiral; monstro em pé face-up; fases
-## DP/SP/MP1/BP/MP2/EP metálicas no meio; mão em arco embaixo; painel 2D
-## fixo à esquerda estilo carta (fundo bege, nome/tipo verdes); HUD 2D no
-## topo (placa azul do seu LP esq / TURN centro / placa vermelha do rival
+## Composição ref nova (fundo sólido, SEM MESA): câmera FIXA atrás/acima do
+## seu campo olhando o rival longe (profundidade); 20 painéis de VIDRO AZUL
+## flutuantes (5+5 por lado); carta virada = marrom com espiral; monstro em pé
+## face-up; fases DP/SP/MP1/BP/MP2/EP metálicas no meio; mão em arco embaixo;
+## painel 2D fixo à esquerda estilo carta (fundo bege, nome/tipo verdes); HUD 2D
+## no topo (placa azul do seu LP esq / TURN centro / placa vermelha do rival
 ## dir + etiquetas Single). Zero regra aqui (R1).
 const DIV := 150.0
 const CENTRO_X := 1158.0
@@ -73,7 +72,7 @@ const CAM_FOV := 20.0
 ## O duelo segue o Forbidden Memories: sem DP/SP/MP1/BP/MP2/EP.
 
 ## ---- JANELA DO CAMPO (doc 15 §15.4 — só DESENHO, nada de regra) ----
-## O mundo 3D inteiro (céu, pilares, campo, cartas, mão, cursor) é
+## O mundo 3D inteiro (campo, cartas, mão, cursor) é
 ## desenhado num SubViewport que ocupa SÓ a região do campo; o HUD 2D
 ## continua em tela cheia por cima (Control filho da cena, como sempre).
 ##   PAINEL_ESQ_PX = 29,3% da largura da tela: MEDIDA da referência
@@ -839,16 +838,6 @@ func _quer_calib_visual() -> bool:
 	return false
 
 
-## Prova sem o céu: `--sem-ceu` tira o fundo (céu + pilares + nuvens) e deixa
-## uma cor sólida, para olhar só mesa e cartas. Zero regra: sem a flag o jogo é
-## exatamente o de sempre.
-func _quer_sem_ceu() -> bool:
-	for a in OS.get_cmdline_user_args():
-		if str(a).strip_edges() == "--sem-ceu":
-			return true
-	return false
-
-
 ## Monta o quadrado de calibração dentro do HUD (por cima de tudo). Cada linha
 ## é a BORDA REAL de uma fileira, lida do dado + da câmera (`_borda_da_fileira_px`),
 ## então o desenho dele é a medida, não um número chutado.
@@ -906,8 +895,8 @@ func _calib_linha(hud: Control, nome: String, y: float, cor: Color, alt: int, x0
 
 # ---- JANELA DO CAMPO (doc 15 §15.4) ----
 
-## Move a JANELA, não a câmera (doc 15 §15.4). O mundo 3D inteiro (céu,
-## pilares, campo, cartas, mão, cursor 3D) nasce dentro de um SubViewport
+## Move a JANELA, não a câmera (doc 15 §15.4). O mundo 3D inteiro (campo,
+## cartas, mão, cursor 3D) nasce dentro de um SubViewport
 ## com o tamanho da região do campo, e esse viewport é mostrado por baixo
 ## do HUD 2D (camada -1). A câmera fica EXATAMENTE onde já estava, sem
 ## deslocamento de lente: por isso a perspectiva é idêntica à de quando o
@@ -916,7 +905,7 @@ func _construir_janela_campo() -> void:
 	_vp = SubViewport.new()
 	_vp.name = "Viewport3D"
 	_vp.size = Vector2(JANELA_CAMPO_L, JANELA_CAMPO_A)
-	_vp.own_world_3d = true   # mundo 3D só desta janela (o céu não invade o HUD)
+	_vp.own_world_3d = true   # mundo 3D só desta janela (não invade o HUD)
 	_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	_vp.transparent_bg = false
 	# Camada -1 = ATRÁS do HUD 2D (que fica na camada 0, tela cheia).
@@ -955,30 +944,10 @@ func _construir_ambiente() -> void:
 	var we := WorldEnvironment.new()
 	we.name = "WorldEnvironment"
 	var env := Environment.new()
-	if _quer_sem_ceu():
-		# Prova sem céu: MAGENTA sólido no lugar do céu + cenário. Magenta de
-		# propósito, para não confundir com nenhum azul do jogo: se algum pixel
-		# do fundo era céu, ele aparece aqui. Só desenho.
-		print("[MESA3D] Prova --sem-ceu: ceu desligado, fundo magenta.")
-		env.background_mode = Environment.BG_COLOR
-		env.background_color = Color(1.0, 0.0, 1.0)
-	else:
-		# Céu azul claro (SEM MESA, SEM vazio estrelado): céu procedural azul com
-		# GRADIENTE VERTICAL (mais escuro em cima, mais claro no horizonte — doc 15
-		# §15.3) + neblina azul-clara p/ profundidade + sol branco. Sem imagem
-		# externa.
-		var ceu := Sky.new()
-		var mat_ceu := ProceduralSkyMaterial.new()
-		mat_ceu.sky_top_color = Color(0.10, 0.30, 0.72)
-		mat_ceu.sky_horizon_color = Color(0.62, 0.82, 0.99)
-		mat_ceu.sky_curve = 0.18
-		mat_ceu.ground_bottom_color = Color(0.16, 0.30, 0.56)
-		mat_ceu.ground_horizon_color = Color(0.46, 0.64, 0.88)
-		mat_ceu.sun_angle_max = 30.0
-		mat_ceu.energy_multiplier = 0.85
-		ceu.sky_material = mat_ceu
-		env.background_mode = Environment.BG_SKY
-		env.sky = ceu
+	# Fundo sólido escuro, sem céu: a câmera olha o chão o duelo inteiro, então
+	# céu, pilares e nuvens nunca aparecem — só custavam GPU. Sem imagem externa.
+	env.background_mode = Environment.BG_COLOR
+	env.background_color = Color(0.03, 0.04, 0.08)
 	# Luz PROFISSIONAL (ref tem volume, não clarão): ambient baixo e
 	# neutro, sol modelando com sombra suave, Healing por zona.
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -989,8 +958,6 @@ func _construir_ambiente() -> void:
 	env.fog_enabled = false
 	we.environment = env
 	_vp.add_child(we)
-	if not _quer_sem_ceu():
-		_construir_cenario_ceu()
 	# SEM LUZES: tudo é UNSHADED, luz não faz nada — nem sol nem omnis. Só o
 	# flash de tela (overlay 2D, ver HUD).
 	#
@@ -1039,50 +1006,7 @@ func _construir_ambiente() -> void:
 	_vista.ao_virar = Callable(self, "_aplicar_vista_da_mao_entao_hud")
 	_vp.add_child(_vista)
 	_cam = _vista.cam
-	_diag("Ambiente: céu azul + neblina + pilares + câmera no PIVÔ da mesa (a volta da mesa, D47).")
-
-
-## Cenário do céu da ref (só desenho): pilares altos de vidro azulado ao
-## fundo + nuvens brancas suaves, sem textura externa. Sem mesa: o campo
-## de vidro flutua aqui.
-func _construir_cenario_ceu() -> void:
-	var no := Node3D.new()
-	no.name = "Ceu"
-	_vp.add_child(no)
-	var rng := RandomNumberGenerator.new()
-	rng.seed = 20260707
-	# Pilares de vidro ao longe (ref tem torres translúcidas no horizonte).
-	var mat_vidro_fundo := StandardMaterial3D.new()
-	mat_vidro_fundo.albedo_color = Color(0.35, 0.55, 0.85, 0.7)
-	mat_vidro_fundo.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat_vidro_fundo.roughness = 0.15
-	mat_vidro_fundo.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	for i in range(10):
-		var mi := MeshInstance3D.new()
-		mi.name = "Pilar%d" % i
-		var malha := BoxMesh.new()
-		malha.size = Vector3(1.2 + rng.randf() * 1.6, 9.0 + rng.randf() * 7.0, 1.2 + rng.randf() * 1.6)
-		mi.mesh = malha
-		var ang := -0.5 + float(i) * 0.35 + rng.randf() * 0.1
-		mi.position = Vector3(sin(ang) * 22.0, 2.0, -14.0 - rng.randf() * 8.0)
-		mi.material_override = mat_vidro_fundo
-		no.add_child(mi)
-	# Nuvens: discos brancos achatados e suaves no alto.
-	var mat_nuvem := StandardMaterial3D.new()
-	mat_nuvem.albedo_color = Color(1, 1, 1, 0.75)
-	mat_nuvem.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat_nuvem.roughness = 1.0
-	mat_nuvem.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	for i in range(14):
-		var mi := MeshInstance3D.new()
-		mi.name = "Nuvem%d" % i
-		var malha := SphereMesh.new()
-		malha.radius = 1.6 + rng.randf() * 2.2
-		malha.height = 0.9 + rng.randf() * 0.7
-		mi.mesh = malha
-		mi.position = Vector3(-20.0 + rng.randf() * 40.0, 9.0 + rng.randf() * 7.0, -10.0 - rng.randf() * 14.0)
-		mi.material_override = mat_nuvem
-		no.add_child(mi)
+	_diag("Ambiente: fundo solido + câmera no PIVÔ da mesa (a volta da mesa, D47).")
 
 
 # ---- CAMPO (SEM MESA: 20 painéis escuros flutuantes + laterais + fases) ----
