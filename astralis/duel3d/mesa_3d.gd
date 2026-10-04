@@ -26,6 +26,7 @@ const Cursor3D := preload("res://duel3d/cursor_3d.gd")
 const Campo3D := preload("res://duel3d/campo_3d.gd")
 const Vista3D := preload("res://duel3d/vista_3d.gd")
 const Carta3D := preload("res://duel3d/carta_3d.gd")
+const Centro3D := preload("res://duel3d/centro_3d.gd")
 const EntradaMao3D := preload("res://duel3d/entrada_mao_3d.gd")
 const Moeda3D := preload("res://duel3d/moeda_3d.gd")
 const IaRival := preload("res://ai/ia_rival.gd")
@@ -136,19 +137,9 @@ const VOLTA_DURACAO := 1.0
 const PAUSA_RIVAL := 0.7
 
 ## A CARTA SEGURADA (o assunto da fase da mão): a carta que o jogador tirou da
-## mão e está decidindo. Ela voa da mão ao centro, gira no próprio eixo para
-## trocar a face, volta para a mão e depois sobe para a estrela — tudo com o
-## tempo daqui, e a face que vale é sempre a do estado (`_face_baixo`).
-const TEMPO_VOO_SEGURADA := 0.35
-## O giro de UMA troca de face (meia volta para a direita). Curto de propósito:
-## a face é uma decisão, e uma animação longa aqui é o jogador esperando para
-## poder confirmar.
-const TEMPO_GIRO_FACE := 0.22
-## O quanto a carta sobe no passo da estrela, em unidades de mundo no eixo da
-## câmera: o menu da estrela fica embaixo dela, então ela tem de estar mais alta
-## que no passo da face. Medido na tela: com 1,1 a carta fica com a base uns
-## 30 px acima do topo do menu.
-const CENTRO_SUBIDA_ESTRELA := 1.1
+## mão aparece no centro por cima do 2D (o palco `centro_3d.gd`), gira no
+## próprio eixo para trocar a face e volta para a mão — tudo instantâneo no
+## estado, e a face que vale é sempre a dele (`_face_baixo`).
 
 ## D77 — O SORTEIO DA MOEDA. Três números, e os três são desta mesa porque a
 ## mesa é a dona da vista e de onde fica cada lado.
@@ -434,13 +425,6 @@ var _segurada_idx := -1
 ## (par = cima, ímpar = baixo) e o número só cresce, então ela nunca gira de
 ## volta pelo caminho mais curto.
 var _segurada_giros := 0
-## A segurada está voando (mão<->centro) ou girando a face: o controle espera
-## esses instantes curtinhos em vez de empilhar um tween em cima do outro.
-var _segurada_voando := false
-var _girando_face := false
-## O tween da segurada (voo ou giro, nunca os dois): começar um novo mata o
-## anterior, então dois tweens nunca escrevem no mesmo nó ao mesmo tempo.
-var _tween_segurada: Tween = null
 var _estrela_ops: Array = []
 var _levantadas: Array = []
 var _combinando := false
@@ -484,6 +468,11 @@ func _ready() -> void:
 	_construir_janela_campo()
 	_construir_ambiente()
 	_construir_hud()
+	# O PALCO DO CENTRO antes dos menus: mesma camada, e quem vem antes desenha
+	# antes — a carta segurada fica por cima do HUD e por baixo dos menus.
+	_centro = Centro3D.new()
+	_centro.altura_carta = ALT_CARTA
+	add_child(_centro)
 	_menus = Menus3D.new()
 	add_child(_menus)
 	# Duelo REAL (motor de verdade): ProjectLoader + DuelManager.
@@ -587,6 +576,8 @@ var _faixa: PanelContainer = null
 ## Os menus sobre a cena (carta do centro + popup da estrela/alvo): o no e o
 ## arquivo `menus_3d.gd`.
 var _menus: CanvasLayer = null
+## O palco da carta segurada: o no e o arquivo `centro_3d.gd`.
+var _centro: Centro3D = null
 ## O painel esquerdo com a carta focada: o no e o arquivo `painel_carta_3d.gd`.
 var _painel: Control = null
 ## De quantas cartas cada mão era no DESENHO ANTERIOR, por dono. É o que diz
@@ -848,6 +839,16 @@ func _quer_calib_visual() -> bool:
 	return false
 
 
+## Prova sem o céu: `--sem-ceu` tira o fundo (céu + pilares + nuvens) e deixa
+## uma cor sólida, para olhar só mesa e cartas. Zero regra: sem a flag o jogo é
+## exatamente o de sempre.
+func _quer_sem_ceu() -> bool:
+	for a in OS.get_cmdline_user_args():
+		if str(a).strip_edges() == "--sem-ceu":
+			return true
+	return false
+
+
 ## Monta o quadrado de calibração dentro do HUD (por cima de tudo). Cada linha
 ## é a BORDA REAL de uma fileira, lida do dado + da câmera (`_borda_da_fileira_px`),
 ## então o desenho dele é a medida, não um número chutado.
@@ -954,22 +955,27 @@ func _construir_ambiente() -> void:
 	var we := WorldEnvironment.new()
 	we.name = "WorldEnvironment"
 	var env := Environment.new()
-	# Céu azul claro (SEM MESA, SEM vazio estrelado): céu procedural azul com
-	# GRADIENTE VERTICAL (mais escuro em cima, mais claro no horizonte — doc 15
-	# §15.3) + neblina azul-clara p/ profundidade + sol branco. Sem imagem
-	# externa.
-	var ceu := Sky.new()
-	var mat_ceu := ProceduralSkyMaterial.new()
-	mat_ceu.sky_top_color = Color(0.10, 0.30, 0.72)
-	mat_ceu.sky_horizon_color = Color(0.62, 0.82, 0.99)
-	mat_ceu.sky_curve = 0.18
-	mat_ceu.ground_bottom_color = Color(0.16, 0.30, 0.56)
-	mat_ceu.ground_horizon_color = Color(0.46, 0.64, 0.88)
-	mat_ceu.sun_angle_max = 30.0
-	mat_ceu.energy_multiplier = 0.85
-	ceu.sky_material = mat_ceu
-	env.background_mode = Environment.BG_SKY
-	env.sky = ceu
+	if _quer_sem_ceu():
+		# Prova sem céu: fundo sólido no lugar do céu + cenário. Só desenho.
+		env.background_mode = Environment.BG_COLOR
+		env.background_color = Color(0.03, 0.04, 0.08)
+	else:
+		# Céu azul claro (SEM MESA, SEM vazio estrelado): céu procedural azul com
+		# GRADIENTE VERTICAL (mais escuro em cima, mais claro no horizonte — doc 15
+		# §15.3) + neblina azul-clara p/ profundidade + sol branco. Sem imagem
+		# externa.
+		var ceu := Sky.new()
+		var mat_ceu := ProceduralSkyMaterial.new()
+		mat_ceu.sky_top_color = Color(0.10, 0.30, 0.72)
+		mat_ceu.sky_horizon_color = Color(0.62, 0.82, 0.99)
+		mat_ceu.sky_curve = 0.18
+		mat_ceu.ground_bottom_color = Color(0.16, 0.30, 0.56)
+		mat_ceu.ground_horizon_color = Color(0.46, 0.64, 0.88)
+		mat_ceu.sun_angle_max = 30.0
+		mat_ceu.energy_multiplier = 0.85
+		ceu.sky_material = mat_ceu
+		env.background_mode = Environment.BG_SKY
+		env.sky = ceu
 	# Luz PROFISSIONAL (ref tem volume, não clarão): ambient baixo e
 	# neutro, sol modelando com sombra suave, Healing por zona.
 	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
@@ -980,7 +986,8 @@ func _construir_ambiente() -> void:
 	env.fog_enabled = false
 	we.environment = env
 	_vp.add_child(we)
-	_construir_cenario_ceu()
+	if not _quer_sem_ceu():
+		_construir_cenario_ceu()
 	# SEM LUZES: tudo é UNSHADED, luz não faz nada — nem sol nem omnis. Só o
 	# flash de tela (overlay 2D, ver HUD).
 	#
@@ -2856,129 +2863,47 @@ func _limpar_levantadas() -> void:
 ##
 ## A carta que o jogador está decidindo sai da mão e aparece NO CENTRO da tela:
 ## na face, no meio; na estrela, mais alta com o menu embaixo. A mão esconde o
-## original no mesmo índice (o lugar fica marcado pelo cursor) e o redesenho
-## nunca toca neste nó porque ele mora fora do `Cartas`.
+## original no mesmo índice (o lugar fica marcado pelo cursor). O palco é o
+## `centro_3d.gd`: outra janela por cima do 2D, então a faixa e a mão do rival
+## ficam embaixo da carta e o menu da estrela continua por cima dela.
 ##
 ## A face que vale é sempre a do estado (`_face_baixo`): o giro só mostra. Cada
 ## troca soma meia volta para a direita, então a paridade nunca mente mesmo
-## depois de reconstruir o nó.
-func _pos_centro_segurada(subida: float) -> Vector3:
-	if _cam == null or _st == null:
-		return Vector3.ZERO
-	# O tamanho é o da mão: a distância é medida da carta do meio da mão, então
-	# a segurada nasce do mesmo tamanho que tinha antes de sair de lá.
-	var mao: Array = (_st.players[0] as Dictionary)["hand"]
-	var n := maxi(mao.size(), 1)
-	var ref := _pos_mao_arco(clampi(n / 2, 0, n - 1), n, 0)
-	var base := _cam.global_transform
-	return _cam.global_position + (-base.basis.z) * (ref - _cam.global_position).length() + base.basis.y * subida
-
-
-## Tira a carta da mão e põe na mão da tela: o nó nasce no lugar dela, com a
-## face que o estado já diz, e o giro continua de onde parou (sem voltar pelo
-## caminho curto).
-func _pegar_segurada() -> void:
+## depois de reconstruir o nó. Tudo aqui é instantâneo no estado (mostrar,
+## girar e esconder não esperam nada): o giro é o único tween, e começar outro
+## mata o anterior.
+func _pegar_segurada(alta: bool) -> void:
 	_liberar_segurada()
-	if _st == null or _cam == null or _vp == null:
+	if _st == null or _centro == null:
 		return
 	var mao: Array = (_st.players[0] as Dictionary)["hand"]
 	if _mao_idx < 0 or _mao_idx >= mao.size():
 		return
 	var no := _fazer_carta(mao[_mao_idx] as Dictionary, false, false)
-	_vp.add_child(no)
-	no.position = _pos_mao_arco(_mao_idx, mao.size(), 0)
-	no.rotation_degrees = Vector3(TILT_MAO_LIVRE, 180.0 if _face_baixo else 0.0, 0.0)
+	_centro.mostrar(no, _face_baixo, alta)
 	_segurada = no
 	_segurada_idx = _mao_idx
 	_segurada_giros = 1 if _face_baixo else 0
-	_segurada_voando = false
-	_girando_face = false
 
 
 ## Solta a segurada sem redesenhar: quem chama decide o que a tela mostra
-## depois. Os tweens morrem com o nó, então nada fica voando sozinho.
+## depois.
 func _liberar_segurada() -> void:
-	_segurada_voando = false
-	_girando_face = false
-	if _tween_segurada != null and _tween_segurada.is_valid():
-		_tween_segurada.kill()
-	_tween_segurada = null
-	if _segurada != null and is_instance_valid(_segurada):
-		_segurada.queue_free()
+	if _centro != null:
+		_centro.esconder()
 	_segurada = null
 	_segurada_idx = -1
-
-
-## Põe a segurada no centro na hora, sem voo: é o que o cancelar usa, porque
-## desfazer é voltar, não viajar de novo.
-func _assentar_segurada_no_centro(subida: float) -> void:
-	if _segurada == null or not is_instance_valid(_segurada):
-		return
-	_segurada.position = _pos_centro_segurada(subida)
-	_segurada.rotation_degrees = Vector3(TILT_MAO_LIVRE, 180.0 if _face_baixo else 0.0, 0.0)
-
-
-## Voa a segurada até o ponto, sem trocar a face no caminho: a paridade de
-## chegada é a mesma da saída, então a carta nunca pisca a face errada no ar.
-## Não espera (é fogo e esquece): quem precisa da chegada passa o `ao_chegar`,
-## e o controle ignora esses instantes curtinhos em vez de empilhar tween.
-func _voar_segurada(para: Vector3, ao_chegar: Callable) -> void:
-	if _segurada == null or not is_instance_valid(_segurada):
-		_segurada_voando = false
-		if ao_chegar.is_valid():
-			ao_chegar.call()
-		return
-	var no := _segurada
-	var de_p := no.position
-	var de_r := no.rotation_degrees
-	var para_r := Vector3(TILT_MAO_LIVRE, 180.0 if _face_baixo else 0.0, 0.0)
-	if _tween_segurada != null and _tween_segurada.is_valid():
-		_tween_segurada.kill()
-	_tween_segurada = null
-	_girando_face = false
-	_segurada_voando = true
-	var tw := no.create_tween()
-	tw.tween_method(_passo_segurada.bind(no, de_p, para, de_r, para_r), 0.0, 1.0, TEMPO_VOO_SEGURADA) \
-		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
-	tw.chain().tween_callback(_chegou_segurada.bind(ao_chegar))
-	_tween_segurada = tw
-
-
-## Escreve o ponto do voo no nó (o tween entrega o valor, quem escreve é aqui).
-func _passo_segurada(t: float, no: Node3D, de_p: Vector3, para_p: Vector3, de_r: Vector3, para_r: Vector3) -> void:
-	if no == null or not is_instance_valid(no):
-		return
-	var k := clampf(t, 0.0, 1.0)
-	no.position = de_p.lerp(para_p, k)
-	no.rotation_degrees = de_r.lerp(para_r, k)
-
-
-func _chegou_segurada(ao: Callable) -> void:
-	_segurada_voando = false
-	_tween_segurada = null
-	if ao.is_valid():
-		ao.call()
 
 
 ## UMA troca de face: meia volta para a direita, e a face do estado vira junto.
 ## O alvo é o giro acumulado (em radianos, que é a unidade do `rotation`), nunca
 ## o normalizado: normalizar aqui faria a carta voltar pelo caminho curto.
 func _girar_segurada() -> void:
-	if _segurada == null or not is_instance_valid(_segurada):
+	if _segurada == null or not is_instance_valid(_segurada) or _centro == null:
 		return
 	_face_baixo = not _face_baixo
 	_segurada_giros = _segurada_giros + 1
-	_girando_face = true
-	var no := _segurada
-	var tw := no.create_tween()
-	tw.tween_property(no, "rotation:y", float(_segurada_giros) * PI, TEMPO_GIRO_FACE) \
-		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
-	tw.chain().tween_callback(_parou_giro_face)
-	_tween_segurada = tw
-
-
-func _parou_giro_face() -> void:
-	_girando_face = false
+	_centro.girar_para(float(_segurada_giros) * PI)
 
 
 ## 1) Confirmar carta monstro -> ela vai ao CENTRO e para (igual ao 2D).
@@ -3001,8 +2926,7 @@ func _fluxo_escolher_carta() -> void:
 	_combinando = false
 	_sub_mao = SUB_FACE
 	_face_na_mao.erase(_mao_idx)
-	_pegar_segurada()
-	_voar_segurada(_pos_centro_segurada(0.0), Callable())
+	_pegar_segurada(false)
 	_fala("Carta no centro. Esq/dir gira a face. Confirme para travar.")
 	_redesenhar(false)
 
@@ -3023,12 +2947,6 @@ func _fluxo_travar_face() -> void:
 	_col = clampi(livre, 0, 4) if livre >= 0 else 0
 	_fala("Face travada (%s). Escolha 1 dos 5 slots (%s)." % [("p/ baixo" if _face_baixo else "p/ cima"), _resumo_slots()])
 	_posicionar_cursor()
-	var mao: Array = (_st.players[0] as Dictionary)["hand"]
-	_voar_segurada(_pos_mao_arco(clampi(_mao_idx, 0, maxi(mao.size() - 1, 0)), mao.size(), 0), Callable(self, "_voltou_segurada_para_mao"))
-
-
-## A segurada pousou de volta na mão: solta o nó e mostra a mão com a face.
-func _voltou_segurada_para_mao() -> void:
 	_liberar_segurada()
 	_redesenhar(false)
 
@@ -3057,12 +2975,10 @@ func _fluxo_escolher_slot() -> void:
 	_set_pad_popup_idx(0)
 	_sub_mao = SUB_ESTRELA
 	# A carta sobe de novo ao centro, mais alta porque o menu fica embaixo, e
-	# a mão esconde o original. Se o voo de volta ainda estava no ar, ele é
-	# desfeito aqui: reconstruir do estado é o mesmo desenho, sem piscar.
+	# a mão esconde o original.
 	_liberar_segurada()
-	_pegar_segurada()
+	_pegar_segurada(true)
 	_redesenhar(false)
-	_voar_segurada(_pos_centro_segurada(CENTRO_SUBIDA_ESTRELA), Callable())
 	_mostrar_popup_estrela()
 	if zona[slot] != null:
 		_fala("Slot %d ocupado por %s: vai tentar fusão. Escolha a estrela." % [slot, _nome_no_slot_lado(0, "monster", slot)])
@@ -3075,9 +2991,6 @@ func _fluxo_escolher_slot() -> void:
 func _confirmar_estrela() -> void:
 	if _fusao_animando:
 		_fala("Aguarde a fusão terminar.")
-		return
-	# A segurada subindo ao centro-alto: a descida só começa quando ela chegou.
-	if _segurada_voando or _girando_face:
 		return
 	if _sub_mao != SUB_ESTRELA or _slot_alvo < 0:
 		_esconder_popup()
@@ -3108,20 +3021,12 @@ func _confirmar_estrela() -> void:
 ## encontro (try_fuse_pair real; falhou -> campo descartado e a da mão desce).
 func _executar_summon_fiel(estrela: String) -> void:
 	_esconder_popup()
+	_liberar_segurada()
 	if _mao_idx < 0 or _slot_alvo < 0:
 		return
 	var hand_idx := _mao_idx
 	var slot_n := _slot_alvo
 	var face: bool = _face_baixo
-	# A carta desce do centro-alto até o slot: o motor só roda quando ela
-	# pousa, então a carta nunca aparece no campo antes de chegar lá.
-	_voar_segurada(_pos_slot(0, "monstro", slot_n) + Vector3(0.0, 0.4, 0.0), Callable(self, "_pousou_segurada_no_slot").bind(hand_idx, slot_n, face, estrela))
-
-
-## A segurada pousou no slot: solta o nó e roda a invocação de verdade, com a
-## face travada e a estrela escolhida.
-func _pousou_segurada_no_slot(hand_idx: int, slot_n: int, face: bool, estrela: String) -> void:
-	_liberar_segurada()
 	var p: Dictionary = _st.players[0] as Dictionary
 	var mao: Array = p["hand"]
 	var zona: Array = p["monster"]
@@ -3810,9 +3715,9 @@ func _mover(dx: int, dy: int) -> void:
 	if _fase_jogador == FASE_MAO and meu_turno and String(_st.phase) == "MAIN":
 		match _sub_mao:
 			SUB_FACE:
-				# A troca é o giro no próprio eixo, para a direita: sem menu, sem
-				# redesenho, e os instantes de voo/giro não empilham outro giro.
-				if dx != 0 and not _segurada_voando and not _girando_face:
+				# A troca é o giro no próprio eixo, para a direita: sem menu e sem
+				# redesenho. Girar de novo no meio do giro mata o anterior.
+				if dx != 0:
 					_girar_segurada()
 					_fala("Face p/ baixo." if _face_baixo else "Face p/ cima.")
 				return
@@ -3940,10 +3845,6 @@ func _confirmar() -> void:
 	# FASE DA MÃO: avulsa = centro -> face -> slot -> estrela;
 	# 1 levantada bloqueia; 2+ = fusão (slot primeiro, depois fila+estrela).
 	if _fase_jogador == FASE_MAO and String(_st.phase) == "MAIN":
-		# A segurada voando ou girando: o estado já mudou e o desenho alcança
-		# em instantes, então o controle espera em vez de trocar de passo no ar.
-		if _segurada_voando or _girando_face:
-			return
 		match _sub_mao:
 			SUB_MAO_ESCOLHA:
 				_limpar_levantadas()
@@ -4099,8 +4000,6 @@ func _cancelar() -> void:
 		_redesenhar(false)
 		return
 	if _fase_jogador == FASE_MAO and int(_st.current_player) == 0:
-		if _segurada_voando or _girando_face:
-			return
 		match _sub_mao:
 			SUB_MAO_ESCOLHA:
 				if not _levantadas.is_empty():
@@ -4135,9 +4034,8 @@ func _cancelar() -> void:
 				_fileira = FILEIRA_MAO
 				_col = clampi(_mao_idx, 0, maxi(_larg_fileira(FILEIRA_MAO) - 1, 0))
 				# Volta para a escolha da face: a carta sai da mão de novo e
-				# assenta no centro, com a face que estava valendo.
-				_pegar_segurada()
-				_assentar_segurada_no_centro(0.0)
+				# aparece no centro, com a face que estava valendo.
+				_pegar_segurada(false)
 				_fala("Face de novo: esq/dir gira.")
 				_redesenhar(false)
 				return
