@@ -43,7 +43,7 @@ faz_agora: "A espera da moeda esta fechada e conferida nas tres telas: a ESPERA
   e no editor ao mesmo tempo."
  travas: "R1 a R14 valem (seção 2 do AGENTS.md). Trava do domínio: a arena é do
    jogo e não tem fallback (D50); a lente nunca é deslocada e o `frustum_offset`
-   é ZERO (D41, D47); a grade é 263 nas seis direções e 390 entre as fileiras de
+    é ZERO (D41, D47); a grade é 237 nas seis direções e 390 entre as fileiras de
    monstro (D49); a carta mede o contrato e a mesa é o único dono do número
    (D70); a carta do painel é a peça 3D e a janela dela é reta, com mundo próprio
    (D75); a entrada da mão é só da carta comprada, e a compra só é mostrada na
@@ -85,7 +85,7 @@ faz_agora: "A espera da moeda esta fechada e conferida nas tres telas: a ESPERA
   Deslocar a lente achata um lado e estica o outro; se parecer torto, muda o
   retângulo do SubViewport, nunca a câmera.
 - **As cartas do campo não se mexem.** Quem gira é a câmera, em torno do pivô.
-- **A grade é um valor só** (263) nas seis direções, e a distância entre as
+- **A grade é um valor só** (237) nas seis direções, e a distância entre as
   fileiras de monstro é 390 e congelada.
 - **A medida da carta é a do contrato** (59 x 86 x 0,30 mm) e a mesa é a única
   dona do número: receptor sem a medida cresce do tamanho zero e grita.

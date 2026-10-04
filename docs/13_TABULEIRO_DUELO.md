@@ -147,17 +147,18 @@ posição sai do arquivo da arena. Mover um slot não pode quebrar regra (D17).
 
 | Eixo | Valor |
 |---|---|
-| X dos 5 slots de monstro | `632 / 895 / 1158 / 1421 / 1684` — passo **263** |
+| X dos 5 slots de monstro | `684 / 921 / 1158 / 1395 / 1632` — passo **237** |
 | Y da fileira de monstro do jogador | `695` |
-| Y da fileira de magia do jogador | `958` |
+| Y da fileira de magia do jogador | `932` |
 | Y da fileira de monstro do rival | `305` |
+| Y da fileira de magia do rival | `68` |
 | Y da fileira de magia do rival | `42` |
 | mão do jogador | `x 1240`, `y 980`, `step 95` |
 | mão do rival | `x 1240`, `y 20`, `step 60` |
-| pilha do baralho (os dois lados) | `x 1899.5`, no meio das fileiras (`y 826.5` embaixo, `173.5` em cima) |
-| pilha do cemitério (os dois lados) | `x 416.5`, no meio das fileiras (mesmos `y`) |
+| pilha do baralho (os dois lados) | `x 1834.5`, no meio das fileiras (`y 813.5` embaixo, `186.5` em cima) |
+| pilha do cemitério (os dois lados) | `x 481.5`, no meio das fileiras (mesmos `y`) |
 
-**A grade é um valor só: 263, nas SEIS direções** (D49) — o passo horizontal das
+**A grade é um valor só: 237, nas SEIS direções** (D49) — o passo horizontal das
 4 fileiras e o vão vertical
 monstro→magia dos dois lados. Os painéis de slot têm EXATO o passo (sem vão
 entre eles) e as pilhas encostam nas colunas das pontas. A distância entre as
