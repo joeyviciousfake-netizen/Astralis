@@ -52,7 +52,7 @@ const TOPO := 0.35
 ## campo ocupa x 29,3%..99,9% da tela (encosta na direita), as fileiras
 ## caem em 17/30/49/67% de cima p/ baixo e o vão do meio (onde entra a
 ## barra de fases da ref) fica em ~10% da altura.
-const ESCALA_CAMPO := 1.06
+const ESCALA_CAMPO := 1.185
 const DESLOC_CAMPO := Vector2(0.0, -0.07)
 ## Câmera FIXA, sem órbita/balanço. Subir/afastar o FOV é
 ## alavanca de DESENHO autorizada (doc 15 §15.5): os valores abaixo são os
