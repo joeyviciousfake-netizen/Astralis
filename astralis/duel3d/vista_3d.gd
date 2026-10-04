@@ -42,6 +42,28 @@ var girando := false
 var cam: Camera3D = null
 ## D51: o plano de simetria do campo em Z de mundo, medido do dado.
 var z_simetria := 0.0
+## O TOPO (visão de cima na escolha do slot): a câmera sobe e olha para baixo,
+## e o campo inteiro aparece de cima. Só desenho: as cartas não se mexem, o
+## giro continua valendo e a volta continua proibida de pular — o topo é em
+## cima da vista atual, e voltar é pré-requisito da volta (`_girar_campo` volta
+## antes de girar).
+## A que altura a câmera para, em unidades de mundo. Dono: este arquivo. Com
+## FOV 20 a altura visível a essa distância é 2·26·tan(10°) = 9,2: as fileiras
+## (8 de vão + o vidro) cabem inteiras e as pilhas ficam nas beiradas.
+const TOPO_ALT := 26.0
+## O tempo da subida e da descida, em segundos. Curto de propósito: é só a
+## troca de ponto de vista, e a decisão é escolher o slot — uma volta longa
+## aqui é o jogador esperando à toa.
+const TOPO_DURACAO := 0.5
+## A câmera está no topo agora. Quem pergunta é a mesa (para não subir duas
+## vezes e para a volta saber que precisa descer antes).
+var no_topo := false
+## A pose de onde a câmera saiu para o topo (para voltar exato). Dono: quem
+## sobe guarda, quem desce restaura — ninguém mais escreve aqui.
+var _topo_base_pos := Vector3.ZERO
+var _topo_base_rot := Vector3.ZERO
+## O voo em curso (só um mexe na câmera por vez): começar outro mata este.
+var _topo_tw: Tween = null
 
 
 func _ready() -> void:
@@ -175,3 +197,65 @@ func _passo(t: float, alvo: float) -> void:
 	giro_campo = lerpf(de, alvo, clampf(t, 0.0, 1.0))
 	aplicar()
 	ao_virar.call()
+
+
+## Sobe para o TOPO: a câmera vai para cima do centro do campo e olha para
+## baixo. O ponto é no eixo (x = 0, z = 0, que o pivô não desloca) com a
+## inclinação zerada no eixo X — de cima, sem torto para lado nenhum. Duas
+## chamadas seguidas não sobem duas vezes: a segunda é no-op.
+## Sem desenho (teste/headless) vai direto, como a volta.
+func ir_para_topo() -> void:
+	if cam == null or no_topo:
+		return
+	no_topo = true
+	_topo_base_pos = cam.position
+	_topo_base_rot = cam.rotation
+	if _topo_tw != null and _topo_tw.is_valid():
+		_topo_tw.kill()
+	_topo_tw = null
+	var alvo_pos := Vector3(0.0, TOPO_ALT, 0.0)
+	var alvo_rot := Vector3(-PI * 0.5, _topo_base_rot.y, 0.0)
+	if sem_render != null and sem_render.call():
+		cam.position = alvo_pos
+		cam.rotation = alvo_rot
+		return
+	girando = true
+	var tw := cam.create_tween().set_parallel(true)
+	tw.tween_property(cam, "position", alvo_pos, TOPO_DURACAO) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(cam, "rotation", alvo_rot, TOPO_DURACAO) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_callback(Callable(self, "_topo_chegou"))
+	_topo_tw = tw
+
+
+## Fim de um voo do topo (só destrava; quem continua o fluxo é a mesa).
+func _topo_chegou() -> void:
+	_topo_tw = null
+	girando = false
+
+
+## Desce do TOPO de volta para a pose de onde saiu. É `await` de verdade: quem
+## chama (a escolha do slot) só segue — segurada, menu — depois que a câmera
+## parou, porque o palco da segurada é calculado da câmera. Fora do topo é
+## no-op instantâneo. Sem desenho vai direto, como a volta.
+func voltar_do_topo() -> void:
+	if not no_topo or cam == null:
+		return
+	no_topo = false
+	if _topo_tw != null and _topo_tw.is_valid():
+		_topo_tw.kill()
+	_topo_tw = null
+	if sem_render != null and sem_render.call():
+		cam.position = _topo_base_pos
+		cam.rotation = _topo_base_rot
+		return
+	girando = true
+	var tw := cam.create_tween().set_parallel(true)
+	tw.tween_property(cam, "position", _topo_base_pos, TOPO_DURACAO) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	tw.tween_property(cam, "rotation", _topo_base_rot, TOPO_DURACAO) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	await tw.finished
+	_topo_tw = null
+	girando = false

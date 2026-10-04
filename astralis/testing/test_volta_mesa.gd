@@ -754,3 +754,34 @@ func test_o_controle_fica_travado_enquanto_a_mesa_gira() -> void:
 	_vista(mesa).set("girando", false)
 	assert_true((mesa.get("_log") as Array).size() >= log_antes,
 		"A tela continua viva (o bloqueio e so do controle, nao da tela).")
+
+
+## (12) O TOPO na escolha do slot: a câmera sobe e olha para baixo no passo
+## do slot, e desce ANTES da estrela (o palco da segurada é calculado dela).
+func test_topo_na_escolha_do_slot_e_volta_antes_da_estrela() -> void:
+	var mesa: Node = await _mesa3d_nova()
+	var st = mesa.get("_st")
+	var vista := _vista(mesa)
+	var cam := vista.get("cam") as Camera3D
+	var idx: int = _indice_monstro_na_mao(st, 0)
+	assert_true(idx >= 0, "Preparo: mão tem monstro.")
+	mesa.set("_fileira", 0)
+	mesa.set("_col", idx)
+	Input.action_press("confirmar")
+	mesa.call("_confirmar")
+	Input.action_release("confirmar")
+	Input.action_press("confirmar")
+	mesa.call("_confirmar")
+	Input.action_release("confirmar")
+	assert_eq(int(mesa.get("_sub_mao")), 2, "Preparo: face travada, passo do slot.")
+	assert_true(bool(vista.get("no_topo")), "No passo do slot a câmera está no topo.")
+	assert_almost_eq(cam.position.y, 26.0, 0.001, "Topo: câmera a 26 de altura.")
+	assert_almost_eq(cam.rotation.x, -PI * 0.5, 0.001, "Topo: câmera olhando para baixo.")
+	var slot: int = SummonSys.free_monster_slot(st, 0)
+	mesa.set("_col", slot)
+	Input.action_press("confirmar")
+	mesa.call("_confirmar")
+	Input.action_release("confirmar")
+	assert_eq(int(mesa.get("_sub_mao")), 3, "Slot escolhido, passo da estrela.")
+	assert_false(bool(vista.get("no_topo")), "Escolhido o slot, a câmera desceu do topo.")
+	assert_eq(cam.position, Vector3(0.0, 16.8, 20.9), "A câmera voltou exata para a vista.")

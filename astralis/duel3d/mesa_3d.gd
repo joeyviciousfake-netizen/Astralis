@@ -2026,6 +2026,11 @@ func _moldar_foco(larg: float, alt: float, rot: Vector3, escala_mao: float) -> v
 func _girar_campo(alvo: float) -> void:
 	if _vista == null or not is_instance_valid(_vista):
 		return
+	# A volta parte da vista normal: se a câmera está no topo (escolha do
+	# slot), ela desce antes de girar — senão o pivô giraria embaixo de uma
+	# câmera de cima.
+	if _vista.no_topo:
+		await _vista.voltar_do_topo()
 	await _vista.girar_para(alvo)
 
 
@@ -2871,6 +2876,9 @@ func _fluxo_travar_face() -> void:
 	_fala("Face travada (%s). Escolha 1 dos 5 slots (%s)." % [("p/ baixo" if _face_baixo else "p/ cima"), _resumo_slots()])
 	_posicionar_cursor()
 	_liberar_segurada()
+	# A câmera sobe para o topo: o slot se escolhe vendo o campo de cima.
+	if _vista != null and is_instance_valid(_vista):
+		_vista.ir_para_topo()
 	_redesenhar(false)
 
 
@@ -2878,6 +2886,7 @@ func _fluxo_travar_face() -> void:
 func _fluxo_escolher_slot() -> void:
 	if _mao_idx < 0:
 		_sub_mao = SUB_MAO_ESCOLHA
+		_sair_do_topo()
 		_redesenhar(false)
 		return
 	var zona: Array = (_st.players[0] as Dictionary)["monster"]
@@ -2892,11 +2901,16 @@ func _fluxo_escolher_slot() -> void:
 		_sub_mao = SUB_MAO_ESCOLHA
 		_mao_idx = -1
 		_esconder_centro3d()
+		_sair_do_topo()
 		_redesenhar(false)
 		return
 	_estrela_ops = _estrelas_da_carta(mao[_mao_idx] as Dictionary)
 	_set_pad_popup_idx(0)
 	_sub_mao = SUB_ESTRELA
+	# A câmera desce do topo ANTES da segurada e do menu: o palco da segurada
+	# é calculado da câmera, e com ela voando a carta pararia no lugar errado.
+	if _vista != null and is_instance_valid(_vista):
+		await _vista.voltar_do_topo()
 	# A carta sobe de novo ao centro, mais alta porque o menu fica embaixo, e
 	# a mão esconde o original.
 	_liberar_segurada()
@@ -2931,6 +2945,8 @@ func _confirmar_estrela() -> void:
 		_fileira = FILEIRA_MEU_M
 		_col = clampi(_slot_alvo, 0, 4)
 		_fala("Escolha 1 dos 5 slots (%s)." % _resumo_slots())
+		if _vista != null and is_instance_valid(_vista):
+			_vista.ir_para_topo()
 		_redesenhar(false)
 		return
 	var estrela := str(_estrela_ops[clampi(_pad_popup_idx(), 0, 1)])
@@ -3074,7 +3090,17 @@ func _iniciar_escolha_slot_fusao() -> void:
 	_fileira = FILEIRA_MEU_M
 	_col = 0
 	_fala("Fusão: escolha 1 dos 5 slots (%s)." % _resumo_slots())
+	# A câmera sobe para o topo, como na invocação avulsa.
+	if _vista != null and is_instance_valid(_vista):
+		_vista.ir_para_topo()
 	_redesenhar(false)
+
+
+## Desce do topo sem esperar: cancelamentos e falhas, onde nada de palco
+## segue (a câmera pousa enquanto o jogador lê o aviso).
+func _sair_do_topo() -> void:
+	if _vista != null and is_instance_valid(_vista):
+		_vista.voltar_do_topo()
 
 
 func _fluxo_escolher_slot_fusao() -> void:
@@ -3090,11 +3116,13 @@ func _fluxo_escolher_slot_fusao() -> void:
 		_fala("Fusão precisa de 2+ levantadas.")
 		_combinando = false
 		_sub_mao = SUB_MAO_ESCOLHA
+		_sair_do_topo()
 		_redesenhar(false)
 		return
 	if bool(_st.over) or int(_st.current_player) != 0 or String(_st.phase) != "MAIN":
 		_combinando = false
 		_fusao_animando = false
+		_sair_do_topo()
 		_redesenhar(false)
 		return
 	var slot := clampi(_col, 0, 4)
@@ -3113,6 +3141,7 @@ func _fluxo_escolher_slot_fusao() -> void:
 		_combinando = false
 		_sub_mao = SUB_MAO_ESCOLHA
 		_slot_alvo = -1
+		_sair_do_topo()
 		_redesenhar(false)
 		return
 	var previa: Dictionary = FusionSystem.resolve_chain(em_ordem, _fusions_data, _cartas)
@@ -3121,6 +3150,7 @@ func _fluxo_escolher_slot_fusao() -> void:
 		_combinando = false
 		_sub_mao = SUB_MAO_ESCOLHA
 		_slot_alvo = -1
+		_sair_do_topo()
 		_redesenhar(false)
 		return
 	_fusao_animando = true
@@ -3128,6 +3158,7 @@ func _fluxo_escolher_slot_fusao() -> void:
 	if bool(_st.over) or int(_st.current_player) != 0 or String(_st.phase) != "MAIN":
 		_fusao_animando = false
 		_combinando = false
+		_sair_do_topo()
 		_redesenhar(false)
 		return
 	var final_card: Dictionary = (previa.get("final_card", {}) as Dictionary).duplicate(true)
@@ -3141,6 +3172,7 @@ func _fluxo_escolher_slot_fusao() -> void:
 		_fileira = FILEIRA_MAO
 		_col = 0
 		_sub_mao = SUB_MAO_ESCOLHA
+		_sair_do_topo()
 		_redesenhar(false)
 		return
 	_fusao_final = final_card
@@ -3165,6 +3197,9 @@ func _fluxo_escolher_slot_fusao() -> void:
 	_estrela_ops = _estrelas_da_carta(_fusao_final)
 	_set_pad_popup_idx(0)
 	_sub_mao = SUB_ESTRELA
+	# A câmera desce do topo antes do menu, como na invocação avulsa.
+	if _vista != null and is_instance_valid(_vista):
+		await _vista.voltar_do_topo()
 	_mostrar_popup_estrela()
 	if zona[slot] != null:
 		_fala("FINAL %s no slot %d ocupado por %s: escolha a estrela." % [final_id, slot, _nome_no_slot_lado(0, "monster", slot)])
@@ -3917,6 +3952,8 @@ func _cancelar() -> void:
 			_fileira = FILEIRA_MEU_M
 			_col = clampi(_slot_alvo, 0, 4)
 			_fala("Escolha 1 dos 5 slots (%s)." % _resumo_slots())
+			if _vista != null and is_instance_valid(_vista):
+				_vista.ir_para_topo()
 			_redesenhar(false)
 			return
 		_fala("Invocação cancelada.")
@@ -3937,6 +3974,8 @@ func _cancelar() -> void:
 				_fileira = FILEIRA_MEU_M
 				_col = clampi(_slot_alvo, 0, 4)
 				_fala("Escolha 1 dos 5 slots (%s)." % _resumo_slots())
+				if _vista != null and is_instance_valid(_vista):
+					_vista.ir_para_topo()
 				_redesenhar(false)
 				return
 			SUB_SLOT:
@@ -3951,11 +3990,17 @@ func _cancelar() -> void:
 					_fileira = FILEIRA_MAO
 					_col = 0
 					_fala("Fusão cancelada. Escolha de novo.")
+					_sair_do_topo()
 					_redesenhar(false)
 					return
 				_sub_mao = SUB_FACE
 				_fileira = FILEIRA_MAO
 				_col = clampi(_mao_idx, 0, maxi(_larg_fileira(FILEIRA_MAO) - 1, 0))
+				# Volta para a escolha da face: a câmera desce do topo antes da
+				# carta sair da mão de novo, porque o palco dela é calculado
+				# da câmera.
+				if _vista != null and is_instance_valid(_vista):
+					await _vista.voltar_do_topo()
 				# Volta para a escolha da face: a carta sai da mão de novo e
 				# aparece no centro, com a face que estava valendo.
 				_pegar_segurada(false)
