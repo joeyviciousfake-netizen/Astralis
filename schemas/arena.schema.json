@@ -18,8 +18,8 @@
         "type": "object",
         "properties": {
           "slot_id": { "type": "string", "pattern": "^(p0|p1)_((m|s)[0-4]|(d|g)0)$", "description": "ID fixo do slot (ex: p0_m0, p0_d0). Lógica só usa este ID." },
-          "x": { "type": "number", "minimum": 0, "maximum": 2000, "description": "Posição X do slot em 1920x1080 (só desenho). Limite 0-2000: a pilha do baralho fica um passo de grade além da última coluna (1947) e tem que continuar válida; o desenho na tela é o que decide o que aparece." },
-          "y": { "type": "number", "minimum": 0, "maximum": 1080, "description": "Posição Y do slot em 1920x1080 (só desenho). Limite 0-1080: idem X (D16, 1920x1080 fixo); igual ao bloco hand deste schema. Dado real (arena_starter, arena oficial D48/D49): Y de 42 a 958, com UM valor so de 263 entre a fileira de monstros e a de magia de cada lado (p0 monstro 695, p0 magia 958, p1 monstro 305, p1 magia 42)." }
+          "x": { "type": "number", "minimum": 0, "maximum": 2000, "description": "Posição X do slot em 1920x1080 (só desenho). Limite 0-2000: a pilha do baralho fica além da última coluna e tem que continuar válida; o desenho na tela é o que decide o que aparece." },
+          "y": { "type": "number", "minimum": 0, "maximum": 1080, "description": "Posição Y do slot em 1920x1080 (só desenho). Limite 0-1080: idem X (D16, 1920x1080 fixo); igual ao bloco hand deste schema. Dado real (arena_starter, arena oficial D48/D49): Y de 68 a 932, com UM valor so de 237 entre a fileira de monstros e a de magia de cada lado (p0 monstro 695, p0 magia 932, p1 monstro 305, p1 magia 68)." }
         },
         "required": ["slot_id", "x", "y"],
         "additionalProperties": false
