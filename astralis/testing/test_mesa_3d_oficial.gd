@@ -90,17 +90,18 @@ func test_nos_chave_3d_existem() -> void:
 	# 24 painéis flutuantes (5+5 por lado + 2 pilhas por lado), cada um com base escura.
 	var paineis := (_n3d(mesa, "Campo/Slots") as Node3D).get_children()
 	assert_eq(paineis.size(), 24, "24 painéis (5+5 por lado + baralho e cemitério de cada lado).")
-	var passo_mundo := 263.0 / 150.0 * float(mesa.get("ESCALA_CAMPO"))
 	for p in paineis:
 		assert_true(str((p as Node).name).begins_with("Painel_p"), "Painel flutuante: " + str((p as Node).name))
 		assert_true((p as Node).get_node_or_null(NodePath("Base")) != null, "Painel tem base escura: " + str((p as Node).name))
-	# Os painéis de slot têm EXATO o passo da grade: encostam sem vão.
+	# Os painéis de slot têm o tamanho da peça (cabe a carta em defesa com
+	# folga); as pilhas têm o tamanho da carta em ataque. As colunas ficam a
+	# um passo de 237 — exato a largura do vidro — então os painéis encostam.
 	for p in paineis:
 		var nome := str((p as Node).name)
 		if nome.contains("_m") or nome.contains("_s"):
 			var base := (p as Node).get_node("Base") as MeshInstance3D
-			assert_almost_eq((base.mesh as BoxMesh).size.x, passo_mundo, 0.0001,
-				"Painel %s com a largura do passo (encostado)." % nome)
+			assert_almost_eq((base.mesh as BoxMesh).size.x, 1.58 * float(mesa.get("ESCALA_CAMPO")), 0.0001,
+				"Painel %s com o tamanho da peça." % nome)
 	# D44 (item 8): as placas do topo saíram de vez e a barra de fases também
 	# (item 6). No topo ficou só a foto + o nome de cada duelista, com o LP
 	# embaixo do nome. A barra "START ? Help" saiu da tela inteira — a ação
@@ -212,8 +213,8 @@ func test_posicao_carta_exatamente_no_painel() -> void:
 	# continua valendo) e é o mesmo em X e Y da arena.
 	var mundo0: Vector3 = mesa.call("_pos_slot", 0, "monstro", 0)
 	var mundo1: Vector3 = mesa.call("_pos_slot", 1, "monstro", 0)
-	var a0: Vector2 = BoardLayout.get_pos(mesa.get("_arena_layout"), BoardLayout.slot_id(0, "monstro", 0), Vector2(632, 695))
-	var a1: Vector2 = BoardLayout.get_pos(mesa.get("_arena_layout"), BoardLayout.slot_id(1, "monstro", 0), Vector2(632, 305))
+	var a0: Vector2 = BoardLayout.get_pos(mesa.get("_arena_layout"), BoardLayout.slot_id(0, "monstro", 0), Vector2(684, 695))
+	var a1: Vector2 = BoardLayout.get_pos(mesa.get("_arena_layout"), BoardLayout.slot_id(1, "monstro", 0), Vector2(1632, 305))
 	var esc: float = mesa.get("ESCALA_CAMPO")
 	var desl: Vector2 = mesa.get("DESLOC_CAMPO")
 	assert_almost_eq(mundo0.x, (a0.x - 1158.0) / 150.0 * esc + desl.x, 0.001, "p0 segue a arena transformada (x).")
@@ -229,7 +230,7 @@ func test_posicao_carta_exatamente_no_painel() -> void:
 	assert_almost_eq(p0_0.x, -p1_0.x, 0.001, "Espelho do rival: p1_m0 é o oposto de p0_m0 (x).")
 	assert_almost_eq(absf(p0_4.x - p0_0.x), absf(p1_0.x - p1_4.x), 0.001, "Distância do espelho é a mesma dos 2 lados.")
 	# A ESCALA é uniforme: a mesma escala vale no eixo X e no Z do dado. E
-	# como a arena tem UM valor só (D49: 263 no passo horizontal E no vão
+	# como a arena tem UM valor só (D49: 237 no passo horizontal E no vão
 	# vertical monstro->magia), a comparação é agora EXATA, sem nenhum
 	# desconto: o que não pode é a escala do campo diferir entre X e Z, nem a
 	# fileira de magia andar fora do dado (o D44 que fazia isso foi removido).
@@ -624,7 +625,7 @@ func test_d49_grade_perfeita_um_valor_so_e_mao_vem_para_a_camera() -> void:
 		var x_max := maxf(m_esq.x, m_dir.x)
 		var pdeck: Vector3 = mesa.call("_pos_slot", lado, "deck", 0)
 		var pcem: Vector3 = mesa.call("_pos_slot", lado, "cemiterio", 0)
-		var ref_pilha := 215.5 / 150.0 * float(mesa.get("ESCALA_CAMPO"))
+		var ref_pilha := 202.5 / 150.0 * float(mesa.get("ESCALA_CAMPO"))
 		assert_almost_eq(absf(pdeck.x - x_max), ref_pilha, 0.000001,
 			"Baralho p%d encostado na coluna da ponta." % lado)
 		assert_almost_eq(absf(x_min - pcem.x), ref_pilha, 0.000001,
@@ -638,11 +639,11 @@ func test_d49_grade_perfeita_um_valor_so_e_mao_vem_para_a_camera() -> void:
 
 	# --- 3. A fileira de monstros do JOGADOR e a do RIVAL: INTOCADAS ---------
 	# Regra 1 do usuário: esta distância (390 no dado) fica congelada. Ela não
-	# faz parte da grade de 263 e nenhuma mudança deste D49 pode mexer nela.
+	# faz parte da grade de 237 e nenhuma mudança deste D49 pode mexer nela.
 	var p0m: Vector2 = BoardLayout.get_pos(lay, BoardLayout.slot_id(0, "monstro", 2), Vector2(0, 0))
 	var p1m: Vector2 = BoardLayout.get_pos(lay, BoardLayout.slot_id(1, "monstro", 2), Vector2(0, 0))
 	assert_eq(p0m.y - p1m.y, 390.0, "A distância entre as fileiras de monstro dos 2 lados continua 390 (congelada).")
-	assert_ne(absf(p0m.y - p1m.y), 263.0, "A distância dos monstros NÃO virou o valor da grade (263).")
+	assert_ne(absf(p0m.y - p1m.y), 237.0, "A distância dos monstros NÃO virou o valor da grade (237).")
 
 	# --- 4. A carta da mão NÃO cresceu de verdade: o mundo é o mesmo -------
 	var st = mesa.get("_st")

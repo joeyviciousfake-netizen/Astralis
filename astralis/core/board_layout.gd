@@ -16,8 +16,8 @@ extends RefCounted
 ## `duel_legacy2d/duel_board.gd`), e era ela que fazia o jogo cair numa tela
 ## diferente da oficial sem ninguém ver. A posição de cada slot vem SO do
 ## arquivo `schemas/examples/arenas/arena_starter.json` (arena_oficial_path).
-## Os números da mesa (632→1684 de 263 em 263; y 695/958 e 305/42, com o vão
-## monstro->magia = 263 dos dois lados e a distância 390 entre as fileiras de
+## Os números da mesa (684→1632 de 237 em 237; y 695/932 e 305/68, com o vão
+## monstro->magia = 237 dos dois lados e a distância 390 entre as fileiras de
 ## monstro CONGELADA) vivem só naquele arquivo, e o D49 travou isso em teste.
 const NULO := Vector2(-99999, -99999)
 

@@ -101,11 +101,11 @@ const ASSETS_EMBUTIDOS := [
 ]
 
 const LARG_CARTA := 1.0
-## Lado do ladrilho (só o ladrilho, não o cursor): EXATO o passo da grade,
-## então os painéis encostam uns nos outros sem vão. Escrito como divisão
-## (263/150) de propósito: o 263 é o passo da arena (o dono é o dado, e o GUT
-## trava ele); se o dado mudar o passo, este número acompanha.
-const PECA_PROF_CARTAS := 263.0 / 150.0
+## Lado do ladrilho (só o ladrilho, não o cursor): um pouco maior que a carta
+## DEITADA (ALT_CARTA = 1,4576 larguras), para a carta de DEF caber dentro da
+## peça em vez de encostar/cortar na borda. As colunas ficam a um passo de 237
+## no dado — exato a largura do vidro — então os painéis encostam sem vão.
+const PECA_PROF_CARTAS := 1.58
 ## D49: o vão vertical monstro->magia NÃO é corrigido aqui, por NENHUM motivo.
 ## Não existe desvio escondido no código: o vão vem inteiro do
 ## `arena_starter.json` (y 695/958 no jogador, 305/42 no rival = 263 nos dois

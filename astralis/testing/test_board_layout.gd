@@ -121,17 +121,17 @@ func test_espelho_p1_fileiras_perto_longe() -> void:
 	var m: Vector2 = BoardLayoutScript.get_pos(s, "p1_m0")
 	var sm: Vector2 = BoardLayoutScript.get_pos(s, "p1_s0")
 	assert_eq(m.y, 305.0, "Rival monstro y=305 (perto do centro).")
-	assert_eq(sm.y, 42.0, "Rival magia y=42 (longe do centro).")
+	assert_eq(sm.y, 68.0, "Rival magia y=68 (longe do centro).")
 	assert_true(m.y > sm.y, "Rival: o monstro fica ABAIXO da magia (perto do centro).")
 	for i in range(5):
 		assert_eq(BoardLayoutScript.get_pos(s, "p1_m%d" % i).y, 305.0, "Rival monstro %d na fileira 305." % i)
-		assert_eq(BoardLayoutScript.get_pos(s, "p1_s%d" % i).y, 42.0, "Rival magia %d na fileira 42." % i)
-	# Você: monstro 695 perto, magia 958 longe.
+		assert_eq(BoardLayoutScript.get_pos(s, "p1_s%d" % i).y, 68.0, "Rival magia %d na fileira 68." % i)
+	# Você: monstro 695 perto, magia 932 longe.
 	assert_eq(BoardLayoutScript.get_pos(s, "p0_m0").y, 695.0, "Você monstro y=695.")
-	assert_eq(BoardLayoutScript.get_pos(s, "p0_s0").y, 958.0, "Você magia y=958.")
+	assert_eq(BoardLayoutScript.get_pos(s, "p0_s0").y, 932.0, "Você magia y=932.")
 	# D49: UM VALOR SÓ no campo.
 	var passo: float = BoardLayoutScript.get_pos(s, "p0_m1").x - BoardLayoutScript.get_pos(s, "p0_m0").x
-	assert_eq(passo, 263.0, "Passo horizontal dos monstros = 263.")
+	assert_eq(passo, 237.0, "Passo horizontal dos monstros = 237.")
 	assert_eq(BoardLayoutScript.get_pos(s, "p0_s1").x - BoardLayoutScript.get_pos(s, "p0_s0").x, passo, "Passo horizontal das magias = o mesmo.")
 	assert_eq(BoardLayoutScript.get_pos(s, "p1_m0").x - BoardLayoutScript.get_pos(s, "p1_m1").x, passo, "Passo horizontal dos monstros do rival = o mesmo.")
 	assert_eq(BoardLayoutScript.get_pos(s, "p1_s0").x - BoardLayoutScript.get_pos(s, "p1_s1").x, passo, "Passo horizontal das magias do rival = o mesmo.")
@@ -151,10 +151,10 @@ func test_pilhas_ao_lado_no_meio_das_fileiras() -> void:
 	for lado in [0, 1]:
 		var d: Vector2 = BoardLayoutScript.get_pos(s, BoardLayoutScript.slot_id(lado, "deck", 0))
 		var g: Vector2 = BoardLayoutScript.get_pos(s, BoardLayoutScript.slot_id(lado, "cemiterio", 0))
-		assert_eq(d.x, 1899.5, "Pilha do baralho p%d a direita do campo." % lado)
-		assert_eq(g.x, 416.5, "Pilha do cemitério p%d a esquerda do campo." % lado)
-		assert_eq(d.x - 1684.0, 215.5, "Baralho p%d encostado na última coluna." % lado)
-		assert_eq(632.0 - g.x, 215.5, "Cemitério p%d encostado na primeira coluna." % lado)
+		assert_eq(d.x, 1834.5, "Pilha do baralho p%d a direita do campo." % lado)
+		assert_eq(g.x, 481.5, "Pilha do cemitério p%d a esquerda do campo." % lado)
+		assert_eq(d.x - 1632.0, 202.5, "Baralho p%d encostado na última coluna." % lado)
+		assert_eq(684.0 - g.x, 202.5, "Cemitério p%d encostado na primeira coluna." % lado)
 	var ym0: float = BoardLayoutScript.get_pos(s, "p0_m0").y
 	var ys0: float = BoardLayoutScript.get_pos(s, "p0_s0").y
 	assert_eq(BoardLayoutScript.get_pos(s, "p0_d0").y, (ym0 + ys0) * 0.5, "Baralho p0 no meio das fileiras.")
