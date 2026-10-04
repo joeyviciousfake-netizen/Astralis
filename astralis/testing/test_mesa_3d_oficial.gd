@@ -90,13 +90,21 @@ func test_nos_chave_3d_existem() -> void:
 	# 24 painéis flutuantes (5+5 por lado + 2 pilhas por lado), cada um com base escura.
 	var paineis := (_n3d(mesa, "Campo/Slots") as Node3D).get_children()
 	assert_eq(paineis.size(), 24, "24 painéis (5+5 por lado + baralho e cemitério de cada lado).")
+	var passo_mundo := 263.0 / 150.0 * float(mesa.get("ESCALA_CAMPO"))
 	for p in paineis:
 		assert_true(str((p as Node).name).begins_with("Painel_p"), "Painel flutuante: " + str((p as Node).name))
 		assert_true((p as Node).get_node_or_null(NodePath("Base")) != null, "Painel tem base escura: " + str((p as Node).name))
-	# D44 (item 8): as placas do topo saíram de vez (LP/TURN foram para a
-	# faixa do meio) e a barra de fases também (item 6). No topo ficou só a
-	# foto + o nome de cada duelista. D45 (item 7): a barra "START ? Help"
-	# saiu da tela inteira — a ação continua no joypad (D19), o texto não.
+	# Os painéis de slot têm EXATO o passo da grade: encostam sem vão.
+	for p in paineis:
+		var nome := str((p as Node).name)
+		if nome.contains("_m") or nome.contains("_s"):
+			var base := (p as Node).get_node("Base") as MeshInstance3D
+			assert_almost_eq((base.mesh as BoxMesh).size.x, passo_mundo, 0.0001,
+				"Painel %s com a largura do passo (encostado)." % nome)
+	# D44 (item 8): as placas do topo saíram de vez e a barra de fases também
+	# (item 6). No topo ficou só a foto + o nome de cada duelista, com o LP
+	# embaixo do nome. A barra "START ? Help" saiu da tela inteira — a ação
+	# continua no joypad (D19), o texto não.
 	for lbl in ["HUD/RetratoVoce", "HUD/RetratoRival"]:
 		assert_true(mesa.get_node_or_null(NodePath(lbl)) != null, "HUD existe: " + lbl)
 	assert_true(mesa.get_node_or_null(NodePath("HUD/BarraStart")) == null,
@@ -608,19 +616,19 @@ func test_d49_grade_perfeita_um_valor_so_e_mao_vem_para_a_camera() -> void:
 		var zs: Vector3 = mesa.call("_pos_slot", lado, "magia", 2)
 		assert_almost_eq(absf(zs.z - zm.z), ref, 0.000001,
 			"Vão vertical monstro->magia de p%d = %.4f = o passo horizontal (%.4f)." % [lado, absf(zs.z - zm.z), ref])
-		# As pilhas ficam com o MESMO vao de vidro dos slots (o vidro da pilha
-		# e menor, entao o centro fica a 228.5 da coluna da ponta).
+		# As pilhas ENCOSTAM nas colunas das pontas (centro a 215.5 = metade do
+		# vidro do slot + metade do vidro da pilha).
 		var m_esq: Vector3 = mesa.call("_pos_slot", lado, "monstro", 0)
 		var m_dir: Vector3 = mesa.call("_pos_slot", lado, "monstro", 4)
 		var x_min := minf(m_esq.x, m_dir.x)
 		var x_max := maxf(m_esq.x, m_dir.x)
 		var pdeck: Vector3 = mesa.call("_pos_slot", lado, "deck", 0)
 		var pcem: Vector3 = mesa.call("_pos_slot", lado, "cemiterio", 0)
-		var ref_pilha := 228.5 / 150.0 * float(mesa.get("ESCALA_CAMPO"))
+		var ref_pilha := 215.5 / 150.0 * float(mesa.get("ESCALA_CAMPO"))
 		assert_almost_eq(absf(pdeck.x - x_max), ref_pilha, 0.000001,
-			"Baralho p%d junto do campo com o mesmo vao." % lado)
+			"Baralho p%d encostado na coluna da ponta." % lado)
 		assert_almost_eq(absf(x_min - pcem.x), ref_pilha, 0.000001,
-		"Cemitério p%d junto do campo com o mesmo vao." % lado)
+		"Cemitério p%d encostado na coluna da ponta." % lado)
 		# E a ordem das fileiras continua a do dado: magia de p0 ABAIXO do
 		# monstro dele, magia de p1 ACIMA do monstro dele.
 		if lado == 0:
@@ -683,8 +691,10 @@ func test_d49_grade_perfeita_um_valor_so_e_mao_vem_para_a_camera() -> void:
 	# minha. Na tela o y CRESCE para baixo, então a de cima tem o y MENOR.
 	var fm1 := _faixa_px(mesa, cam, 1, "monstro", peca)
 	var fs1 := _faixa_px(mesa, cam, 1, "magia", peca)
-	assert_true(fs1.y < fm1.x, "Ordem da ref no rival: magia ACIMA de monstro (%.0f < %.0f)." % [fs1.y, fm1.x])
-	assert_true(f_m.y < f_s.x, "Ordem da ref no seu lado: monstro ACIMA de magia (%.0f < %.0f)." % [f_m.y, f_s.x])
+	assert_true(fs1.y <= fm1.x, "Ordem da ref no rival: magia ACIMA de monstro (%.0f <= %.0f)." % [fs1.y, fm1.x])
+	assert_true((fs1.x + fs1.y) * 0.5 < (fm1.x + fm1.y) * 0.5, "Centro da magia rival acima do centro do monstro.")
+	assert_true(f_m.y <= f_s.x, "Ordem da ref no seu lado: monstro ACIMA de magia (%.0f <= %.0f)." % [f_m.y, f_s.x])
+	assert_true((f_m.x + f_m.y) * 0.5 < (f_s.x + f_s.y) * 0.5, "Centro do seu monstro acima do centro da sua magia.")
 
 
 ## Teto e base de uma fileira de ladrilhos, em pixels de tela. A borda é

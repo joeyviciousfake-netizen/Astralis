@@ -61,10 +61,9 @@ func _ready() -> void:
 ## não um wireframe colado). O lado acompanha o campo, então a fresta entre as
 ## peças continua a mesma em qualquer escala.
 ##
-## O vidro precisa ser maior que o lado LONGO da carta em DEFESA (a mesma
-## carta girada um quarto de volta): 1,58 deixa ~0,12 de carta de folga dos
-## dois lados. Abaixo disso a carta de DEF invade o vizinho. Só apresentação;
-## a composição do dado não muda.
+## O vidro tem EXATO o passo da grade: um painel encosta no vizinho, sem vão.
+## A carta de DEF (a mesma girada um quarto de volta) continua cabendo dentro
+## com folga. Só apresentação; a composição do dado não muda.
 ##
 ## NÃO passa pela perspectiva (doc 16) de propósito: as 24 peças são
 ## construídas UMA vez, com as DUAS fileiras e as pilhas, e a perspectiva só troca os

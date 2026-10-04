@@ -144,17 +144,17 @@ func test_espelho_p1_fileiras_perto_longe() -> void:
 
 func test_pilhas_ao_lado_no_meio_das_fileiras() -> void:
 	# As 4 pilhas: baralho a direita (d), cemiterio a esquerda (g), no MEIO
-	# entre as fileiras de cada lado. O que e igual aos slots e o VAO DE
-	# VIDRO: 26 (263 menos a largura do vidro do slot). Como o vidro da pilha
-	# e menor, o centro fica a 228.5 (118.5 meio vidro + 26 vao + 84 meia pilha).
+	# entre as fileiras de cada lado e ENCOSTADAS nas colunas das pontas (sem
+	# vao de vidro): centro a 215.5 (metade do vidro do slot + metade do vidro
+	# da pilha).
 	var s: Dictionary = BoardLayoutScript.load_arena(BoardLayoutScript.arena_oficial_path())
 	for lado in [0, 1]:
 		var d: Vector2 = BoardLayoutScript.get_pos(s, BoardLayoutScript.slot_id(lado, "deck", 0))
 		var g: Vector2 = BoardLayoutScript.get_pos(s, BoardLayoutScript.slot_id(lado, "cemiterio", 0))
-		assert_eq(d.x, 1912.5, "Pilha do baralho p%d a direita do campo." % lado)
-		assert_eq(g.x, 403.5, "Pilha do cemitério p%d a esquerda do campo." % lado)
-		assert_eq(d.x - 1684.0, 228.5, "Baralho p%d com o mesmo vao de vidro dos slots." % lado)
-		assert_eq(632.0 - g.x, 228.5, "Cemitério p%d com o mesmo vao de vidro dos slots." % lado)
+		assert_eq(d.x, 1899.5, "Pilha do baralho p%d a direita do campo." % lado)
+		assert_eq(g.x, 416.5, "Pilha do cemitério p%d a esquerda do campo." % lado)
+		assert_eq(d.x - 1684.0, 215.5, "Baralho p%d encostado na última coluna." % lado)
+		assert_eq(632.0 - g.x, 215.5, "Cemitério p%d encostado na primeira coluna." % lado)
 	var ym0: float = BoardLayoutScript.get_pos(s, "p0_m0").y
 	var ys0: float = BoardLayoutScript.get_pos(s, "p0_s0").y
 	assert_eq(BoardLayoutScript.get_pos(s, "p0_d0").y, (ym0 + ys0) * 0.5, "Baralho p0 no meio das fileiras.")
