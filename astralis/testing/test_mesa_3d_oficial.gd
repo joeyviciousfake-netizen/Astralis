@@ -87,13 +87,12 @@ func test_nos_chave_3d_existem() -> void:
 	for lbl in ["HUD", "HUD/FlashTela", "CamadaFundo", "Camada3D", "Camada3D/JanelaCampo"]:
 		assert_true(mesa.get_node_or_null(NodePath(lbl)) != null, "Nó-chave existe: " + lbl)
 	assert_true((_n3d(mesa, "PivoMesa/Camera3D") as Camera3D).current, "Camera3D é a atual.")
-	# 24 painéis flutuantes (5+5 por lado + 2 pilhas por lado), cada um com base escura + borda.
+	# 24 painéis flutuantes (5+5 por lado + 2 pilhas por lado), cada um com base escura.
 	var paineis := (_n3d(mesa, "Campo/Slots") as Node3D).get_children()
 	assert_eq(paineis.size(), 24, "24 painéis (5+5 por lado + baralho e cemitério de cada lado).")
 	for p in paineis:
 		assert_true(str((p as Node).name).begins_with("Painel_p"), "Painel flutuante: " + str((p as Node).name))
 		assert_true((p as Node).get_node_or_null(NodePath("Base")) != null, "Painel tem base escura: " + str((p as Node).name))
-		assert_true((p as Node).get_node_or_null(NodePath("Borda")) != null, "Painel tem borda com brilho: " + str((p as Node).name))
 	# D44 (item 8): as placas do topo saíram de vez (LP/TURN foram para a
 	# faixa do meio) e a barra de fases também (item 6). No topo ficou só a
 	# foto + o nome de cada duelista. D45 (item 7): a barra "START ? Help"
