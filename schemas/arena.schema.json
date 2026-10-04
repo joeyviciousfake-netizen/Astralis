@@ -11,14 +11,14 @@
     "background": { "type": "string", "description": "Caminho do fundo, ex: assets/backgrounds/arena_starter.png. Opcional, pode ser placeholder." },
     "slots": {
       "type": "array",
-      "description": "20 posições fixas: p0 = você/baixo (duelist1), p1 = rival/cima (duelist2); m = monstro, s = magia; índice 0-4. Ordem livre; IDs únicos. Só XY de desenho, nunca regra.",
-      "minItems": 20,
-      "maxItems": 20,
+      "description": "24 posições fixas: p0 = você/baixo (duelist1), p1 = rival/cima (duelist2); m = monstro, s = magia (índice 0-4); d = pilha do baralho, g = pilha do cemitério (índice 0). Ordem livre; IDs únicos. Só XY de desenho, nunca regra.",
+      "minItems": 24,
+      "maxItems": 24,
       "items": {
         "type": "object",
         "properties": {
-          "slot_id": { "type": "string", "pattern": "^(p0|p1)_(m|s)[0-4]$", "description": "ID fixo do slot (ex: p0_m0). Lógica só usa este ID." },
-          "x": { "type": "number", "minimum": 0, "maximum": 1920, "description": "Posição X do slot em 1920x1080 (só desenho). Limite 0-1920: a resolução da mesa é FIXA em 1920x1080 (D16), então nada pode cair fora da tela; o mesmo limite já existe no bloco hand deste schema (hand.p0/hand.p1), e os slots eram a inconsistência. Dado real (arena_starter, arena oficial D48): X de 632 a 1684, passo 263." },
+          "slot_id": { "type": "string", "pattern": "^(p0|p1)_((m|s)[0-4]|(d|g)0)$", "description": "ID fixo do slot (ex: p0_m0, p0_d0). Lógica só usa este ID." },
+          "x": { "type": "number", "minimum": 0, "maximum": 2000, "description": "Posição X do slot em 1920x1080 (só desenho). Limite 0-2000: a pilha do baralho fica um passo de grade além da última coluna (1947) e tem que continuar válida; o desenho na tela é o que decide o que aparece." },
           "y": { "type": "number", "minimum": 0, "maximum": 1080, "description": "Posição Y do slot em 1920x1080 (só desenho). Limite 0-1080: idem X (D16, 1920x1080 fixo); igual ao bloco hand deste schema. Dado real (arena_starter, arena oficial D48/D49): Y de 42 a 958, com UM valor so de 263 entre a fileira de monstros e a de magia de cada lado (p0 monstro 695, p0 magia 958, p1 monstro 305, p1 magia 42)." }
         },
         "required": ["slot_id", "x", "y"],
