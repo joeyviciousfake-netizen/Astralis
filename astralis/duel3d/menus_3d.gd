@@ -13,7 +13,9 @@ extends CanvasLayer
 ##
 ## NADA AQUI CALCULA REGUA (R1/R3): as opcoes e os textos chegam prontos da
 ## mesa (a lista de estrelas do DADO, o nome da carta do centro). Este no so
-## escreve o que a mesa mandou na tela.
+## escreve o que a mesa mandou na tela. As POSICOES tambem vem da mesa
+## (`posicionar_centro`, `posicionar_popup`): os dois blocos acompanham a
+## carta segurada, um em cima e um embaixo dela.
 ##
 ## O `MenuLayer` e este no, e ele e filho da MESA (nao do HUD) de proposito: o
 ## CanvasLayer desenha em espaco de tela, acima do painel esquerdo, que e a
@@ -63,8 +65,8 @@ func _construir_popup() -> void:
 	_popup = PanelContainer.new()
 	_popup.name = "MenuEstrela"
 	_popup.add_theme_stylebox_override("panel", _estilo(Color(0.03, 0.03, 0.08, 0.95), Color(1.0, 0.9, 0.4)))
-	# Embaixo da carta segurada: ela sobe ao centro-alto no passo da estrela e
-	# o menu fica centrado na mesma coluna, com folga entre os dois.
+	# A posicao inicial e so para nao nascer no canto: quem mostra o popup
+	# (`mostrar_estrela`) e posicionado pela mesa, colado na carta segurada.
 	_popup.position = Vector2(981, 500)
 	_popup.size = Vector2(520, 220)
 	_popup.visible = false
@@ -118,6 +120,17 @@ func mostrar_centro(texto: String) -> void:
 func esconder_centro() -> void:
 	if _painel_centro != null:
 		_painel_centro.visible = false
+
+
+## Posiciona os blocos na tela (a mesa calcula a partir da carta segurada).
+func posicionar_centro(p: Vector2) -> void:
+	if _painel_centro != null:
+		_painel_centro.position = p
+
+
+func posicionar_popup(p: Vector2) -> void:
+	if _popup != null:
+		_popup.position = p
 
 
 ## Abre o popup da estrela, com as 2 guardian stars do DADO real.

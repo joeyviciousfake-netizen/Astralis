@@ -1772,6 +1772,12 @@ func _redesenhar(com_efeito: bool, dono_efeito: int = 0) -> void:
 	# `_preparar_entrada` e quem decide (`_distribuicao_ativa` está dentro dela),
 	# então aqui o `com_efeito` só precisa dizer que HÁ DISTRIBUIÇÃO em curso.
 	var compra0 := _preparar_entrada(0, mao0.size(), com_efeito and (dono_efeito == 0 or _distribuicao_ativa))
+	# Na estrela a mão sai da tela: só ficam a segurada e o menu. A contagem
+	# acima continua valendo, então a volta não anima carta fantasma.
+	var mao_escondida := _fase_jogador == FASE_MAO and _sub_mao == SUB_ESTRELA
+	for i in range(mao0.size()):
+		if mao_escondida:
+			continue
 	# `com_efeito and (dono_efeito == 0 or _distribuicao_ativa)`: na COMPRA só a
 	# mão que comprou anima (D53), e na DISTRIBUIÇÃO as duas. O `or` fica AQUI e
 	# não dentro de `_preparar_entrada` porque quem sabe se é compra é quem
@@ -2455,6 +2461,8 @@ func _construir_fundo_painel(hud: Control) -> void:
 
 func _mostrar_centro3d(face_baixo: bool) -> void:
 	if _menus != null and is_instance_valid(_menus):
+		var carta := _retangulo_carta_palco()
+		_menus.posicionar_centro(Vector2(carta.get_center().x - 260.0, maxf(8.0, carta.position.y - 120.0 - PALCO_FOLGA)))
 		_menus.mostrar_centro(_texto_do_centro(face_baixo))
 
 
@@ -2476,6 +2484,9 @@ func _esconder_centro3d() -> void:
 
 func _mostrar_popup_estrela() -> void:
 	if _menus != null and is_instance_valid(_menus):
+		var carta := _retangulo_carta_palco()
+		_menus.posicionar_centro(Vector2(carta.get_center().x - 260.0, maxf(8.0, carta.position.y - 120.0 - PALCO_FOLGA)))
+		_menus.posicionar_popup(Vector2(carta.get_center().x - 260.0, minf(float(TELA_A) - 228.0, carta.end.y + PALCO_FOLGA)))
 		_menus.mostrar_estrela(_estrela_ops)
 
 
@@ -2750,9 +2761,10 @@ func _limpar_levantadas() -> void:
 ## O PALCO DA SEGURADA (só desenho do fluxo fiel, zero regra).
 ##
 ## A carta que o jogador está decidindo sai da mão e VOA até a frente da
-## câmera — sem trocar de camada. Na
-## estrela o palco é mais alto, porque o menu fica embaixo. A mão esconde o
-## original no mesmo índice (o lugar fica marcado pelo cursor).
+## câmera — sem trocar de camada. A posição é UMA SÓ nos dois passos (face e
+## estrela): o meio entre a mão dele e a do rival, calculado da câmera na
+## hora. A mão esconde o original no mesmo índice (o lugar fica marcado pelo
+## cursor).
 ##
 ## A face que vale é sempre a do estado (`_face_baixo`): o giro só mostra. Cada
 ## troca soma meia volta para a direita, então a paridade nunca mente mesmo
@@ -2761,18 +2773,59 @@ func _limpar_levantadas() -> void:
 ## bloco. Com FOV 20 a altura visível a essa distância é 2·8,5·tan(10°) = 3,0,
 ## então a carta (1,46 de altura) ocupa metade da tela.
 const PALCO_DIST := 8.5
-## Quanto o palco da estrela sobe em relação ao da face (o menu fica embaixo).
-const PALCO_ALTO := 1.3
 ## O voo da mão até o palco, em segundos. Curto de propósito: é só o aparecer.
 const PALCO_VOO := 0.28
 ## O giro de UMA troca de face (meia volta para a direita). A mesa só diz o
 ## ângulo acumulado.
 const PALCO_GIRO := 0.22
+## A folga entre a carta do palco e os blocos 2D (texto em cima, menu embaixo).
+const PALCO_FOLGA := 14.0
 ## O voo em curso e o giro em curso (só um de cada mexe no nó por vez):
 ## começar outro mata o anterior, então dois nunca brigam.
 var _seg_voo: Tween = null
 var _seg_giro: Tween = null
+
+
+## O meio entre as duas mãos, em coordenadas do viewport. É para onde a carta
+## segurada vai — e é por isso que ela aparece entre as mãos em qualquer vista.
+func _meio_das_maos_tela() -> Vector2:
+	if _vp == null:
+		return Vector2(744.0, 540.0)
+	var meio := Vector2(_vp.size.x * 0.5, _vp.size.y * 0.5)
+	if _st == null or _cam == null or not is_instance_valid(_cam):
+		return meio
+	var mao0: Array = (_st.players[0] as Dictionary)["hand"] as Array
+	var mao1: Array = (_st.players[1] as Dictionary)["hand"] as Array
+	if mao0.is_empty() or mao1.is_empty():
+		return meio
+	var s0: Vector2 = _cam.unproject_position(_pos_mao_arco(mao0.size() / 2, mao0.size(), 0))
+	var s1: Vector2 = _cam.unproject_position(_pos_mao_arco(mao1.size() / 2, mao1.size(), 1))
+	return Vector2(_vp.size.x * 0.5, (s0.y + s1.y) * 0.5)
+
+
+## Onde a segurada fica: o raio da câmera pelo meio das mãos, a PALCO_DIST de
+## profundidade. Posição única nos dois passos.
+func _pos_palco() -> Vector3:
+	if _cam == null or not is_instance_valid(_cam):
+		return Vector3.ZERO
+	var meio := _meio_das_maos_tela()
+	var raio := _cam.project_ray_normal(meio)
+	var eixo := -_cam.global_transform.basis.z
+	return _cam.project_ray_origin(meio) + raio * (PALCO_DIST / maxf(0.2, raio.dot(eixo)))
+
+
+## O retângulo da carta do palco na tela cheia. A mesa posiciona os blocos 2D
+## (texto em cima, menu embaixo) a partir dele.
+func _retangulo_carta_palco() -> Rect2:
+	var centro := Vector2(JANELA_CAMPO_X, 0.0) + _meio_das_maos_tela()
+	var meio := Vector2.ZERO
+	if _cam != null and is_instance_valid(_cam):
+		var px_por_mundo: float = float(_vp.size.y) / (2.0 * PALCO_DIST * tan(deg_to_rad(_cam.fov * 0.5)))
+		meio = Vector2(LARG_CARTA, ALT_CARTA) * 0.5 * px_por_mundo
+	return Rect2(centro - meio, meio * 2.0)
 func _pegar_segurada(alta: bool) -> void:
+	# `alta` diz o passo (face ou estrela), mas a posição é única nos dois: o
+	# meio das mãos. Só o menu muda de lugar.
 	_liberar_segurada()
 	if _st == null or _cam == null or not is_instance_valid(_cam):
 		return
@@ -2780,10 +2833,7 @@ func _pegar_segurada(alta: bool) -> void:
 	if _mao_idx < 0 or _mao_idx >= mao.size():
 		return
 	var no := _fazer_carta(mao[_mao_idx] as Dictionary, false, false)
-	var base := _cam.global_transform.basis
-	var palco: Vector3 = _cam.global_position - base.z * PALCO_DIST
-	if alta:
-		palco += base.y * PALCO_ALTO
+	var palco: Vector3 = _pos_palco()
 	_vp.add_child(no)
 	no.global_position = _pos_mao_arco(_mao_idx, mao.size(), 0)
 	no.global_rotation = _cam.global_rotation
@@ -2911,7 +2961,7 @@ func _fluxo_escolher_slot() -> void:
 	# é calculado da câmera, e com ela voando a carta pararia no lugar errado.
 	if _vista != null and is_instance_valid(_vista):
 		await _vista.voltar_do_topo()
-	# A carta sobe de novo ao centro, mais alta porque o menu fica embaixo, e
+	# A carta sobe de novo ao centro, na mesma posição da face, e
 	# a mão esconde o original.
 	_liberar_segurada()
 	_pegar_segurada(true)
