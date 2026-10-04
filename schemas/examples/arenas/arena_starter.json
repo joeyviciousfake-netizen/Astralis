@@ -2,7 +2,7 @@
  "schema_version": 1,
  "id": "arena_starter",
  "name": "Arena Inicial",
-  "description": "ARENA OFICIAL (D48: uma arena so; D49: a grade PERFEITA). 1920x1080 em ESPELHO (D24/R3: so desenho, IDs e logica intactos). UM UNICO VALOR de distancia em todo o campo: 263. p0 = voce/baixo: monstros y=695, magias y=958 (263 abaixo do monstro). p1 = rival/cima ESPELHADO: monstros y=305, magias y=42 (263 acima do monstro), com X invertido (m0/s0 a direita x=1684, m4/s4 a esquerda x=632). X de 632 a 1684 de 263 em 263, nos DOIS lados e nos DOIS tipos de slot. A distancia entre a fileira de monstros do jogador e a do rival e 390 e NAO faz parte da grade (fica congelada). PILHAS (d = baralho a direita, g = cemiterio a esquerda): o VAO de vidro ate a coluna da ponta e o MESMO dos slots (26), entao o centro fica a 228.5 (118.5 meio vidro + 26 vao + 84 meio pilha); ficam no MEIO entre as fileiras de cada lado (p0 y=826.5, p1 y=173.5). Mao: p0 x=1240 y=980 aberta, p1 x=1240 y=20 de costas.",
+  "description": "ARENA OFICIAL (D48: uma arena so; D49: a grade PERFEITA). 1920x1080 em ESPELHO (D24/R3: so desenho, IDs e logica intactos). UM UNICO VALOR de distancia em todo o campo: 263. p0 = voce/baixo: monstros y=695, magias y=958 (263 abaixo do monstro). p1 = rival/cima ESPELHADO: monstros y=305, magias y=42 (263 acima do monstro), com X invertido (m0/s0 a direita x=1684, m4/s4 a esquerda x=632). X de 632 a 1684 de 263 em 263, nos DOIS lados e nos DOIS tipos de slot. A distancia entre a fileira de monstros do jogador e a do rival e 390 e NAO faz parte da grade (fica congelada). PILHAS (d = baralho a direita, g = cemiterio a esquerda): ENCOSTADAS nas colunas das pontas (centro a 215.5 = metade do vidro do slot + metade do vidro da pilha); ficam no MEIO entre as fileiras de cada lado (p0 y=826.5, p1 y=173.5). Mao: p0 x=1240 y=980 aberta, p1 x=1240 y=20 de costas.",
  "background": "assets/backgrounds/arena_starter.png",
  "slots": [
   {
@@ -107,22 +107,22 @@
   },
   {
    "slot_id": "p0_d0",
-   "x": 1912.5,
+   "x": 1899.5,
    "y": 826.5
   },
   {
    "slot_id": "p0_g0",
-   "x": 403.5,
+   "x": 416.5,
    "y": 826.5
   },
   {
    "slot_id": "p1_d0",
-   "x": 1912.5,
+   "x": 1899.5,
    "y": 173.5
   },
   {
    "slot_id": "p1_g0",
-   "x": 403.5,
+   "x": 416.5,
    "y": 173.5
   }
  ],
