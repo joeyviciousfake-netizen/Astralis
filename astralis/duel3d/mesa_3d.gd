@@ -956,9 +956,12 @@ func _construir_ambiente() -> void:
 	we.name = "WorldEnvironment"
 	var env := Environment.new()
 	if _quer_sem_ceu():
-		# Prova sem céu: fundo sólido no lugar do céu + cenário. Só desenho.
+		# Prova sem céu: MAGENTA sólido no lugar do céu + cenário. Magenta de
+		# propósito, para não confundir com nenhum azul do jogo: se algum pixel
+		# do fundo era céu, ele aparece aqui. Só desenho.
+		print("[MESA3D] Prova --sem-ceu: ceu desligado, fundo magenta.")
 		env.background_mode = Environment.BG_COLOR
-		env.background_color = Color(0.03, 0.04, 0.08)
+		env.background_color = Color(1.0, 0.0, 1.0)
 	else:
 		# Céu azul claro (SEM MESA, SEM vazio estrelado): céu procedural azul com
 		# GRADIENTE VERTICAL (mais escuro em cima, mais claro no horizonte — doc 15
