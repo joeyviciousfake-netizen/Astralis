@@ -273,7 +273,7 @@ corrigido quando um dos dois muda. A altura do quadro é `2 · d · tan(fov/2)`.
 verdade (`roughness` 0.25 com clearcoat), e **PBR sem luz é preto**: a cena do
 duelo não tem iluminação e não vai ter, então o material importado sairia escuro e
 sem a cor do Blender. `_pintar_sem_luz` põe `SHADING_MODE_UNSHADED` em **todo**
-material da peça, que é o mesmo modo das cartas, do vidro, do céu e da nuvem. A luz
+material da peça, que é o mesmo modo das cartas e do vidro. A luz
 que viaja com a moeda continua existindo, mas não para iluminar o metal: é o brilho
 do **estouro** final.
 
