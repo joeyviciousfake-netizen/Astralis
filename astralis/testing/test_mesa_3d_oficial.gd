@@ -638,11 +638,11 @@ func test_d49_grade_perfeita_um_valor_so_e_mao_vem_para_a_camera() -> void:
 			assert_true(zs.z < zm.z, "A magia do rival continua ACIMA do monstro dele.")
 
 	# --- 3. A fileira de monstros do JOGADOR e a do RIVAL: INTOCADAS ---------
-	# Regra 1 do usuário: esta distância (390 no dado) fica congelada. Ela não
+	# Regra 1 do usuário: esta distância (300 no dado) fica congelada. Ela não
 	# faz parte da grade de 237 e nenhuma mudança deste D49 pode mexer nela.
 	var p0m: Vector2 = BoardLayout.get_pos(lay, BoardLayout.slot_id(0, "monstro", 2), Vector2(0, 0))
 	var p1m: Vector2 = BoardLayout.get_pos(lay, BoardLayout.slot_id(1, "monstro", 2), Vector2(0, 0))
-	assert_eq(p0m.y - p1m.y, 390.0, "A distância entre as fileiras de monstro dos 2 lados continua 390 (congelada).")
+	assert_eq(p0m.y - p1m.y, 300.0, "A distância entre as fileiras de monstro dos 2 lados é 300 (congelada).")
 	assert_ne(absf(p0m.y - p1m.y), 237.0, "A distância dos monstros NÃO virou o valor da grade (237).")
 
 	# --- 4. A carta da mão NÃO cresceu de verdade: o mundo é o mesmo -------

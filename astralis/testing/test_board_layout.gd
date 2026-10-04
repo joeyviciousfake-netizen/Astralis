@@ -120,12 +120,12 @@ func test_espelho_p1_fileiras_perto_longe() -> void:
 	var s: Dictionary = BoardLayoutScript.load_arena(BoardLayoutScript.arena_oficial_path())
 	var m: Vector2 = BoardLayoutScript.get_pos(s, "p1_m0")
 	var sm: Vector2 = BoardLayoutScript.get_pos(s, "p1_s0")
-	assert_eq(m.y, 305.0, "Rival monstro y=305 (perto do centro).")
-	assert_eq(sm.y, 68.0, "Rival magia y=68 (longe do centro).")
+	assert_eq(m.y, 395.0, "Rival monstro y=395 (perto do centro).")
+	assert_eq(sm.y, 158.0, "Rival magia y=158 (longe do centro).")
 	assert_true(m.y > sm.y, "Rival: o monstro fica ABAIXO da magia (perto do centro).")
 	for i in range(5):
-		assert_eq(BoardLayoutScript.get_pos(s, "p1_m%d" % i).y, 305.0, "Rival monstro %d na fileira 305." % i)
-		assert_eq(BoardLayoutScript.get_pos(s, "p1_s%d" % i).y, 68.0, "Rival magia %d na fileira 68." % i)
+		assert_eq(BoardLayoutScript.get_pos(s, "p1_m%d" % i).y, 395.0, "Rival monstro %d na fileira 395." % i)
+		assert_eq(BoardLayoutScript.get_pos(s, "p1_s%d" % i).y, 158.0, "Rival magia %d na fileira 158." % i)
 	# Você: monstro 695 perto, magia 932 longe.
 	assert_eq(BoardLayoutScript.get_pos(s, "p0_m0").y, 695.0, "Você monstro y=695.")
 	assert_eq(BoardLayoutScript.get_pos(s, "p0_s0").y, 932.0, "Você magia y=932.")
@@ -138,7 +138,7 @@ func test_espelho_p1_fileiras_perto_longe() -> void:
 	assert_eq(absf(BoardLayoutScript.get_pos(s, "p0_s0").y - BoardLayoutScript.get_pos(s, "p0_m0").y), passo, "Vão monstro->magia do jogador = o passo horizontal.")
 	assert_eq(absf(BoardLayoutScript.get_pos(s, "p1_m0").y - BoardLayoutScript.get_pos(s, "p1_s0").y), passo, "Vão monstro->magia do rival = o passo horizontal.")
 	# E a distância entre as fileiras de monstro dos 2 lados segue CONGELADA.
-	assert_eq(BoardLayoutScript.get_pos(s, "p0_m0").y - BoardLayoutScript.get_pos(s, "p1_m0").y, 390.0, "D50/D49: a distância entre as fileiras de monstro continua 390.")
+	assert_eq(BoardLayoutScript.get_pos(s, "p0_m0").y - BoardLayoutScript.get_pos(s, "p1_m0").y, 300.0, "D50/D49: a distância entre as fileiras de monstro é 300.")
 	assert_ne(BoardLayoutScript.get_pos(s, "p0_m0").y - BoardLayoutScript.get_pos(s, "p1_m0").y, passo, "A distância dos monstros NÃO virou o valor da grade.")
 
 

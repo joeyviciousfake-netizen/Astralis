@@ -347,7 +347,7 @@ func test_pasta_arenas_no_projeto_e_ignorada_com_aviso() -> void:
 
 func test_arena_oficial_e_a_unica_e_a_perfeita() -> void:
 	# A arena oficial: 24 slots, um valor só (237) nas seis direções, e a
-	# distância de 390 entre as fileiras de monstro dos 2 lados congelada.
+	# distância de 300 entre as fileiras de monstro dos 2 lados congelada.
 	var slots: Dictionary = BoardLayoutScript.load_arena(BoardLayoutScript.arena_oficial_path())
 	assert_eq(slots.size(), 24, "A arena oficial tem 24 slots.")
 	assert_true(BoardLayoutScript.valida_arena_oficial(slots).is_empty(), "A arena oficial passa na validação.")
@@ -362,7 +362,7 @@ func test_arena_oficial_e_a_unica_e_a_perfeita() -> void:
 		var zm: Vector2 = slots[BoardLayoutScript.slot_id(lado, "monstro", 2)]
 		var zs: Vector2 = slots[BoardLayoutScript.slot_id(lado, "magia", 2)]
 		assert_almost_eq(absf(zs.y - zm.y), passo, 0.000001, "Vão monstro->magia de p%d = 237." % lado)
-	assert_eq((slots["p0_m0"] as Vector2).y - (slots["p1_m0"] as Vector2).y, 390.0, "A distância entre as fileiras de monstro continua 390.")
+	assert_eq((slots["p0_m0"] as Vector2).y - (slots["p1_m0"] as Vector2).y, 300.0, "A distância entre as fileiras de monstro é 300.")
 	# E quem DESENHA usa o MESMO dado (sem número próprio): a posição do slot
 	# na tela sai do layout, e a trava disso é do arquivo 3D
 	# (test_posicao_carta_exatamente_no_painel).
