@@ -49,12 +49,12 @@ perspectiva fica torta na hora que o campo é puxado para a direita.
 |---|---|---|
 | `CAM_POS.x` | `0` | a lente fica no eixo |
 | `frustum_offset` | `Vector2.ZERO` | sem deslocamento de lente |
-| `PAINEL_ESQ_L` | `562` px | o campo começa depois do painel 2D (29,3% da tela) |
-| `JANELA_CAMPO_L` | `1358` px | 70,7% da tela — a janela do SubViewport |
+| `PAINEL_ESQ_L` | `431` px | o campo começa depois do painel 2D (22,4% da tela: 375 da carta + 2x28 de margem) |
+| `JANELA_CAMPO_L` | `1489` px | 77,6% da tela — a janela do SubViewport |
 | `ESCALA_CAMPO` | `1.23` | transform de apresentação, sobre o layout da arena |
 | `DESLOC_CAMPO` | `Vector2(0.0, -0.07)` | idem |
 
-O centro do campo cai em **64,6%** da tela, e a simetria nas 4 fileiras é exata.
+O centro do campo cai em **61,2%** da tela, e a simetria nas 4 fileiras é exata.
 
 **A tríade que garante a perspectiva simétrica:** `CAM_POS.x == 0`, alvo no centro
 do campo e `frustum_offset == Vector2.ZERO`. Mover a câmera **não** é o problema;
@@ -77,8 +77,8 @@ São **alvos** de composição (em % da tela), não medidas do que existe:
 
 | Região | Alvo |
 |---|---|
-| área do campo (SubViewport) | x 29,3%..100%, altura toda |
-| painel esquerdo | x 0..29,3% |
+| área do campo (SubViewport) | x 22,4%..100%, altura toda |
+| painel esquerdo | x 0..22,4% |
 | retrato | 7,5% de largura, margem igual nos 3 lados |
 | nome do duelista | alinhado ao topo da foto |
 | faixa do meio | entre as fileiras, no vão |
@@ -221,8 +221,8 @@ decisão, não por acidente.
 
 **O retângulo tem a proporção real da carta** (59 x 86), não a da moldura em
 JPG: o que o painel desenha é a peça, e a peça mede 59 x 86. Com a altura da
-faixa da referência (546 px, y 16..562) a largura sai 374 px, centrada nos 562
-do painel. A câmera ortogonal com `size` = altura da carta e `KEEP_HEIGHT` faz a
+faixa da referência (546 px, y 16..562) a largura sai 375 px, centrada nos 431
+do painel (28 px de margem de cada lado, a mesma dos textos). A câmera ortogonal com `size` = altura da carta e `KEEP_HEIGHT` faz a
 peça preencher o retângulo exato — nem sobra, nem corta o canto arredondado, e
 o GUT mede isso em vez de deixar no olho.
 
