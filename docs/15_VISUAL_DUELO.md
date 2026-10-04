@@ -51,7 +51,7 @@ perspectiva fica torta na hora que o campo é puxado para a direita.
 | `frustum_offset` | `Vector2.ZERO` | sem deslocamento de lente |
 | `PAINEL_ESQ_L` | `431` px | o campo começa depois do painel 2D (22,4% da tela: 375 da carta + 2x28 de margem) |
 | `JANELA_CAMPO_L` | `1489` px | 77,6% da tela — a janela do SubViewport |
-| `ESCALA_CAMPO` | `1.06` | transform de apresentação, sobre o layout da arena (com ele as pilhas a um passo das colunas cabem na tela) |
+| `ESCALA_CAMPO` | `1.185` | transform de apresentação, sobre o layout da arena (com ele as pilhas encostam nas bordas da janela) |
 | `DESLOC_CAMPO` | `Vector2(0.0, -0.07)` | idem |
 
 O centro do campo cai em **61,2%** da tela, e a simetria nas 4 fileiras é exata.
