@@ -908,11 +908,13 @@ func _construir_janela_campo() -> void:
 	_vp.own_world_3d = true   # mundo 3D só desta janela (não invade o HUD)
 	_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	_vp.transparent_bg = false
-	# Camada -1 = ATRÁS do HUD 2D (que fica na camada 0, tela cheia).
-	var camada := CanvasLayer.new()
-	camada.name = "Camada3D"
-	camada.layer = -1
-	add_child(camada)
+	# O FUNDO é a última camada: só o pano escuro de trás, que nunca cobre
+	# ninguém, então mora sozinho na camada -2. A janela do campo continua na
+	# -1, ATRÁS do HUD 2D (que fica na camada 0, tela cheia).
+	var base := CanvasLayer.new()
+	base.name = "CamadaFundo"
+	base.layer = -2
+	add_child(base)
 	# Fundo escuro da faixa do painel esquerdo (na ref, essa faixa é escura).
 	var fundo := ColorRect.new()
 	fundo.name = "Fundo3D"
@@ -920,7 +922,11 @@ func _construir_janela_campo() -> void:
 	fundo.position = Vector2.ZERO
 	fundo.size = Vector2(TELA_L, TELA_A)
 	fundo.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	camada.add_child(fundo)
+	base.add_child(fundo)
+	var camada := CanvasLayer.new()
+	camada.name = "Camada3D"
+	camada.layer = -1
+	add_child(camada)
 	var janela := SubViewportContainer.new()
 	janela.name = "JanelaCampo"
 	janela.position = Vector2(JANELA_CAMPO_X, 0.0)
