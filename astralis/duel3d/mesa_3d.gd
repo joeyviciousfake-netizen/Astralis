@@ -26,7 +26,6 @@ const Cursor3D := preload("res://duel3d/cursor_3d.gd")
 const Campo3D := preload("res://duel3d/campo_3d.gd")
 const Vista3D := preload("res://duel3d/vista_3d.gd")
 const Carta3D := preload("res://duel3d/carta_3d.gd")
-const Centro3D := preload("res://duel3d/centro_3d.gd")
 const EntradaMao3D := preload("res://duel3d/entrada_mao_3d.gd")
 const Moeda3D := preload("res://duel3d/moeda_3d.gd")
 const IaRival := preload("res://ai/ia_rival.gd")
@@ -136,9 +135,10 @@ const VOLTA_DURACAO := 1.0
 const PAUSA_RIVAL := 0.7
 
 ## A CARTA SEGURADA (o assunto da fase da mão): a carta que o jogador tirou da
-## mão aparece no centro por cima do 2D (o palco `centro_3d.gd`), gira no
-## próprio eixo para trocar a face e volta para a mão — tudo instantâneo no
-## estado, e a face que vale é sempre a dele (`_face_baixo`).
+## mão voa até a frente da câmera no mesmo viewport do campo (sem trocar de
+## camada, por cima da faixa), gira no próprio eixo para trocar a face e volta
+## para a mão — tudo instantâneo no estado, e a face que vale é sempre a dele
+## (`_face_baixo`).
 
 ## D77 — O SORTEIO DA MOEDA. Três números, e os três são desta mesa porque a
 ## mesa é a dona da vista e de onde fica cada lado.
@@ -380,8 +380,8 @@ var _lbl_log: Label = null
 var _lbl_dica: Label = null
 var _lbl_slot: Label = null
 var _lbl_fila: Label = null
-## D45 (item 2): a FAIXA DO MEIO é 2D e vive em `faixa_2d.gd` (filha do
-## HUD), com o VALOR sempre do GameState real.
+## D45 (item 2): a FAIXA DO MEIO é 2D e vive em `faixa_2d.gd` (na camada -1,
+## atrás do 3D), com o VALOR sempre do GameState real.
 var _retrato_rival_foto: TextureRect = null
 var _retrato_rival_silhueta: Label = null
 var _retrato_voce_foto: TextureRect = null
@@ -467,11 +467,6 @@ func _ready() -> void:
 	_construir_janela_campo()
 	_construir_ambiente()
 	_construir_hud()
-	# O PALCO DO CENTRO antes dos menus: mesma camada, e quem vem antes desenha
-	# antes — a carta segurada fica por cima do HUD e por baixo dos menus.
-	_centro = Centro3D.new()
-	_centro.altura_carta = ALT_CARTA
-	add_child(_centro)
 	_menus = Menus3D.new()
 	add_child(_menus)
 	# Duelo REAL (motor de verdade): ProjectLoader + DuelManager.
@@ -575,8 +570,6 @@ var _faixa: PanelContainer = null
 ## Os menus sobre a cena (carta do centro + popup da estrela/alvo): o no e o
 ## arquivo `menus_3d.gd`.
 var _menus: CanvasLayer = null
-## O palco da carta segurada: o no e o arquivo `centro_3d.gd`.
-var _centro: Centro3D = null
 ## O painel esquerdo com a carta focada: o no e o arquivo `painel_carta_3d.gd`.
 var _painel: Control = null
 ## De quantas cartas cada mão era no DESENHO ANTERIOR, por dono. É o que diz
@@ -896,21 +889,27 @@ func _calib_linha(hud: Control, nome: String, y: float, cor: Color, alt: int, x0
 # ---- JANELA DO CAMPO (doc 15 §15.4) ----
 
 ## Move a JANELA, não a câmera (doc 15 §15.4). O mundo 3D inteiro (campo,
-## cartas, mão, cursor 3D) nasce dentro de um SubViewport
-## com o tamanho da região do campo, e esse viewport é mostrado por baixo
-## do HUD 2D (camada -1). A câmera fica EXATAMENTE onde já estava, sem
-## deslocamento de lente: por isso a perspectiva é idêntica à de quando o
-## campo estava no meio da tela — só mudou a janela que mostra o mundo.
+## cartas, mão, cursor 3D) nasce dentro de um SubViewport com o tamanho da
+## região do campo. A ordem da tela, de trás para frente, é: fundo (-2), faixa
+## do meio (-1), mundo 3D (0, transparente: onde não há geometria a faixa
+## aparece), HUD 2D (0, depois na árvore), menus (1). A câmera fica EXATAMENTE
+## onde já estava, sem deslocamento de lente: por isso a perspectiva é idêntica
+## à de quando o campo estava no meio da tela — só mudou a janela que mostra
+## o mundo.
 func _construir_janela_campo() -> void:
 	_vp = SubViewport.new()
 	_vp.name = "Viewport3D"
 	_vp.size = Vector2(JANELA_CAMPO_L, JANELA_CAMPO_A)
 	_vp.own_world_3d = true   # mundo 3D só desta janela (não invade o HUD)
 	_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	_vp.transparent_bg = false
+	# Transparente de propósito: a faixa do meio mora na camada de trás (-1) e
+	# é vista através do vão entre as fileiras, onde não há geometria. Opaco
+	# aqui esconderia a faixa inteira — e nenhuma carta precisaria trocar de
+	# camada para passar por cima dela.
+	_vp.transparent_bg = true
 	# O FUNDO é a última camada: só o pano escuro de trás, que nunca cobre
-	# ninguém, então mora sozinho na camada -2. A janela do campo continua na
-	# -1, ATRÁS do HUD 2D (que fica na camada 0, tela cheia).
+	# ninguém, então mora sozinho na camada -2. A faixa do meio fica na -1 e a
+	# janela do campo na 0 (transparente, por cima da faixa).
 	var base := CanvasLayer.new()
 	base.name = "CamadaFundo"
 	base.layer = -2
@@ -925,7 +924,7 @@ func _construir_janela_campo() -> void:
 	base.add_child(fundo)
 	var camada := CanvasLayer.new()
 	camada.name = "Camada3D"
-	camada.layer = -1
+	camada.layer = 0
 	add_child(camada)
 	var janela := SubViewportContainer.new()
 	janela.name = "JanelaCampo"
@@ -2389,11 +2388,16 @@ func _extensao_da_fileira_px(lado: int, tipo: String) -> Vector2:
 	return Vector2(x0 + float(PAINEL_ESQ_L), x1 + float(PAINEL_ESQ_L))
 
 
-## Cria a FAIXA DO MEIO (D45) como o no `faixa_2d.gd` dentro do HUD. Ela e um
-## assunto so - posicao, celulas, cores, numeros do estado e o espelhamento da
-## volta - e por isso mora no arquivo dela, nao aqui.
+## Cria a FAIXA DO MEIO (D45) como o no `faixa_2d.gd` na camada -1, ATRÁS do
+## mundo 3D: a janela do campo é transparente, então a faixa aparece no vão
+## entre as fileiras e qualquer carta passa por cima dela sem trocar de
+## camada. Ela é um assunto só - posição, células, cores, números do estado e
+## o espelhamento da volta - e por isso mora no arquivo dela, não aqui.
 func _construir_faixa() -> void:
-	var hud := get_node_or_null(NodePath("HUD")) as Control
+	var camada := CanvasLayer.new()
+	camada.name = "CamadaFaixa"
+	camada.layer = -1
+	add_child(camada)
 	_faixa = Faixa2D.new()
 	_faixa.estado = Callable(self, "_pegar_estado")
 	_faixa.cartas_de = Callable(self, "_pegar_cartas")
@@ -2407,7 +2411,7 @@ func _construir_faixa() -> void:
 	_faixa.cor_verm_fundo = COR_VERM_FUNDO
 	_faixa.cor_preto_borda = COR_PRETO_BORDA
 	_faixa.cor_preto_fundo = COR_PRETO_FUNDO
-	_faixa.construir(hud)
+	_faixa.construir(camada)
 
 
 ## O GameState e o dicionario de cartas, do jeito que a tela inteira le: por
@@ -2792,38 +2796,70 @@ func _limpar_levantadas() -> void:
 	_levantadas = novas
 
 
-## A CARTA SEGURADA (só desenho do fluxo fiel, zero regra).
+## O PALCO DA SEGURADA (só desenho do fluxo fiel, zero regra).
 ##
-## A carta que o jogador está decidindo sai da mão e aparece NO CENTRO da tela:
-## na face, no meio; na estrela, mais alta com o menu embaixo. A mão esconde o
-## original no mesmo índice (o lugar fica marcado pelo cursor). O palco é o
-## `centro_3d.gd`: outra janela por cima do 2D, então a faixa e a mão do rival
-## ficam embaixo da carta e o menu da estrela continua por cima dela.
+## A carta que o jogador está decidindo sai da mão e VOA até a frente da
+## câmera — sem trocar de camada: ela continua no mesmo viewport do campo, e
+## como a faixa mora atrás dele, a carta passa por cima dela sozinha. Na
+## estrela o palco é mais alto, porque o menu fica embaixo. A mão esconde o
+## original no mesmo índice (o lugar fica marcado pelo cursor).
 ##
 ## A face que vale é sempre a do estado (`_face_baixo`): o giro só mostra. Cada
 ## troca soma meia volta para a direita, então a paridade nunca mente mesmo
-## depois de reconstruir o nó. Tudo aqui é instantâneo no estado (mostrar,
-## girar e esconder não esperam nada): o giro é o único tween, e começar outro
-## mata o anterior.
+## depois de reconstruir o nó.
+## A que distância da câmera o palco fica, em unidades de mundo. Dono: este
+## bloco. Com FOV 20 a altura visível a essa distância é 2·8,5·tan(10°) = 3,0,
+## então a carta (1,46 de altura) ocupa metade da tela.
+const PALCO_DIST := 8.5
+## Quanto o palco da estrela sobe em relação ao da face (o menu fica embaixo).
+const PALCO_ALTO := 1.3
+## O voo da mão até o palco, em segundos. Curto de propósito: é só o aparecer.
+const PALCO_VOO := 0.28
+## O giro de UMA troca de face (meia volta para a direita). A mesa só diz o
+## ângulo acumulado.
+const PALCO_GIRO := 0.22
+## O voo em curso e o giro em curso (só um de cada mexe no nó por vez):
+## começar outro mata o anterior, então dois nunca brigam.
+var _seg_voo: Tween = null
+var _seg_giro: Tween = null
 func _pegar_segurada(alta: bool) -> void:
 	_liberar_segurada()
-	if _st == null or _centro == null:
+	if _st == null or _cam == null or not is_instance_valid(_cam):
 		return
 	var mao: Array = (_st.players[0] as Dictionary)["hand"]
 	if _mao_idx < 0 or _mao_idx >= mao.size():
 		return
 	var no := _fazer_carta(mao[_mao_idx] as Dictionary, false, false)
-	_centro.mostrar(no, _face_baixo, alta)
+	var base := _cam.global_transform.basis
+	var palco: Vector3 = _cam.global_position - base.z * PALCO_DIST
+	if alta:
+		palco += base.y * PALCO_ALTO
+	_vp.add_child(no)
+	no.global_position = _pos_mao_arco(_mao_idx, mao.size(), 0)
+	no.global_rotation = _cam.global_rotation
+	no.scale = Vector3.ONE * 0.35
 	_segurada = no
 	_segurada_idx = _mao_idx
 	_segurada_giros = 1 if _face_baixo else 0
+	no.rotation.y = _cam.global_rotation.y + float(_segurada_giros) * PI
+	_seg_voo = no.create_tween().set_parallel(true)
+	_seg_voo.tween_property(no, "position", palco, PALCO_VOO) \
+		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	_seg_voo.tween_property(no, "scale", Vector3.ONE, PALCO_VOO) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
 
 
 ## Solta a segurada sem redesenhar: quem chama decide o que a tela mostra
 ## depois.
 func _liberar_segurada() -> void:
-	if _centro != null:
-		_centro.esconder()
+	if _seg_voo != null and _seg_voo.is_valid():
+		_seg_voo.kill()
+	_seg_voo = null
+	if _seg_giro != null and _seg_giro.is_valid():
+		_seg_giro.kill()
+	_seg_giro = null
+	if _segurada != null and is_instance_valid(_segurada):
+		(_segurada as Node).queue_free()
 	_segurada = null
 	_segurada_idx = -1
 
@@ -2832,11 +2868,20 @@ func _liberar_segurada() -> void:
 ## O alvo é o giro acumulado (em radianos, que é a unidade do `rotation`), nunca
 ## o normalizado: normalizar aqui faria a carta voltar pelo caminho curto.
 func _girar_segurada() -> void:
-	if _segurada == null or not is_instance_valid(_segurada) or _centro == null:
+	if _segurada == null or not is_instance_valid(_segurada):
+		return
+	if _cam == null or not is_instance_valid(_cam):
 		return
 	_face_baixo = not _face_baixo
 	_segurada_giros = _segurada_giros + 1
-	_centro.girar_para(float(_segurada_giros) * PI)
+	if _seg_giro != null and _seg_giro.is_valid():
+		_seg_giro.kill()
+	_seg_giro = null
+	var tw := (_segurada as Node3D).create_tween()
+	tw.tween_property(_segurada, "rotation:y",
+		_cam.global_rotation.y + float(_segurada_giros) * PI, PALCO_GIRO) \
+		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	_seg_giro = tw
 
 
 ## 1) Confirmar carta monstro -> ela vai ao CENTRO e para (igual ao 2D).

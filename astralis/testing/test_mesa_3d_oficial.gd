@@ -84,7 +84,7 @@ func test_nos_chave_3d_existem() -> void:
 			"Campo", "Campo/Slots", "Campo/Laterais",
 			"Cartas", "Cursor3D"]:
 		assert_true(_n3d(mesa, caminho) != null, "Nó-chave 3D existe: " + caminho)
-	for lbl in ["HUD", "HUD/FlashTela", "HUD/Faixa2D", "Camada3D", "Camada3D/JanelaCampo"]:
+	for lbl in ["HUD", "HUD/FlashTela", "CamadaFaixa/Faixa2D", "CamadaFundo", "Camada3D", "Camada3D/JanelaCampo"]:
 		assert_true(mesa.get_node_or_null(NodePath(lbl)) != null, "Nó-chave existe: " + lbl)
 	assert_true((_n3d(mesa, "PivoMesa/Camera3D") as Camera3D).current, "Camera3D é a atual.")
 	# 20 painéis flutuantes (5+5 por lado), cada um com base escura + borda.
@@ -379,7 +379,14 @@ func test_campo_a_direita_sem_perspectiva_torta() -> void:
 	assert_true(vp.own_world_3d, "Janela com mundo 3D próprio (o céu não invade o HUD).")
 	var camada := mesa.get_node_or_null(NodePath("Camada3D")) as CanvasLayer
 	assert_true(camada != null, "Camada da janela 3D existe.")
-	assert_eq(camada.layer, -1, "Janela 3D ATRÁS do HUD 2D (camada 0).")
+	assert_eq(camada.layer, 0, "Janela 3D na camada 0 (por cima da faixa, que é -1).")
+	assert_true(vp.transparent_bg, "Janela transparente (a faixa de trás aparece no vão).")
+	var camada_faixa := mesa.get_node_or_null(NodePath("CamadaFaixa")) as CanvasLayer
+	assert_true(camada_faixa != null, "Camada da faixa existe.")
+	assert_true(camada_faixa.layer < camada.layer, "Faixa atrás do 3D (a carta passa por cima sem trocar de camada).")
+	var camada_fundo := mesa.get_node_or_null(NodePath("CamadaFundo")) as CanvasLayer
+	assert_true(camada_fundo != null, "Camada do fundo existe.")
+	assert_true(camada_fundo.layer < camada_faixa.layer, "Fundo atrás de tudo.")
 	var janela := mesa.get_node_or_null(NodePath("Camada3D/JanelaCampo")) as SubViewportContainer
 	assert_true(janela != null, "Janela do campo exibida na tela.")
 	assert_eq(janela.position, Vector2(562, 0), "Janela começa em 29,3% da largura (562 px).")
@@ -748,10 +755,10 @@ func test_topo_so_retratos_com_nome_e_nada_mais() -> void:
 	assert_eq(str((rv.get_node("Silhueta") as Label).text), _inicial(str(mesa.get("_nome_voce"))),
 		"Placeholder seu com a INICIAL do nome (o pack não tem foto).")
 	# Nada de texto de LP/turno sobrou no TOPO — a única faixa com LP e turno é
-	# a do MEIO (D45: `HUD/Faixa2D`), que é onde o usuário mandou ficar.
+	# a do MEIO (D45: `CamadaFaixa/Faixa2D`), que é onde o usuário mandou ficar.
 	var texts: Array = []
 	_coletar(mesa.get_node("HUD"), texts)
-	var faixa2d := mesa.get_node("HUD/Faixa2D") as Node
+	var faixa2d := mesa.get_node("CamadaFaixa/Faixa2D") as Node
 	for n in texts:
 		if n is Label and not _dentro_de(n as Node, faixa2d):
 			var t := str((n as Label).text)
@@ -957,7 +964,7 @@ func _pecas(carta: Node3D) -> PackedStringArray:
 
 
 ## ---- D44/D45: A FAIXA DO MEIO (2D) e a limpeza da tela -------------------
-## D45: a faixa do meio saiu do 3D e virou 2D no HUD (item 2). D45 item 1
+## D45: a faixa do meio saiu do 3D e virou 2D na camada de trás (item 2). D45 item 1
 ## trocou o cemitério e o baralho de lugar, e os itens 3 a 7 limparam os
 ## blocos (sem palavra, sem ícone), colocaram cor por lado, número branco, a
 ## foto da última carta do cemitério e a cor do turno acompanhando quem joga.
@@ -970,12 +977,12 @@ const ORDEM_FAIXA := ["MeuCemiterio", "MeuDeck", "LpVoce", "Turno", "LpRival",
 
 ## Celulas da faixa 2D na tela, na ordem em que aparecem.
 func _celulas_faixa2d(mesa: Node) -> Array:
-	var linha := mesa.get_node("HUD/Faixa2D/Celulas")
+	var linha := mesa.get_node("CamadaFaixa/Faixa2D/Celulas")
 	return linha.get_children() if linha != null else []
 
 
 func _celula(mesa: Node, nome: String) -> PanelContainer:
-	return mesa.get_node("HUD/Faixa2D/Celulas/" + nome) as PanelContainer
+	return mesa.get_node("CamadaFaixa/Faixa2D/Celulas/" + nome) as PanelContainer
 
 
 ## O rótulo de número de uma célula.
@@ -1006,14 +1013,14 @@ func _assinatura_tex(tex: Texture2D) -> int:
 		soma = (soma * 31 + dados[i]) & 0x7FFFFFFF
 	return hash("%dx%d:%d" % [img.get_width(), img.get_height(), soma])
 func test_d45_faixa_2d_no_vao_entre_as_fileiras_na_ordem_do_usuario() -> void:
-	# D45 (item 2): a faixa do meio é 2D (no HUD), tem as 7 células NA ORDEM
+	# D45 (item 2): a faixa do meio é 2D (na camada -1, atrás do 3D), tem as 7 células NA ORDEM
 	# do usuário (baralho meu, cemitério meu, meu LP, turno, LP do rival,
 	# cemitério do rival, baralho do rival) e fica NO VÃO entre as duas
 	# fileiras de monstro — sem cobrir nenhuma delas e sem sair da janela.
 	var mesa: Node = await _mesa3d_nova()
 	var cam := _n3d(mesa, "PivoMesa/Camera3D") as Camera3D
-	var barra := mesa.get_node_or_null(NodePath("HUD/Faixa2D")) as Control
-	assert_true(barra != null, "A faixa do meio existe em 2D (HUD/Faixa2D).")
+	var barra := mesa.get_node_or_null(NodePath("CamadaFaixa/Faixa2D")) as Control
+	assert_true(barra != null, "A faixa do meio existe em 2D (CamadaFaixa/Faixa2D).")
 	var cels := _celulas_faixa2d(mesa)
 	assert_eq(cels.size(), 7, "A faixa tem exatamente 7 células (nada mais): %d." % cels.size())
 	for i in range(mini(cels.size(), 7)):
@@ -1368,8 +1375,8 @@ func test_d45_nada_de_faixa_no_3d() -> void:
 		if nome in ["MeuDeck", "DeckRival", "MeuCemiterio", "CemRival", "LpVoce", "LpRival", "Turno", "Corpo", "Moldura", "Fatias", "Topo", "Aro", "Vidro", "Numero"]:
 			achados.append(nome)
 	assert_eq(achados.size(), 0, "Nenhum desenho de pilha/placa sobrou no 3D: %s" % str(achados))
-	# E a faixa 2D está lá, no HUD (a mesma informação, em pixel puro).
-	assert_true(mesa.get_node_or_null(NodePath("HUD/Faixa2D")) != null, "A faixa 2D continua no HUD.")
+	# E a faixa 2D está lá, na camada de trás (a mesma informação, em pixel puro).
+	assert_true(mesa.get_node_or_null(NodePath("CamadaFaixa/Faixa2D")) != null, "A faixa 2D continua na camada de trás.")
 	assert_eq((_n3d(mesa, "Campo/Laterais") as Node3D).get_child_count(), 0,
 		"O guarda-chuva Laterais continua vazio (nada de desenho no canto).")
 
@@ -1500,10 +1507,10 @@ func test_d44_lp_e_turno_da_faixa_vem_do_estado_real() -> void:
 			achados.append(str((n as Node).name))
 	assert_eq(achados.size(), 0, "Nenhum desenho solto no campo: %s" % str(achados))
 	# Os 4 ladrilhos + o cursor continuam (o que é necessário p/ jogar) e a
-	# faixa do meio virou 2D (D45), então ela vive no HUD.
+	# faixa do meio virou 2D (D45), então ela vive na camada de trás.
 	assert_eq((_n3d(mesa, "Campo/Slots") as Node3D).get_child_count(), 20, "As 4 fileiras continuam (20 ladrilhos).")
 	assert_true(_n3d(mesa, "Campo/Faixa") == null, "D45: a faixa do meio saiu do 3D.")
-	assert_true(mesa.get_node_or_null(NodePath("HUD/Faixa2D")) != null, "A faixa do meio continua, agora em 2D no HUD.")
+	assert_true(mesa.get_node_or_null(NodePath("CamadaFaixa/Faixa2D")) != null, "A faixa do meio continua, agora em 2D na camada de trás.")
 	assert_true(_n3d(mesa, "Cursor3D") != null, "O cursor (foco) continua.")
 	# Sem cenário: a câmera olha o chão o duelo inteiro, então céu, pilares e
 	# nuvens saíram — só cenário, sem regra.

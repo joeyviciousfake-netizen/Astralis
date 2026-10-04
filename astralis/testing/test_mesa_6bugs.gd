@@ -59,6 +59,7 @@ func test_bug2_popup_estrela_acima_da_carta_central() -> void:
 	var segurada: Node3D = mesa.get("_segurada") as Node3D
 	assert_true(popup.visible, "Menu da estrela visivel.")
 	assert_true(segurada != null and is_instance_valid(segurada) and segurada.visible, "Carta segurada existe no centro-alto.")
+	assert_true(mesa.get_node("Camada3D/JanelaCampo/Viewport3D").is_ancestor_of(segurada), "Segurada no viewport do campo (sem trocar de camada).")
 	assert_true(_menus(mesa).layer > -1, "Menu (camada %d) desenha por cima do 3D." % _menus(mesa).layer)
 	assert_eq(int(mesa.get("_segurada_giros")) % 2, 1 if bool(mesa.get("_face_baixo")) else 0, "Giro conta a face que vale.")
 	# O menu sobrevive a navegar dentro dele (nao some nem volta atras).

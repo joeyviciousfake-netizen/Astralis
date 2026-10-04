@@ -2,7 +2,8 @@ extends PanelContainer
 
 ## faixa_2d — A FAIXA DO MEIO (D45, item 2), um assunto so.
 ##
-## E a barra que fica no VAO entre as fileiras de monstros, dentro do HUD 2D.
+## E a barra que fica no VAO entre as fileiras de monstros, na camada -1
+## (atras do mundo 3D, que e transparente no vao).
 ## POR QUE 2D: em 3D a posicao de um objeto no chao e a soma de tres numeros (z
 ## da fileira + meia profundidade do ladrilho + profundidade do objeto) e "a
 ## altura do chao" na tela e uma FAIXA, nao uma linha; em 2D a posicao e o pixel.
@@ -110,11 +111,11 @@ var _esperando_sorteio := false
 var _pulso: Tween = null
 
 
-## Monta a faixa dentro do HUD. `hud` e o Control do HUD (a barra vira filha
-## dele, com o nome "Faixa2D" porque o teste do D45 le a ordem das celulas
-## direto da tela).
-func construir(hud: Control) -> void:
-	if hud == null:
+## Monta a faixa na camada recebida (a `CamadaFaixa` da mesa, atrás do 3D).
+## `pai` é o nó da camada (a barra vira filha dele, com o nome "Faixa2D"
+## porque o teste do D45 lê a ordem das células direto da tela).
+func construir(pai: Node) -> void:
+	if pai == null:
 		return
 	name = "Faixa2D"
 	add_theme_stylebox_override("panel", _estilo_barra())
@@ -131,7 +132,7 @@ func construir(hud: Control) -> void:
 	position = Vector2(x0, y)
 	size = Vector2(larg, alt)
 	custom_minimum_size = Vector2(larg, alt)
-	hud.add_child(self)
+	pai.add_child(self)
 
 	_linha = HBoxContainer.new()
 	_linha.name = "Celulas"
