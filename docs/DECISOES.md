@@ -48,7 +48,7 @@
 ## Mesa (o ponto de vista)
 
 - **D47** | A tela e o ponto de vista de **quem esta jogando**, girando a **camera** 180 em torno do centro do campo. A camera e filha de um pivo e nunca se move nem gira: quem gira e o pivo. As cartas do campo **nao se mexem**. | porque: mexer nas cartas por perspectiva e mais codigo para o mesmo resultado. | proibido: perspectiva por carta, esmaecer, carta viajando, ou guardar o ponto de vista em variavel. O HUD 2D nao gira: vira de carta com `abs(cos(graus))` e troca o conteudo nos 90 - **a barra de fases nao inverte**, porque mostra a fase real de quem joga. Nao existe pular a volta. A mesa **nasce** na vista de quem tem a vez: quando o rival comeca, o boot coloca a vista em 180 (`colocar_vista`, sem tween).
-- **D49** | A grade do campo e **perfeita**: **um valor so, 237**, nas seis direcoes (EXCETO o 390 entre as fileiras de monstros, que vem da outra medida da arena). | porque: dois numeros iguais escritos em lugares diferentes divergem no primeiro ajuste de layout. | proibido: um segundo valor de vao.
+- **D49** | A grade do campo e **perfeita**: **um valor so, 237**, nas seis direcoes (EXCETO o 300 entre as fileiras de monstros, que vem da outra medida da arena). | porque: dois numeros iguais escritos em lugares diferentes divergem no primeiro ajuste de layout. | proibido: um segundo valor de vao.
 - **D50** | **A arena e do jogo.** Os numeros da mesa vivem em `schemas/`, e a pasta `arenas/` do projeto e IGNORADA com aviso. | porque: duas arenas sao duas mesas, e numero de mesa em dois lugares diverge sozinho. | proibido: `arenas/` no projeto, e a mesa ler layout de fora do dado.
 - **D51** | A vista do rival é o **espelho exato** da sua: `z_local = cam_pos.z - 2 * z_simetria * (giro / 180)`, com `z_simetria` medido do dado. | porque: o plano de simetria do campo não está na origem, então girar em torno dela chega perto demais da mesa e o campo sai enviesado. | proibido: mudar a perspectiva da sua vez. A correção tem de estar em 0° **exatamente** como `cam_pos.z`.
 - **D52** | Quem está jogando ocupa o lugar de **baixo** e o outro o de **cima**; na vista do rival cada lugar é o espelho do mesmo lugar na sua vista. A troca acontece nos 90°, as duas mãos ficam de pé mostrando o verso e o cursor some na vista do rival. | porque: o verso de uma carta não é o espelho da frente dela, então virar de cabeça para baixo mostraria a arte do jogador. | proibido: guardar a pose da mão por `instance_id` da câmera (ela não muda na volta) — o boot resolve os dois lugares antes de qualquer carta.
@@ -118,7 +118,7 @@ D45 --- (reservada)
 D46 --- (reservada)
 D47 A tela gira a CAMERA 180
 D48 --- (reservada)
-D49 Grade perfeita: 237 nas seis direcoes, 390 congelado
+D49 Grade perfeita: 237 nas seis direcoes, 300 congelado
 D50 A arena e do jogo
 D51 A vista do rival e o ESPELHO EXATO da sua
 D52 As DUAS maos, uma em cada lugar, nas duas vistas

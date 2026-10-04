@@ -150,19 +150,18 @@ posição sai do arquivo da arena. Mover um slot não pode quebrar regra (D17).
 | X dos 5 slots de monstro | `684 / 921 / 1158 / 1395 / 1632` — passo **237** |
 | Y da fileira de monstro do jogador | `695` |
 | Y da fileira de magia do jogador | `932` |
-| Y da fileira de monstro do rival | `305` |
-| Y da fileira de magia do rival | `68` |
-| Y da fileira de magia do rival | `42` |
+| Y da fileira de monstro do rival | `395` |
+| Y da fileira de magia do rival | `158` |
 | mão do jogador | `x 1240`, `y 980`, `step 95` |
 | mão do rival | `x 1240`, `y 20`, `step 60` |
-| pilha do baralho (os dois lados) | `x 1834.5`, no meio das fileiras (`y 813.5` embaixo, `186.5` em cima) |
+| pilha do baralho (os dois lados) | `x 1834.5`, no meio das fileiras (`y 813.5` embaixo, `276.5` em cima) |
 | pilha do cemitério (os dois lados) | `x 481.5`, no meio das fileiras (mesmos `y`) |
 
 **A grade é um valor só: 237, nas SEIS direções** (D49) — o passo horizontal das
 4 fileiras e o vão vertical
-monstro→magia dos dois lados. Os painéis de slot têm EXATO o passo (sem vão
-entre eles) e as pilhas encostam nas colunas das pontas. A distância entre as
-duas fileiras de monstro é **390 e fica congelada**, porque mudar isso desalinha o
+monstro→magia dos dois lados. O vidro do slot é um pouco maior que a carta em
+defesa, e as pilhas ficam junto das colunas das pontas. A distância entre as
+duas fileiras de monstro é **300 e fica congelada**, porque mudar isso desalinha o
 campo que o usuário aprovou. As pilhas ficam no MEIO entre as fileiras de cada
 lado (metade do vão).
 
