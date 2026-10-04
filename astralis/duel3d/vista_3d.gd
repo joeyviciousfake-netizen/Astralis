@@ -68,7 +68,7 @@ func _ready() -> void:
 ## D51: MEDE O PLANO DE SIMETRIA DO CAMPO, em Z de mundo, direto do dado: a
 ## media das DUAS fileiras de monstro da arena oficial. E o plano em que o
 ## campo e espelhado - o mesmo para os dois lados, porque a arena oficial e
-## simetrica (D49: 263 de vao acima e abaixo, 390 entre as fileiras).
+## simetrica (D49: 237 de vao acima e abaixo, 300 entre as fileiras).
 ## RODA UMA VEZ, quando a arena ja esta lida, e fica memorizado como um float.
 func medir_plano_de_simetria() -> void:
 	var soma := 0.0
