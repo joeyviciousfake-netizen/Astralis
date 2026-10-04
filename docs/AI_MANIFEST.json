@@ -216,13 +216,13 @@
     "files": [
       "astralis/duel3d/mesa_3d.gd = a mesa: o estado do duelo e o orquestrador",
       "astralis/duel3d/painel_carta_3d.gd = o painel esquerdo: a CARTA 3D da carta focada (a mesma peca do campo, nao uma imagem 2D), mais ATK/DEF, nome, tipo e descricao (D60, D75)",
-      "astralis/duel3d/faixa_2d.gd = a faixa do meio 2D do vao entre as fileiras (D59)",
       "astralis/duel3d/carta_3d.gd = FABRICA da carta 3D: corpo, arte, ATK, verso (D66)",
       "astralis/duel3d/menus_3d.gd = os menus 3D do centro e da selecao",
       "astralis/duel3d/vista_3d.gd = a camera no pivo e a volta de 180 graus (D65)",
-      "astralis/duel3d/campo_3d.gd = os 20 paineis de vidro (D64)",
+      "astralis/duel3d/campo_3d.gd = os 24 paineis de vidro (20 slots + 4 pilhas)",
       "astralis/duel3d/cursor_3d.gd = o cursor de foco: moldura azul + mao branca (D63)",
-      "astralis/duel3d/entrada_mao_3d.gd = a entrada da carta COMPRADA: so dela voa, as outras deslizam, e o tempo do voo e DONO DESTE ARQUIVO (D76)"
+      "astralis/duel3d/entrada_mao_3d.gd = a entrada da carta COMPRADA: so dela voa, as outras deslizam, e o tempo do voo e DONO DESTE ARQUIVO (D76)",
+      "astralis/duel3d/moeda_3d.gd = a moeda do sorteio na frente da camera (D77)"
     ]
   },
   "ai_files": {

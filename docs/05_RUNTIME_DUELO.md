@@ -16,9 +16,9 @@ EXISTE:
             DamageSystem, PositionSystem, FusionSystem  <- SISTEMAS DE REGRA (R1)
   duel3d:   a TELA do duelo em 9 arquivos, UM ASSUNTO CADA:
             mesa_3d.gd (orquestrador + dono das medidas),
-            painel_carta_3d.gd, faixa_2d.gd, carta_3d.gd (fábrica),
+            painel_carta_3d.gd, carta_3d.gd (fábrica),
             entrada_mao_3d.gd, menus_3d.gd, vista_3d.gd, campo_3d.gd,
-            cursor_3d.gd
+            cursor_3d.gd, moeda_3d.gd
             -> o mapa com o dono de cada número está no doc 15 §15.7
   ai:       ia_rival.gd (a IA ESCOLHE carta e alvo; a mesa EXECUTA, D68)
   ui:       card_view.gd (a carta 2D pelo molde)

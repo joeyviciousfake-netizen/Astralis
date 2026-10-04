@@ -7,7 +7,7 @@
 > fazer com a que ficou sem valor é R14 no `AGENTS.md`.
 >
 > **Buraco é intencional:** nada se renumera e o índice marca o buraco (`D13`,
-> `D46` reservadas; `D45b` fundida na `D45`). O motivo está no `git log`.
+> `D45`, `D46`, `D79` reservadas). O motivo está no `git log`.
 >
 > Regra de processo e convenção de código é o **`AGENTS.md` seção 2** (R1-R14) e
 > **não** se repete aqui.
@@ -47,11 +47,10 @@
 
 ## Mesa (o ponto de vista)
 
-- **D45** | A faixa do meio e **2D**, na camada -1 (atras do mundo 3D, que e transparente no vao), dentro do vao entre as fileiras, com 7 celulas na ordem do D45b. Todo numero e BRANCO. A posicao nao e chutada: a barra se encaixa nas bordas REAIS das fileiras, medidas do dado + da camera. | porque: em 3D a posicao de um objeto e a soma de tres numeros e a "altura do chao" e uma faixa, nao uma linha; em 2D a posicao e o pixel. | proibido: hardcode de posicao da faixa, e cor de numero fora do branco (doc 15 15.6).
 - **D47** | A tela e o ponto de vista de **quem esta jogando**, girando a **camera** 180 em torno do centro do campo. A camera e filha de um pivo e nunca se move nem gira: quem gira e o pivo. As cartas do campo **nao se mexem**. | porque: mexer nas cartas por perspectiva e mais codigo para o mesmo resultado. | proibido: perspectiva por carta, esmaecer, carta viajando, ou guardar o ponto de vista em variavel. O HUD 2D nao gira: vira de carta com `abs(cos(graus))` e troca o conteudo nos 90 - **a barra de fases nao inverte**, porque mostra a fase real de quem joga. Nao existe pular a volta. A mesa **nasce** na vista de quem tem a vez: quando o rival comeca, o boot coloca a vista em 180 (`colocar_vista`, sem tween).
 - **D49** | A grade do campo e **perfeita**: **um valor so, 263**, nas seis direcoes (EXCETO o 390 entre as fileiras de monstros, que vem da outra medida da arena). | porque: dois numeros iguais escritos em lugares diferentes divergem no primeiro ajuste de layout. | proibido: um segundo valor de vao.
 - **D50** | **A arena e do jogo.** Os numeros da mesa vivem em `schemas/`, e a pasta `arenas/` do projeto e IGNORADA com aviso. | porque: duas arenas sao duas mesas, e numero de mesa em dois lugares diverge sozinho. | proibido: `arenas/` no projeto, e a mesa ler layout de fora do dado.
-- **D51** | A vista do rival é o **espelho exato** da sua: `z_local = cam_pos.z - 2 * z_simetria * (giro / 180)`, com `z_simetria` medido do dado. | porque: o plano de simetria do campo não está na origem, então girar em torno dela chega perto demais da mesa e o campo sai enviesado. | proibido: reposicionar a faixa 2D por vista, e mudar a perspectiva da sua vez. A correção tem de estar em 0° **exatamente** como `cam_pos.z`.
+- **D51** | A vista do rival é o **espelho exato** da sua: `z_local = cam_pos.z - 2 * z_simetria * (giro / 180)`, com `z_simetria` medido do dado. | porque: o plano de simetria do campo não está na origem, então girar em torno dela chega perto demais da mesa e o campo sai enviesado. | proibido: mudar a perspectiva da sua vez. A correção tem de estar em 0° **exatamente** como `cam_pos.z`.
 - **D52** | Quem está jogando ocupa o lugar de **baixo** e o outro o de **cima**; na vista do rival cada lugar é o espelho do mesmo lugar na sua vista. A troca acontece nos 90°, as duas mãos ficam de pé mostrando o verso e o cursor some na vista do rival. | porque: o verso de uma carta não é o espelho da frente dela, então virar de cabeça para baixo mostraria a arte do jogador. | proibido: guardar a pose da mão por `instance_id` da câmera (ela não muda na volta) — o boot resolve os dois lugares antes de qualquer carta.
 - **D53** | A compra animada é da mão que comprou; a chacoalhada é da carta do slot e **nunca** sacode a mesa inteira; o passo de cursor só reposiciona cursor e painel. | porque: um desenho que se mexe sem precisar denuncia escolha errada. | proibido: trava de "só com render" na entrada da mão e no `_sacudir` — sem ela o GUT **vê quem animou**.
 - **D76** | A entrada da carta comprada é de QUEM COMPROU e só da carta que COMPROU: as outras da mão DESLIZAM para o lugar novo, e a compra só é mostrada DEPOIS que a câmera parou na perspectiva de quem comprou. | porque: a mão é centrada, então comprar uma carta muda o lugar de todas, e o salto delas é o que faz a compra parecer quebrada; e compra mostrada na tela de outro é a tela mentindo sobre de quem é a vez. | proibido: animar a mão inteira de uma vez, e entregar a vez (e a compra) antes de a volta acabar.
@@ -68,11 +67,10 @@
 - **D71** | **Regra das ferramentas:** documentacao (o `docs/17_BLENDER.md` e o manual, a copia local quando existe) ANTES do que nao se sabe; depois nativa, internet, manual so em ultimo caso. | porque: consultar a doc antes e o caminho curto, e depois de errar e registro de erro. | proibido: reconstruir geometria a mao sem consultar a doc e perguntar "o programa ja faz isso?". (= R12)
 - **D74** | **A documentacao e lida ANTES do codigo, e o motor arbitra quando elas discordam:** ler a doc do que se vai usar e, como a copia local do Godot e do `master` enquanto o motor e o da `project.godot`, conferir a API no motor com `ClassDB.class_has_method`. | porque: o motor muda o tempo todo e o jeito facil ja existe quase sempre. | proibido: mexer em codigo de motor sem ler a doc, e usar API que a doc marca como recente sem conferir no motor. (= R17)
 - **D75** | **A carta do painel esquerdo e a CARTA 3D de verdade, nao uma imagem 2D** (doc 15 §15.9). | porque: uma segunda carta so para o painel seria um duble do que a mesa mostra. | proibido: carta desenhada so no painel, e janela do painel em perspectiva ou deslocada (D41/D47 travam a camera do CAMPO).
-- **D77** | **A moeda do sorteio e um desenho NA FRENTE DA CAMERA, e ela NAO some o jogo:** perspectiva, cartas, painel e marcador ficam a coluna inteira. Ela e IRMA do pivo (nao filha), tomba em torno do eixo VERTICAL da tela e para na face — estrela = jogador, losango = rival, a face e a resposta, e **nao ha nome escrito nem pulo**. E **UNSHADED** (a cena nao tem luz) e cabe INTEIRA no vao entre o cemiterio de cima e o marcador (doc 15 15.10). | porque: um sorteio que vira a mesa de lado faz o jogador perder as proprias cartas no instante em que vai jogar; e a face se le em um quinto de segundo e um nome em um segundo. | proibido: moeda dentro do pivo, girar na normal da face (o giro sumiria), moeda fora do vao (some atras das cartas), e material PBR (sai preto sem luz).
+- **D77** | **A moeda do sorteio e um desenho NA FRENTE DA CAMERA, e ela NAO some o jogo:** perspectiva, cartas e painel ficam a coluna inteira. Ela e IRMA do pivo (nao filha), tomba em torno do eixo VERTICAL da tela e para na face — estrela = jogador, losango = rival, a face e a resposta, e **nao ha nome escrito nem pulo**. E **UNSHADED** (a cena nao tem luz) e cabe INTEIRA no vao entre as fileiras (doc 15 15.10). | porque: um sorteio que vira a mesa de lado faz o jogador perder as proprias cartas no instante em que vai jogar; e a face se le em um quinto de segundo e um nome em um segundo. | proibido: moeda dentro do pivo, girar na normal da face (o giro sumiria), moeda fora do vao (some atras das cartas), e material PBR (sai preto sem luz).
 - **D78** | **A DISTRIBUIÇÃO INICIAL usa a MESMA animação da compra** (`entrada_mao_3d.gd`), e as DUAS mãos animam juntas: as 5 cartas do jogador embaixo e as 5 do rival em cima, uma por uma. A ordem do boot e **distribuição -> moeda**. | porque: quem abre o duelo precisa ver a mao se encher antes de saber de quem e a vez, e um tempo novo de distribuicao seria uma segunda fonte da mesma medida do voo. | proibido: tempo de distribuicao escrito fora de `entrada_mao_3d.gd`, animar so uma mao na distribuicao, e a moeda antes das cartas chegarem.
-- **D79** | **O TURNO E PERGUNTA durante a espera: `?` ambar no ROXO, e o numero branco so depois.** | porque: o motor ja sabe quem comeca antes do giro, entao a cor de lado dava a resposta ANTES da hora. | proibido: celula na cor de lado antes da resposta, e herdar o `modulate` do pulso (alpha baixo sobre fundo escuro = cinza).
-- **D80** | **A ESPERA E UMA COISA SO, E A MESA QUE DIZ QUE ELA EXISTE:** existe moeda na tela quando o DADO do duelo e `turn_order: "moeda"` (ou a flag de prova), e dai vem o PAINEL em branco, a NAVEGACAO travada e o marcador. A janela cobre a distribuicao E a moeda, e acaba com a resposta. | porque: o motor ja sabe quem comeca (D42) e a tela ainda nao virou, entao o cursor esta no LUGAR da mao de quem ganhou; e sem moeda nao ha o que esconder. | proibido: `?`, carta ou verso no painel, cursor andando na espera, e espera em duelo sem moeda.
-- **D81** | A ordem da tela e fundo, faixa, campo, HUD e menus: fundo na -2, faixa na -1 e campo transparente no vao, entao a carta passa por cima sem trocar de camada. | porque: camada vale para a tela toda, e viewport opaco esconderia a faixa. | proibido: campo opaco, e segurada em outra camada.
+- **D80** | **A ESPERA E UMA COISA SO, E A MESA QUE DIZ QUE ELA EXISTE:** existe moeda na tela quando o DADO do duelo e `turn_order: "moeda"` (ou a flag de prova), e dai vem o PAINEL em branco e a NAVEGACAO travada. A janela cobre a distribuicao E a moeda, e acaba com a resposta. | porque: o motor ja sabe quem comeca (D42) e a tela ainda nao virou, entao o cursor esta no LUGAR da mao de quem ganhou; e sem moeda nao ha o que esconder. | proibido: carta ou verso no painel, cursor andando na espera, e espera em duelo sem moeda.
+- **D81** | A ordem da tela e fundo, campo, HUD e menus: fundo na -2 e campo transparente no vao. | porque: camada vale para a tela toda. | proibido: campo opaco, e segurada em outra camada.
 - **D82** | Cada lado tem 2 pilhas no campo: baralho a direita (`d0`) e cemiterio a esquerda (`g0`), no meio entre as fileiras e com o MESMO vao de vidro dos slots. O vidro tem o tamanho da carta em ataque e o cursor nao anda nelas. | porque: a pilha e desenho da lista que ja existe no estado, e carta de pilha nunca fica em defesa. | proibido: zona nova no estado para a pilha, e pilha quadrada de slot de monstro.
 
 # ÍNDICE (R13: a maior decisão que existe é a **D82**)
@@ -116,7 +114,7 @@ D41 SubViewport, lente nunca deslocada
 D42 seed 0 = sem semente
 D43 Sem ataque enquanto o turno for 1 (pelo contador)
 D44 --- (reservada)
-D45 Faixa do meio 2D na camada de tras
+D45 --- (reservada)
 D46 --- (reservada)
 D47 A tela gira a CAMERA 180
 D48 --- (reservada)
@@ -141,8 +139,8 @@ D75 A carta do painel e a CARTA 3D de verdade
 D76 A entrada e so da carta comprada, na tela de quem comprou
 D77 A moeda e um desenho na frente da camera, sem virar a tela
 D78 A distribuicao inicial usa a animacao da compra
-D79 O marcador pergunta durante a espera
+D79 --- (reservada)
 D80 A espera e uma coisa so, decidida pela mesa
-D81 Fundo, faixa, campo, HUD e menus: a carta passa por cima sem trocar de camada
+D81 Fundo, campo, HUD e menus: a carta passa por cima sem trocar de camada
 D82 As 2 pilhas de cada lado: baralho a direita, cemiterio a esquerda
 ```

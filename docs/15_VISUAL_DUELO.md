@@ -2,7 +2,7 @@
 
 > O contrato visual da mesa: o que é medido, de onde vem cada imagem, e quem é o
 > dono de cada número do desenho. **Escopo: só desenho.** Nenhuma regra de duelo
-> muda aqui (R1). As decisões são D37, D38, D41, D45, D70 e D75; o porquê de cada
+> muda aqui (R1). As decisões são D37, D38, D41, D70 e D75; o porquê de cada
 > uma está no `DECISOES.md`.
 
 ## 15.1 O QUE MUDA E O QUE NÃO
@@ -81,7 +81,6 @@ São **alvos** de composição (em % da tela), não medidas do que existe:
 | painel esquerdo | x 0..22,4% |
 | retrato | 7,5% de largura, margem igual nos 3 lados |
 | nome do duelista | alinhado ao topo da foto |
-| faixa do meio | entre as fileiras, no vão |
 
 O que **não** pode ficar igual à referência é falta de **dado**, não de código: os
 39 retratos dos duelistas, as 722 descrições das cartas, a cidade de fundo e a
@@ -100,45 +99,14 @@ barra de fases da referência.
 Fora da flag a tela fica limpa. `--mesa3d-calib` foi o que mostrou o "afundado"
 das placas sem depender de medir pixel por pixel.
 
-## 15.6 A FAIXA DO MEIO (2D, D45)
+## 15.6 A FAIXA DO MEIO (removida)
 
-A faixa do meio é **2D, na camada -1 (atrás do mundo 3D)**, dentro do vão entre as fileiras de monstros.
+A faixa do meio saiu da tela: o vão entre as fileiras mostra o fundo, o LP
+mora embaixo do nome de cada duelista no topo, o baralho deita de costas e o
+cemitério mostra a última carta aberta nos slots 3D do campo, e o turno não
+tem visual.
 
-**As 7 células, na ordem:**
-
-```text
-[ FOTO | DECK | SEU LP | TURNO | LP RIVAL | DECK | FOTO ]
-```
-
-- **Deck**: só a contagem, sempre virado para baixo.
-- **Cemitério**: contagem + a **foto da última carta** que foi para lá, num
-  quadrado perfeito — à **esquerha** no meu, à **direita** no do rival. O corte é
-  quadrado, a imagem nunca distorce. Cemitério vazio **não** mostra foto
-  inventada.
-- **Turno**: alterna a cor com quem está jogando (azul na sua vez, vermelho na do
-  rival).
-- **Todos os números são brancos**, e os blocos **não têm palavra nem ícone**:
-  dentro de cada célula é só o número e, no cemitério, a foto.
-
-**Três conjuntos de cor**, e o mesmo conjunto no bloco do nome do topo e no bloco
-do LP daquele lado:
-
-| Cor | Serve a |
-|---|---|
-| azul | você |
-| vermelho | rival |
-| preto (borda preta, interior mais claro) | os dois cemitérios |
-
-**A posição é medida, não chutada.** O vão vem das bordas **reais** das duas
-fileiras (`_borda_da_fileira_px`) e a largura da extensão real
-(`_extensao_da_fileira_px`); a barra é centrada no vão e nunca invade fileira
-nenhuma. O GUT trava as duas coisas.
-
-O porquê de 2D: em 3D a base de um objeto depende de três números que precisam
-concordar (z da fileira, meia profundidade do ladrilho, profundidade do objeto) e
-a "altura do chão" na tela é uma faixa, não uma linha. Em 2D a posição é o pixel.
-
-## 15.7 ONDE O DESENHO MORA: OS 10 ARQUIVOS
+## 15.7 ONDE O DESENHO MORA: OS 9 ARQUIVOS
 
 | Arquivo | Assunto | O que ele decide |
 |---|---|---|
@@ -148,12 +116,11 @@ a "altura do chão" na tela é uma faixa, não uma linha. Em 2D a posição é o
 | `astralis/duel3d/campo_3d.gd` | o campo de vidro | onde os 24 painéis de vidro ficam (20 slots + 4 pilhas) |
 | `astralis/duel3d/carta_3d.gd` | a fábrica de carta | corpo, arte, ATK e verso de uma carta 3D |
 | `astralis/duel3d/cursor_3d.gd` | o cursor de foco | a moldura azul e a mão branca |
-| `astralis/duel3d/faixa_2d.gd` | a faixa do meio | as 7 células, as cores e as fotos (e o `?` do sorteio, secao 15.10) |
 | `astralis/duel3d/painel_carta_3d.gd` | o painel esquerdo | a carta 3D da carta focada, ATK/DEF, nome, tipo e descrição |
 | `astralis/duel3d/menus_3d.gd` | os menus 3D | o menu do LP e o da estrela |
 | `astralis/duel3d/moeda_3d.gd` | a moeda do sorteio | o desenho do sorteio: onde ela nasce, como entra e qual face para (secao 15.10) |
 
-**Três regras atravessam os dez (R9, D57):**
+**Três regras atravessam os nove (R9, D57):**
 
 1. **Um arquivo = um assunto**, e o assunto manda na divisão — nunca a contagem,
    e nunca criar arquivo minúsculo só para existir.
@@ -165,7 +132,7 @@ a "altura do chão" na tela é uma faixa, não uma linha. Em 2D a posição é o
 3. **A UI nunca guarda cópia do estado.** Ela pergunta ao dono na hora de
    desenhar. Guardar cópia faz a tela mostrar turno velho depois que o duelo muda.
 
-**Estado atual:** os dez cumprem a regra, menos a `mesa_3d.gd`, cujo
+**Estado atual:** os nove cumprem a regra, menos a `mesa_3d.gd`, cujo
 orquestrador ainda carrega assunto demais. A divisão pelo assunto é o resto do
 trabalho (ver as dívidas no `SESSAO_ATUAL.md`).
 
@@ -176,7 +143,7 @@ o `d0` (baralho, à direita) e o `g0` (cemitério, à esquerda). O vidro tem o
 tamanho da carta EM ATAQUE (largura x altura + a folga, nunca quadrado),
 porque carta de pilha nunca fica em defesa. O baralho deita de costas e o
 cemitério mostra a última carta aberta em cima; pilha vazia é só o vidro. O
-cursor não anda nas pilhas e a faixa do meio continua mostrando as contagens.
+cursor não anda nas pilhas.
 
 ## 15.8 A MEDIDA DA CARTA É A DO CONTRATO (D70)
 
@@ -266,10 +233,8 @@ dele. O pivô gira na entrega do turno, e uma moeda dentro dele viraria de perfi
 | `VOLTAS` | `8.0` | **par** de meias voltas (D77) |
 | `MEIA_VOLTA` | `PI` | o que troca a face |
 
-**O VÃO onde a moeda vive** é o espaço entre o **cemitério de cima** e a **faixa do
-marcador**, e ele é medido na tela: o cemitério acaba em `y≈160` e a faixa começa
-em `y≈435`, numa tela de 1080 cujo centro é `y=540`. O meio do vão dá **0.225** de
-altura. A moeda tem que caber **inteira** nesse vão: ela é 3D e o campo a desenha
+**O VÃO onde a moeda vive** é o espaço entre as fileiras, medido na tela. A
+moeda tem que caber **inteira** nesse vão: ela é 3D e o campo a desenha
 depois, então uma moeda mais alta some atrás das cartas do inimigo. O teste
 trava a **invariante** (a moeda não invade nenhum dos dois lados), não o número.
 
@@ -297,12 +262,6 @@ terminariam na face errada.
 um segundo inteiro — escrever o nome seria traduzir a resposta que o jogador já
 recebeu. Quem sabe qual face é qual é o `.glb`, não o `.gd`.
 
-**O MARCADOR DE TURNO** (`faixa_2d.gd`) responde em três tempos: `?` **âmbar**
-(no mesmo âmbar da moeda, para o olho ligar pergunta e resposta) com a célula no
-**roxo** da espera; o número real quando a moeda some. O roxo é a mistura das duas
-cores de lado em luz, e é a cor de **ninguém**: uma célula de lado enquanto a
-moeda não respondeu seria o jogo affirmando o que o motor ainda vai sortear.
-
 **A DISTRIBUIÇÃO INICIAL anima, e é a MESMA animação da compra** (D78). As 5
 cartas de cada lado chegam uma por uma do baralho, no tempo normal do voo — não
 existe tempo novo de distribuição, e o dono do tempo é `entrada_mao_3d.gd`. A
@@ -312,14 +271,13 @@ antes de saber de quem é a vez.
 **A ESPERA É UMA COISA SÓ, E A MESA QUE DIZ QUE ELA EXISTE** (D80). Existe moeda na
 tela quando o **dado** do duelo é `turn_order: "moeda"` (ou a flag de prova
 `--mesa3d-moeda`) — a resposta sai de `_tem_sorteio_na_tela()` em `mesa_3d.gd`, e
-é dela que nascem as três travas:
+é dela que nascem as duas travas:
 
 - o **painel** em branco (`painel_carta_3d.gd` pergunta por `esperando_sorteio`):
   sem carta e **sem verso**, porque o verso do rival de costas também é resposta;
 - a **navegação**: o `_unhandled_input` (teclado) e o `Input.is_action_pressed` do
   `_process` (analógico). O `set_input_as_handled` do primeiro não afeta o
-  segundo, então os dois precisam da guarda;
-- o **marcador** do D79.
+   segundo, então os dois precisam da guarda;
 
 A janela cobre a **distribuição inteira e a moeda**, e acaba com a resposta. Cobre
 a distribuição porque é nela que o spoiler acontece: o motor já sabe quem começa
@@ -327,14 +285,6 @@ a distribuição porque é nela que o spoiler acontece: o motor já sabe quem co
 ganhou — irrespective de a moeda já estar na tela. Numa duel sem moeda não há o
 que esconder: a espera não abre e o painel responde desde o primeiro quadro, como
 sempre respondeu.
-
-**O MARCADOR PERGUNTA durante a espera** (D79). A espera não começa quando a moeda
-entra, começa no primeiro quadro: o motor já sabe quem começa, então uma célula na
-cor do lado antes do giro daria a resposta antes da hora. Por isso o `?` âmbar no
-roxo estão lá desde o primeiro frame, e o número só aparece quando a moeda some. E o
-número é **branco com alpha cheio** — o pulso do `?` escreve em `modulate`, e um
-`modulate` de sobrevida deixaria o número com alpha baixo sobre o fundo escuro da
-célula, que sai **cinza** em vez de branco.
 
 **Proibições:**
 
@@ -346,7 +296,7 @@ célula, que sai **cinza** em vez de branco.
 - **Não** deixar `_girar` sobrescrever `_giro_extra` (aí os dois lados param
   na mesma face).
 - **Não** deixar a moeda fora do vão (acima ela some atrás das cartas do
-  inimigo; abaixo ela cobre o `?`).
+  inimigo; abaixo ela cobre o vão).
 - **Não** usar material PBR na moeda (a cena não tem luz: sai preto).
 - **Não** mostrar carta nem verso no painel enquanto a tela espera, nem deixar o
   cursor andar (o analógico precisa da guarda própria: `set_input_as_handled` não

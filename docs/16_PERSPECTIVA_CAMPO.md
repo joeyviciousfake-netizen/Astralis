@@ -74,10 +74,8 @@ mesmo retângulo de tela, com as de cima e de baixo trocadas, e o vão entre ela
 A rotação local da câmera **não** é tocada (a inclinação continua vindo de
 `CAM_POS`), o FOV não muda e `frustum_offset` continua ZERO.
 
-**Duas proibições que o usuário mesmo colocou:**
+**A proibição que o usuário mesmo colocou:**
 
-- A **faixa 2D do meio não se mexe**. Ela não ganhou nenhum código de
-  reposicionamento por vista, e não pode ganhar.
 - A **visão do jogador não muda em nada**. `CAM_POS`, a rotação e o
   `frustum_offset` ficam intactos; a correção tem de estar em 0° exatamente como
   estava.
@@ -88,9 +86,8 @@ O HUD não gira. Ele encolhe no eixo X com `abs(cos(graus))` — `1` em 0° e 18
 `0` em 90° — e o conteúdo troca **exatamente nos 90°**, quando a largura é zero
 e ninguém vê a troca.
 
-**Invertem** na virada: os retratos, as plaquinhas de nome e de LP, e a ordem
-das 7 células da faixa do meio. A cor viaja com o número, então azul continua
-sendo você.
+**Invertem** na virada: os retratos, as plaquinhas de nome e de LP. A cor
+viaja com o número, então azul continua sendo você.
 
 **A barra de fases NÃO inverte**, de propósito: ela mostra a fase **real** de
 quem está jogando, e espelhar um dado de regra seria a tela mentir.
