@@ -183,21 +183,15 @@ func _fluxo3d_ate_campo(mesa: Node, face_baixo: bool, estrela_idx: int) -> Dicti
 	mesa.call("_confirmar")
 	Input.action_release("confirmar")
 	assert_eq(int(mesa.get("_sub_mao")), 1, "Carta foi ao centro (trava a face).") # SUB_FACE
-	# O voo mão->centro termina antes de girar ou travar, senão é ignorado.
-	await wait_seconds(0.5)
 	if face_baixo:
 		Input.action_press("mover_dir")
 		mesa.call("_mover", 1, 0)
 		Input.action_release("mover_dir")
-		# O giro termina antes de travar.
-		await wait_seconds(0.3)
 	assert_eq(bool(mesa.get("_face_baixo")), face_baixo, "Face escolhida: p/ baixo = %s." % str(face_baixo))
 	Input.action_press("confirmar")
 	mesa.call("_confirmar")
 	Input.action_release("confirmar")
 	assert_eq(int(mesa.get("_sub_mao")), 2, "Face travada, escolhe 1 dos 5 slots.") # SUB_SLOT
-	# A volta à mão termina antes de escolher o slot.
-	await wait_seconds(0.5)
 	var slot: int = SummonSystem.free_monster_slot(st, 0)
 	assert_true(slot >= 0, "Preparo: há slot livre no próprio campo.")
 	mesa.set("_col", slot)
@@ -208,8 +202,6 @@ func _fluxo3d_ate_campo(mesa: Node, face_baixo: bool, estrela_idx: int) -> Dicti
 	assert_true((_menus(mesa).get("_popup") as Control).visible, "Menu da estrela abriu no centro.")
 	var ops: Array = mesa.get("_estrela_ops")
 	assert_eq(ops.size(), 2, "Menu traz as 2 guardian stars do dado.")
-	# A subida ao centro-alto termina antes de escolher a estrela.
-	await wait_seconds(0.5)
 	if estrela_idx == 1:
 		Input.action_press("mover_baixo")
 		mesa.call("_mover", 0, 1)
@@ -219,8 +211,6 @@ func _fluxo3d_ate_campo(mesa: Node, face_baixo: bool, estrela_idx: int) -> Dicti
 	Input.action_press("confirmar")
 	mesa.call("_confirmar")
 	Input.action_release("confirmar")
-	# A descida ao slot termina com o motor rodando no pouso.
-	await wait_seconds(0.7)
 	return {"slot": slot, "estrela": esperada, "mao_antes": mao_antes}
 
 
