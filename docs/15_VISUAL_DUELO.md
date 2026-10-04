@@ -102,7 +102,7 @@ das placas sem depender de medir pixel por pixel.
 
 ## 15.6 A FAIXA DO MEIO (2D, D45)
 
-A faixa do meio é **2D, no HUD**, dentro do vão entre as fileiras de monstros.
+A faixa do meio é **2D, na camada -1 (atrás do mundo 3D)**, dentro do vão entre as fileiras de monstros.
 
 **As 7 células, na ordem:**
 
