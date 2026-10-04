@@ -125,7 +125,10 @@
   }
 
   function ordemNome(v: string): string {
-    return v === "first_p1" ? "Jogador 1 começa" : v === "first_p2" ? "Jogador 2 começa" : "Sorteio (aleatório)";
+    return v === "first_p1" ? "Jogador 1 começa"
+      : v === "first_p2" ? "Jogador 2 começa"
+      : v === "moeda" ? "Sorteio com a moeda"
+      : "Sorteio (aleatório)";
   }
 </script>
 
@@ -191,6 +194,7 @@
           <span class="text-[10px] tracking-widest text-violet-300 font-semibold">QUEM COMEÇA</span>
           <select class="mt-1 w-full px-2.5 py-2 rounded-lg bg-zinc-950 border border-zinc-800 text-sm" bind:value={ordem}>
             <option value="random">Sorteio (aleatório)</option>
+            <option value="moeda">Sorteio com a moeda</option>
             <option value="first_p1">Jogador 1 começa</option>
             <option value="first_p2">Jogador 2 começa</option>
           </select>

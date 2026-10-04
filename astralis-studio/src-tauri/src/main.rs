@@ -2230,19 +2230,23 @@ fn semente_do_duelo(seed: Option<i64>) -> i64 {
 }
 
 /// Ordem de quem começa (contrato `duel_setup.turn_order` = first_p1 |
-/// first_p2 | random):
+/// first_p2 | random | moeda):
 /// - Campo de Testes (`test_state` presente, D33): SEMPRE first_p1 — o teste
 ///   começa na SUA fase da mão (doc 04.6 / D24). O que veio no pedido é
 ///   ignorado de propósito (trava do D33, não pode cair).
 /// - Duelo normal: `random` (sorteio) é o PADRÃO — é o que o usuário pediu
 ///   (quem começa tem que ser sorteado). Vazio = sorteio; valor fora da lista
 ///   = erro em PT-BR.
+/// - `moeda` é o MESMO sorteio de `random` no motor; a diferença é que a tela
+///   MOSTRA o sorteio jogando a moeda. O sorteio é do motor (R1/D42) e a moeda
+///   só representa a decisão, então as duas continuam com a mesma
+///   reprodutibilidade por semente.
 fn ordem_do_duelo(ordem: &str, tem_teste: bool) -> Result<String, String> {
     if tem_teste {
         return Ok("first_p1".to_string());
     }
     let o = if ordem.trim().is_empty() { "random".to_string() } else { ordem.trim().to_string() };
-    if !["first_p1", "first_p2", "random"].contains(&o.as_str()) {
+    if !["first_p1", "first_p2", "random", "moeda"].contains(&o.as_str()) {
         return Err("Ordem de turno inválida. Escolha quem começa na lista.".to_string());
     }
     Ok(o)
