@@ -9,32 +9,46 @@ extends Control
 ## (y 670..756), o TIPO verde entre colchetes (y 756..799) e a DESCRICAO branca
 ## com a barra laranja de rolagem (y 810..1080).
 ##
-## A carta e a carta REAL: moldura, arte, nome, orbe do atributo, fileira de
-## estrelas-imagem e todos os numeros vem do DADO (R3). Este painel nao calcula
-## regra nenhuma - ele pergunta o que esta sob o cursor e escreve.
+## A CARTA aqui e a CARTA 3D DE VERDADE, a mesma peca que o campo e a mao
+## desenham: nao existe uma imagem 2D imitando a carta neste painel. A peca e
+## montada pela MESMA fabrica (`carta_3d.gd`), com o mesmo dado, e o que aparece
+## e o resultado — corpo do `.glb` com o canto arredondado, moldura, arte na
+## janela, orbe, fileira de estrelas, nome e ATK/DEF impressos. Uma diferenca
+## de desenho entre a carta do campo e a do painel seria duas cartas, e o painel
+## nao pode ser um duble do que a mesa mostra.
+##
+## A vista e RETA, de frente, por uma camera ORTOGONAL: o painel e lugar de
+## informacao, entao a carta e lida sem perspectiva nem distorcao. Isso nao
+## muda a peca, muda o olho — e o olho aqui nao e o da mesa (o da mesa esta
+## preso em D41/D47), e um olho so deste painel.
 ##
 ## D46b (sobreviveu dentro da D47): na vez do RIVAL o painel CONTINUA VIVO (o
-## jogador pode focar o que quiser) mas nao entrega a carta - mostra a imagem
-## PADRONIZADA do jogo (o verso, que ja e asset) e NENHUM dado. E o que o rival
-## esta vendo, e o rival nao pode saber o que voce tem.
+## jogador pode focar o que quiser) mas nao entrega a carta - mostra a carta de
+## costas, a imagem PADRONIZADA do jogo (o verso, que ja e asset) e NENHUM
+## dado. E o que o rival esta vendo, e o rival nao pode saber o que voce tem.
 ##
-## O no se chama "PainelCarta" e e filho direto do HUD, com os mesmos filhos de
-## antes: e por isso que nenhuma trava de teste mudou de caminho.
+## O no se chama "PainelCarta" e e filho direto do HUD: e por isso que nenhuma
+## trava de teste mudou de caminho.
 
 ## Onde o painel comeca e acaba, em px do canvas 1920x1080 (doc 15 §15.3). Sao
 ## da TELA, entao a mesa e que passa (o mesmo numero diz onde o campo 3D
 ## comeca).
 var largura := 562
 var altura := 1080
-## Janela de arte DENTRO da moldura real (832x1248), em fracao: a arte preenche
-## a janela sem sobra, e ancorar em % faz a peca acompanhar o tamanho do molde.
-## A JANELA e do CONTRATO da carta, entao o dono dela e a mesa (a carta 3D usa
-## a mesma); o painel recebe. Sem default de proposito: o valor que estava
-## escrito aqui era outro, e so nao apareceu porque a mesa sobrescreve no boot.
-var janela_art: Vector4
+## As DUAS medidas da carta em unidades de mundo, e o DONO delas e a mesa (a
+## carta 3D do campo usa as mesmas). O painel usa as duas para dar a
+## proporcao real (59 x 86) ao retangulo da carta e para armar a camera
+## ortogonal. Sem default de proposito, pelo mesmo motivo dos outros
+## receptores: valor escrito aqui seria a segunda fonte da mesma medida.
+var larg_carta: float
+var alt_carta: float
 
 const CARTA_Y0 := 16
 const CARTA_Y1 := 562
+## Distancia da camera ortogonal ate a carta. Ela NAO muda o tamanho do desenho
+## (e ortogonal, nao perspectiva): existe so para a carta ficar entre os planos
+## near e far da camera.
+const DIST_CAM_CARTA := 2.0
 const STATS_Y0 := 562
 const STATS_Y1 := 648
 const NOME_Y0 := 670
@@ -57,18 +71,37 @@ var cartas_de: Callable
 var foco: Callable
 var tex_cache: Callable
 var cor_de_atributo: Callable
-var textura_arte: Callable
-var moldura_da_carta: Callable
 ## As 2 guardian stars do DADO. O dono da leitura e a mesa (o FLUXO tambem
 ## precisa delas, para as opcoes do menu da estrela), entao o painel pergunta.
 var estrelas_da_carta: Callable
+## D80: a tela ainda esta ESPERANDO a moeda. Enquanto for verdade o painel fica
+## VAZIO — nem a carta do foco, nem o verso do rival. Quem pergunta e a mesa
+## (e a mesa sabe: ela e quem mandou a moeda aparecer), e e uma PERGUNTA como as
+## outras: o painel nao tem como saber que a moeda existe.
+##
+## O painel nao usa este estado para se esconder nem para mentir: ele so deixa de
+## responder. A razao esta em `_atualizar`.
+var esperando_sorteio: Callable
+## MONTAR a carta 3D. Quem monta e a fabrica (`carta_3d.gd`) e quem a tem e a
+## mesa, entao o painel recebe a operacao, nunca a fabrica: assim o painel nao
+## tem como mexer nas medidas nem nas texturas que continuam sendo de um dono so.
+var montar_carta: Callable
 
-var _moldura: TextureRect = null
-var _arte: TextureRect = null
-var _cor_arte: ColorRect = null
-var _orbe_molde: TextureRect = null
-var _nome_molde: Label = null
-var _caixa_estrelas: HBoxContainer = null
+## Chave da janela quando ela mostra o VERSO PADRONIZADO (nenhum dado, D46b).
+## O prefixo `:` nao existe em id de carta (o contrato so aceita
+## `^[a-z][a-z0-9_]*$`), entao o verso nunca colide com uma carta.
+const CHAVE_VERSO := "verso:padrao"
+const PREFIJO_CARTA := "carta:"
+
+var _janela_carta: SubViewportContainer = null
+var _vp_carta: SubViewport = null
+var _mundo_carta: Node3D = null
+var _cam_carta: Camera3D = null
+var _carta_no: Node3D = null
+## Qual carta esta montada na janela agora. Serve para nao remontar a peca a
+## cada passo do cursor — nao e copia do estado do duelo, e o remember do que
+## ja foi desenhado: a carta do DADO nao muda enquanto o id nao muda.
+var _carta_chave := ""
 var _cor_atr: ColorRect = null
 var _stats: Label = null
 var _orbe_atr: TextureRect = null
@@ -92,58 +125,55 @@ func _ready() -> void:
 	_construir_descricao()
 
 
-## --- A CARTA (y 16..562). A moldura real e 832x1248 (0,667), entao numa caixa
-## de 546 de altura a carta tem 364 de largura, CENTRADA na faixa.
+## --- A CARTA (y 16..562). E a CARTA 3D de verdade, entao o retangulo e uma
+## JANELA 3D: um SubViewport proprio, com a carta dentro, visto por uma camera
+## ORTOGONAL de frente. Ela nao divide o mundo do campo (o campo gira a
+## camera 180 e nada aqui pode acompanhar isso), e o fundo e transparente para
+## o azul-marinho do painel aparecer atras.
+##
+## O retangulo tem a PROPORCAO REAL da carta (59 x 86), e nao a da moldura em
+## JPG: o que esta desenhado agora e a peca, e a peca mede 59 x 86. Com a altura
+## da faixa da ref (546 px) a largura sai 374 px, centrada nos 562 do painel.
+## Camera ortogonal com `size` = altura da carta e `KEEP_HEIGHT` faz a peca
+## preencher o retangulo exatamente: nem sobra, nem corta o canto arredondado.
 func _construir_carta() -> void:
-	assert(janela_art.z > janela_art.x and janela_art.w > janela_art.y,
-		"painel_carta_3d: janela_art vem da mesa (dono da janela, compartilhada com a "
-		+ "carta 3D). Vazia aqui = arte ancorada em zero, em silencio.")
-	var molde := Control.new()
-	molde.name = "CartaMolde"
-	var alt_carta := float(CARTA_Y1 - CARTA_Y0)
-	var larg_carta := alt_carta * (832.0 / 1248.0)
-	molde.position = Vector2(round((largura - larg_carta) * 0.5), CARTA_Y0)
-	molde.size = Vector2(round(larg_carta), alt_carta)
-	molde.custom_minimum_size = molde.size
-	molde.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(molde)
-	_moldura = TextureRect.new()
-	_moldura.name = "Moldura"
-	_moldura.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_moldura.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_moldura.stretch_mode = TextureRect.STRETCH_SCALE
-	_moldura.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	molde.add_child(_moldura)
-	_arte = TextureRect.new()
-	_arte.name = "FocoArte"
-	_ancorar(_arte, janela_art.x, janela_art.y, janela_art.z, janela_art.w)
-	_arte.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_arte.stretch_mode = TextureRect.STRETCH_SCALE
-	_arte.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	molde.add_child(_arte)
-	_cor_arte = ColorRect.new()
-	_cor_arte.name = "FocoCor"
-	_ancorar(_cor_arte, janela_art.x, janela_art.y, janela_art.z, janela_art.w)
-	_cor_arte.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	molde.add_child(_cor_arte)
-	_nome_molde = _rotulo("FocoNomeMolde", "", 15, Color(0.12, 0.07, 0.03))
-	_ancorar(_nome_molde, 0.054, 0.027, 0.674, 0.078)
-	_nome_molde.clip_text = true
-	molde.add_child(_nome_molde)
-	_orbe_molde = TextureRect.new()
-	_orbe_molde.name = "FocoOrbe"
-	_ancorar(_orbe_molde, 0.833, 0.044, 0.928, 0.109)
-	_orbe_molde.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_orbe_molde.stretch_mode = TextureRect.STRETCH_SCALE
-	_orbe_molde.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	molde.add_child(_orbe_molde)
-	_caixa_estrelas = HBoxContainer.new()
-	_caixa_estrelas.name = "FocoEstrelasBox"
-	_ancorar(_caixa_estrelas, 0.40, 0.118, 0.92, 0.172)
-	_caixa_estrelas.alignment = BoxContainer.ALIGNMENT_END
-	_caixa_estrelas.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_caixa_estrelas.add_theme_constant_override("separation", 1)
-	molde.add_child(_caixa_estrelas)
+	assert(larg_carta > 0.0 and alt_carta > 0.0,
+		"painel_carta_3d: larg_carta/alt_carta vem da mesa (ela e o dono da medida, "
+		+ "a mesma que a carta 3D do campo usa). Vazia aqui = janela 3D sem medida.")
+	var alt_px := float(CARTA_Y1 - CARTA_Y0)
+	var larg_px := float(round(alt_px * larg_carta / alt_carta))
+	_janela_carta = SubViewportContainer.new()
+	_janela_carta.name = "Carta3DJanela"
+	_janela_carta.position = Vector2(float(round((largura - larg_px) * 0.5)), float(CARTA_Y0))
+	_janela_carta.size = Vector2(larg_px, alt_px)
+	_janela_carta.stretch = true
+	_janela_carta.stretch_shrink = 1
+	_janela_carta.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_janela_carta)
+	_vp_carta = SubViewport.new()
+	_vp_carta.name = "Carta3DViewport"
+	# Textura 1:1 (mesmo tamanho do retangulo): sem escala/rotação na imagem.
+	_vp_carta.size = _janela_carta.size
+	# Mundo PROPRIO: o campo 3D tem a camera no pivô da volta da mesa, e nada
+	# do painel pode herdar esse mundo.
+	_vp_carta.own_world_3d = true
+	_vp_carta.transparent_bg = true
+	_vp_carta.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_janela_carta.add_child(_vp_carta)
+	_mundo_carta = Node3D.new()
+	_mundo_carta.name = "Carta3DMundo"
+	_vp_carta.add_child(_mundo_carta)
+	_cam_carta = Camera3D.new()
+	_cam_carta.name = "Carta3DCam"
+	# ORTOGONAL, de frente: o painel e lugar de informacao, e a carta e lida sem
+	# perspectiva nem distorcao. A peca e a mesma do campo; o olho e outro.
+	_cam_carta.projection = Camera3D.PROJECTION_ORTHOGONAL
+	_cam_carta.keep_aspect = Camera3D.KEEP_HEIGHT
+	_cam_carta.size = alt_carta
+	_cam_carta.position = Vector3(0.0, 0.0, DIST_CAM_CARTA)
+	_vp_carta.add_child(_cam_carta)
+	_cam_carta.current = true
+	_janela_carta.visible = false
 
 
 ## --- Faixa de ATK/DEF (y 562..648): "ATK/3000 DEF/2000" + os 2 orbes + o
@@ -237,19 +267,6 @@ func _construir_descricao() -> void:
 	bloco.add_child(barra)
 
 
-## Peca posicionada em % da MOLDE, com ANCORAS: assim ela acompanha o tamanho
-## do molde (que estica com o painel) em vez de um px fixo.
-func _ancorar(c: Control, x0: float, y0: float, x1: float, y1: float) -> void:
-	c.anchor_left = x0
-	c.anchor_top = y0
-	c.anchor_right = x1
-	c.anchor_bottom = y1
-	c.offset_left = 0.0
-	c.offset_top = 0.0
-	c.offset_right = 0.0
-	c.offset_bottom = 0.0
-
-
 func _rotulo(nome: String, texto: String, tam: int, cor: Color) -> Label:
 	var l := Label.new()
 	l.name = nome
@@ -265,6 +282,16 @@ func _rotulo(nome: String, texto: String, tam: int, cor: Color) -> Label:
 ## costas nunca vaza: e o `aberta` que a mesa traz.
 func atualizar() -> void:
 	if not foco.is_valid():
+		return
+	# D80: a tela esta ESPERANDO a moeda, e o painel fica VAZIO. Nao e o verso do
+	# rival nem a sua carta: e nada. A razao e o que a tela contaria sem isto —
+	# com o motor JA TENDO sorteado (D42) e a tela ainda nao virada, o cursor
+	# esta no LUGAR DE BAIXO, que e a mao de quem ganhou. Mostrar o verso dele
+	# era mostrar "a sua mao sumiu", e mostrar a sua carta era mostrar "a sua mao
+	# continua aqui": os dois lados diziam o resultado antes da moeda. Enquanto
+	# nao ha resposta, nao ha o que mostrar.
+	if esperando_sorteio.is_valid() and bool(esperando_sorteio.call()):
+		_limpar()
 		return
 	var st = estado.call() if estado.is_valid() else null
 	if st != null and int(st.current_player) == 1:
@@ -282,27 +309,14 @@ func atualizar() -> void:
 		real = cartas[cid] as Dictionary
 	var nome := str(real.get("name", dado.get("name", "?")))
 	_nome.text = nome
-	_nome_molde.text = nome.to_upper()
-	_moldura.texture = tex_cache.call(moldura_da_carta.call(real)) as Texture2D
-	var nivel := int(real.get("level", dado.get("level", 0)))
 	var attr := str(real.get("attribute", dado.get("attribute", "")))
 	var ctipo := str(real.get("card_type", dado.get("card_type", "monster")))
 	var tex_o := tex_cache.call("assets/attributes/%s.png" % attr.to_lower()) as Texture2D
-	_orbe_molde.texture = tex_o
-	# As estrelas-imagem da carta (o level vira fileira de estrelas, e so
-	# monstro tem): o asset e um, a fileira e o level.
-	for f2 in _caixa_estrelas.get_children():
-		(f2 as Node).queue_free()
-	var tex_e := tex_cache.call("assets/estrelas/estrela.png") as Texture2D
-	if tex_e != null and ctipo == "monster":
-		for s in range(clampi(nivel, 0, 12)):
-			var im := TextureRect.new()
-			im.custom_minimum_size = Vector2(20, 20)
-			im.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			im.stretch_mode = TextureRect.STRETCH_SCALE
-			im.texture = tex_e
-			im.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			_caixa_estrelas.add_child(im)
+	# A CARTA 3D: a peca real, montada pela mesma fabrica do campo. A posicao no
+	# slot vem do DADO (`position`), e nao de um palpite.
+	var inst: Dictionary = f.get("inst", {}) as Dictionary
+	var em_defesa := str(inst.get("position", "")).to_upper() == "DEF"
+	_trocar_carta(real, false, em_defesa, PREFIJO_CARTA + cid)
 	_stats.text = "ATK/%d DEF/%d" % [int(real.get("attack", dado.get("attack", 0))), int(real.get("defense", dado.get("defense", 0)))]
 	# O atributo NAO vira texto no painel (D5): fica no orbe da faixa e no canto
 	# da carta. O quadradinho da faixa usa a cor do atributo real.
@@ -330,21 +344,34 @@ func atualizar() -> void:
 		_orbe_tipo.visible = false
 	var copias := contar_copia_carta(cid, st)
 	_copias.text = ("x%d" % copias) if copias > 0 else ""
-	var tex := textura_arte.call(real) as Texture2D
-	if tex != null:
-		_arte.texture = tex
-		_arte.visible = true
-		_cor_arte.visible = false
-	else:
-		_arte.visible = false
-		_cor_arte.visible = true
-		_cor_arte.color = cor_de_atributo.call(attr)
+
+
+## Troca a carta 3D da JANELA. `chave` e o que esta na janela agora: com a
+## mesma chave a peca nao e remontada, porque o cursor anda a cada passo e
+## remontar a carta inteira (corpo, face, arte, quads) 60x por segundo e
+## desperdicio. A chave e o id do DADO, e a carta do DADO nao muda enquanto o
+## id nao muda.
+func _trocar_carta(dado: Dictionary, face_down: bool, em_defesa: bool, chave: String) -> void:
+	if chave == _carta_chave and is_instance_valid(_carta_no):
+		return
+	_carta_chave = chave
+	if _carta_no != null and is_instance_valid(_carta_no):
+		_mundo_carta.remove_child(_carta_no)
+		# `free()` imediato, nao `queue_free`: a fila so drena no fim do frame, e
+		# o GUT conta orfao antes disso.
+		_carta_no.free()
+	_carta_no = null
+	if dado.is_empty() and not face_down:
+		_janela_carta.visible = false
+		return
+	_carta_no = montar_carta.call(dado, face_down, em_defesa) as Node3D
+	_mundo_carta.add_child(_carta_no)
+	_janela_carta.visible = true
 
 
 ## Nada focavel: o painel mostra o traço e diz para mirar.
 func _limpar() -> void:
-	_nome.text = "\u2014"
-	_nome_molde.text = ""
+	_nome.text = "—"
 	_stats.text = ""
 	_cor_atr.color = Color(0.2, 0.2, 0.25)
 	_tipo.text = ""
@@ -354,44 +381,25 @@ func _limpar() -> void:
 	_orbe_tipo.texture = null
 	_orbe_atr.visible = false
 	_orbe_tipo.visible = false
-	_arte.visible = false
-	_cor_arte.color = Color(0.08, 0.08, 0.12)
-	_moldura.texture = null
-	_orbe_molde.texture = null
-	_limpar_estrelas()
+	_trocar_carta({}, false, false, "")
 
 
-## D46b: na vez do RIVAL o quadro fica, a carta some. Imagem PADRONIZADA (o
-## verso, que ja e asset do jogo) e NENHUM dado. So DESENHO; o estado nao e
-## tocado.
+## D46b: na vez do RIVAL o quadro fica, a carta some. A carta de VERSO — a
+## imagem PADRONIZADA do jogo — e NENHUM dado. O dado entregue e vazio de
+## propósito: quem vira e o que esconde a frente, e o verso e asset do jogo.
+## So DESENHO; o estado nao e tocado.
 func atualizar_neutro() -> void:
 	_nome.text = ""
-	_nome_molde.text = ""
 	_stats.text = ""
 	_tipo.text = ""
 	_desc.text = ""
 	_copias.text = ""
-	_limpar_estrelas()
 	_orbe_atr.texture = null
 	_orbe_atr.visible = false
 	_orbe_tipo.texture = null
 	_orbe_tipo.visible = false
 	_cor_atr.color = Color(0.2, 0.2, 0.25)
-	_moldura.texture = tex_cache.call("assets/frames/normal.jpg") as Texture2D
-	_orbe_molde.texture = null
-	var verso := tex_cache.call("assets/backs/verso_padrao.png") as Texture2D
-	_arte.texture = verso
-	_arte.visible = verso != null
-	_cor_arte.visible = verso == null
-	_cor_arte.color = Color(0.12, 0.12, 0.18)
-
-
-func _limpar_estrelas() -> void:
-	for f in _caixa_estrelas.get_children():
-		_caixa_estrelas.remove_child(f as Node)
-		# `free()` imediato, nao `queue_free`: a fila so drena no fim do frame, e
-		# o GUT conta orfao antes disso.
-		(f as Node).free()
+	_trocar_carta({}, true, false, CHAVE_VERSO)
 
 
 ## Quantas COPIAS da carta focada estao no BARALHO DO JOGADOR (dado real). So

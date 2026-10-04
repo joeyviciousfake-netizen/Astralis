@@ -12,9 +12,6 @@ config_version=5
 
 config/name="Astralis"
 config/description="Astralis — motor de duelos (runtime, única verdade de gameplay)."
-; Boot oficial (D23/D40): a cena principal é a MESA 3D, e ela é a ÚNICA tela
-; do duelo — a mesa 2D e a flag `--cenario3d` saíram do projeto (D54/D58), e
-; não existe flag para voltar a elas porque não existe mais para onde voltar.
 run/main_scene="res://duel3d/mesa_3d.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
@@ -27,12 +24,6 @@ window/stretch/mode="canvas_items"
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/gut/plugin.cfg")
-
-[rendering]
-
-renderer/rendering_method="gl_compatibility"
-renderer/rendering_method.mobile="gl_compatibility"
-textures/default_filters/use_nearest_mipmap_filter=true
 
 [input]
 
@@ -96,3 +87,9 @@ pausar={
 "events": [Object(InputEventJoypadButton,"resource_local_to_scene":false,"resource_name":"","device":-1,"button_index":6,"pressure":0.0,"pressed":true,"script":null)
 ]
 }
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+textures/default_filters/use_nearest_mipmap_filter=true

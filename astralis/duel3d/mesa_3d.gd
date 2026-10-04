@@ -26,6 +26,8 @@ const Cursor3D := preload("res://duel3d/cursor_3d.gd")
 const Campo3D := preload("res://duel3d/campo_3d.gd")
 const Vista3D := preload("res://duel3d/vista_3d.gd")
 const Carta3D := preload("res://duel3d/carta_3d.gd")
+const EntradaMao3D := preload("res://duel3d/entrada_mao_3d.gd")
+const Moeda3D := preload("res://duel3d/moeda_3d.gd")
 const IaRival := preload("res://ai/ia_rival.gd")
 
 ## Conversão desenho 2D->3D (só desenho): campo 2D centrado em x=1158.
@@ -126,6 +128,20 @@ const COLUNAS_CAMPO := 5
 ## movimentos da tela (TRANS_CUBIC/EASE_IN_OUT) e não pula: passar a vez
 ## sempre gira a mesa inteira.
 const VOLTA_DURACAO := 1.0
+
+## A PAUSA do turno do RIVAL depois de comprar, para o jogador ver a compra antes
+## do ataque. Ela tem PISO (este número) e TETO (o tempo real da entrada de mão,
+## que mora em `entrada_mao_3d.gd`): uma compra pode trazer duas cartas, e a pausa
+## nunca pode cortar uma carta no ar.
+const PAUSA_RIVAL := 0.7
+
+## D77 — O SORTEIO DA MOEDA. Três números, e os três são desta mesa porque a
+## mesa é a dona da vista e de onde fica cada lado.
+##
+## `TURNO_MOEDA` é o valor do `duel_setup.turn_order` que faz a tela MOSTRAR o
+## sorteio. No motor ele é o MESMO sorteio de "random" — a moeda representa a
+## decisão, nunca a toma (R1/D42).
+const TURNO_MOEDA := "moeda"
 
 ## Chão de desenho do campo: o plano da FACE DE CIMA do ladrilho (a caixa de
 ## vidro tem 0,05 de espessura assentada em TOPO - 0,03, ou seja o topo dela
@@ -317,6 +333,37 @@ var _deck_pos := [Vector3(4.9, 0.6, 1.6), Vector3(-4.9, 0.6, -2.2)]
 var _foto_frame_alvo := 90
 var _auto_passa_em := 0.0
 var _auto_passa_espera := -1.0
+## D46 (prova): `--mesa3d-moeda` obriga o sorteio com a moeda, para a foto ser
+## determinística (o duelo DEV sorteia a ordem, uma em quatro). Zero regra: só
+## muda o DESENHO do sorteio; QUEM começou continua sendo o do motor.
+var _moeda_forcada := false
+## Os TRES ESTADOS da abertura de um duelo. Antes eram cinco, e quatro deles
+## descreviam a MESMA coisa (a distribuição) em lugares diferentes — o que é
+## como um dado escrito duas vezes diverge sozinho. Cada um aqui tem UM dono e UM
+## consumidor, e nenhum guarda tempo: o tempo é dos arquivos de animação.
+##
+## 1. `_distribuicao_ativa`: este desenho mostra cartas NOVAS (a distribuição
+##    inicial, ou nada). O consumidor é `_preparar_entrada`, dentro do
+##    `_redesenhar`, e ele a desliga no fim — por isso é um estado local do
+##    desenho e não da mesa inteira.
+var _distribuicao_ativa := true
+## 2. `_cartas_voando`: quantas cartas da distribuição ainda estão no ar. O
+##    consumidor é a ÚLTIMA carta, que abre o turno — e não um relógio, porque
+##    quem sabe quando a animação acaba é a própria animação.
+var _cartas_voando := 0
+## D78: a ÚLTIMA carta da distribuição emite isto, e é o que o boot espera
+## (o sinal direto) antes de abrir o turno. É um SINAL e não um relógio porque
+## quem sabe quando a animação acabou é a própria animação — e um número de
+## segundos aqui seria a segunda fonte da medida, cujo dono é
+## `entrada_mao_3d.gd`.
+signal _distribuida
+## 3. `_aguardando_sorteio`: a MOEDA está na tela. Nasce **falso** e só vira
+##    verdadeiro quando o duelo é de moeda — num duelo `first_p1` não existe
+##    sorteio na tela, não existe spoiler, e o painel responde desde o primeiro
+##    quadro. Os consumidores são o painel (vazio até lá, D80) e a navegação.
+var _aguardando_sorteio := false
+## `--mesa3d-sair=N`: sai sozinho depois de N segundos (validação headless).
+var _mesa3d_sair := 0.0
 
 ## D44 (item 8): o topo ficou SÓ com foto + nome de cada duelista. Estas são
 ## as etiquetas de nome ao lado de cada retrato (dado real do duelista).
@@ -385,9 +432,19 @@ var _y_mao_cam := 0
 var _pulso := 0.0
 var _foto_destino := ""
 var _foto_frames := -1
+## D46 (prova): a foto pode ser pedida por TEMPO em vez de por quadro
+## (`--mesa3d-foto-em=s`). A contagem de quadros vale só para a tela parada: o
+## quadro de uma cena de 4,5 s muda de máquina para máquina, e a prova da moeda
+## precisa de dizer "no segundo 2,1" e não "no quadro 130". A espera começa no
+## fim do boot, que é onde o sorteio começa.
+var _foto_em := -1.0
+var _foto_em_espera := -1.0
 
 
 func _ready() -> void:
+	# As flags de PROVA primeiro, antes de qualquer desenho: `--mesa3d-moeda`
+	# decide se o duel tem a moeda no palco, e o palco é montado no fim do boot.
+	_ler_flags_de_prova()
 	_construir_janela_campo()
 	_construir_ambiente()
 	_construir_hud()
@@ -437,12 +494,32 @@ func _ready() -> void:
 		_calib_visual(get_node_or_null(NodePath("HUD")) as Control)
 	_fusions_data = _fusoes_do_data(data)
 	_fala("Mesa 3D: duelo real carregado.")
-	_redesenhar(false)
+	# D78: a DISTRIBUIÇÃO INICIAL anima, e usa a MESMA animação da compra — as 5
+	# cartas de cada lado chegam uma por uma, no tempo normal do voo. Não há
+	# tempo novo aqui: o dono do tempo do voo é `entrada_mao_3d.gd`, e um tempo
+	# "de distribuição" escrito aqui seria a segunda fonte da mesma medida.
+	#
+	# D80: a ESPERA DA MOEDA liga AQUI, e nao dentro de `_sorteio_pela_moeda`.
+	# Ela precisa cobrir a distribuição inteira, porque é nela que o spoiler
+	# acontece: o motor já sorteou (D42) e a tela ainda não virou, então o lugar
+	# de baixo — onde o cursor está — é a mão de quem ganhou. Ligar só na moeda
+	# seria tarde. E ela NÃO liga se o duelo não é de moeda: sem moeda na tela
+	# não existe spoiler, e um duelo `first_p1` responde ao painel no primeiro
+	# quadro como sempre respondeu.
+	_aguardando_sorteio = _tem_sorteio_na_tela()
+	# A MESMA resposta vai para o marcador, e no mesmo quadro: o `?` e a
+	# representacao da moeda, entao quem tem a moeda e quem diz que ela existe.
+	# A faixa nao olha o dado nem a camera (ela nao sabe que a moeda existe), e
+	# por isso que e a mesa que responde — o mesmo caminho de `painel_carta_3d.gd`.
+	if _faixa != null and is_instance_valid(_faixa):
+		_faixa.esperar_sorteio(_aguardando_sorteio)
+	_redesenhar(_distribuicao_ativa, 0)
 	_atualizar_hud()
+	# A contagem da foto por TEMPO começa AQUI, e não no `_ready`: o boot carrega
+	# o dado e o campo antes disso, e o tempo de carga não é o tempo do duelo.
+	if _foto_em >= 0.0:
+		_foto_em_espera = 0.0
 	_iniciar_turno_do_duelo()
-	if int(_st.current_player) == 0:
-		_redesenhar(false)
-		_atualizar_hud()
 	_diag("Pronta: mão p0=%d p1=%d, artes carregadas=%d, assets embutidos=%d/17." % [
 		((_st.players[0] as Dictionary)["hand"] as Array).size(),
 		((_st.players[1] as Dictionary)["hand"] as Array).size(), _artes_ok,
@@ -476,6 +553,14 @@ var _faixa: PanelContainer = null
 var _menus: CanvasLayer = null
 ## O painel esquerdo com a carta focada: o no e o arquivo `painel_carta_3d.gd`.
 var _painel: Control = null
+## De quantas cartas cada mão era no DESENHO ANTERIOR, por dono. É o que diz
+## quais cartas são as NOVAS de uma compra: a mão cresce, então tudo que está
+## depois do número velho acabou de entrar. Sem isto a animação não sabe voar só
+## o que foi comprado.
+var _mao_n_desenhada := {}
+## Quanto tempo a ÚLTIMA entrada de mão vai levar voando. Quem espera a mão
+## assentar lê daqui, porque o dono do tempo é o arquivo da animação.
+var _entrada_duracao := 0.0
 ## O cursor de foco (moldura azul + mao branca): o no e o arquivo `cursor_3d.gd`.
 var _cursor: Node3D = null
 ## O campo de vidro (os 20 ladrilhos): o no e o arquivo `campo_3d.gd`.
@@ -489,6 +574,9 @@ var _ia: IaRival = null
 ## A fabrica das cartas 3D (o desenho da carta): `carta_3d.gd`. Carta tem
 ## varias na cena, entao ali mora a fabrica e aqui o botao que a chama.
 var _fabrica_carta: Carta3D = null
+## A moeda do sorteio (o desenho do sorteio): `moeda_3d.gd`. Uma instância só —
+## ela é o sorteio, e o sorteio acontece uma vez por duelo.
+var _moeda: Moeda3D = null
 var _debug := _quer_debug()
 
 
@@ -536,6 +624,37 @@ func _iniciar_turno_do_duelo() -> void:
 	if bool(_st.over):
 		_fala("Duelo já acabou.")
 		return
+	# D78: a distribuição vem ANTES do sorteio. Quem abre o duelo precisa ver a
+	# mão se encher antes de saber de quem é a vez — e a moeda é a resposta sobre
+	# a mão que acabou de chegar, não sobre um campo vazio.
+	#
+	# O boot ESPERA um SINAL, e não um relógio: a última carta da distribuição
+	# emite `_distribuida` quando pousa, e é ela quem sabe quando acabou (ninguém
+	# mais sabe — o tempo do voo é do arquivo da animação). Espera o sinal
+	# direto: ele segura o boot até a última carta assentar, e solta na hora.
+	# Com zero cartas voando o sinal nunca vem, e aí o turno abre
+	# na hora — daí o `if` antes de esperar.
+	if _cartas_voando > 0:
+		await _distribuida
+		if not is_inside_tree():
+			return
+	await _abrir_o_turno()
+
+
+## O TURNO DEPOIS DA DISTRIBUIÇÃO (D78): o sorteio, a virada da tela e a entrega
+## da vez. Vive em um método à parte porque quem chega aqui é a ÚLTIMA carta da
+## distribuição (`_carta_da_distribuicao_assentou`) e não o boot — e a corrotina
+## precisa de um dono só, senão o turno abriria duas vezes.
+func _abrir_o_turno() -> void:
+	if not is_inside_tree():
+		return
+	if _tem_sorteio_na_tela():
+		# D77: `turn_order: "moeda"` é o MESMO sorteio de "random" no motor — a
+		# diferença é que a tela MOSTRA. Quem decidiu foi o motor (R1/D42) e a
+		# moeda representa a decisão, nunca a toma.
+		await _sorteio_pela_moeda()
+		if not is_inside_tree():
+			return
 	if int(_st.current_player) != 0:
 		# O RIVAL COMEÇOU (o motor sorteou ele). A tela é o ponto de vista de
 		# QUEM ESTÁ JOGANDO, então ela tem de nascer na vista DELE: quem
@@ -552,6 +671,57 @@ func _iniciar_turno_do_duelo() -> void:
 	# A vez é sua: DRAW -> MAIN pelo motor (mão 5/5 sem carta extra, D26).
 	_duel.advance_phase()
 	_fala("Duelo começou! Sua vez.")
+	_redesenhar(false)
+	_atualizar_hud()
+
+
+## D77 — O SORTEIO DA MOEDA: um desenho NA FRENTE DA CÂMERA, e nada mais.
+##
+## A tela do jogo já está como o jogador a vê — cartas na mão, painel, campo,
+## marcador de turno — e a moeda é uma coisa que aparece no ar em cima do
+## marcador, de frente, enquanto ela gira. Não há palco de 90°, não se esconde
+## nada, e a câmera não se mexe: a moeda vive no sistema da câmera, e o que
+## ela toca é o ar entre o HUD e as cartas.
+##
+## São três tempos, e a ordem deles é a regra:
+##
+##  1. A **moeda**: ela representa a decisão do motor e mostra a face que casa
+##     com `current_player`. Zero regra (R1): nenhum número de jogo muda aqui.
+##  2. A **entrega**: o pivô gira para 0 ou 180 — quem ganhou. É a mesma
+##     `_girar_campo` que toda volta da mesa usa, e por isso que a mão só
+##     entra DEPOIS: o `_redesenhar(true, dono)` de cada caminho acontece
+##     depois deste `await`.
+##  3. O **marcador** vira "1": quem acabou de ver a moeda sabe de quem é a
+##     vez, e o número da volta é o que confirma isso na tela.
+##
+## O que NÃO acontece aqui: girar a câmera (D41), mexer em `current_player`
+## (D42), ou qualquer coisa no DADO.
+func _sorteio_pela_moeda() -> void:
+	if _moeda == null:
+		return
+	var vencedor := 0 if int(_st.current_player) == 0 else 1
+	# D79: a espera NAO entra aqui — ela ja nasceu ligada no boot (o `_?` esta na
+	# tela desde o primeiro quadro). Religar aqui nao mudaria nada e voltaria a
+	# dar a chance de a celula ficar na cor do lado entre o boot e aqui.
+	_moeda.reset()
+	await _moeda.tocar(vencedor, _cam)
+	# D80: A ESPERA TERMINA AQUI, e nao quando a moeda COMECA. A janela inteira
+	# — boot, distribuicao e a moeda — foi um so estado, e ele acaba com a
+	# resposta na tela: e o "?" que vira numero, o painel que volta a mostrar a
+	# carta e a navegacao que volta a andar, tudo no mesmo instante em que a
+	# moeda sai de cena. Ficar ligado depois deixaria o painel vazio e a mao
+	# travada no turno de quem ja viu a resposta.
+	_aguardando_sorteio = false
+	if _faixa != null and is_instance_valid(_faixa):
+		_faixa.esperar_sorteio(false)
+	# O painel responde no MESMO INSTANTE da resposta, e antes da virada: e a
+	# `current_player` do motor que decide se o painel mostra a carta sob o
+	# cursor ou o neutro da vez do rival (D46b), e essa resposta ja saiu da
+	# moeda. A virada é o passo DEPOIS deste, e nao muda o que esta em foco.
+	_atualizar_painel_foco()
+	if not is_inside_tree():
+		return
+	await _girar_campo(0.0 if vencedor == 0 else 180.0)
 
 
 func _ver_autoquit() -> void:
@@ -562,29 +732,51 @@ func _ver_autoquit() -> void:
 	# D46 — as duas ferramentas que a troca de perspectiva precisou (ela só
 	# aparece quando a VEZ PASSA, e a vez do jogador espera o START, que
 	# ninguém aperta numa prova automática):
-	#   `--mesa3d-foto-frame=N`  em qual QUADRO a foto sai (padrão 90, o de
+	#   `--mesa3d-foto-frame=N`  em qual QUADRO a foto saiu (padrão 90, o de
 	#                           sempre: sem a flag, nada muda);
+	#   `--mesa3d-foto-em=s`     em quantos SEGUNDOS depois que a tela do duelo
+	#                           ficou pronta (o quadro de uma cena muda de
+	#                           máquina para máquina, o segundo não);
 	#   `--mesa3d-auto-passa=s`  passa a vez sozinho `s` segundos depois de a
 	#                           tela ficar pronta, pelo MESMO caminho do START.
 	# As duas são PROVA (doc 16 §16.6, etapa 2), zero regra: nenhum estado do
 	# duelo delas vira produto, e sem a flag o jogo é exatamente o de sempre.
+	#
+	# A LEITURA das flags é `_ler_flags_de_prova`, e ela roda ANTES do duel
+	# começar — não aqui. `_moeda_forcada` decide se o duel tem a moeda no
+	# PALCO, e o palco é montado em `_iniciar_turno_do_duelo`, que vem antes
+	# desta linha: ler a flag aqui era tarde demais e a moeda nunca aparecia,
+	# sem erro nenhum.
+	if _mesa3d_sair > 0.0:
+		await get_tree().create_timer(_mesa3d_sair).timeout
+		_diag("Autoquit de validação após %s s." % str(_mesa3d_sair))
+		get_tree().quit()
+
+
+## AS FLAGS DE PROVA, lidas uma vez e no COMEÇO do boot (D46/D77).
+##
+## `--mesa3d-foto=<arquivo>` / `--mesa3d-foto-frame=N` / `--mesa3d-foto-em=s`
+## / `--mesa3d-auto-passa=s` / `--mesa3d-sair=N` / `--mesa3d-moeda` /
+## `--mesa3d-moeda`. Todas zero regra: sem elas o jogo é exatamente o de
+## sempre.
+func _ler_flags_de_prova() -> void:
 	for a in OS.get_cmdline_user_args():
 		var s := str(a)
 		if s.begins_with("--mesa3d-foto="):
 			_foto_destino = s.trim_prefix("--mesa3d-foto=").strip_edges()
 			_foto_frames = 0
+		elif s.begins_with("--mesa3d-foto-em="):
+			_foto_em = maxf(float(s.trim_prefix("--mesa3d-foto-em=")), 0.0)
 		elif s.begins_with("--mesa3d-foto-frame="):
 			_foto_frame_alvo = maxi(int(s.trim_prefix("--mesa3d-foto-frame=")), 1)
 		elif s.begins_with("--mesa3d-auto-passa="):
 			_auto_passa_em = maxf(float(s.trim_prefix("--mesa3d-auto-passa=")), 0.0)
 			# 0 = a contagem começa agora (o `_process` só conta se for >= 0).
 			_auto_passa_espera = 0.0
-		if s.begins_with("--mesa3d-sair="):
-			var n := float(s.trim_prefix("--mesa3d-sair="))
-			if n > 0.0:
-				await get_tree().create_timer(n).timeout
-				_diag("Autoquit de validação após %s s." % str(n))
-				get_tree().quit()
+		elif s == "--mesa3d-moeda":
+			_moeda_forcada = true
+		elif s.begins_with("--mesa3d-sair="):
+			_mesa3d_sair = float(s.trim_prefix("--mesa3d-sair="))
 
 
 func _sem_render() -> bool:
@@ -763,6 +955,16 @@ func _construir_ambiente() -> void:
 	# dois lados, só espelhado.
 	# A IA DO RIVAL (`ai/ia_rival.gd`): ela sabe ESCOLHER, e nao sabe executar.
 	_ia = IaRival.new()
+	# A MOEDA DO SORTEIO (`moeda_3d.gd`): ela sabe COMO o sorteio aparece e não
+	# sabe QUEM ganhou — quem ganhou é o motor (D42) e quem sabe onde cada lado
+	# fica é a mesa. Uma instância, como a fábrica e a IA.
+	_moeda = Moeda3D.new()
+	# A moeda e IRMA do pivô (`_vista`), e nao filha dele: ela e um desenho na
+	# frente da camera, e o pivô e quem gira a mesa de lado na entrega do turno.
+	# Se a moeda estivesse dentro do pivô, ela viraria junto com a mesa e o
+	# jogador a veria de perfil — o oposto de uma moeda de frente para quem
+	# assiste.
+	_vp.add_child(_moeda)
 	# A FABRICA DAS CARTAS 3D (`carta_3d.gd`): ela sabe desenhar a carta e
 	# nao sabe onde a carta fica. As texturas/cores chegam por Callable porque
 	# o painel 2D do HUD usa as MESMAS, e o dono delas continua sendo a mesa.
@@ -1598,6 +1800,15 @@ func _redesenhar(com_efeito: bool, dono_efeito: int = 0) -> void:
 	# Rotação LIVRE: valor fixo editável, sem nenhum cálculo da câmera. Mude
 	# TILT_MAO_LIVRE à vontade (graus no eixo X).
 	var mao0: Array = (_st.players[0] as Dictionary)["hand"]
+	# D78: na DISTRIBUIÇÃO as DUAS mãos animam, e na compra só a que comprou.
+	# `_preparar_entrada` e quem decide (`_distribuicao_ativa` está dentro dela),
+	# então aqui o `com_efeito` só precisa dizer que HÁ DISTRIBUIÇÃO em curso.
+	var compra0 := _preparar_entrada(0, mao0.size(), com_efeito and (dono_efeito == 0 or _distribuicao_ativa))
+	# `com_efeito and (dono_efeito == 0 or _distribuicao_ativa)`: na COMPRA só a
+	# mão que comprou anima (D53), e na DISTRIBUIÇÃO as duas. O `or` fica AQUI e
+	# não dentro de `_preparar_entrada` porque quem sabe se é compra é quem
+	# chamou o `_redesenhar` — e o `_distribuicao_ativa` precisa valer só no
+	# PRIMEIRO desenho, que é o que o próprio `_redesenhar` apaga no fim.
 	for i in range(mao0.size()):
 		var c := _fazer_carta(mao0[i] as Dictionary, false, false)
 		# Mão PEQUENA no rodapé (fase 2/doc 15 §15.3): o X acompanha o
@@ -1616,8 +1827,9 @@ func _redesenhar(com_efeito: bool, dono_efeito: int = 0) -> void:
 		c.set_meta("mao_dono", 0)
 		_no_cartas.add_child(c)
 		_pose_da_carta_da_mao(c, 0)
-		_animar_compra(c, 0, com_efeito, dono_efeito)
+		_marcar_entrada(compra0, c, i)
 	var mao1: Array = (_st.players[1] as Dictionary)["hand"]
+	var compra1 := _preparar_entrada(1, mao1.size(), com_efeito and (dono_efeito == 1 or _distribuicao_ativa))
 	for j in range(mao1.size()):
 		var v := _fazer_carta({}, true, false)
 		v.position = _pos_mao_arco(j, mao1.size(), 1)
@@ -1625,24 +1837,116 @@ func _redesenhar(com_efeito: bool, dono_efeito: int = 0) -> void:
 		v.set_meta("mao_dono", 1)
 		_no_cartas.add_child(v)
 		_pose_da_carta_da_mao(v, 1)
-		_animar_compra(v, 1, com_efeito, dono_efeito)
+		_marcar_entrada(compra1, v, j)
+	_tocar_entrada(compra0)
+	_tocar_entrada(compra1)
 	_atualizar_hud()
 	_posicionar_cursor()
+	# D78: a DISTRIBUIÇÃO é SÓ o primeiro desenho, e ela se desliga aqui. Quem
+	# segura o turno é a CONTAGEM (_cartas_voando), que a última carta zera —
+	# não outro booleano dizendo a mesma coisa.
+	_distribuicao_ativa = false
 
 
-## D53: A COMPRA ANIMADA É DA MÃO QUE COMPROU, e só dela. A carta nasce no
-## baralho do dono e voa (0,35 s) para o lugar dela na mão. A trava importa: se
-## a compra animasse sempre a mão de baixo, na vez do rival ela animaria o
-## LUGAR DE CIMA da tela dele e as cartas dele atravessariam a tela voando.
-func _animar_compra(carta: Node3D, dono: int, com_efeito: bool, dono_efeito: int) -> void:
-	# Sem trava de `_sem_render` de propósito (mesmo motivo do `_sacudir`): o
-	# tween é de 0,35 s e não depende de render, e assim o GUT vê QUEM animou.
-	if not com_efeito or dono != dono_efeito or carta == null or not is_instance_valid(carta):
+## A ENTRADA DE UMA CARTA NA MÃO é assunto do arquivo dela
+## (`entrada_mao_3d.gd`): quem mora aqui é o COMPRA — de que mão é, quantas cartas
+## entraram e de onde elas saem. Quem sabe o trajeto é o arquivo dele, e quem sabe
+## o lugar de cada carta é `_pos_mao_arco`.
+##
+## `n_antes` é de quantas cartas a mão era no DESENHO ANTERIOR, e é o que diz
+## quais são as NOVAS: a mão cresce, então tudo que está depois do número velho
+## acabou de entrar. Sem isto a animação não sabe voar só o que foi comprado —
+## e antes ela voava a MÃO INTEIRA de uma vez, que é o defeito que a compra tinha.
+func _preparar_entrada(dono: int, n: int, animar: bool) -> Dictionary:
+	var n_antes: int = int(_mao_n_desenhada.get(dono, n))
+	_mao_n_desenhada[dono] = n
+	# D78: na DISTRIBUIÇÃO a mão nasce com 5 cartas e não havia nada antes, então
+	# `n_antes` é ZERO para os dois lados. A animação é da compra E a soma das
+	# DUAS mãos é o que segura o turno, então o `_tocar_entrada` de cada lado
+	# escreve no mesmo `_entrada_duracao` e quem lê pega a maior.
+	var animando := animar and n > n_antes
+	if _distribuicao_ativa:
+		n_antes = 0
+		animando = n > 0
+	return {"dono": dono, "n": n, "n_antes": n_antes,
+		"novas": [] as Array, "deslizes": [] as Array, "animar": animando}
+
+
+## Junta a carta `no`, que já está no lugar final, na lista da compra: é NOVA se
+## apareceu depois do número velho, e é DESLIZO se já estava na mão.
+func _marcar_entrada(compra: Dictionary, no: Node3D, i: int) -> void:
+	if not bool(compra.get("animar", false)):
 		return
-	var alvo: Vector3 = carta.position
-	carta.position = _deck_pos[dono]
-	var tw := carta.create_tween().set_parallel(true)
-	tw.tween_property(carta, "position", alvo, 0.35).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	if i >= int(compra.get("n_antes", 0)):
+		(compra["novas"] as Array).append(no)
+		return
+	# Onde ela ESTAVA é o lugar dela na mão ANTES da compra: a mão é centrada, e
+	# o número de cartas é o que a recentra. Por isso o "de" sai do arco com o
+	# número velho, e não de um lugar guardado.
+	(compra["deslizes"] as Array).append(
+		{"no": no, "de": _pos_mao_arco(i, int(compra.get("n_antes", 0)), int(compra.get("dono", 0)))})
+
+
+## Pôr a carta na mão. Sem compra não há nada a fazer: o resto da tela não se
+## mexe por causa disto.
+##
+## O TEMPO que a entrada vai levar fica guardado aqui, e quem precisa esperar a
+## mão assentar lê dele — o dono do número é o arquivo da animação, e um número
+## "parecido" escrito aqui seria a segunda fonte da mesma medida.
+func _tocar_entrada(compra: Dictionary) -> void:
+	if not bool(compra.get("animar", false)):
+		return
+	var novas := compra["novas"] as Array
+	# D78: durante a DISTRIBUIÇÃO o pouso da carta tambem conta quem ainda esta
+	# voando, e a ÚLTIMA dispara o turno. E o `ao_assentar` da distribuição, e
+	# nao o da compra: a compra não espera ninguém (o turno dela já está
+	# aberto), e misturar os dois faria uma compra no meio da distribuição abrir
+	# um turno dentro da outra.
+	var ao_pousar := Callable(self, "_camada_da_mao_do_lugar")
+	print("[DBG] tocar dono=", int(compra.get("dono", 0)), " novas=", novas.size(), " voando=", _cartas_voando, " t=", Time.get_ticks_msec())
+	if _distribuicao_ativa:
+		_cartas_voando += novas.size()
+		ao_pousar = Callable(self, "_carta_da_distribuicao_assentou")
+	EntradaMao3D.tocar(novas, _deck_pos[int(compra.get("dono", 0))],
+		compra["deslizes"] as Array, ao_pousar)
+	# O TEMPO da entrada fica guardado para quem precisa esperar a mão assentar
+	# (a compra de um turno). A distribuição NÃO escreve aqui: ela não tem
+	# ninguém esperando por TEMPO — quem espera por ela é a última carta, que
+	# conta em `_cartas_voando`. Um número na mesa seria a segunda fonte da
+	# medida, e o dono é o arquivo da animação.
+	if not _distribuicao_ativa:
+		_entrada_duracao = maxf(_entrada_duracao, EntradaMao3D.duracao_total(novas.size()))
+
+
+## D78: UMA carta da distribuição pousou. Cada voo chama isto ao assentar (é o
+## `ao_assentar` da `entrada_mao_3d.gd`), e a ÚLTIMA abre o turno — porque só
+## depois que as DUAS mãos estão completas é que a moeda tem sobre o que falar.
+func _carta_da_distribuicao_assentou(no: Node3D) -> void:
+	_camada_da_mao_do_lugar(no)
+	_cartas_voando = maxi(_cartas_voando - 1, 0)
+	print("[DBG] assentou voando=", _cartas_voando, " t=", Time.get_ticks_msec())
+	if _cartas_voando > 0:
+		return
+	_distribuida.emit()
+
+
+## A entrada que ainda está voando (a última), e só uma vez: quem chama para
+## esperar limpa o número, senão uma pausa que não era de compra atrasaria o
+## duelo inteiro.
+func _duracao_da_entrada() -> float:
+	var d := _entrada_duracao
+	_entrada_duracao = 0.0
+	return d
+
+
+## A camada de mão é do LUGAR, e o lugar é da vista: quem está jogando fica
+## embaixo, o outro em cima. A carta que voltou de voar recebe a camada pelo
+## MESMO caminho de quem nunca saiu do lugar — por isso o dono da pose está aqui e
+## não no arquivo da animação.
+func _camada_da_mao_do_lugar(no: Node3D) -> void:
+	if no == null or not is_instance_valid(no) or not no.has_meta("mao_dono"):
+		return
+	_camada_da_mao(no, int(no.get_meta("mao_dono")) != _dono_do_lugar_perto())
 
 
 ## D52: aplica na carta da mão a POSE do lugar que ela ocupa na vista atual
@@ -1768,8 +2072,8 @@ func _posicionar_cursor() -> void:
 		FILEIRA_MAO:
 			var n: int = ((_st.players[0] as Dictionary)["hand"] as Array).size()
 			if n > 0:
-				# A moldura de foco fica NA CARTA (a mão é cortada pela borda
-				# de baixo; abaixo dela a moldura saía da tela virando um
+				# A moldura de foco fica NA CARTA (a mao é cortada pela borda
+				# de baixo; abaixo dela a moldura sai da tela virando um
 				# traço branco solto no canto).
 				alvo = _pos_mao_arco(clampi(_col, 0, n - 1), n, 0)
 				_moldar_foco(LARG_CARTA, ALT_CARTA, Vector3(TILT_MAO_LIVRE, 0, 0), LARG_CARTA)
@@ -2175,15 +2479,20 @@ func _construir_hud() -> void:
 	_painel = PainelCarta3D.new()
 	_painel.largura = PAINEL_ESQ_L
 	_painel.altura = TELA_A
-	_painel.janela_art = JANELA_ART
+	# As DUAS medidas da carta: a mesa e o unico dono delas, e o painel usa as
+	# mesmas para dar a proporcao real a janela 3D da carta (D70).
+	_painel.larg_carta = LARG_CARTA
+	_painel.alt_carta = ALT_CARTA
 	_painel.estado = Callable(self, "_pegar_estado")
 	_painel.cartas_de = Callable(self, "_pegar_cartas")
 	_painel.foco = Callable(self, "_carta_focada")
+	_painel.esperando_sorteio = Callable(self, "_tela_espera_a_moeda")
 	_painel.tex_cache = Callable(self, "_tex_cache")
 	_painel.cor_de_atributo = Callable(self, "_cor_atributo")
-	_painel.textura_arte = Callable(self, "_textura_arte")
-	_painel.moldura_da_carta = Callable(self, "_moldura_da_carta")
 	_painel.estrelas_da_carta = Callable(self, "_estrelas_da_carta")
+	# A carta do painel e a MESMA peca do campo: o painel recebe a operacao de
+	# montar, e a fabrica continua sendo de um dono so.
+	_painel.montar_carta = Callable(self, "_fazer_carta")
 	hud.add_child(_painel)
 
 
@@ -2303,6 +2612,29 @@ func _atualizar_hud() -> void:
 func _atualizar_painel_foco() -> void:
 	if _painel != null and is_instance_valid(_painel):
 		_painel.atualizar()
+
+
+## D80: a tela ainda esta esperando a MOEDA? E o que o painel e a navegacao
+## consultam. Um metodo e nao o booleano direto porque quem pergunta sao OUTROS
+## arquivos (o painel), e eles perguntam por `Callable` como todo o resto da tela.
+func _tela_espera_a_moeda() -> bool:
+	return _aguardando_sorteio
+
+
+## D80: EXISTE MOEDA NA TELHA neste duelo? E a pergunta de onde nasce a espera,
+## e a mesa e a unica que pode responder porque tem as DUAS fontes: o DADO do
+## duelo (`turn_order`) e a flag de PROVA `--mesa3d-moeda`, que existe para a
+## foto ser deterministica sem mudar quem ganhou (D42).
+##
+## E UM metodo e nao uma expressao solta no `_ready` porque tres coisas
+## dependem desta resposta (o painel, o marcador e a navegacao) e tres escritas
+## a mao divergem na primeira delas que alguem esquecer de atualizar. Numa tela
+## sem moeda nao existe espera: nao existe o que esconder, e o painel responde
+## desde o primeiro quadro.
+func _tem_sorteio_na_tela() -> bool:
+	if _st == null:
+		return false
+	return _moeda_forcada or str(_st.turn_order) == TURNO_MOEDA
 
 
 ## D44 (itens 3, 4 e 11): NÃO existe placa de contador solta na tela. O número
@@ -2998,12 +3330,11 @@ func _rival_auto() -> void:
 		_fala("Rival esta com a mao vazia neste turno.")
 	else:
 		_fala("Rival nao tem monstro na mao para invocar.")
-	# D53: a compra do turno é DELE, então a animação da compra é da mão DELE
-	# (que, com a D52, é o lugar de baixo da tela dele). Antes esta chamada
-	# animava a MÃO DO JOGADOR, que na tela do rival é o lugar de cima: as
-	# cartas dela saíam do baralho e atravessavam o campo voando.
-	_redesenhar(true, 1)
-	await get_tree().create_timer(0.7).timeout
+	# A invocação NÃO é compra: a carta desce da mão para o campo, e o redesenho
+	# é sem efeito. A compra do rival já foi desenhada em `_passar_turno`, depois
+	# que a câmera parou na perspectiva dele.
+	_redesenhar(false)
+	await get_tree().create_timer(maxf(PAUSA_RIVAL, _duracao_da_entrada())).timeout
 	if not is_inside_tree() or bool(_st.over):
 		_rival_rodando = false
 		_redesenhar(false)
@@ -3140,7 +3471,14 @@ func _passar_turno() -> void:
 	_sub_mao = SUB_MAO_ESCOLHA
 	var dono := int(_st.current_player)
 	var guarda := 0
-	while int(_st.current_player) == dono and not bool(_st.over) and guarda < 8:
+	# A ENTREGA DE VEZ fica para DEPOIS da volta. O motor troca o jogador e
+	# compra na MESMA chamada de `advance_phase` (fase END), então avançar até o
+	# fim é o que segura a compra: se ela saísse antes, a carta nova do rival
+	# aparecia na mão dele com a câmera ainda na SUA perspectiva — o jogador via
+	# a compra alheia na tela errada. Ninguém compra antes de a câmera parar na
+	# perspectiva de quem compra.
+	while String(_st.phase) != "END" and int(_st.current_player) == dono \
+			and not bool(_st.over) and guarda < 8:
 		_duel.advance_phase()
 		guarda += 1
 	if bool(_st.over):
@@ -3155,6 +3493,17 @@ func _passar_turno() -> void:
 	await _girar_campo(180.0)
 	if not is_inside_tree():
 		return
+	# A câmera já PAROU na perspectiva do rival. Agora sim a vez é entregue: o
+	# motor sorteia a fase e o rival compra, e a compra é desenhada aqui — na
+	# tela de quem comprou.
+	guarda = 0
+	while int(_st.current_player) == dono and not bool(_st.over) and guarda < 8:
+		_duel.advance_phase()
+		guarda += 1
+	if bool(_st.over):
+		_redesenhar(false)
+		return
+	_redesenhar(true, 1)
 	_rival_auto()
 
 
@@ -3647,11 +3996,16 @@ func _process(delta: float) -> void:
 			if _auto_passa_espera >= _auto_passa_em:
 				_auto_passa_espera = -1.0
 				_auto_passa()
-		if _foto_frames >= _foto_frame_alvo:
+		var alvo_quadro := _foto_em < 0.0 and _foto_frames >= _foto_frame_alvo
+		var alvo_tempo := false
+		if _foto_em_espera >= 0.0:
+			_foto_em_espera += delta
+			alvo_tempo = _foto_em_espera >= _foto_em
+		if alvo_quadro or alvo_tempo:
 			var img := get_viewport().get_texture().get_image()
 			img.save_png(_foto_destino)
-			_diag("Foto salva (quadro %d, volta %.0f graus): %s" % [
-				_foto_frames, _vista.giro_campo, _foto_destino])
+			_diag("Foto salva (quadro %d, %.2fs, volta %.0f graus): %s" % [
+				_foto_frames, _foto_em_espera, _vista.giro_campo, _foto_destino])
 			get_tree().quit()
 	if _cursor != null and is_instance_valid(_cursor):
 		var s := 1.0 + 0.04 * sin(_pulso)
@@ -3660,9 +4014,17 @@ func _process(delta: float) -> void:
 		return
 	# Repetição do direcional (igual ao 2D). D47: nada de andar o cursor
 	# enquanto a mesa está girando.
+	#
+	# D80: e NADA de andar o cursor enquanto a tela espera a moeda. Este e o
+	# caminho do ANALÓGICO, e é SEPARADO do `_unhandled_input` (o do teclado):
+	# o `set_input_as_handled` de lá só para a PROPAGAÇÃO do evento e não afeta o
+	# `Input.is_action_pressed` lido aqui (doc do motor, `set_input_as_handled`).
+	# Sem este guarda o direcional andava a carta durante o sorteio, e o painel
+	# mostraria o que estava sob o cursor: a mao do lado que ganhou, que e
+	# o spoiler de novo por outro caminho.
 	var dx := 0
 	var dy := 0
-	if not _vista.girando:
+	if not _vista.girando and not _aguardando_sorteio:
 		if Input.is_action_pressed("mover_esq"):
 			dx -= 1
 		if Input.is_action_pressed("mover_dir"):
@@ -3688,6 +4050,19 @@ func _process(delta: float) -> void:
 
 
 func _unhandled_input(evento: InputEvent) -> void:
+	# D77: com a moeda na tela, o controle responde a NADA — e o evento é
+	# CONSUMIDO (`set_input_as_handled`), não simplesmente ignorado. A diferença
+	# importa: um START apertado enquanto a moeda gira fica na fila, e quando a
+	# trava abre esse START começa o turno sem o jogador ter visto a moeda. A
+	# mão é justamente o que a moeda vai dizer que não é dele, então nada do
+	# que veio antes pode passar.
+	#
+	# D80: o guarda é o `_aguardando_sorteio` (a janela INTEIRA, do boot até a
+	# resposta) e não o instante da moeda. Com o instante, o teclado andava a
+	# carta durante a distribuição — que é a outra metade da mesma espera.
+	if _aguardando_sorteio:
+		get_viewport().set_input_as_handled()
+		return
 	# D47: com a mesa girando, o controle fica TRAVADO. Sem isto a carta focada
 	# andaria de um lado para o outro da tela no meio do giro, e um START
 	# passando por cima da volta quebraria a sequência.

@@ -34,6 +34,23 @@ const ARO := Color(0.36, 0.52, 0.92, 0.95)
 const COR_NUM := Color(1, 1, 1, 1)
 const FONTE_NUM := 34
 const FONTE_CONT := 30
+## D77: o ROXO da ESPERA. Nao e a cor de ninguem — e a cor da PERGUNTA. As
+## duas cores de lado (azul e vermelho) dizem QUEM esta jogando; enquanto a
+## moeda esta na tela ninguem esta jogando ainda, e uma celula de lado nessa
+## hora seria o jogo affirmando antes de o motor affirmar. A mistura das duas
+## cores de lado em luz e o que o roxo e (o vermelho e o azul juntos nao se
+## cancelam: nao e subtrativa, e aditiva).
+const COR_ROXO_BORDA := Color(0.72, 0.44, 0.78, 0.98)
+const COR_ROXO_FUNDO := Color(0.55, 0.31, 0.57, 0.86)
+## O AMBAR do "?". E a cor da MOEDA (`moeda_3d.gd`), e sao a mesma por um motivo
+## que e leitura, nao gosto: o "?" e a pergunta e a moeda e a resposta, e a
+## mesma cor amarra as duas na cabeça de quem assiste sem precisar de texto.
+const COR_PERGUNTA := Color(1.0, 0.72, 0.34)
+## O periodo do PULSO do "?", em segundos. O dono: e o dono da URGENCIA da
+## espera. Um "?" parado parece numero travado; um "?" piscando devagar parece
+## uma espera que vai durar para sempre. Meio segundo e o batida que o olho le
+## como vivo sem ficar nervoso.
+const PULSO_PERGUNTA := 0.5
 ## Cores de identidade: azul = voce, vermelho = rival, preto = os DOIS
 ## cemiterios. O DONO delas e a mesa (a tela inteira usa os mesmos tres
 ## conjuntos - a faixa, os retratos e a placa de nome), entao a faixa recebe em
@@ -72,6 +89,25 @@ var _num_turno: Label = null
 var _num_lp_rival: Label = null
 var _num_cem_rival: Label = null
 var _num_deck_rival: Label = null
+## D77: enquanto a moeda esta na tela, a celula do TURNAO mostra "?" no roxo em
+## vez do numero do turno. E um ESTADO e nao uma conta: quem sabe que a moeda
+## esta na tela e a mesa, e o numero do turno nao muda por causa disso — o que
+## muda e o que a celula DIZ enquanto a resposta nao saiu.
+## D79: a espera e a JANELA INTEIRA, do primeiro quadro ate a moeda sumir, porque
+## e nela que o spoiler acontece: o motor ja sabe quem comeca antes de a moeda
+## girar (D42), entao comecar a esperar so quando a moeda entra dava a resposta
+## ANTES — o bloco ja estava azul ou vermelho enquanto a distribuicao voava.
+##
+## D80: este booleano NASCE FALSO e quem o liga e a MESA, porque a marca de
+## espera e uma representacao da moeda: quem decide se existe moeda na tela e a
+## unica que a manda aparecer. Nascer verdadeiro faria o `?` em TODO duelo, e
+## num duelo `first_p1` nao ha moeda, nao ha pergunta e a resposta pode aparecer
+## desde o primeiro quadro.
+var _esperando_sorteio := false
+## O tween do pulso do "?", guardado para poder PARAR quando a espera acaba. Um
+## pulso que continua depois do "?" virar "1" deixa o numero respirando, e um
+## numero que respira parece que ainda esta changing.
+var _pulso: Tween = null
 
 
 ## Monta a faixa dentro do HUD. `hud` e o Control do HUD (a barra vira filha
@@ -128,7 +164,11 @@ func construir(hud: Control) -> void:
 	_arte_cem_rival = cel_cem_rival.get_node("Caixa/Arte") as TextureRect
 	_num_cem_rival = cel_cem_rival.get_node("Caixa/Numero") as Label
 
-	atualizar()
+	# D80: a espera NAO se decide aqui, e a mesa que chama `esperar_sorteio`
+	# logo depois de montar a faixa — num duelo sem moeda o "?" nunca chega a
+	# existir. E o pulso do "?" nasce junto com ele: os dois tem de aparecer no
+	# mesmo quadro, senao o primeiro "?" ficaria parado ate a moeda comecar, que
+	# e quando o jogador ja esta olhando para ele.
 	if avisar.is_valid():
 		avisar.call("Faixa 2D: 7 celulas em x=%.0f..%.0f y=%.0f..%.0f (vao das fileiras %.0f..%.0f px)." % [
 			x0, x0 + larg, y, y + alt, y_topo, y_base])
@@ -260,14 +300,63 @@ func atualizar() -> void:
 	if _num_turno != null:
 		if bool(st.over):
 			_num_turno.text = "VITORIA!" if int(st.winner) == 0 else "DERROTA"
+		elif _esperando_sorteio:
+			# D77: enquanto a moeda esta na tela, o TURNO e uma PERGUNTA. E o "?"
+			# que o jogador ve, e nao o numero: mostrar o numero agora seria
+			# deixar o contador adivinhar a face antes de a moeda virar.
+			_num_turno.text = "?"
+			_num_turno.add_theme_color_override("font_color", COR_PERGUNTA)
 		else:
 			_num_turno.text = "%d" % int(st.turn_number)
+			_num_turno.add_theme_color_override("font_color", COR_NUM)
 	_tingir_turno(st)
 
 
+## D77: a mesa avisa que a moeda entrou (ou saiu) e a faixa responde. Esta e a
+## UNICA forma de entrar no estado de espera: a faixa nao olha a camera nem a
+## moeda, ela nao sabe que a moeda existe. Quem sabe e a mesa, porque quem
+## Mandou a moeda aparecer foi a mesa.
+func esperar_sorteio(ligado: bool) -> void:
+	_esperando_sorteio = ligado
+	# O pulso do "?" so existe na espera: quando a celula volta a mostrar o
+	# numero, um tween vivo ainda mexendo nela seria um numero que continua
+	# respirando depois de virar numero.
+	if _pulso != null and _pulso.is_valid():
+		_pulso.kill()
+	_pulso = null
+	if _num_turno != null and is_instance_valid(_num_turno):
+		# D79: o numero volta com o ALPHA CHEIO. O pulso escreve em `modulate`, e
+		# matar o tween deixa o `modulate` no ultimo valor escrito (0.35) — e um
+		# numero com alpha 0.35 sobre o fundo escuro da celula sai CINZA. O
+		# branco do numero (D45) e a cor da fonte; o `modulate` e a transparencia
+		# por cima dela, e ele nao pode sobreviver a virada.
+		_num_turno.modulate.a = 1.0
+	if ligado and _num_turno != null and is_instance_valid(_num_turno):
+		_pulso = create_tween().set_loops()
+		_pulso.tween_method(Callable(self, "_pulso_para"), 0.35, 1.0, PULSO_PERGUNTA) \
+			.set_trans(Tween.TRANS_SINE)
+		_pulso.tween_method(Callable(self, "_pulso_para"), 1.0, 0.35, PULSO_PERGUNTA) \
+			.set_trans(Tween.TRANS_SINE)
+	atualizar()
+
+
+## O ALPHA do "?". O `tween_method` entrega SO o `t`, entao o valor entra
+## inteiro — e o `t` e uma Beatriz de 0 a 1, entao o alpha e o valor.
+func _pulso_para(a: float) -> void:
+	if _num_turno != null and is_instance_valid(_num_turno):
+		_num_turno.modulate.a = a
+
+
 ## D45 (item 7): a celula do TURNO muda de cor com quem esta jogando.
+## D77: durante o sorteio ela NAO muda para lado nenhum — ela e roxa, a cor da
+## espera, porque a moeda ainda nao disse de quem e a vez e a cor de lado aqui
+## seria o jogo affirmando o que o motor ainda vai sortear.
 func _tingir_turno(st) -> void:
 	if _turno_cel == null or not is_instance_valid(_turno_cel):
+		return
+	if _esperando_sorteio:
+		_turno_cel.add_theme_stylebox_override("panel", _estilo_celula(
+			COR_ROXO_BORDA, COR_ROXO_FUNDO))
 		return
 	var meu: bool = int(st.current_player) == 0
 	_turno_cel.add_theme_stylebox_override("panel", _estilo_celula(
