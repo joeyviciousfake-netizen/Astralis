@@ -182,7 +182,7 @@ func test_a_moeda_e_tinta_sem_luz_como_o_resto_da_tela() -> void:
 	assert_not_null(malha, "A malha existe.")
 	# A cena do duelo nao tem iluminacao e nao vai ter, entao um material PBR
 	# importado do `.glb` sai PRETO. Todo material da peca e UNSHADED, que e o
-	# mesmo modo de todas as cartas, do vidro, do ceu e da nuvem: e o que faz a
+	# mesmo modo de todas as cartas e do vidro: e o que faz a
 	# moeda aparecer na cor que o Blender mostra.
 	var vistas := 0
 	for s in malha.get_surface_count():

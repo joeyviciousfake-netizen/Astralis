@@ -70,10 +70,11 @@ func test_sem_mesa_nenhum_no_de_mesa() -> void:
 		var nome := str((n as Node).name)
 		assert_false(nome in NOS_PROIBIDOS, "Nó de mesa proibido ausente: " + nome)
 		assert_false(nome.begins_with("Marca_"), "Sem Marca_ de slot: " + nome)
-	# Fundo = céu azul GX sem neblina (neblina lavava a cena): só Sky.
+	# Fundo sólido escuro, sem céu: a câmera olha o chão o duelo inteiro, então
+	# céu, pilares e nuvens saíram (só custavam GPU).
 	var we := _n3d(mesa, "WorldEnvironment") as WorldEnvironment
 	assert_true(we != null, "WorldEnvironment existe.")
-	assert_eq(we.environment.background_mode, Environment.BG_SKY, "Fundo é céu (Sky).")
+	assert_eq(we.environment.background_mode, Environment.BG_COLOR, "Fundo é cor sólida, sem Sky.")
 	assert_false(we.environment.fog_enabled, "Sem neblina (lava os painéis).")
 
 
@@ -81,7 +82,7 @@ func test_nos_chave_3d_existem() -> void:
 	var mesa: Node = await _mesa3d_nova()
 	for caminho in ["PivoMesa/Camera3D", "WorldEnvironment",
 			"Campo", "Campo/Slots", "Campo/Laterais",
-			"Cartas", "Cursor3D", "Ceu"]:
+			"Cartas", "Cursor3D"]:
 		assert_true(_n3d(mesa, caminho) != null, "Nó-chave 3D existe: " + caminho)
 	for lbl in ["HUD", "HUD/FlashTela", "HUD/Faixa2D", "Camada3D", "Camada3D/JanelaCampo"]:
 		assert_true(mesa.get_node_or_null(NodePath(lbl)) != null, "Nó-chave existe: " + lbl)
@@ -942,9 +943,7 @@ func test_painel_esquerdo_carta_focada() -> void:
 	assert_eq(virada.rotation_degrees, Vector3(0.0, 180.0, 0.0),
 		"Sem dado, a carta vira de costas: o verso e o que se ve (nada de dado inventado).")
 	virada.free()
-	assert_true(_n3d(mesa, "Ceu") != null, "Céu azul existe.")
-	var filhos_ceu := (_n3d(mesa, "Ceu") as Node3D).get_child_count()
-	assert_true(filhos_ceu >= 24, "Céu com pilares + nuvens (10 + 14): %d." % filhos_ceu)
+	assert_true(_n3d(mesa, "Ceu") == null, "Sem nó de céu: pilares e nuvens saíram.")
 
 
 ## Os nomes das pecas de uma carta, na ordem em que a fabrica as cria. E o que o
@@ -1506,7 +1505,6 @@ func test_d44_lp_e_turno_da_faixa_vem_do_estado_real() -> void:
 	assert_true(_n3d(mesa, "Campo/Faixa") == null, "D45: a faixa do meio saiu do 3D.")
 	assert_true(mesa.get_node_or_null(NodePath("HUD/Faixa2D")) != null, "A faixa do meio continua, agora em 2D no HUD.")
 	assert_true(_n3d(mesa, "Cursor3D") != null, "O cursor (foco) continua.")
-	# O céu é o cenário, não lixo de campo: continua lá.
-	assert_true(_n3d(mesa, "Ceu") != null, "Céu azul existe.")
-	var filhos_ceu := (_n3d(mesa, "Ceu") as Node3D).get_child_count()
-	assert_true(filhos_ceu >= 24, "Céu com pilares + nuvens (10 + 14): %d." % filhos_ceu)
+	# Sem cenário: a câmera olha o chão o duelo inteiro, então céu, pilares e
+	# nuvens saíram — só cenário, sem regra.
+	assert_true(_n3d(mesa, "Ceu") == null, "Sem nó de céu.")
