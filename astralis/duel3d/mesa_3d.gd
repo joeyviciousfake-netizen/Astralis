@@ -53,7 +53,7 @@ const TOPO := 0.35
 ## campo ocupa x 29,3%..99,9% da tela (encosta na direita), as fileiras
 ## caem em 17/30/49/67% de cima p/ baixo e o vão do meio (onde entra a
 ## barra de fases da ref) fica em ~10% da altura.
-const ESCALA_CAMPO := 1.23
+const ESCALA_CAMPO := 1.06
 const DESLOC_CAMPO := Vector2(0.0, -0.07)
 ## Câmera FIXA, sem órbita/balanço. Subir/afastar o FOV é
 ## alavanca de DESENHO autorizada (doc 15 §15.5): os valores abaixo são os
@@ -1055,7 +1055,7 @@ func _caixa(nome: String, tamanho: Vector3, pos: Vector3, material: Material) ->
 
 
 func _construir_campo() -> void:
-	# O CAMPO DE VIDRO (os 20 paineis + o guarda-chuva das laterais): o no e
+	# O CAMPO DE VIDRO (os 24 paineis + o guarda-chuva das laterais): o no e
 	# o arquivo dele (`campo_3d.gd`). Quem sabe ONDE o vidro fica e o arquivo;
 	# quem sabe a medida do DADO (a posicao de cada slot em XZ) e a mesa.
 	_campo = Campo3D.new()
@@ -1065,6 +1065,8 @@ func _construir_campo() -> void:
 	_campo.topo = TOPO
 	_campo.escala_campo = ESCALA_CAMPO
 	_campo.peca_prof_cartas = PECA_PROF_CARTAS
+	_campo.larg_carta = LARG_CARTA
+	_campo.alt_carta = ALT_CARTA
 	_vp.add_child(_campo)
 	_no_cartas = Node3D.new()
 	_no_cartas.name = "Cartas"
@@ -1082,7 +1084,7 @@ func _construir_campo() -> void:
 	_cursor.caixa = Callable(self, "_caixa")
 	_cursor.position = Vector3(0, TOPO, _ponto_lateral(0.0, 0.0, 4.15).z)
 	_vp.add_child(_cursor)
-	_diag("Campo: 20 painéis + faixa do meio (7 itens) + Cursor3D.")
+	_diag("Campo: 24 painéis + faixa do meio (7 itens) + Cursor3D.")
 
 
 func _peca_prof_carta() -> float:
@@ -1115,8 +1117,8 @@ func _pos_slot(lado: int, tipo: String, indice: int) -> Vector3:
 	if p2 == BoardLayoutScript.NULO:
 		push_warning("[MESA3D] Slot '%s' sem posição na arena oficial (D50: sem grade no código)." % sid)
 		p2 = Vector2(BoardLayoutScript.NULO.x, BoardLayoutScript.NULO.y)
-	# D49: a conversão é PURA e igual para os 4 tipos de slot (monstro/magia,
-	# jogador/rival). O vão vertical monstro->magia é o do DADO (263 = o mesmo
+	# D49: a conversão é PURA e igual para os 6 tipos de slot (monstro/magia/
+	# deck/cemitério, jogador/rival). O vão vertical monstro->magia é o do DADO (263 = o mesmo
 	# do passo horizontal) e a fileira de monstro fica exatamente onde o dado
 	# diz. Não existe nenhum desvio por tipo aqui: se a tela mostrar um vão
 	# torto, a causa é a perspectiva da câmera (doc 15 §15.4), não este código.
@@ -1761,6 +1763,32 @@ func _redesenhar(com_efeito: bool, dono_efeito: int = 0) -> void:
 				carta.set_meta("slot_id", "p%d_%s%d" % [lado, ("m" if zona_nome == "monster" else "s"), i])
 				carta.set_meta("card_id", str(m.get("card_id", "")))
 				_no_cartas.add_child(carta)
+	# As 4 PILHAS (só desenho, zero regra): o baralho de cada lado deitado de
+	# costas no `d0`, e a última carta do cemitério de cada lado aberta em cima
+	# do `g0`. Pilha vazia = só o vidro. O baralho e o cemitério continuam
+	# sendo as listas do estado (o dado não muda aqui); o cursor não anda nas
+	# pilhas.
+	for lado_pilha in [0, 1]:
+		var deck: Array = _lista_do_jogador(lado_pilha, "deck")
+		if not deck.is_empty():
+			var dorso := _fazer_carta({}, true, false)
+			dorso.scale = Vector3.ONE * ESCALA_CAMPO
+			dorso.position = _pos_slot(lado_pilha, "deck", 0) + Vector3(0, 0.015 * ESCALA_CAMPO, 0)
+			_deitar_carta(dorso, true, false, lado_pilha)
+			dorso.set_meta("slot_id", "p%d_d0" % lado_pilha)
+			_no_cartas.add_child(dorso)
+		var cem: Array = _lista_do_jogador(lado_pilha, "graveyard")
+		if not cem.is_empty():
+			var cid := str(cem[cem.size() - 1])
+			if not cid.is_empty() and _cartas.has(cid):
+				var dado: Dictionary = _cartas[cid] as Dictionary
+				var topo := _fazer_carta(dado, false, false)
+				topo.scale = Vector3.ONE * ESCALA_CAMPO
+				topo.position = _pos_slot(lado_pilha, "cemiterio", 0) + Vector3(0, 0.015 * ESCALA_CAMPO, 0)
+				_deitar_carta(topo, false, false, lado_pilha)
+				topo.set_meta("slot_id", "p%d_g0" % lado_pilha)
+				topo.set_meta("card_id", cid)
+				_no_cartas.add_child(topo)
 	# Mãos em arco: DUAS na tela, uma embaixo e outra em cima, e QUEM ESTÁ
 	# JOGANDO é a de baixo (D52). O que decide o lugar é a VISTA (o
 	# `giro_campo` do no da vista, pelos 90°), e a troca acontece com a tela sem

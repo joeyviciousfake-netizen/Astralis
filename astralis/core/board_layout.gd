@@ -105,8 +105,9 @@ static func get_hand(arena_ou_hand: Dictionary, lado: int) -> Dictionary:
 
 
 ## ID fixo do slot. lado: 0 = p0/você-baixo, 1 = p1/rival-cima.
-## tipo: "monstro"/"m" -> m, "magia"/"s" -> s. indice: 0..4.
-## Volta "" se inválido.
+## tipo: "monstro"/"m" -> m, "magia"/"s" -> s (índice 0..4);
+## "deck"/"d" -> d (pilha do baralho), "cemiterio"/"g" -> g (pilha do
+## cemitério), sempre índice 0. Volta "" se inválido.
 static func slot_id(lado: int, tipo: String, indice: int) -> String:
 	var prefixo := "p1" if lado == 1 else "p0"
 	var t := tipo.strip_edges().to_lower()
@@ -115,14 +116,22 @@ static func slot_id(lado: int, tipo: String, indice: int) -> String:
 		letra = "m"
 	elif t == "s" or t == "magia":
 		letra = "s"
+	elif t == "d" or t == "deck" or t == "baralho":
+		letra = "d"
+	elif t == "g" or t == "cemiterio" or t == "cemitério" or t == "graveyard":
+		letra = "g"
 	else:
 		return ""
+	if letra == "d" or letra == "g":
+		if indice != 0:
+			return ""
+		return "%s_%s0" % [prefixo, letra]
 	if indice < 0 or indice > 4:
 		return ""
 	return "%s_%s%d" % [prefixo, letra, indice]
 
 
-## Diz se o ID segue o contrato: p0/p1 + _ + m/s + 0-4.
+## Diz se o ID segue o contrato: p0/p1 + _ + m/s + 0-4, ou d0/g0 de pilha.
 static func eh_slot_valido(slot: String) -> bool:
 	if slot.length() != 5:
 		return false
@@ -132,11 +141,11 @@ static func eh_slot_valido(slot: String) -> bool:
 		return false
 	if slot[2] != "_":
 		return false
-	if slot[3] != "m" and slot[3] != "s":
-		return false
-	if slot[4] < "0" or slot[4] > "4":
-		return false
-	return true
+	if slot[3] == "m" or slot[3] == "s":
+		return slot[4] >= "0" and slot[4] <= "4"
+	if slot[3] == "d" or slot[3] == "g":
+		return slot[4] == "0"
+	return false
 
 
 ## D50: NAO EXISTE MAIS GRADE NO CODIGO. Este arquivo era o segundo lugar (e o
@@ -154,7 +163,7 @@ static func default_pos(_slot: String) -> Vector2:
 	return NULO
 
 
-## Os 20 IDs esperados -> Vector2 do DADO (a arena oficial). Sem layout, tudo
+## Os 24 IDs esperados -> Vector2 do DADO (a arena oficial). Sem layout, tudo
 ## NULO: e assim que o jogo percebe que o arquivo nao veio, em vez de desenhar
 ## uma grade imaginaria.
 static func default_layout() -> Dictionary:
@@ -165,6 +174,8 @@ static func default_layout() -> Dictionary:
 			var id_s := slot_id(lado, "magia", i)
 			out[id_m] = NULO
 			out[id_s] = NULO
+		out[slot_id(lado, "deck", 0)] = NULO
+		out[slot_id(lado, "cemiterio", 0)] = NULO
 	return out
 
 
@@ -176,7 +187,7 @@ static func starter_arena_path() -> String:
 
 
 ## `schemas/examples/arenas/arena_starter.json` e a MESMA mesa que o jogo
-## desenha (20 slots + mao p0/p1). NAO existe mais nenhuma outra arena:
+## desenha (24 slots + mao p0/p1). NAO existe mais nenhuma outra arena:
 ## nem no codigo (as grades do `board_layout.gd` e do `duel_legacy2d/
 ## duel_board.gd` foram apagadas) nem por projeto (o projeto nao tem mais
 ## pasta `arenas/`; o D50 tirou o override por projeto).
@@ -226,7 +237,7 @@ static func get_pos(layout: Dictionary, slot: String, fallback: Vector2 = NULO) 
 	return fallback
 
 
-## Confere que a arena oficial tem os 20 slots. D50: como não existe mais
+## Confere que a arena oficial tem os 24 slots. D50: como não existe mais
 ## grade no código, um arquivo faltando ou quebrado é um ERRO DE VERDADE —
 ## devolve a lista do que falta e a mesa não inventa posição nenhuma.
 static func valida_arena_oficial(slots: Dictionary) -> Array:
@@ -238,8 +249,12 @@ static func valida_arena_oficial(slots: Dictionary) -> Array:
 				var p := get_pos(slots, sid)
 				if p == NULO:
 					faltando.append(sid)
+		for pilha in ["deck", "cemiterio"]:
+			var pid := slot_id(lado, pilha, 0)
+			if get_pos(slots, pid) == NULO:
+				faltando.append(pid)
 	if faltando.is_empty():
-		print("[ARENA] Arena oficial OK: 20 slots, uma mesa só (D50).")
+		print("[ARENA] Arena oficial OK: 24 slots, uma mesa só (D50).")
 	else:
 		push_warning("[ARENA] A arena oficial está com %d slot(s) faltando: %s. "
 			% [faltando.size(), str(faltando)]
@@ -281,8 +296,8 @@ static func load_arena_data(path: String) -> Dictionary:
 		return vazio
 	var layout: Dictionary = {}
 	var lista: Array = dados["slots"]
-	if lista.size() != 20:
-		push_warning("[ARENA] Arena oficial precisa de 20 slots, achou %d em %s." % [lista.size(), path])
+	if lista.size() != 24:
+		push_warning("[ARENA] Arena oficial precisa de 24 slots, achou %d em %s." % [lista.size(), path])
 	for item in lista:
 		if not (item is Dictionary):
 			push_warning("[ARENA] Slot inválido ignorado (esperava objeto com slot_id/x/y).")
@@ -293,7 +308,7 @@ static func load_arena_data(path: String) -> Dictionary:
 			continue
 		var sid := str(d.get("slot_id", ""))
 		if not eh_slot_valido(sid):
-			push_warning("[ARENA] Slot com ID inválido '%s' ignorado (esperava p0/p1 + m/s + 0-4)." % sid)
+			push_warning("[ARENA] Slot com ID inválido '%s' ignorado (esperava p0/p1 + m/s + 0-4 ou d0/g0)." % sid)
 			continue
 		if layout.has(sid):
 			push_warning("[ARENA] Slot duplicado '%s' ignorado (vale o primeiro)." % sid)

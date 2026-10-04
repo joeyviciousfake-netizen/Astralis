@@ -87,9 +87,9 @@ func test_nos_chave_3d_existem() -> void:
 	for lbl in ["HUD", "HUD/FlashTela", "CamadaFaixa/Faixa2D", "CamadaFundo", "Camada3D", "Camada3D/JanelaCampo"]:
 		assert_true(mesa.get_node_or_null(NodePath(lbl)) != null, "Nó-chave existe: " + lbl)
 	assert_true((_n3d(mesa, "PivoMesa/Camera3D") as Camera3D).current, "Camera3D é a atual.")
-	# 20 painéis flutuantes (5+5 por lado), cada um com base escura + borda.
+	# 24 painéis flutuantes (5+5 por lado + 2 pilhas por lado), cada um com base escura + borda.
 	var paineis := (_n3d(mesa, "Campo/Slots") as Node3D).get_children()
-	assert_eq(paineis.size(), 20, "20 painéis de slot (5+5 por lado, espelho do 2D).")
+	assert_eq(paineis.size(), 24, "24 painéis (5+5 por lado + baralho e cemitério de cada lado).")
 	for p in paineis:
 		assert_true(str((p as Node).name).begins_with("Painel_p"), "Painel flutuante: " + str((p as Node).name))
 		assert_true((p as Node).get_node_or_null(NodePath("Base")) != null, "Painel tem base escura: " + str((p as Node).name))
@@ -114,9 +114,9 @@ func test_nos_chave_3d_existem() -> void:
 func test_estado_real_reflete_no_campo_3d() -> void:
 	var mesa: Node = await _mesa3d_nova()
 	var st = mesa.get("_st")
-	# Leitura: 10 cartas desenhadas (5 abertas p0 + 5 de costas p1), campo vazio.
+	# Leitura: 12 cartas desenhadas (5 abertas p0 + 5 de costas p1 + 2 dorsos de baralho), campo vazio.
 	var desenhadas: int = (_n3d(mesa, "Cartas") as Node3D).get_child_count()
-	assert_eq(desenhadas, 10, "Campo 3D desenha as 10 da mão (5 abertas + 5 de costas).")
+	assert_eq(desenhadas, 12, "Campo 3D desenha as 10 da mão + os 2 baralhos.")
 	# Escrita SÓ pelo sistema real: invoca de verdade e redesenha.
 	var idx: int = _indice_monstro_na_mao(st, 0)
 	assert_true(idx >= 0, "Preparo: mão p0 tem monstro.")
@@ -567,9 +567,9 @@ func test_d49_grade_perfeita_um_valor_so_e_mao_vem_para_a_camera() -> void:
 	var div: float = float(mesa.get("DIV"))
 	var topo: float = float(mesa.get("TOPO"))
 
-	# --- 1. Os 20 slots são o DADO PURO: nenhum desvio por tipo de slot ------
+	# --- 1. Os 24 slots são o DADO PURO: nenhum desvio por tipo de slot ------
 	# O teste recalcula o transform ESCALA_CAMPO/DESLOC_CAMPO do jeito que o
-	# jogo faz e exige igualdade EXATA nos 20 (o D44 deslocava a fileira de
+	# jogo faz e exige igualdade EXATA nos 24 (o D44 deslocava a fileira de
 	# magia com dois números chutados; não existe mais nada disso).
 	for lado in [0, 1]:
 		for tipo in ["monstro", "magia"]:
@@ -583,6 +583,16 @@ func test_d49_grade_perfeita_um_valor_so_e_mao_vem_para_a_camera() -> void:
 					"%s p%d_%d no X puro do dado." % [tipo, lado, i])
 				assert_almost_eq(real.z, puro.z, 0.000001,
 					"%s p%d_%d no Z puro do dado (sem desvio escondido)." % [tipo, lado, i])
+		for pilha in ["deck", "cemiterio"]:
+			var pid := BoardLayout.slot_id(lado, pilha, 0)
+			var p3: Vector2 = BoardLayout.get_pos(lay, pid, BoardLayout.default_pos(pid))
+			var puro_p := Vector3((p3.x - c_x) / div * escala + desl.x, topo,
+				(p3.y - c_y) / div * escala + desl.y)
+			var real_p: Vector3 = mesa.call("_pos_slot", lado, pilha, 0)
+			assert_almost_eq(real_p.x, puro_p.x, 0.000001,
+				"Pilha %s p%d no X puro do dado." % [pilha, lado])
+			assert_almost_eq(real_p.z, puro_p.z, 0.000001,
+				"Pilha %s p%d no Z puro do dado (sem desvio escondido)." % [pilha, lado])
 
 	# --- 2. UM VALOR SÓ: o mesmo intervalo nas 6 direções do campo -----------
 	# O valor de referência é o passo horizontal entre dois monstros vizinhos
@@ -602,6 +612,19 @@ func test_d49_grade_perfeita_um_valor_so_e_mao_vem_para_a_camera() -> void:
 		var zs: Vector3 = mesa.call("_pos_slot", lado, "magia", 2)
 		assert_almost_eq(absf(zs.z - zm.z), ref, 0.000001,
 			"Vão vertical monstro->magia de p%d = %.4f = o passo horizontal (%.4f)." % [lado, absf(zs.z - zm.z), ref])
+		# As pilhas ficam com o MESMO vao de vidro dos slots (o vidro da pilha
+		# e menor, entao o centro fica a 228.5 da coluna da ponta).
+		var m_esq: Vector3 = mesa.call("_pos_slot", lado, "monstro", 0)
+		var m_dir: Vector3 = mesa.call("_pos_slot", lado, "monstro", 4)
+		var x_min := minf(m_esq.x, m_dir.x)
+		var x_max := maxf(m_esq.x, m_dir.x)
+		var pdeck: Vector3 = mesa.call("_pos_slot", lado, "deck", 0)
+		var pcem: Vector3 = mesa.call("_pos_slot", lado, "cemiterio", 0)
+		var ref_pilha := 228.5 / 150.0 * float(mesa.get("ESCALA_CAMPO"))
+		assert_almost_eq(absf(pdeck.x - x_max), ref_pilha, 0.000001,
+			"Baralho p%d junto do campo com o mesmo vao." % lado)
+		assert_almost_eq(absf(x_min - pcem.x), ref_pilha, 0.000001,
+		"Cemitério p%d junto do campo com o mesmo vao." % lado)
 		# E a ordem das fileiras continua a do dado: magia de p0 ABAIXO do
 		# monstro dele, magia de p1 ACIMA do monstro dele.
 		if lado == 0:
@@ -1509,7 +1532,7 @@ func test_d44_lp_e_turno_da_faixa_vem_do_estado_real() -> void:
 	assert_eq(achados.size(), 0, "Nenhum desenho solto no campo: %s" % str(achados))
 	# Os 4 ladrilhos + o cursor continuam (o que é necessário p/ jogar) e a
 	# faixa do meio virou 2D (D45), então ela vive na camada de trás.
-	assert_eq((_n3d(mesa, "Campo/Slots") as Node3D).get_child_count(), 20, "As 4 fileiras continuam (20 ladrilhos).")
+	assert_eq((_n3d(mesa, "Campo/Slots") as Node3D).get_child_count(), 24, "As 4 fileiras + 4 pilhas continuam (24 peças).")
 	assert_true(_n3d(mesa, "Campo/Faixa") == null, "D45: a faixa do meio saiu do 3D.")
 	assert_true(mesa.get_node_or_null(NodePath("CamadaFaixa/Faixa2D")) != null, "A faixa do meio continua, agora em 2D na camada de trás.")
 	assert_true(_n3d(mesa, "Cursor3D") != null, "O cursor (foco) continua.")

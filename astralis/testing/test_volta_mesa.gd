@@ -601,13 +601,13 @@ func test_as_cartas_do_campo_nao_se_mexem_na_volta() -> void:
 	var st = mesa.get("_st")
 	await _campo_cheio(mesa, st)
 	var antes := _posicoes(mesa)
-	assert_eq(antes.size(), 10, "Preparo: as 10 cartas do campo estao desenhadas.")
-	if antes.size() < 10:
+	assert_eq(antes.size(), 12, "Preparo: as 10 do campo + os 2 dorsos de baralho estao desenhados.")
+	if antes.size() < 12:
 		return
 	mesa.call("_girar_campo", 180.0)
 	await wait_process_frames(2)
 	var depois := _posicoes(mesa)
-	assert_eq(depois.size(), 10, "Depois da volta as 10 cartas continuam desenhadas.")
+	assert_eq(depois.size(), 12, "Depois da volta as 12 cartas continuam desenhadas.")
 	for sid in antes:
 		assert_true(depois.has(sid), "A carta %s continua desenhada depois da volta." % sid)
 		if not depois.has(sid):

@@ -3,7 +3,7 @@ extends "res://testing/astralis_test_base.gd"
 ## test_mesa_6bugs - GUT permanente dos 6 bugs da mesa (so controle/desenho,
 ## sem regra nova). Roda na mesa 3D REAL, a oficial (D40).
 ## (2) popup da estrela ACIMA da carta central (menu por cima, carta visivel);
-## (3) navegacao alcanca as 4 fileiras do campo (20 slots, magia inclusa);
+## (3) navegacao alcanca as 4 fileiras do campo (20 slots navegaveis, magia inclusa; as 4 pilhas sao so desenho);
 ## (5) cima no topo e baixo na base nao saem dos slots (nunca na mao);
 ## (6) rival vazio -> menu oferece o LP (dano ATK cheio via Battle real) e o
 ##     rival automATico ataca direto quando seu campo esta vazio.
@@ -72,7 +72,8 @@ func test_bug2_popup_estrela_acima_da_carta_central() -> void:
 
 func test_bug3_navegacao_alcanca_4_fileiras_20_slots() -> void:
 	# (3) Fase de campo anda SO nos 20 slots: 2 de monstro + 2 de magia
-	# (proprias + rival), na ordem VISUAL de cima para baixo.
+	# (proprias + rival), na ordem VISUAL de cima para baixo. As pilhas
+	# (baralho/cemiterio) sao desenho e o cursor nao anda nelas.
 	var mesa = await _mesa3d_nova()
 	var fim: Dictionary = _fluxo3d_ate_campo(mesa, false, 0)
 	assert_eq(int(mesa.get("_fase_jogador")), FASE_CAMPO, "Preparo: fase de campo.")

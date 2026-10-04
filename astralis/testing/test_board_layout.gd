@@ -18,6 +18,8 @@ func _ids_esperados() -> Array:
 		for i in range(5):
 			out.append(BoardLayoutScript.slot_id(lado, "monstro", i))
 			out.append(BoardLayoutScript.slot_id(lado, "magia", i))
+		out.append(BoardLayoutScript.slot_id(lado, "deck", 0))
+		out.append(BoardLayoutScript.slot_id(lado, "cemiterio", 0))
 	return out
 
 
@@ -29,14 +31,14 @@ func _ids_esperados() -> Array:
 ## `test_d50_sem_grade_no_codigo`.
 
 
-func test_arena_starter_tem_20_slots_unicos() -> void:
+func test_arena_starter_tem_24_slots_unicos() -> void:
 	var caminho: String = BoardLayoutScript.arena_oficial_path()
 	assert_true(FileAccess.file_exists(caminho), "A arena oficial existe: %s" % caminho)
 	var layout: Dictionary = BoardLayoutScript.load_arena(caminho)
-	assert_eq(layout.size(), 20, "A arena oficial tem 20 slots.")
+	assert_eq(layout.size(), 24, "A arena oficial tem 24 slots (20 + 4 pilhas).")
 	var vistos := {}
 	for sid in layout.keys():
-		assert_true(BoardLayoutScript.eh_slot_valido(str(sid)), "Slot '%s' segue o contrato p0/p1+m/s+0-4." % str(sid))
+		assert_true(BoardLayoutScript.eh_slot_valido(str(sid)), "Slot '%s' segue o contrato p0/p1+m/s/d/g." % str(sid))
 		assert_false(vistos.has(sid), "Slot '%s' não repete (ID único)." % str(sid))
 		vistos[sid] = true
 	for esperado in _ids_esperados():
@@ -45,7 +47,7 @@ func test_arena_starter_tem_20_slots_unicos() -> void:
 		var p = layout[sid]
 		assert_true(p is Vector2, "Slot '%s' guarda Vector2." % str(sid))
 		assert_true((p as Vector2).x >= 0.0 and (p as Vector2).y >= 0.0, "Slot '%s' tem XY válido." % str(sid))
-	assert_true(BoardLayoutScript.valida_arena_oficial(layout).is_empty(), "A arena oficial passa na validação de 20 slots.")
+	assert_true(BoardLayoutScript.valida_arena_oficial(layout).is_empty(), "A arena oficial passa na validação de 24 slots.")
 
 
 func test_get_pos_com_xy_custom_retorna_custom() -> void:
@@ -92,7 +94,7 @@ func test_arquivo_ruim_nao_inventa_posicao() -> void:
 		assert_eq(p, BoardLayoutScript.NULO, "Com arquivo ruim, get_pos devolve NULO (nada é inventado).")
 	# E a validação diz exatamente o que falta, para o log ser útil.
 	var faltando: Array = BoardLayoutScript.valida_arena_oficial({})
-	assert_eq(faltando.size(), 20, "Layout vazio: a validação aponta os 20 slots que faltam.")
+	assert_eq(faltando.size(), 24, "Layout vazio: a validação aponta os 24 slots que faltam.")
 
 
 func test_espelho_p1_x_invertido() -> void:
@@ -138,6 +140,29 @@ func test_espelho_p1_fileiras_perto_longe() -> void:
 	# E a distância entre as fileiras de monstro dos 2 lados segue CONGELADA.
 	assert_eq(BoardLayoutScript.get_pos(s, "p0_m0").y - BoardLayoutScript.get_pos(s, "p1_m0").y, 390.0, "D50/D49: a distância entre as fileiras de monstro continua 390.")
 	assert_ne(BoardLayoutScript.get_pos(s, "p0_m0").y - BoardLayoutScript.get_pos(s, "p1_m0").y, passo, "A distância dos monstros NÃO virou o valor da grade.")
+
+
+func test_pilhas_ao_lado_no_meio_das_fileiras() -> void:
+	# As 4 pilhas: baralho a direita (d), cemiterio a esquerda (g), no MEIO
+	# entre as fileiras de cada lado. O que e igual aos slots e o VAO DE
+	# VIDRO: 26 (263 menos a largura do vidro do slot). Como o vidro da pilha
+	# e menor, o centro fica a 228.5 (118.5 meio vidro + 26 vao + 84 meia pilha).
+	var s: Dictionary = BoardLayoutScript.load_arena(BoardLayoutScript.arena_oficial_path())
+	for lado in [0, 1]:
+		var d: Vector2 = BoardLayoutScript.get_pos(s, BoardLayoutScript.slot_id(lado, "deck", 0))
+		var g: Vector2 = BoardLayoutScript.get_pos(s, BoardLayoutScript.slot_id(lado, "cemiterio", 0))
+		assert_eq(d.x, 1912.5, "Pilha do baralho p%d a direita do campo." % lado)
+		assert_eq(g.x, 403.5, "Pilha do cemitério p%d a esquerda do campo." % lado)
+		assert_eq(d.x - 1684.0, 228.5, "Baralho p%d com o mesmo vao de vidro dos slots." % lado)
+		assert_eq(632.0 - g.x, 228.5, "Cemitério p%d com o mesmo vao de vidro dos slots." % lado)
+	var ym0: float = BoardLayoutScript.get_pos(s, "p0_m0").y
+	var ys0: float = BoardLayoutScript.get_pos(s, "p0_s0").y
+	assert_eq(BoardLayoutScript.get_pos(s, "p0_d0").y, (ym0 + ys0) * 0.5, "Baralho p0 no meio das fileiras.")
+	assert_eq(BoardLayoutScript.get_pos(s, "p0_g0").y, (ym0 + ys0) * 0.5, "Cemitério p0 no meio das fileiras.")
+	var ym1: float = BoardLayoutScript.get_pos(s, "p1_m0").y
+	var ys1: float = BoardLayoutScript.get_pos(s, "p1_s0").y
+	assert_eq(BoardLayoutScript.get_pos(s, "p1_d0").y, (ym1 + ys1) * 0.5, "Baralho p1 no meio das fileiras.")
+	assert_eq(BoardLayoutScript.get_pos(s, "p1_g0").y, (ym1 + ys1) * 0.5, "Cemitério p1 no meio das fileiras.")
 
 
 func test_d50_sem_grade_no_codigo() -> void:
@@ -327,10 +352,10 @@ func test_animacao_recriar_mesa_2x_sem_erro() -> void:
 		var n0: int = ((st.players[0] as Dictionary)["hand"] as Array).size()
 		var n1: int = ((st.players[1] as Dictionary)["hand"] as Array).size()
 		var n_cartas: int = _cartas3d(mesa).size()
-		assert_eq(n_cartas, n0 + n1, "Mesa %d desenha as DUAS maos (efeito ligado)." % k)
+		assert_eq(n_cartas, n0 + n1 + 2, "Mesa %d desenha as DUAS maos + os 2 dorsos de baralho (efeito ligado)." % k)
 		mesa.call("_redesenhar", true, 0)
 		await wait_process_frames(6)
-		assert_eq(_cartas3d(mesa).size(), n0 + n1, "Mesa %d recriada com efeito mantem a contagem." % k)
+		assert_eq(_cartas3d(mesa).size(), n0 + n1 + 2, "Mesa %d recriada com efeito mantem a contagem." % k)
 		mesa.queue_free()
 		await wait_process_frames(2)
 	assert_true(true, "2 mesas criadas/liberadas sem erro (tween preso a carta).")

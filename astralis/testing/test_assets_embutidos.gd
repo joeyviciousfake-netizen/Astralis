@@ -119,8 +119,9 @@ func test_carta_deitada_no_campo_igual_a_da_mao_com_nome_e_atkdef() -> void:
 	var cartas: Node3D = mesa.get_node("Camada3D/JanelaCampo/Viewport3D/Cartas")
 	var da_mao: Node3D = null
 	var do_campo: Node3D = null
+	var sid_invocado := "p0_m%d" % slot
 	for f in cartas.get_children():
-		if (f as Node).has_meta("slot_id"):
+		if (f as Node).has_meta("slot_id") and str((f as Node).get_meta("slot_id")) == sid_invocado:
 			do_campo = f as Node3D
 		elif (f as Node).has_meta("mao_dono") and int((f as Node).get_meta("mao_dono")) == 0 and int((f as Node).get_meta("mao_idx")) == 0:
 			da_mao = f as Node3D
