@@ -33,9 +33,9 @@ const ORDEM_CAMPO := [4, 3, 1, 2]
 
 
 func test_bug2_popup_estrela_acima_da_carta_central() -> void:
-	# (2) Menu da estrela sempre POR CIMA da carta central. Na mesa 3D o menu
-	# e um Control do HUD e a carta central e uma Label do MESMO painel, entao
-	# a ordem e do desenho: quem vem depois no painel fica por cima.
+	# (2) Menu da estrela sempre POR CIMA da carta segurada no centro-alto. O
+	# menu é 2D (MenuLayer) e a carta é 3D, então a ordem é das camadas: o menu
+	# fica por cima e a carta aparece inteira embaixo dele.
 	var mesa = await _mesa3d_nova()
 	assert_true(is_instance_valid(mesa), "Mesa real instanciada.")
 	var st = mesa.get("_st")
@@ -45,10 +45,12 @@ func test_bug2_popup_estrela_acima_da_carta_central() -> void:
 	mesa.call("_confirmar")
 	Input.action_release("confirmar")
 	assert_eq(int(mesa.get("_sub_mao")), SUB_FACE, "Preparo: carta no centro.")
+	await wait_seconds(0.5)
 	Input.action_press("confirmar")
 	mesa.call("_confirmar")
 	Input.action_release("confirmar")
 	assert_eq(int(mesa.get("_sub_mao")), SUB_SLOT, "Preparo: escolhe o slot.")
+	await wait_seconds(0.5)
 	var slot: int = SummonSystem.free_monster_slot(st, 0)
 	mesa.set("_col", slot)
 	Input.action_press("confirmar")
@@ -56,25 +58,24 @@ func test_bug2_popup_estrela_acima_da_carta_central() -> void:
 	Input.action_release("confirmar")
 	assert_eq(int(mesa.get("_sub_mao")), SUB_ESTRELA, "Preparo: menu da estrela aberto.")
 	var popup: Control = _menus(mesa).get("_popup") as Control
-	var centro: Control = _menus(mesa).get("_painel_centro") as Control
+	var segurada: Node3D = mesa.get("_segurada") as Node3D
 	assert_true(popup.visible, "Menu da estrela visivel.")
-	assert_true(centro != null and centro.visible, "Carta central existe e aparece atras do menu.")
-	assert_true(centro.get_index() < popup.get_index(),
-		"Popup por CIMA da carta central (centro %d, popup %d)." % [centro.get_index(), popup.get_index()])
-	assert_true(str((_menus(mesa).get("_lbl_centro") as Label).text).contains("Centro"), "A carta central diz o que e.")
+	assert_true(segurada != null and is_instance_valid(segurada) and segurada.visible, "Carta segurada existe no centro-alto.")
+	assert_true(_menus(mesa).layer > -1, "Menu (camada %d) desenha por cima do 3D." % _menus(mesa).layer)
+	assert_eq(int(mesa.get("_segurada_giros")) % 2, 1 if bool(mesa.get("_face_baixo")) else 0, "Giro conta a face que vale.")
 	# O menu sobrevive a navegar dentro dele (nao some nem volta atras).
 	Input.action_press("mover_baixo")
 	mesa.call("_mover", 0, 1)
 	Input.action_release("mover_baixo")
 	assert_true(popup.visible, "Menu segue visivel apos navegar.")
-	assert_true(centro.get_index() < popup.get_index(), "Ordem mantida: popup acima do centro.")
+	assert_true(is_instance_valid(segurada), "Segurada segue no centro apos navegar.")
 
 
 func test_bug3_navegacao_alcanca_4_fileiras_20_slots() -> void:
 	# (3) Fase de campo anda SO nos 20 slots: 2 de monstro + 2 de magia
 	# (proprias + rival), na ordem VISUAL de cima para baixo.
 	var mesa = await _mesa3d_nova()
-	var fim: Dictionary = _fluxo3d_ate_campo(mesa, false, 0)
+	var fim: Dictionary = await _fluxo3d_ate_campo(mesa, false, 0)
 	assert_eq(int(mesa.get("_fase_jogador")), FASE_CAMPO, "Preparo: fase de campo.")
 	assert_eq(ORDEM_CAMPO.size(), 4, "Campo tem 4 fileiras.")
 	assert_eq(ORDEM_CAMPO, [4, 3, 1, 2], "Ordem visual: magia rival -> monstro rival -> meu monstro -> minha magia.")
@@ -116,7 +117,7 @@ func test_bug5_cima_no_topo_e_baixo_na_base_nao_saem_dos_slots() -> void:
 	# (5) Na fase de campo, cima no topo e baixo na base nao saem do campo:
 	# nunca fogem pra mao (0), que e a unica fileira de fora.
 	var mesa = await _mesa3d_nova()
-	_fluxo3d_ate_campo(mesa, false, 0)
+	await _fluxo3d_ate_campo(mesa, false, 0)
 	assert_eq(int(mesa.get("_fase_jogador")), FASE_CAMPO, "Preparo: fase de campo.")
 	var topo: int = int(ORDEM_CAMPO[0])
 	var base: int = int(ORDEM_CAMPO[ORDEM_CAMPO.size() - 1])
@@ -166,7 +167,7 @@ func test_bug6_rival_vazio_menu_LP_dano_ATK_cheio_e_IA_direta() -> void:
 	# real) e o rival automatico ataca direto quando o seu campo esta vazio.
 	# Parte A: menu na mesa real. Parte B: o rival joga o turno dele de verdade.
 	var mesa = await _mesa3d_nova()
-	var fim: Dictionary = _fluxo3d_ate_campo(mesa, false, 0)
+	var fim: Dictionary = await _fluxo3d_ate_campo(mesa, false, 0)
 	var st = mesa.get("_st")
 	var slot_atk: int = int(fim["slot"])
 	assert_eq(int(mesa.get("_fase_jogador")), FASE_CAMPO, "Preparo: fase de campo.")
@@ -223,7 +224,7 @@ func test_bug6_rival_vazio_menu_LP_dano_ATK_cheio_e_IA_direta() -> void:
 	assert_eq(lp_antes - lp_depois, atk_esperado, "Direto via menu: dano ATK cheio (%d) no Battle real." % atk_esperado)
 	# Parte B: o rival joga o turno dele de verdade e ataca direto no vazio.
 	var mesa2 = await _mesa3d_nova()
-	_fluxo3d_ate_campo(mesa2, false, 0)
+	await _fluxo3d_ate_campo(mesa2, false, 0)
 	var st2 = mesa2.get("_st")
 	_garantir_monstros_na_mao(st2, 1, 1)
 	for i in range(5):

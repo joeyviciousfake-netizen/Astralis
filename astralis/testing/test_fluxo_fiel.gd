@@ -56,6 +56,8 @@ func test_fase_da_mao_cursor_nunca_sai_da_mao() -> void:
 	mesa.call("_confirmar")
 	Input.action_release("confirmar")
 	assert_eq(int(mesa.get("_sub_mao")), SUB_FACE, "Carta foi ao centro (passo da face).")
+	# O voo mão->centro termina antes de travar, senão o confirmar é ignorado.
+	await wait_seconds(0.5)
 	var face_ini: bool = bool(mesa.get("_face_baixo"))
 	Input.action_press("mover_cima")
 	mesa.call("_mover", 0, -1)
@@ -92,7 +94,7 @@ func test_carta_desce_em_ataque_com_face_cima_e_estrela() -> void:
 	# (2a) Fluxo fiel p/ cima: desce SEMPRE em Ataque (vertical) com a face
 	# escolhida e a guardian star do menu gravada na instância.
 	var mesa = await _mesa3d_nova()
-	var fim: Dictionary = _fluxo3d_ate_campo(mesa, false, 0)
+	var fim: Dictionary = await _fluxo3d_ate_campo(mesa, false, 0)
 	var st = mesa.get("_st")
 	var slot: int = int(fim["slot"])
 	var inst: Dictionary = (st.players[0] as Dictionary)["monster"][slot] as Dictionary
@@ -108,7 +110,7 @@ func test_carta_desce_em_ataque_com_face_cima_e_estrela() -> void:
 func test_carta_desce_em_ataque_com_face_baixo_e_estrela() -> void:
 	# (2b) Fluxo fiel p/ baixo + 2ª estrela: também desce em Ataque, virada.
 	var mesa = await _mesa3d_nova()
-	var fim: Dictionary = _fluxo3d_ate_campo(mesa, true, 1)
+	var fim: Dictionary = await _fluxo3d_ate_campo(mesa, true, 1)
 	var st = mesa.get("_st")
 	var slot: int = int(fim["slot"])
 	var inst: Dictionary = (st.players[0] as Dictionary)["monster"][slot] as Dictionary
@@ -185,7 +187,7 @@ func test_start_na_mao_nao_passa_e_no_campo_passa() -> void:
 	assert_eq(int(stm.turn_number), turno_ini, "START na fase da mão: turno não muda.")
 	assert_eq(int(mesa_mao.get("_fase_jogador")), FASE_MAO, "START na fase da mão: segue na fase da mão.")
 	var mesa_campo = await _mesa3d_nova()
-	_fluxo3d_ate_campo(mesa_campo, false, 0)
+	await _fluxo3d_ate_campo(mesa_campo, false, 0)
 	var stc = mesa_campo.get("_st")
 	assert_eq(int(mesa_campo.get("_fase_jogador")), FASE_CAMPO, "Preparo: mesa está na fase de campo.")
 	assert_eq(int(stc.current_player), 0, "Preparo: ainda é sua vez antes do START.")
