@@ -43,19 +43,17 @@ const DISTANCIA := 9.5
 ## não precisa ser corrigido quando um dos dois muda. Um diâmetro em unidades de
 ## mundo aqui seria um número que mente sobre o tamanho sempre que a câmera muda.
 ##
-## O tamanho é limitado pelo VAO onde a moeda vive: o espaço entre as cartas do
-## cemitério de cima e a faixa do marcador tem 275 px numa tela de 1080, e uma
-## moeda maior que isso invade as cartas e some atrás delas (o 3D as desenha
-## depois). 0.15 deixa a moeda com folga dos dois lados.
+## O tamanho é limitado pelo VAO onde a moeda vive (entre as fileiras de
+## monstro): uma moeda maior invade as cartas e some atrás delas (o 3D as
+## desenha depois). 0.15 deixa a moeda com folga dos dois lados.
 const FRACAO_DIAMETRO := 0.15
 
 ## A ALTURA FINAL do centro da moeda, como fração da altura da tela e em relação
 ## ao centro. POSITIVO é ACIMA do centro, porque o Y da base da câmera aponta
 ## para cima da tela — é o eixo de quem assiste, não o do mundo. O dono deste
-## número: é o que segura a moeda no vao entre o CEMITÉRIO de cima e o MARCADOR
-## de turno. Medido na tela: o cemitério acaba em y≈160 e a faixa do marcador
-## começa em y≈435, então o meio do vao é y≈297 — e o meio da tela é y=540, o
-## que dá 0,225. Desceu de 0.30 porque a 0.30 o topo da moeda entrava em y≈124 e
+## número: é o que segura a moeda no vao entre as fileiras. Medido na tela:
+## o cemitério acaba em y≈160 e o meio do vao fica em y≈297 — e o meio da
+## tela é y=540, o que dá 0,225. Desceu de 0.30 porque a 0.30 o topo da moeda entrava em y≈124 e
 ## ficava atrás das cartas do inimigo.
 const ALTURA_FINAL := 0.225
 

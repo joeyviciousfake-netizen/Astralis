@@ -36,13 +36,10 @@ func _moeda_da_mesa(mesa: Node) -> Node:
 	return mesa.get("_moeda") as Node
 
 
-## O texto que a celula do TURNO esta mostrando.
+## O numero do turno no ESTADO (o turno nao tem visual na tela).
 func _texto_do_turno(mesa: Node) -> String:
-	var faixa := mesa.get("_faixa") as Node
-	if faixa == null or not is_instance_valid(faixa):
-		return ""
-	var lbl := faixa.get("_num_turno") as Label
-	return "" if lbl == null else str(lbl.text)
+	var st = mesa.get("_st")
+	return "" if st == null else str(int(st.turn_number))
 
 
 # ---------------------------------------------------------------------------
@@ -225,8 +222,6 @@ func test_a_mesa_e_quem_diz_que_existe_moeda_na_tela() -> void:
 		"Um duelo sem moeda nao tem sorteio na tela.")
 	assert_false(bool(mesa.get("_aguardando_sorteio")),
 		"E a espera do painel e da navegacao segue a MESMA resposta (nao ha duas).")
-	assert_false(bool((mesa.get("_faixa") as Node).get("_esperando_sorteio")),
-		"O marcador segue a mesma resposta: sem moeda nao existe pergunta.")
 
 
 func test_com_moeda_no_palco_a_mesa_liga_o_marcador_e_a_navegacao() -> void:
@@ -247,43 +242,10 @@ func test_com_moeda_no_palco_a_mesa_liga_o_marcador_e_a_navegacao() -> void:
 	st.turn_order = antes
 
 
-func test_o_marcador_mostra_interrogacao_roxo_durante_o_sorteio() -> void:
+func test_sem_faixa_na_tela() -> void:
+	# A faixa do meio saiu da tela: nem turno, nem "?" de espera. A espera
+	# continua existindo (painel em branco + navegacao travada, na mesa),
+	# mas sem marcador na tela.
 	var mesa: Node = await _mesa3d_nova()
-	var faixa := mesa.get("_faixa") as Node
-	faixa.call("esperar_sorteio", true)
-	await wait_process_frames(1)
-	# O "?" e a PERGUNTA, e a celula fica no roxo da espera (nenhuma cor de
-	# lado: a moeda ainda nao disse de quem e a vez).
-	assert_eq(_texto_do_turno(mesa), "?",
-		"Durante o sorteio o marcador e uma PERGUNTA, nao o numero do turno.")
-	var cel := faixa.get("_turno_cel") as PanelContainer
-	assert_not_null(cel, "A celula do turno existe.")
-	var estilo := cel.get_theme_stylebox("panel") as StyleBoxFlat
-	assert_not_null(estilo, "A celula do turno tem estilo.")
-	# O roxo e a mistura das DUAS cores de lado: ele nao e a cor de ninguem.
-	var roxo := Vector3(0.55, 0.31, 0.57)
-	assert_almost_eq(estilo.bg_color.r, roxo.x, 0.02,
-		"A celula da espera e ROXA (o vermelho e o azul juntos nao se cancelam).")
-	# E o "?" e ambar, a cor da moeda: a pergunta e a resposta sao da mesma
-	# familia e o eye liga uma na outra sem ler texto.
-	var lbl := faixa.get("_num_turno") as Label
-	assert_almost_eq(lbl.get_theme_color("font_color").r, 1.0, 0.02,
-		"O '?' e ambar (a cor da moeda).")
-
-
-func test_o_marcador_volta_para_o_numero_quando_a_moeda_sai() -> void:
-	var mesa: Node = await _mesa3d_nova()
-	var faixa := mesa.get("_faixa") as Node
-	var st = mesa.get("_st")
-	faixa.call("esperar_sorteio", false)
-	await wait_process_frames(1)
-	var esperado := "%d" % int(st.turn_number)
-	assert_eq(_texto_do_turno(mesa), esperado,
-		"Fora do sorteio o marcador volta ao numero real do turno (R3).")
-	assert_false(bool(faixa.get("_esperando_sorteio")),
-		"A espera acabou com a moeda.")
-	# O pulso do "?" nao sobrevive a virada: um numero que respira parece que
-	# ainda esta mudando.
-	var pulso := faixa.get("_pulso") as Tween
-	assert_true(pulso == null or not pulso.is_valid(),
-		"O pulso do '?' morreu quando o numero voltou.")
+	assert_true(mesa.get_node_or_null(NodePath("CamadaFaixa")) == null, "Sem camada da faixa.")
+	assert_true(mesa.get_node_or_null(NodePath("CamadaFaixa/Faixa2D")) == null, "Sem faixa do meio na tela.")

@@ -88,9 +88,6 @@ func _mesa_com_ordem(ordem: String) -> Array:
 	mesa.set("_duel", duelo)
 	mesa.set("_st", duelo.get_state())
 	mesa.set("_aguardando_sorteio", mesa.call("_tem_sorteio_na_tela"))
-	var faixa: Node = mesa.get("_faixa") as Node
-	if faixa != null and is_instance_valid(faixa):
-		faixa.call("esperar_sorteio", mesa.get("_aguardando_sorteio"))
 	mesa.call("_redesenhar", false)
 	return [mesa, duelo.get_state()]
 
@@ -218,15 +215,11 @@ func test_first_p2_rival_comeca_compra_joga_e_devolve_a_vez() -> void:
 	assert_eq(int(fim["mao0"]), 5, "Sua mão foi completada até 5 na sua DRAW (refill do motor): %d." % int(fim["mao0"]))
 	assert_true(mao_rival_antes >= 5, "Preparo: o rival começou com a mão de abertura do motor (%d)." % mao_rival_antes)
 	# D44 (item 6): a barra de fases SAIU da tela por ordem do usuário, e o
-	# turno agora é lido na FAIXA DO MEIO (que em D45 virou 2D, na camada de
-	# trás), com o valor real do motor.
-	#
-	# D80: este duelo e `first_p1`, sem moeda na tela, entao a faixa ja esta
-	# Mostrando o numero do motor desde o primeiro quadro. Este teste mede a
-	# ORDEM do turno e nao o desenho da espera — o `?` tem como dono
-	# `test_moeda.gd`.
-	var txt := str((mesa.get_node("CamadaFaixa/Faixa2D/Celulas/Turno/Caixa/Numero") as Label).text)
-	assert_eq(txt, str(int(fim["turno"])), "Faixa do meio com o turno real do motor (%s)." % txt)
+	# turno não tem visual (o motor continua contando). Este teste mede a
+	# ORDEM do turno no estado, nao o desenho.
+	var txt := str(int(st.turn_number)) if st != null else ""
+	assert_eq(txt, str(int(fim["turno"])), "Turno real do motor (%s)." % txt)
+	assert_true(mesa.get_node_or_null(NodePath("CamadaFaixa/Faixa2D/Celulas/Turno")) == null, "Sem célula de turno na faixa.")
 	assert_true(mesa.get_node_or_null(NodePath("HUD/BarraFases")) == null, "Sem barra de fases na tela (D44).")
 
 

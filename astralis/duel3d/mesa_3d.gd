@@ -19,7 +19,6 @@ const BattleSystem := preload("res://duel/battle_system.gd")
 const PositionSystem := preload("res://duel/position_system.gd")
 const FusionSystem := preload("res://duel/fusion_system.gd")
 const BoardLayoutScript := preload("res://core/board_layout.gd")
-const Faixa2D := preload("res://duel3d/faixa_2d.gd")
 const Menus3D := preload("res://duel3d/menus_3d.gd")
 const PainelCarta3D := preload("res://duel3d/painel_carta_3d.gd")
 const Cursor3D := preload("res://duel3d/cursor_3d.gd")
@@ -135,7 +134,7 @@ const PAUSA_RIVAL := 0.7
 
 ## A CARTA SEGURADA (o assunto da fase da mão): a carta que o jogador tirou da
 ## mão voa até a frente da câmera no mesmo viewport do campo (sem trocar de
-## camada, por cima da faixa), gira no próprio eixo para trocar a face e volta
+## camada), gira no próprio eixo para trocar a face e volta
 ## para a mão — tudo instantâneo no estado, e a face que vale é sempre a dele
 ## (`_face_baixo`).
 
@@ -150,20 +149,16 @@ const TURNO_MOEDA := "moeda"
 ## Chão de desenho do campo: o plano da FACE DE CIMA do ladrilho (a caixa de
 ## vidro tem 0,05 de espessura assentada em TOPO - 0,03, ou seja o topo dela
 ## fica em TOPO - 0,005). É o único dono desse número no arquivo: as bordas
-## de tela das fileiras (`_borda_da_fileira_px`) e a faixa 2D medem a partir
+## de tela das fileiras (`_borda_da_fileira_px`) medem a partir
 ## daqui, então "a linha dos slots" é UM número, não três.
 const TOPO_PISO := TOPO - 0.005
-## Cores de identidade da tela (D45b): azul = voce, vermelho = rival, e o
-## PRETO (borda preta que nao e preta escura, dentro um preto mais claro) nos
-## DOIS cemiterios. Cada conjunto e BORDA escura + INTERIOR mais claro, e o
-## MESMO conjunto vale no bloco do nome (topo) e no do LP daquele lado.
-## Dono: a mesa. A faixa do meio e os retratos recebem daqui.
+## Cores de identidade da tela: azul = voce, vermelho = rival. Cada conjunto
+## e BORDA escura + INTERIOR mais claro, e o MESMO conjunto vale no bloco do
+## nome (topo) e na celula daquele lado. Dono: a mesa.
 const COR_AZUL_BORDA := Color(0.07, 0.17, 0.40, 0.98)
 const COR_AZUL_FUNDO := Color(0.16, 0.40, 0.76, 0.96)
 const COR_VERM_BORDA := Color(0.40, 0.06, 0.09, 0.98)
 const COR_VERM_FUNDO := Color(0.74, 0.17, 0.20, 0.96)
-const COR_PRETO_BORDA := Color(0.07, 0.07, 0.08, 0.98)
-const COR_PRETO_FUNDO := Color(0.21, 0.21, 0.25, 0.96)
 
 ## ---- HUD 2D (doc 15 §15.3 — TUDO medido na referência, em px do canvas
 ## 1920x1080; a referência é 1024x583 e o §15.3 traz os %) ----------------
@@ -372,14 +367,14 @@ var _mesa3d_sair := 0.0
 ## as etiquetas de nome ao lado de cada retrato (dado real do duelista).
 var _lbl_placa_nome_voce: Label = null
 var _lbl_placa_nome_rival: Label = null
+var _lbl_lp_voce: Label = null
+var _lbl_lp_rival: Label = null
 var _lbl_mao_rival: Label = null
 var _lbl_fase: Label = null
 var _lbl_log: Label = null
 var _lbl_dica: Label = null
 var _lbl_slot: Label = null
 var _lbl_fila: Label = null
-## D45 (item 2): a FAIXA DO MEIO é 2D e vive em `faixa_2d.gd` (na camada -1,
-## atrás do 3D), com o VALOR sempre do GameState real.
 var _retrato_rival_foto: TextureRect = null
 var _retrato_rival_silhueta: Label = null
 var _retrato_voce_foto: TextureRect = null
@@ -493,8 +488,8 @@ func _ready() -> void:
 	_avisar_arena()
 	# D51: com a arena lida, mede o plano de simetria do campo (o Z em que os
 	# dois lados são espelho). A câmera do jogador não muda; a do rival vai
-	# para o espelho exato dela, e é isso que deixa a faixa do meio — que é 2D
-	# e fica parada — cair no vão das fileiras nas DUAS vistas.
+	# para o espelho exato dela, e é isso que deixa o vão entre as fileiras
+	# igual nas DUAS vistas.
 	_vista.medir_plano_de_simetria()
 	_vista.aplicar()
 	# Campo DEPOIS da arena (os painéis nascem no XZ real do dado).
@@ -504,9 +499,6 @@ func _ready() -> void:
 	# seria resolvido na primeira mão que aparecesse — e se o rival começar o
 	# duelo (D42, sorteado pelo motor) isso viria com a câmera do lado errado.
 	_aquecer_a_mao()
-	# D45 (item 2): a faixa do meio é 2D e vive no HUD, no vão entre as duas
-	# fileiras de monstro (que ela mede do dado + da câmera, não chuta).
-	_construir_faixa()
 	if _quer_calib_visual():
 		_calib_visual(get_node_or_null(NodePath("HUD")) as Control)
 	_fusions_data = _fusoes_do_data(data)
@@ -524,12 +516,6 @@ func _ready() -> void:
 	# não existe spoiler, e um duelo `first_p1` responde ao painel no primeiro
 	# quadro como sempre respondeu.
 	_aguardando_sorteio = _tem_sorteio_na_tela()
-	# A MESMA resposta vai para o marcador, e no mesmo quadro: o `?` e a
-	# representacao da moeda, entao quem tem a moeda e quem diz que ela existe.
-	# A faixa nao olha o dado nem a camera (ela nao sabe que a moeda existe), e
-	# por isso que e a mesa que responde — o mesmo caminho de `painel_carta_3d.gd`.
-	if _faixa != null and is_instance_valid(_faixa):
-		_faixa.esperar_sorteio(_aguardando_sorteio)
 	_redesenhar(_distribuicao_ativa, 0)
 	_atualizar_hud()
 	# A contagem da foto por TEMPO começa AQUI, e não no `_ready`: o boot carrega
@@ -563,8 +549,6 @@ func _avisar_arena() -> void:
 
 ## Diagnóstico: só sai com `--debug` (medidas, câmera, calibração, fila de
 ## fusão, foto). Sem ela o jogo só imprime o log de boot.
-## A faixa do meio (D45): o no e o arquivo `faixa_2d.gd`.
-var _faixa: PanelContainer = null
 ## Os menus sobre a cena (carta do centro + popup da estrela/alvo): o no e o
 ## arquivo `menus_3d.gd`.
 var _menus: CanvasLayer = null
@@ -717,20 +701,17 @@ func _sorteio_pela_moeda() -> void:
 	if _moeda == null:
 		return
 	var vencedor := 0 if int(_st.current_player) == 0 else 1
-	# D79: a espera NAO entra aqui — ela ja nasceu ligada no boot (o `_?` esta na
-	# tela desde o primeiro quadro). Religar aqui nao mudaria nada e voltaria a
-	# dar a chance de a celula ficar na cor do lado entre o boot e aqui.
+	# D79: a espera NAO entra aqui — ela ja nasceu ligada no boot. Religar
+	# aqui nao mudaria nada.
 	_moeda.reset()
 	await _moeda.tocar(vencedor, _cam)
 	# D80: A ESPERA TERMINA AQUI, e nao quando a moeda COMECA. A janela inteira
 	# — boot, distribuicao e a moeda — foi um so estado, e ele acaba com a
-	# resposta na tela: e o "?" que vira numero, o painel que volta a mostrar a
+	# resposta na tela: o painel que volta a mostrar a
 	# carta e a navegacao que volta a andar, tudo no mesmo instante em que a
 	# moeda sai de cena. Ficar ligado depois deixaria o painel vazio e a mao
 	# travada no turno de quem ja viu a resposta.
 	_aguardando_sorteio = false
-	if _faixa != null and is_instance_valid(_faixa):
-		_faixa.esperar_sorteio(false)
 	# O painel responde no MESMO INSTANTE da resposta, e antes da virada: e a
 	# `current_player` do motor que decide se o painel mostra a carta sob o
 	# cursor ou o neutro da vez do rival (D46b), e essa resposta ja saiu da
@@ -888,9 +869,9 @@ func _calib_linha(hud: Control, nome: String, y: float, cor: Color, alt: int, x0
 
 ## Move a JANELA, não a câmera (doc 15 §15.4). O mundo 3D inteiro (campo,
 ## cartas, mão, cursor 3D) nasce dentro de um SubViewport com o tamanho da
-## região do campo. A ordem da tela, de trás para frente, é: fundo (-2), faixa
-## do meio (-1), mundo 3D (0, transparente: onde não há geometria a faixa
-## aparece), HUD 2D (0, depois na árvore), menus (1). A câmera fica EXATAMENTE
+## região do campo. A ordem da tela, de trás para frente, é: fundo (-2),
+## mundo 3D (0, transparente: onde não há geometria aparece o fundo),
+## HUD 2D (0, depois na árvore), menus (1). A câmera fica EXATAMENTE
 ## onde já estava, sem deslocamento de lente: por isso a perspectiva é idêntica
 ## à de quando o campo estava no meio da tela — só mudou a janela que mostra
 ## o mundo.
@@ -900,14 +881,11 @@ func _construir_janela_campo() -> void:
 	_vp.size = Vector2(JANELA_CAMPO_L, JANELA_CAMPO_A)
 	_vp.own_world_3d = true   # mundo 3D só desta janela (não invade o HUD)
 	_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
-	# Transparente de propósito: a faixa do meio mora na camada de trás (-1) e
-	# é vista através do vão entre as fileiras, onde não há geometria. Opaco
-	# aqui esconderia a faixa inteira — e nenhuma carta precisaria trocar de
-	# camada para passar por cima dela.
+	# Transparente de propósito: o fundo escuro aparece onde não há geometria.
+	# Opaco aqui taparia o fundo — e o vão entre as fileiras ficaria chapado.
 	_vp.transparent_bg = true
 	# O FUNDO é a última camada: só o pano escuro de trás, que nunca cobre
-	# ninguém, então mora sozinho na camada -2. A faixa do meio fica na -1 e a
-	# janela do campo na 0 (transparente, por cima da faixa).
+	# ninguém, então mora sozinho na camada -2. A janela do campo vai na 0.
 	var base := CanvasLayer.new()
 	base.name = "CamadaFundo"
 	base.layer = -2
@@ -1084,7 +1062,7 @@ func _construir_campo() -> void:
 	_cursor.caixa = Callable(self, "_caixa")
 	_cursor.position = Vector3(0, TOPO, _ponto_lateral(0.0, 0.0, 4.15).z)
 	_vp.add_child(_cursor)
-	_diag("Campo: 24 painéis + faixa do meio (7 itens) + Cursor3D.")
+	_diag("Campo: 24 painéis + Cursor3D.")
 
 
 func _peca_prof_carta() -> float:
@@ -1478,7 +1456,7 @@ func _erro_linha_mao(y: float, z: float, tilt_graus: float, alvo: float, pelo_ce
 ## fileira) e `perto` falso = a de CIMA. Sai do dado real (os 5 ladrilhos da
 ## fileira) + da projeção da câmera — nenhuma linha da tela é chutada.
 ## Medida na FACE DE CIMA do ladrilho (TOPO_PISO), que é a superfície que a
-## faixa do meio encosta e que a mão do jogador fica logo abaixo.
+## mão do jogador fica logo abaixo.
 func _borda_da_fileira_px(lado: int, tipo: String, perto: bool) -> float:
 	if _cam == null or not is_instance_valid(_cam):
 		return float(TELA_A)
@@ -1486,8 +1464,7 @@ func _borda_da_fileira_px(lado: int, tipo: String, perto: bool) -> float:
 	var linha := -1e9 if perto else 1e9
 	for i in range(5):
 		# `_pos_slot` com o LADO VISUAL: a fileira é medida onde ela está na
-		# tela. A faixa do meio NÃO espelha (D8/doc 16 D8 — ela é sempre o
-		# painel do jogador), e o vão entre as duas fileiras de monstro dá a
+		# tela. O vão entre as duas fileiras de monstro dá a
 		# MESMA medida nas duas perspectivas porque a vista do rival é o
 		# espelho exato da do jogador (D51: a câmera volta para o espelho em
 		# torno do plano de simetria do campo, não em torno da origem).
@@ -1665,19 +1642,14 @@ var _vista_trocada := false
 ## o conteúdo muda.
 ##
 ## O que inverte e o que NÃO inverte, e por quê:
-##   * retratos e plaquinhas de nome/LP: invertem as POSIÇÕES (o seu vai para
+##   * retratos, plaquinhas de nome e LP: invertem as POSIÇÕES (o seu vai para
 ##     a direita, o dele para a esquerda) — para cada um ver o seu do lado dele;
-##   * a faixa do meio: a ORDEM das 7 células se espelha, então o seu deck e o
-##     seu LP ficam do lado que agora é o seu na tela, e a cor viaja com o
-##     número (azul = você, sempre);
 ##   * a barra de fases: NÃO inverte, de propósito. Ela mostra a fase REAL de
 ##     quem está jogando (D13/doc 13), e espelhar um dado de regra seria a tela
 ##     mentir. Fica como âncora visual do meio da mesa.
 func _aplicar_vista_hud() -> void:
 	var esc: float = _vista.escala_do_virar()
 	var invertido: bool = _vista.invertida()
-	if _faixa != null:
-		_faixa.virar(esc)
 	for b in _blocos_voce:
 		_virar_bloco(b, esc)
 	for b in _blocos_rival:
@@ -1685,8 +1657,6 @@ func _aplicar_vista_hud() -> void:
 	if invertido != _vista_trocada:
 		_vista_trocada = invertido
 		_trocar_lado_das_blocos()
-		if _faixa != null and is_instance_valid(_faixa):
-			_faixa.espelhar()
 
 
 ## Um bloco do HUD que vira de carta: pivô no meio dele (para encolher para os
@@ -1723,10 +1693,6 @@ func _trocar_lado_das_blocos() -> void:
 			b2.position.x = xb
 
 
-## A ORDEM das 7 células da faixa se espelha na virada. Como o `Celulas` é um
-## HBoxContainer, a ordem dos filhos É a ordem na tela: espelhar é reordenar.
-## O turno fica no meio (é o único que não tem dono) e a cor viaja com o
-## número, então o azul continua sendo "você" — só muda de lado na tela.
 ## Redesenha as cartas 3D do estado real.
 ## `com_efeito` = a compra deve ANIMAR (a carta nova voa do baralho para a mão).
 ## `dono_efeito` = de QUEM é a compra (0 = você, 1 = rival): a animação é da
@@ -2286,8 +2252,8 @@ func _fundo_retrato(tom: Color) -> TextureRect:
 
 
 ## D44 (item 8): o topo da tela tem SÓ a foto de cada duelista + o nome dele:
-## o seu à ESQUERDA e o do rival à DIREITA. Toda a informação (LP, TURN, fases)
-## fica na faixa do meio. O pack não tem foto de duelista, então o que aparece é
+## o seu à ESQUERDA e o do rival à DIREITA. O LP fica embaixo de cada nome.
+## O pack não tem foto de duelista, então o que aparece é
 ## o placeholder com a inicial do nome dentro da moldura (nada de rosto
 ## inventado) e o nome real do dado ao lado.
 func _construir_retratos(hud: Control) -> void:
@@ -2327,6 +2293,8 @@ func _construir_retratos(hud: Control) -> void:
 		RETRATO_NOME_L, RETRATO_NOME_A, HORIZONTAL_ALIGNMENT_RIGHT, COR_VERM_BORDA, COR_VERM_FUNDO)
 	if _lbl_placa_nome_rival != null and _lbl_placa_nome_rival.get_parent() != null:
 		_blocos_rival.append(_lbl_placa_nome_rival.get_parent() as Control)
+	_lbl_lp_rival = _lp_sob_nome(hud, "LpRival", RETRATO_NOME_RIVAL_X, HORIZONTAL_ALIGNMENT_RIGHT)
+	_blocos_rival.append(_lbl_lp_rival)
 	# VOCÊ: foto na esquerda (x 578) e nome à DIREITA dela, alinhado à
 	# esquerda (espelho do rival).
 	var ret_voce := PanelContainer.new()
@@ -2360,6 +2328,8 @@ func _construir_retratos(hud: Control) -> void:
 	# D47: a placa de nome e o retrato sao blocos que viram de carta na volta.
 	if _lbl_placa_nome_voce != null and _lbl_placa_nome_voce.get_parent() != null:
 		_blocos_voce.append(_lbl_placa_nome_voce.get_parent() as Control)
+	_lbl_lp_voce = _lp_sob_nome(hud, "LpVoce", RETRATO_NOME_VOCE_X, HORIZONTAL_ALIGNMENT_LEFT)
+	_blocos_voce.append(_lbl_lp_voce)
 
 
 ## Placa de NOME ao lado do retrato (D44, item 8; cores em D45, item 2): o MESMO
@@ -2382,66 +2352,22 @@ func _placa_nome_retrato(hud: Control, nome: String, x: float, y: float, larg: f
 	return l
 
 
-## A FAIXA DO MEIO é 2D e vive em `faixa_2d.gd` (D45, item 2), filha do HUD.
-## A barra é posicionada no VÃO entre as duas fileiras de monstro, e o vão não é
-## chutado: ele sai das bordas REAIS das fileiras (dado + câmera, em
-## `_borda_da_fileira_px`). A largura sai da fileira real
-## (`_extensao_da_fileira_px`).
-## As 7 células seguem a ordem travada no D44 e cada uma mostra:
-##   deck       -> CONTAGEM de cartas do baralho real
-##   cemitério  -> CONTAGEM de cartas do cemitério real
-##   LP         -> número do GameState
-##   TURNO      -> número do GameState
-## Nada aqui calcula regra: é só leitura (R1/R3), como toda a tela.
-
-## Extensão (x de tela) de uma fileira de ladrilhos: da coluna 0 até a 4, já em
-## pixel do canvas (a janela do campo começa em PAINEL_ESQ_L). É MEDIÇÃO (câmera
-## + layout da arena), então mora aqui; quem usa é a faixa do meio
-## (`faixa_2d.gd`), que é sempre o painel do jogador (D8/doc 16) e por isso
-## mede a fileira como ela está desenhada agora.
-func _extensao_da_fileira_px(lado: int, tipo: String) -> Vector2:
-	var x0 := 1e9
-	var x1 := -1e9
-	if _cam == null or not is_instance_valid(_cam):
-		return Vector2(float(PAINEL_ESQ_L), float(TELA_L))
-	var peca := _peca_prof_carta()
-	for i in range(5):
-		var p := _pos_slot(lado, tipo, i)
-		for sz in [-1.0, 1.0]:
-			var q := _cam.unproject_position(p + Vector3(sz * peca * 0.5, 0.0, 0.0))
-			x0 = minf(x0, q.x)
-			x1 = maxf(x1, q.x)
-	return Vector2(x0 + float(PAINEL_ESQ_L), x1 + float(PAINEL_ESQ_L))
-
-
-## Cria a FAIXA DO MEIO (D45) como o no `faixa_2d.gd` na camada -1, ATRÁS do
-## mundo 3D: a janela do campo é transparente, então a faixa aparece no vão
-## entre as fileiras e qualquer carta passa por cima dela sem trocar de
-## camada. Ela é um assunto só - posição, células, cores, números do estado e
-## o espelhamento da volta - e por isso mora no arquivo dela, não aqui.
-func _construir_faixa() -> void:
-	var camada := CanvasLayer.new()
-	camada.name = "CamadaFaixa"
-	camada.layer = -1
-	add_child(camada)
-	_faixa = Faixa2D.new()
-	_faixa.estado = Callable(self, "_pegar_estado")
-	_faixa.cartas_de = Callable(self, "_pegar_cartas")
-	_faixa.medir_borda = Callable(self, "_borda_da_fileira_px")
-	_faixa.medir_extensao = Callable(self, "_extensao_da_fileira_px")
-	_faixa.tex_cache = Callable(self, "_tex_cache")
-	_faixa.avisar = Callable(self, "_diag")
-	_faixa.cor_azul_borda = COR_AZUL_BORDA
-	_faixa.cor_azul_fundo = COR_AZUL_FUNDO
-	_faixa.cor_verm_borda = COR_VERM_BORDA
-	_faixa.cor_verm_fundo = COR_VERM_FUNDO
-	_faixa.cor_preto_borda = COR_PRETO_BORDA
-	_faixa.cor_preto_fundo = COR_PRETO_FUNDO
-	_faixa.construir(camada)
+## O LP embaixo da placa de NOME (o número branco do GameState, sem placa).
+## Fica na mesma coluna da placa (mesmo X, mesma largura, mesmo alinhamento) e
+## vira de carta junto com ela na volta, porque entra nos blocos do lado.
+func _lp_sob_nome(hud: Control, nome: String, x: float, align: HorizontalAlignment) -> Label:
+	var l := _rotulo_hud(nome, "", Vector2(x, RETRATO_RIVAL_Y + RETRATO_NOME_A + 6.0), 30, Color(1, 1, 1, 1))
+	l.size = Vector2(RETRATO_NOME_L, 40)
+	l.custom_minimum_size = l.size
+	l.horizontal_alignment = align
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hud.add_child(l)
+	return l
 
 
 ## O GameState e o dicionario de cartas, do jeito que a tela inteira le: por
-## funcao, e nao por copia. A faixa pergunta aqui a cada atualizacao, entao
+## funcao, e nao por copia. O painel pergunta aqui a cada atualizacao, entao
 ## trocar o duelo em tempo de execucao (D42) nao deixa numero velho na tela.
 func _pegar_estado():
 	return _st
@@ -2451,19 +2377,11 @@ func _pegar_cartas() -> Dictionary:
 	return _cartas
 
 
-## A faixa escreve o estado real na tela (D45). Delegado: quem sabe escrever
-## na faixa e o arquivo dela.
-func _atualizar_faixa() -> void:
-	if _faixa != null and is_instance_valid(_faixa):
-		_faixa.atualizar()
-
-
 func _construir_hud() -> void:
 	# HUD 2D na referência (doc 15 §15.3): o que existe são o painel esquerdo
-	# com a carta focada, os retratos com nome e a faixa do meio. Tudo IGNORE
-	# (D19). D44/D45: NÃO existem a barra superior com LP/TURN, a barra de fases
-	# DRAW/MAIN/BATTLE/END nem a barra START ? Help — essa informação vive na
-	# faixa do meio (`faixa_2d.gd`).
+	# com a carta focada e os retratos com nome e LP. Tudo IGNORE
+	# (D19). D44/D45: NÃO existem a barra superior, a barra de fases
+	# DRAW/MAIN/BATTLE/END nem a barra START ? Help.
 	var hud := Control.new()
 	hud.name = "HUD"
 	hud.set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -2610,14 +2528,16 @@ func _fala(texto: String) -> void:
 func _atualizar_hud() -> void:
 	if _st == null:
 		return
-	# D44: quem escreve o dado real na tela são a FAIXA DO MEIO (LP dos dois
-	# lados, turno e a espessura/carta do topo de cada pilha) e os NOMES ao lado
+	# D44: quem escreve o dado real na tela sao o LP embaixo dos NOMES ao lado
 	# dos retratos. A barra de fases e as placas do topo NÃO existem nesta tela.
 	if _lbl_placa_nome_voce != null:
 		_lbl_placa_nome_voce.text = _nome_voce.to_upper()
 	if _lbl_placa_nome_rival != null:
 		_lbl_placa_nome_rival.text = _nome_rival.to_upper()
-	_atualizar_faixa()
+	if _lbl_lp_voce != null:
+		_lbl_lp_voce.text = "%d" % _int_do_jogador(0, "lp")
+	if _lbl_lp_rival != null:
+		_lbl_lp_rival.text = "%d" % _int_do_jogador(1, "lp")
 	_atualizar_painel_foco()
 
 
@@ -2640,8 +2560,8 @@ func _tela_espera_a_moeda() -> bool:
 ## duelo (`turn_order`) e a flag de PROVA `--mesa3d-moeda`, que existe para a
 ## foto ser deterministica sem mudar quem ganhou (D42).
 ##
-## E UM metodo e nao uma expressao solta no `_ready` porque tres coisas
-## dependem desta resposta (o painel, o marcador e a navegacao) e tres escritas
+## E UM metodo e nao uma expressao solta no `_ready` porque duas coisas
+## dependem desta resposta (o painel e a navegacao) e duas escritas
 ## a mao divergem na primeira delas que alguem esquecer de atualizar. Numa tela
 ## sem moeda nao existe espera: nao existe o que esconder, e o painel responde
 ## desde o primeiro quadro.
@@ -2651,9 +2571,8 @@ func _tem_sorteio_na_tela() -> bool:
 	return _moeda_forcada or str(_st.turn_order) == TURNO_MOEDA
 
 
-## D44 (itens 3, 4 e 11): NÃO existe placa de contador solta na tela. O número
-## de cartas do baralho/cemitério e a ALTURA da pilha são mostrados na faixa do
-## meio (`_atualizar_faixa`), e a mão não tem contagem nenhuma.
+## D44 (itens 3, 4 e 11): NÃO existe placa de contador solta na tela. A
+## mão não tem contagem nenhuma.
 
 ## Carta focada pelo cursor (só leitura): mão, campo próprio ou rival.
 ## Rival de costas / virada = dado oculto (mostra "?" sem vazar).
@@ -2825,8 +2744,7 @@ func _limpar_levantadas() -> void:
 ## O PALCO DA SEGURADA (só desenho do fluxo fiel, zero regra).
 ##
 ## A carta que o jogador está decidindo sai da mão e VOA até a frente da
-## câmera — sem trocar de camada: ela continua no mesmo viewport do campo, e
-## como a faixa mora atrás dele, a carta passa por cima dela sozinha. Na
+## câmera — sem trocar de camada. Na
 ## estrela o palco é mais alto, porque o menu fica embaixo. A mão esconde o
 ## original no mesmo índice (o lugar fica marcado pelo cursor).
 ##

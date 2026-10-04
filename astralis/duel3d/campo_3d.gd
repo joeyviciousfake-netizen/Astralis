@@ -52,10 +52,8 @@ func _ready() -> void:
 	no_laterais = Node3D.new()
 	no_laterais.name = "Laterais"
 	add_child(no_laterais)
-	# `Laterais` fica VAZIO de propósito (D44/D45): as pilhas de baralho,
-	# cemitério e os contadores foram para a faixa 2D do meio do HUD. É o
-	# guarda-chuva que o resto da cena já usava, e some qualquer desenho
-	# solto do canto.
+	# `Laterais` fica VAZIO de propósito (D44/D45): nada de desenho solto no
+	# canto. É o guarda-chuva que o resto da cena já usava.
 
 
 ## Um painel de vidro = a PEÇA DE VIDRO da ref (doc 15 §15.3): vidro azul

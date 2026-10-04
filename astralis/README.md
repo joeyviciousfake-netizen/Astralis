@@ -18,10 +18,10 @@ astralis/
                               board_layout (arena)
   duel/                    <- game_state, duel_manager, turn_manager, summon/battle/damage/
                               position/fusion_system (REGRA — a única verdade de gameplay)
-  duel3d/                  <- A TELA do duelo em 8 arquivos, UM ASSUNTO CADA (D57):
+  duel3d/                  <- A TELA do duelo em 9 arquivos, UM ASSUNTO CADA (D57):
                               mesa_3d (orquestrador + dono das medidas), painel_carta_3d,
-                              faixa_2d, carta_3d (fabrica), menus_3d, vista_3d (camera e a
-                              volta), campo_3d (os 20 paineis), cursor_3d
+                              carta_3d (fabrica), menus_3d, vista_3d (camera e a
+                              volta), campo_3d (os 24 paineis), cursor_3d
   ai/                      <- ia_rival (a IA ESCOLHE: carta e alvo; a mesa EXECUTA, D68)
   ui/                      <- card_view (a carta 2D/molde; a mesa do duelo saiu no D54/D58)
   testing/                 <- testes GUT + astralis_test_base.gd (base comum)

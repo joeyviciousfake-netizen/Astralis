@@ -189,11 +189,8 @@ func test_a_vista_do_rival_e_o_espelho_exato_da_do_jogador() -> void:
 	assert_almost_eq(cam.position.z, z180, 0.0001,
 		"D51: depois da volta a câmera está no ponto do espelho.")
 	# (d) A TRAVA DE VERDADE: o VÃO entre as duas fileiras de monstro é o MESMO
-	# nas duas vistas. A faixa do meio é 2D, não se mexe, e foi montada com a
-	# medida do vão da vista do jogador — então é isso que garante que ela
-	# caia entre os slots de monstro dos dois lados.
+	# nas duas vistas.
 	var vao_jogador := _vao_das_fileiras(mesa)
-	var faixa: Control = mesa.get("_faixa") as Control
 	mesa.call("_girar_campo", 0.0)
 	await wait_process_frames(2)
 	var vao_rival := _vao_das_fileiras(mesa)
@@ -206,23 +203,6 @@ func test_a_vista_do_rival_e_o_espelho_exato_da_do_jogador() -> void:
 	# E a ida e volta devolve a SUA câmera exatamente onde estava.
 	assert_eq(cam.position, pos_0,
 		"D51: depois de ir ao rival e voltar, a câmera do jogador está no mesmo lugar (byte a byte).")
-	# (e) E a faixa do meio cai DENTRO do vão, com a mesma folga em cima e em
-	# baixo — que é o "exatamente certa entre os slots de monstro" do usuário.
-	if faixa != null:
-		var folga_cima := faixa.position.y - vao_rival.x
-		var folga_baixo := vao_rival.y - (faixa.position.y + faixa.size.y)
-		assert_true(folga_cima > 0.0 and folga_baixo > 0.0,
-			"D51: a faixa do meio está DENTRO do vão na vista do rival (folgas %.1f / %.1f)." % [
-				folga_cima, folga_baixo])
-		assert_almost_eq(folga_cima, folga_baixo, 1.0,
-			"D51: a faixa fica CENTRADA no vão da vista do rival (folgas %.1f / %.1f)." % [
-				folga_cima, folga_baixo])
-		var folga_cima_j := faixa.position.y - vao_jogador.x
-		var folga_baixo_j := vao_jogador.y - (faixa.position.y + faixa.size.y)
-		assert_almost_eq(folga_cima, folga_cima_j, 1.0,
-			"D51: a folga de cima é a mesma nas duas vistas (a faixa não se mexe).")
-		assert_almost_eq(folga_baixo, folga_baixo_j, 1.0,
-			"D51: a folga de baixo é a mesma nas duas vistas (a faixa não se mexe).")
 	# (f) E a fileira de cada jogador cai no MESMO retângulo de tela que a do
 	# jogador na outra vista (é o espelho, não um redimensionamento).
 	for lado in [0, 1]:
@@ -710,63 +690,25 @@ func test_cada_jogador_ve_a_propria_fileira_na_ordem_normal() -> void:
 ## (invisivel) em 90 - que e onde o conteudo troca, entao ninguem ve a troca.
 func test_o_hud_vira_de_carta_e_troca_nos_90_graus() -> void:
 	var mesa: Node = await _mesa3d_nova()
-	var faixa: Control = mesa.get("_faixa") as Control
-	assert_true(faixa != null, "A faixa do meio existe (e vira de carta).")
-	if faixa == null:
+	var bloco := mesa.get_node("HUD/RetratoVoce") as Control
+	assert_true(bloco != null, "O retrato existe (e vira de carta).")
+	if bloco == null:
 		return
 	_vista(mesa).set("giro_campo", 0.0)
 	mesa.call("_aplicar_vista_hud")
-	assert_almost_eq(faixa.scale.x, 1.0, 0.001, "Em 0 graus a faixa esta com a largura inteira.")
+	assert_almost_eq(bloco.scale.x, 1.0, 0.001, "Em 0 graus o bloco esta com a largura inteira.")
 	_vista(mesa).set("giro_campo", 45.0)
 	mesa.call("_aplicar_vista_hud")
-	var meio: float = faixa.scale.x
+	var meio: float = bloco.scale.x
 	assert_true(meio < 0.75 and meio > 0.25,
-		"Em 45 graus a faixa ja esta encolhendo (%.2f) - ela vira, nao some de uma vez." % meio)
+		"Em 45 graus o bloco ja esta encolhendo (%.2f) - ele vira, nao some de uma vez." % meio)
 	_vista(mesa).set("giro_campo", 90.0)
 	mesa.call("_aplicar_vista_hud")
-	assert_almost_eq(faixa.scale.x, 0.0, 0.001,
-		"Em 90 graus a faixa tem largura ZERO (e o e o instante da troca, invisivel).")
+	assert_almost_eq(bloco.scale.x, 0.0, 0.001,
+		"Em 90 graus o bloco tem largura ZERO (e o e o instante da troca, invisivel).")
 	_vista(mesa).set("giro_campo", 180.0)
 	mesa.call("_aplicar_vista_hud")
-	assert_almost_eq(faixa.scale.x, 1.0, 0.001, "Em 180 graus a faixa volta a ter a largura inteira.")
-
-
-## (7b) E o conteudo da faixa se ESPELHA na virada: o seu deck e o seu LP ficam
-## do lado que agora e o seu na tela, e a cor viaja com o numero.
-func test_a_faixa_do_meio_se_espelha_na_volta() -> void:
-	var mesa: Node = await _mesa3d_nova()
-	var faixa: Control = mesa.get("_faixa") as Control
-	assert_true(faixa != null, "A faixa do meio existe.")
-	var linha: Node = null
-	if faixa != null:
-		linha = faixa.get_node_or_null(NodePath("Celulas"))
-	assert_true(linha != null, "A linha de celulas da faixa existe.")
-	if linha == null:
-		return
-	var nomes := _nomes_das_celulas(linha)
-	assert_eq(nomes.size(), 7, "A faixa tem as 7 celulas.")
-	if nomes.size() != 7:
-		return
-	assert_eq(nomes[0], "MeuCemiterio", "Ordem normal comeca no seu cemiterio (esquerda).")
-	assert_eq(nomes[3], "Turno", "O turno fica no meio (nao tem dono).")
-	_vista(mesa).set("giro_campo", 180.0)
-	mesa.call("_aplicar_vista_hud")
-	var espelhado := _nomes_das_celulas(linha)
-	assert_eq(espelhado[0], "CemRival", "Virada: o cemiterio do RIVAL foi para a esquerda (invertido).")
-	assert_eq(espelhado[1], "DeckRival", "Virada: o deck do RIVAL foi para o segundo lugar.")
-	assert_eq(espelhado[3], "Turno", "Virada: o turno continua no meio.")
-	assert_eq(espelhado[6], "MeuCemiterio", "Virada: o seu cemiterio foi para a direita.")
-	# Volta: a ordem normal volta exatamente.
-	_vista(mesa).set("giro_campo", 0.0)
-	mesa.call("_aplicar_vista_hud")
-	assert_eq(_nomes_das_celulas(linha), nomes, "Voltou a visao do jogador: a faixa volta a ordem normal.")
-
-
-func _nomes_das_celulas(linha: Node) -> Array:
-	var out: Array = []
-	for c in linha.get_children():
-		out.append(str((c as Node).name))
-	return out
+	assert_almost_eq(bloco.scale.x, 1.0, 0.001, "Em 180 graus o bloco volta a ter a largura inteira.")
 
 
 ## (8) D46b continua valendo: na vez do rival o painel esquerdo mostra so a

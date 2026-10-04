@@ -85,8 +85,8 @@ func medir_plano_de_simetria() -> void:
 ## volta, a camera recua o MESMO desvio que o pivo tem do plano de simetria do
 ## campo - porque o pivo esta na origem e o campo e simetrico em torno de
 ## `z_simetria`. Sem isso a camera do rival chega 2x esse desvio mais perto da
-## mesa do que a do jogador, e o campo sai mais para baixo (a faixa do meio,
-## que e 2D e NAO se mexe, deixa de cair no vao das duas fileiras).
+## mesa do que a do jogador, e o campo sai mais para baixo (o vao entre as
+## fileiras deixa de bater nas duas vistas).
 ## Ou seja: a vista do rival e o ESPELHO EXATO da do jogador, e a do jogador
 ## nao muda em nada.
 func _z_local_da_camera(giro: float) -> float:
