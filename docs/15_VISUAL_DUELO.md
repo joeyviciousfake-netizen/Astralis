@@ -51,7 +51,7 @@ perspectiva fica torta na hora que o campo é puxado para a direita.
 | `frustum_offset` | `Vector2.ZERO` | sem deslocamento de lente |
 | `PAINEL_ESQ_L` | `431` px | o campo começa depois do painel 2D (22,4% da tela: 375 da carta + 2x28 de margem) |
 | `JANELA_CAMPO_L` | `1489` px | 77,6% da tela — a janela do SubViewport |
-| `ESCALA_CAMPO` | `1.23` | transform de apresentação, sobre o layout da arena |
+| `ESCALA_CAMPO` | `1.06` | transform de apresentação, sobre o layout da arena (com ele as pilhas a um passo das colunas cabem na tela) |
 | `DESLOC_CAMPO` | `Vector2(0.0, -0.07)` | idem |
 
 O centro do campo cai em **61,2%** da tela, e a simetria nas 4 fileiras é exata.
@@ -145,7 +145,7 @@ a "altura do chão" na tela é uma faixa, não uma linha. Em 2D a posição é o
 | `astralis/duel3d/mesa_3d.gd` | a mesa: orquestrador | o estado do duelo, o boot, o redesenho, e é o **dono das medidas** |
 | `astralis/duel3d/vista_3d.gd` | a vista e a volta | câmera, pivô e `giro_campo` (doc 16) |
 | `astralis/duel3d/entrada_mao_3d.gd` | a entrada da carta comprada | de onde ela sai, o arco, o escalonamento e o **tempo** do voo (doc 16 §16.5) |
-| `astralis/duel3d/campo_3d.gd` | o campo de vidro | onde os 20 painéis de vidro ficam |
+| `astralis/duel3d/campo_3d.gd` | o campo de vidro | onde os 24 painéis de vidro ficam (20 slots + 4 pilhas) |
 | `astralis/duel3d/carta_3d.gd` | a fábrica de carta | corpo, arte, ATK e verso de uma carta 3D |
 | `astralis/duel3d/cursor_3d.gd` | o cursor de foco | a moldura azul e a mão branca |
 | `astralis/duel3d/faixa_2d.gd` | a faixa do meio | as 7 células, as cores e as fotos (e o `?` do sorteio, secao 15.10) |
@@ -168,6 +168,15 @@ a "altura do chão" na tela é uma faixa, não uma linha. Em 2D a posição é o
 **Estado atual:** os dez cumprem a regra, menos a `mesa_3d.gd`, cujo
 orquestrador ainda carrega assunto demais. A divisão pelo assunto é o resto do
 trabalho (ver as dívidas no `SESSAO_ATUAL.md`).
+
+## 15.7.1 AS PILHAS (baralho e cemitério no campo)
+
+Cada lado tem 2 painéis a mais, ao lado do campo e no meio entre as fileiras:
+o `d0` (baralho, à direita) e o `g0` (cemitério, à esquerda). O vidro tem o
+tamanho da carta EM ATAQUE (largura x altura + a folga, nunca quadrado),
+porque carta de pilha nunca fica em defesa. O baralho deita de costas e o
+cemitério mostra a última carta aberta em cima; pilha vazia é só o vidro. O
+cursor não anda nas pilhas e a faixa do meio continua mostrando as contagens.
 
 ## 15.8 A MEDIDA DA CARTA É A DO CONTRATO (D70)
 

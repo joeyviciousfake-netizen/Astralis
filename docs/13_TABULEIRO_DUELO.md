@@ -14,8 +14,8 @@
 | `graveyard` | lista, sem teto |
 | `banished` | lista, sem teto |
 
-São 5+5 por lado, e o schema da arena exige os 20 slots com o padrão
-`^(p0|p1)_(m|s)[0-4]$`. Nenhum número de zona mora em `game_state.gd`: cada
+São 5+5 por lado, mais 1 pilha de baralho e 1 de cemitério por lado, e o schema da arena exige os 24 slots com o padrão
+`^(p0|p1)_((m|s)[0-4]|(d|g)0)$`. Nenhum número de zona mora em `game_state.gd`: cada
 sistema usa o seu literal no ponto da regra (`turn_manager.gd` usa 5 e 7).
 
 ## 13.2 FASES DO TURNO (nesta ordem, fixa)
@@ -124,15 +124,15 @@ fusão, vitória e derrota é o runtime (R1, R2). O botão "Testar fusão" do St
 
 ## 13.9 SLOTS
 
-Cada slot tem **ID fixo** (`p0/p1` + `m`/`s` + índice). A lógica só usa o ID; a
+Cada slot tem **ID fixo** (`p0/p1` + `m`/`s` + índice, ou `d0`/`g0` de pilha). A lógica só usa o ID; a
 posição sai do arquivo da arena. Mover um slot não pode quebrar regra (D17).
 
 ## 13.10 A ARENA
 
 **A arena é do jogo, e tem um dono só** (D50).
 
-- O arquivo oficial é `schemas/examples/arenas/arena_starter.json`, com os 20
-  slots e o bloco `hand`.
+- O arquivo oficial é `schemas/examples/arenas/arena_starter.json`, com os 24
+  slots (20 + 4 pilhas) e o bloco `hand`.
 - `astralis/core/board_layout.gd` **não tem constante de grade**. `default_pos` e
   `default_layout` devolvem nulo, e quem chama decide o que fazer.
 - O `arena_id` do `duel_setup` é lido e **ignorado**; a lista de arenas do Studio
@@ -154,11 +154,17 @@ posição sai do arquivo da arena. Mover um slot não pode quebrar regra (D17).
 | Y da fileira de magia do rival | `42` |
 | mão do jogador | `x 1240`, `y 980`, `step 95` |
 | mão do rival | `x 1240`, `y 20`, `step 60` |
+| pilha do baralho (os dois lados) | `x 1912.5`, no meio das fileiras (`y 826.5` embaixo, `173.5` em cima) |
+| pilha do cemitério (os dois lados) | `x 403.5`, no meio das fileiras (mesmos `y`) |
 
 **A grade é um valor só: 263, nas SEIS direções** (D49) — o passo horizontal das
-4 fileiras **e** o vão vertical monstro→magia dos dois lados. A distância entre as
+4 fileiras e o vão vertical
+monstro→magia dos dois lados. O que iguala as pilhas aos slots é o VÃO DE
+VIDRO (26 = 263 menos a largura do vidro do slot): como o vidro da pilha é
+menor, o centro dela fica a 228.5 da coluna da ponta. A distância entre as
 duas fileiras de monstro é **390 e fica congelada**, porque mudar isso desalinha o
-campo que o usuário aprovou.
+campo que o usuário aprovou. As pilhas ficam no MEIO entre as fileiras de cada
+lado (metade do vão).
 
 Se o vão ficar feio, o que se muda é o **JSON**, nunca um número escondido no
 código.
