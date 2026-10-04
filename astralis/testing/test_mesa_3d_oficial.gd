@@ -369,13 +369,14 @@ func test_campo_a_direita_sem_perspectiva_torta() -> void:
 	# Doc 15 §15.4 (pedido do usuário: "a mesma perspectiva de quando fica no
 	# meio"): o campo foi para a DIREITA empurrando a JANELA (SubViewport),
 	# nunca a LENTE. Aqui travamos as 3 coisas que fazem isso:
-	#  1) a janela ocupa x 562..1920 (29,3%..100% medidos na referência);
+	#  1) a janela ocupa x 431..1920 (22,4%..100%: o painel tem a largura da
+	#  carta + as margens do texto);
 	#  2) a lente fica NO EIXO (frustum_offset = 0) = projeção simétrica;
 	#  3) o centro do campo cai no meio DA JANELA = 64,6% da tela.
 	var mesa: Node = await _mesa3d_nova()
 	var vp := mesa.get_node_or_null(NodePath(JANELA)) as SubViewport
 	assert_true(vp != null, "Mundo 3D dentro de um SubViewport (janela do campo).")
-	assert_eq(vp.size, Vector2i(1358, 1080), "Janela com a região do campo (1358x1080).")
+	assert_eq(vp.size, Vector2i(1489, 1080), "Janela com a região do campo (1489x1080).")
 	assert_true(vp.own_world_3d, "Janela com mundo 3D próprio (o céu não invade o HUD).")
 	var camada := mesa.get_node_or_null(NodePath("Camada3D")) as CanvasLayer
 	assert_true(camada != null, "Camada da janela 3D existe.")
@@ -389,8 +390,8 @@ func test_campo_a_direita_sem_perspectiva_torta() -> void:
 	assert_true(camada_fundo.layer < camada_faixa.layer, "Fundo atrás de tudo.")
 	var janela := mesa.get_node_or_null(NodePath("Camada3D/JanelaCampo")) as SubViewportContainer
 	assert_true(janela != null, "Janela do campo exibida na tela.")
-	assert_eq(janela.position, Vector2(562, 0), "Janela começa em 29,3% da largura (562 px).")
-	assert_eq(janela.size, Vector2(1358, 1080), "Janela ocupa até a borda direita, altura toda.")
+	assert_eq(janela.position, Vector2(431, 0), "Janela começa em 22,4% da largura (431 px).")
+	assert_eq(janela.size, Vector2(1489, 1080), "Janela ocupa até a borda direita, altura toda.")
 	assert_eq(janela.stretch_shrink, 1, "Textura 1:1 (sem escala/rotação na imagem do campo).")
 	# O HUD 2D continua em tela cheia, filho da cena (nada dele entrou no 3D).
 	assert_true(mesa.get_node_or_null(NodePath("HUD")) != null, "HUD 2D segue filho da cena.")
@@ -404,14 +405,14 @@ func test_campo_a_direita_sem_perspectiva_torta() -> void:
 	assert_eq(cam.position, Vector3(0, 16.8, 20.9), "Câmera na altura/Z medidos contra a referência.")
 	assert_eq(cam.fov, 20.0, "FOV medido contra a referência.")
 	assert_eq(cam.global_position, Vector3(0, 16.8, 20.9), "Câmera dentro da janela 3D (transform da janela não move a lente).")
-	# O CENTRO DO CAMPO no meio da janela = 562 + 1358/2 = 1241 px = 64,6%.
-	var centro_campo: float = cam.unproject_position(Vector3(0.0, 0.35, 0.0)).x + 562.0
-	assert_almost_eq(centro_campo, 1241.0, 1.0, "Centro do campo em 1241 px (64,6%% da tela): %.1f." % centro_campo)
-	assert_almost_eq(centro_campo / 1920.0 * 100.0, 64.6, 0.1, "Centro do campo em 64,6% da tela (ref: ~63,5%).")
+	# O CENTRO DO CAMPO no meio da janela = 431 + 1489/2 = 1175,5 px = 61,2%.
+	var centro_campo: float = cam.unproject_position(Vector3(0.0, 0.35, 0.0)).x + float(mesa.get("JANELA_CAMPO_X"))
+	assert_almost_eq(centro_campo, 1175.5, 1.0, "Centro do campo em 1175,5 px (61,2%% da tela): %.1f." % centro_campo)
+	assert_almost_eq(centro_campo / 1920.0 * 100.0, 61.2, 0.1, "Centro do campo em 61,2% da tela.")
 	# SIMETRIA: as pontas das fileiras equidistantes do centro (a projeção é
 	# simétrica porque a lente está no eixo). Se um lado esticar e o outro
 	# comprimir, a diferença aqui estoura e o teste pega.
-	var meio := 679.0
+	var meio := float(mesa.get("JANELA_CAMPO_L")) * 0.5
 	for lado in [0, 1]:
 		var esq: float = cam.unproject_position(mesa.call("_pos_slot", lado, "monstro", 0) as Vector3).x
 		var dir: float = cam.unproject_position(mesa.call("_pos_slot", lado, "monstro", 4) as Vector3).x
@@ -655,7 +656,7 @@ func test_d49_grade_perfeita_um_valor_so_e_mao_vem_para_a_camera() -> void:
 	assert_true(cima.y >= f_s.y,
 		"A mão não cobre a sua fileira de magia: topo da carta em %.0f px, base da fileira em %.0f px." % [cima.y, f_s.y])
 	assert_true(baixo.y > 1080.0, "A sua mão continua cortada pela borda de baixo (base em %.0f px > 1080)." % baixo.y)
-	# ...nem o painel esquerdo (a janela do campo começa em x=562).
+	# ...nem o painel esquerdo (a janela do campo começa em x=431).
 	assert_true(cam.unproject_position(p0_m).x > 562.0 + 20.0,
 		"A mão não invade o painel esquerdo.")
 	# A ordem das fileiras é a da referência (doc 15 §15.3): de cima para
@@ -713,7 +714,7 @@ func test_topo_so_retratos_com_nome_e_nada_mais() -> void:
 	var rv := mesa.get_node("HUD/RetratoVoce") as Control
 	var rr := mesa.get_node("HUD/RetratoRival") as Control
 	assert_true(rv.position.x < rr.position.x, "Seu retrato a ESQUERDA, o do rival a DIREITA.")
-	assert_true(rv.position.x >= 562.0, "Seu retrato nunca invade o painel esquerdo (x %d)." % int(rv.position.x))
+	assert_true(rv.position.x >= float(mesa.get("PAINEL_ESQ_L")), "Seu retrato nunca invade o painel esquerdo (x %d)." % int(rv.position.x))
 	assert_true(rr.position.x + rr.size.x <= 1920.0, "Retrato do rival dentro da tela (%d)." % int(rr.position.x + rr.size.x))
 	# D45 (item 1): "a imagem dos duelistas bem pra cima, dando o mesmo espaço
 	# entre as laterais e a parte de cima" e "a parte de cima da imagem e a
@@ -736,7 +737,7 @@ func test_topo_so_retratos_com_nome_e_nada_mais() -> void:
 			"D45 (item 1): o bloco de nome %s começa na MESMA linha do topo da foto (%.0f = %.0f px)." % [
 				quem, placa.position.y, foto.position.y])
 		# E a placa nunca invade o painel esquerdo.
-		assert_true(placa.position.x >= 562.0,
+		assert_true(placa.position.x >= float(mesa.get("PAINEL_ESQ_L")),
 			"D45 (item 1): a placa de nome %s não invade o painel esquerdo (x %d)." % [quem, int(placa.position.x)])
 	# Nome real do dado, do lado de dentro de cada retrato (espelhado).
 	var placas_nome := 0
@@ -819,10 +820,10 @@ func test_painel_esquerdo_carta_focada() -> void:
 	# laranja y 810..1080. Tudo com o DADO REAL da carta focada.
 	var mesa: Node = await _mesa3d_nova()
 	assert_true(mesa.get_node_or_null(NodePath("HUD/PainelCarta")) != null, "Painel esquerdo existe.")
-	# Fundo azul-marinho (#1b2340) ocupando a faixa x 0..562, altura toda.
+	# Fundo azul-marinho (#1b2340) ocupando a faixa x 0..431, altura toda.
 	var fundo := mesa.get_node("HUD/FundoPainelEsq") as ColorRect
 	assert_eq(fundo.color, Color(0.106, 0.137, 0.251, 1.0), "Fundo do painel no azul-marinho da ref (#1b2340).")
-	assert_eq(fundo.size.x, 562, "Fundo do painel na faixa x 0..562 da ref.")
+	assert_eq(fundo.size.x, float(mesa.get("PAINEL_ESQ_L")), "Fundo do painel na faixa x 0..431.")
 	assert_eq(fundo.size.y, 1080, "Fundo do painel com altura toda.")
 	# D5: a linha de atributo em texto ("LUZ") foi REMOVIDA — na ref, depois
 	# do [TIPO] vem direto a descrição. O atributo continua visível como
@@ -868,7 +869,7 @@ func test_painel_esquerdo_carta_focada() -> void:
 	assert_almost_eq(prop, prop_carta, 0.002, "Janela com a proporcao real da carta: %.4f (carta %.4f)." % [prop, prop_carta])
 	assert_almost_eq(alt_px, 546.0, 0.5, "Carta na faixa y 16..562 da ref: %.1f." % alt_px)
 	assert_almost_eq(janela.position.y, 16.0, 0.5, "Carta comeca em y 16 como na ref.")
-	assert_true(janela.position.x >= 0.0 and janela.position.x + janela.size.x <= 562.0,
+	assert_true(janela.position.x >= 0.0 and janela.position.x + janela.size.x <= float(mesa.get("PAINEL_ESQ_L")),
 		"Carta dentro da faixa do painel, sem vazar: %d..%d." % [int(janela.position.x), int(janela.position.x + janela.size.x)])
 	# A JANELA ENQUADRA A CARTA INTEIRA. Camera ortogonal com KEEP_HEIGHT mostra
 	# `size` de altura de mundo; a largura visivel sai da proporcao do retangulo.

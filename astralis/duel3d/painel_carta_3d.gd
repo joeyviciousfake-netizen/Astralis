@@ -33,7 +33,7 @@ extends Control
 ## Onde o painel comeca e acaba, em px do canvas 1920x1080 (doc 15 §15.3). Sao
 ## da TELA, entao a mesa e que passa (o mesmo numero diz onde o campo 3D
 ## comeca).
-var largura := 562
+var largura := 431
 var altura := 1080
 ## As DUAS medidas da carta em unidades de mundo, e o DONO delas e a mesa (a
 ## carta 3D do campo usa as mesmas). O painel usa as duas para dar a
@@ -133,7 +133,8 @@ func _ready() -> void:
 ##
 ## O retangulo tem a PROPORCAO REAL da carta (59 x 86), e nao a da moldura em
 ## JPG: o que esta desenhado agora e a peca, e a peca mede 59 x 86. Com a altura
-## da faixa da ref (546 px) a largura sai 374 px, centrada nos 562 do painel.
+## da faixa da ref (546 px) a largura sai 375 px, centrada nos 431 do painel
+## (28 px de margem de cada lado, a mesma dos textos).
 ## Camera ortogonal com `size` = altura da carta e `KEEP_HEIGHT` faz a peca
 ## preencher o retangulo exatamente: nem sobra, nem corta o canto arredondado.
 func _construir_carta() -> void:

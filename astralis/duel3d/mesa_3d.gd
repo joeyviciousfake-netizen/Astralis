@@ -74,17 +74,16 @@ const CAM_FOV := 20.0
 ## O mundo 3D inteiro (campo, cartas, mão, cursor) é
 ## desenhado num SubViewport que ocupa SÓ a região do campo; o HUD 2D
 ## continua em tela cheia por cima (Control filho da cena, como sempre).
-##   PAINEL_ESQ_PX = 29,3% da largura da tela: MEDIDA da referência
-##   (doc 15 §15.3 — na imagem de 1024 px o painel esquerdo vai de 0 a
-##   300 px, e 300/1024 = 29,3%; a referência põe o centro do campo em
-##   ~63,5% e aqui ele cai em 29,3% + 70,7%/2 = 64,6%).
+##   PAINEL_ESQ_PX = a largura do painel: a carta tem 375 px de largura e o
+##   texto usa 28 px de margem de cada lado, então o painel tem 375 + 2x28.
+##   Com ele o centro do campo cai em 431 + 1489/2 = 61,2% da tela.
 ## AJUSTE FINO DO ENQUADRAMENTO É AQUI (PAINEL_ESQ_PX). Se ficar torto,
 ## mexe-se neste retângulo — NUNCA na câmera (doc 15 §15.4).
 const TELA_L := 1920
 const TELA_A := 1080
-const PAINEL_ESQ_PX := 562                       # 29,3% de 1920
+const PAINEL_ESQ_PX := 431                       # 375 da carta + 2x28 de margem
 const JANELA_CAMPO_X := PAINEL_ESQ_PX            # começa depois do painel 2D
-const JANELA_CAMPO_L := TELA_L - JANELA_CAMPO_X  # 1358 px (70,7% da tela)
+const JANELA_CAMPO_L := TELA_L - JANELA_CAMPO_X  # 1489 px (77,6% da tela)
 const JANELA_CAMPO_A := TELA_A                   # altura toda
 ## Cor de fundo da faixa que sobrou à esquerda (na ref, o painel 2D é
 ## escuro). Só apresentação, zero regra.
@@ -168,10 +167,9 @@ const COR_PRETO_FUNDO := Color(0.21, 0.21, 0.25, 0.96)
 
 ## ---- HUD 2D (doc 15 §15.3 — TUDO medido na referência, em px do canvas
 ## 1920x1080; a referência é 1024x583 e o §15.3 traz os %) ----------------
-## PAINEL ESQUERDO: a faixa inteira x 0..562, altura toda.
-const PAINEL_ESQ_L := 562
-const PAINEL_CARTA_L := 364
-## BARRA SUPERIOR metálica: x 562..1920 (29,3%..100%), y 0..92 (8,5% da alt).
+## PAINEL ESQUERDO: a faixa inteira x 0..431, altura toda.
+const PAINEL_ESQ_L := 431
+## BARRA SUPERIOR metálica: x 431..1920, y 0..92 (8,5% da alt).
 const BARRA_TOPO_X0 := 562
 const BARRA_TOPO_Y1 := 92
 const PLACA_VOCE_X0 := 576
@@ -196,13 +194,13 @@ const BARRA_FASES_GAP := 8
 ## rival).
 const RETRATO_MARGEM := 14
 const RETRATO_L := 136
-const RETRATO_VOCE_X := PAINEL_ESQ_PX + RETRATO_MARGEM              # 576
+const RETRATO_VOCE_X := PAINEL_ESQ_PX + RETRATO_MARGEM              # 445
 const RETRATO_RIVAL_X := TELA_L - RETRATO_MARGEM - RETRATO_L        # 1770
 const RETRATO_VOCE_Y := RETRATO_MARGEM                             # 14
 const RETRATO_RIVAL_Y := RETRATO_MARGEM                            # 14
 ## D45 (item 1): a placa de NOME do duelista fica AO LADO do retrato (para
 ## dentro, para os dois lados ficarem espelhados), nunca invade o painel
-## esquerdo (que termina em x 562) e tem o TOPO NA MESMA LINHA do topo da
+## esquerdo (que termina em x 431) e tem o TOPO NA MESMA LINHA do topo da
 ## foto.
 const RETRATO_NOME_L := 300
 const RETRATO_NOME_A := 44
@@ -2485,7 +2483,7 @@ func _construir_hud() -> void:
 
 
 ## Fundo do painel esquerdo: azul-marinho escuro (ref) ocupando a faixa
-## inteira x 0..562, altura toda, com um fio de brilho na borda direita.
+## inteira x 0..431, altura toda, com um fio de brilho na borda direita.
 func _construir_fundo_painel(hud: Control) -> void:
 	var fundo := ColorRect.new()
 	fundo.name = "FundoPainelEsq"
