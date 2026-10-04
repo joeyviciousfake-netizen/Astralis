@@ -1806,7 +1806,10 @@ func _redesenhar(com_efeito: bool, dono_efeito: int = 0) -> void:
 		_no_cartas.add_child(c)
 		_pose_da_carta_da_mao(c, 0)
 		if virada:
-			c.rotation_degrees.y = 180.0
+			# Gira 180 no eixo vertical LOCAL (não no da cena): a carta mostra
+			# o verso ocupando o mesmo retângulo na tela, com a mesma
+			# inclinação das outras. Girar no eixo da cena entorta ela em pé.
+			c.global_transform.basis = Basis(Vector3.RIGHT, c.rotation.x) * Basis(Vector3.UP, PI)
 		if _segurada != null and is_instance_valid(_segurada) and i == _segurada_idx:
 			c.visible = false
 		_marcar_entrada(compra0, c, i)
@@ -1984,6 +1987,10 @@ func _aplicar_vista_da_mao() -> void:
 		var mao: Array = ((_st.players[dono] as Dictionary)["hand"] as Array)
 		carta.position = _pos_mao_arco(int(carta.get_meta("mao_idx")), mao.size(), dono)
 		_pose_da_carta_da_mao(carta, dono)
+		# A volta refaz a pose e apagaria o 180 da virada: reaplica no eixo
+		# local, igual ao desenho da mão.
+		if dono == 0 and bool(_face_na_mao.get(int(carta.get_meta("mao_idx")), false)):
+			carta.global_transform.basis = Basis(Vector3.RIGHT, carta.rotation.x) * Basis(Vector3.UP, PI)
 	if _cursor != null and is_instance_valid(_cursor):
 		_cursor.visible = not _vista.invertida()
 
@@ -2784,23 +2791,39 @@ const PALCO_FOLGA := 14.0
 ## começar outro mata o anterior, então dois nunca brigam.
 var _seg_voo: Tween = null
 var _seg_giro: Tween = null
+## A base da segurada: a orientação da câmera quando ela subiu. O giro da face
+## é em torno do eixo vertical DA CÂMERA — e é por isso que a carta para reta
+## para quem olha, em vez de entortar no eixo próprio dela.
+var _seg_base := Basis()
 
 
-## O meio entre as duas mãos, em coordenadas do viewport. É para onde a carta
-## segurada vai — e é por isso que ela aparece entre as mãos em qualquer vista.
+## O meio do vão livre entre as duas mãos, em coordenadas do viewport. É para
+## onde a carta segurada vai: a base da mão de cima e o topo da mão de baixo,
+## medidos de verdade na tela (posição e inclinação reais de cada carta), em
+## qualquer vista.
 func _meio_das_maos_tela() -> Vector2:
 	if _vp == null:
 		return Vector2(744.0, 540.0)
 	var meio := Vector2(_vp.size.x * 0.5, _vp.size.y * 0.5)
 	if _st == null or _cam == null or not is_instance_valid(_cam):
 		return meio
-	var mao0: Array = (_st.players[0] as Dictionary)["hand"] as Array
-	var mao1: Array = (_st.players[1] as Dictionary)["hand"] as Array
-	if mao0.is_empty() or mao1.is_empty():
+	var fundo_cima := -1.0
+	var topo_baixo := 1e9
+	for dono in [0, 1]:
+		var mao: Array = ((_st.players[dono] as Dictionary)["hand"] as Array)
+		if mao.is_empty():
+			return meio
+		var perto: bool = dono == _dono_do_lugar_perto()
+		var tilt := float(_pose_da_mao(perto)["tilt"])
+		for i in range(mao.size()):
+			var b := _caixa_carta_tela(_pos_mao_arco(i, mao.size(), dono), tilt)
+			if perto:
+				topo_baixo = minf(topo_baixo, b.y)
+			else:
+				fundo_cima = maxf(fundo_cima, b.w)
+	if fundo_cima < 0.0 or topo_baixo > 1e8:
 		return meio
-	var s0: Vector2 = _cam.unproject_position(_pos_mao_arco(mao0.size() / 2, mao0.size(), 0))
-	var s1: Vector2 = _cam.unproject_position(_pos_mao_arco(mao1.size() / 2, mao1.size(), 1))
-	return Vector2(_vp.size.x * 0.5, (s0.y + s1.y) * 0.5)
+	return Vector2(_vp.size.x * 0.5, (fundo_cima + topo_baixo) * 0.5)
 
 
 ## Onde a segurada fica: o raio da câmera pelo meio das mãos, a PALCO_DIST de
@@ -2836,12 +2859,12 @@ func _pegar_segurada(alta: bool) -> void:
 	var palco: Vector3 = _pos_palco()
 	_vp.add_child(no)
 	no.global_position = _pos_mao_arco(_mao_idx, mao.size(), 0)
-	no.global_rotation = _cam.global_rotation
+	_seg_base = _cam.global_transform.basis
 	no.scale = Vector3.ONE * 0.35
 	_segurada = no
 	_segurada_idx = _mao_idx
 	_segurada_giros = 1 if _face_baixo else 0
-	no.rotation.y = _cam.global_rotation.y + float(_segurada_giros) * PI
+	no.global_transform.basis = _seg_base.rotated(_seg_base.y.normalized(), float(_segurada_giros) * PI)
 	_seg_voo = no.create_tween().set_parallel(true)
 	_seg_voo.tween_property(no, "position", palco, PALCO_VOO) \
 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
@@ -2877,11 +2900,20 @@ func _girar_segurada() -> void:
 	if _seg_giro != null and _seg_giro.is_valid():
 		_seg_giro.kill()
 	_seg_giro = null
+	var de := float(_segurada_giros - 1) * PI
+	var ate := float(_segurada_giros) * PI
 	var tw := (_segurada as Node3D).create_tween()
-	tw.tween_property(_segurada, "rotation:y",
-		_cam.global_rotation.y + float(_segurada_giros) * PI, PALCO_GIRO) \
+	tw.tween_method(Callable(self, "_aplicar_giro"), de, ate, PALCO_GIRO) \
 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	_seg_giro = tw
+
+
+## Aplica o ângulo do giro na base da câmera: a carta gira no eixo vertical de
+## quem olha e para reta, de frente ou de costas.
+func _aplicar_giro(t: float) -> void:
+	if _segurada == null or not is_instance_valid(_segurada):
+		return
+	(_segurada as Node3D).global_transform.basis = _seg_base.rotated(_seg_base.y.normalized(), t)
 
 
 ## 1) Confirmar carta monstro -> ela vai ao CENTRO e para (igual ao 2D).

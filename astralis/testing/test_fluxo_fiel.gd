@@ -198,3 +198,41 @@ func test_start_na_mao_nao_passa_e_no_campo_passa() -> void:
 	assert_true(is_instance_valid(mesa_campo), "Mesa segue válida após o turno do rival.")
 	assert_eq(int(stc.current_player), 0, "Rival jogou e devolveu sua vez.")
 	assert_eq(int(mesa_campo.get("_fase_jogador")), FASE_MAO, "De volta à sua fase da mão.")
+
+
+func test_carta_virada_volta_pra_mao_com_mesma_inclinacao() -> void:
+	# Travar a face p/ baixo devolve a carta à mão mostrando o verso, mas no
+	# MESMO retângulo e inclinação das outras: giro no eixo vertical local.
+	# Girar no eixo da cena deixava ela em pé (quase de perfil para a câmera).
+	var mesa = await _mesa3d_nova()
+	var st = mesa.get("_st")
+	var idx: int = _indice_monstro_na_mao(st, 0)
+	assert_true(idx >= 0, "Preparo: mão tem monstro.")
+	mesa.set("_fileira", FILEIRA_MAO)
+	mesa.set("_col", idx)
+	Input.action_press("confirmar")
+	mesa.call("_confirmar")
+	Input.action_release("confirmar")
+	Input.action_press("mover_dir")
+	mesa.call("_mover", 1, 0)
+	Input.action_release("mover_dir")
+	assert_true(bool(mesa.get("_face_baixo")), "Preparo: face p/ baixo escolhida.")
+	Input.action_press("confirmar")
+	mesa.call("_confirmar")
+	Input.action_release("confirmar")
+	assert_eq(int(mesa.get("_sub_mao")), SUB_SLOT, "Preparo: face travada, passo do slot.")
+	assert_true(bool((mesa.get("_face_na_mao") as Dictionary).get(idx, false)), "Preparo: carta marcada virada na mão.")
+	var virada := _carta_da_mao(mesa, idx, 0) as Node3D
+	assert_true(virada != null, "Carta virada desenhada na mão.")
+	var normal: Node3D = null
+	for f in _cartas3d(mesa):
+		if (f as Node).has_meta("mao_dono") and int((f as Node).get_meta("mao_dono")) == 0 \
+				and int((f as Node).get_meta("mao_idx")) != idx:
+			normal = f as Node3D
+	assert_true(normal != null, "Preparo: há outra carta na mão p/ comparar.")
+	var y_v: Vector3 = (virada as Node3D).global_transform.basis.y
+	var y_n: Vector3 = (normal as Node3D).global_transform.basis.y
+	assert_true(y_v.dot(y_n) > 0.99, "Virada tem a mesma inclinação das outras (eixo Y igual).")
+	var z_v: Vector3 = (virada as Node3D).global_transform.basis.z
+	var z_n: Vector3 = (normal as Node3D).global_transform.basis.z
+	assert_true(z_v.dot(z_n) < -0.99, "Virada mostra o outro lado (eixo Z invertido).")
