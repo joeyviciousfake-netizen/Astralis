@@ -63,7 +63,9 @@ func _construir_popup() -> void:
 	_popup = PanelContainer.new()
 	_popup.name = "MenuEstrela"
 	_popup.add_theme_stylebox_override("panel", _estilo(Color(0.03, 0.03, 0.08, 0.95), Color(1.0, 0.9, 0.4)))
-	_popup.position = Vector2(700, 440)
+	# Embaixo da carta segurada: ela sobe ao centro-alto no passo da estrela e
+	# o menu fica centrado na mesma coluna, com folga entre os dois.
+	_popup.position = Vector2(981, 500)
 	_popup.size = Vector2(520, 220)
 	_popup.visible = false
 	_popup.mouse_filter = Control.MOUSE_FILTER_IGNORE
