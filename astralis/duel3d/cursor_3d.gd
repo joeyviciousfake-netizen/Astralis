@@ -1,33 +1,70 @@
 extends Node3D
 
-## cursor_3d — O CURSOR DE FOCO: o retangulo AZUL BRILHANTE que ABRAÇA a coisa
-## focada, mais a MAO BRANCA no centro dela. Um assunto so.
+## cursor_3d — O CURSOR DE FOCO: uma LUZ AZUL arredondada em volta da coisa
+## focada, que respira suave. Um assunto so.
 ##
 ## Ele nao sabe o que esta focado: quem molda o cursor e a mesa, que mede a coisa
 ## (a carta da mao ou o ladrilho) e passa largura, altura, inclinacao e escala.
 ## Por isso o mesmo cursor serve na mao E no campo (ref, doc 15 §15.3).
 ##
-## A moldura e desenhada no PLANO DA CARTA (XY local dentro do `Grupo`), e o
-## grupo gira junto com a focada - entao a moldura sai colada nela, nas DUAS
+## A luz e desenhada no PLANO DA CARTA (XY local dentro do `Grupo`), e o
+## grupo gira junto com a focada - entao a luz sai colada nela, nas DUAS
 ## situacoes.
+##
+## Um quad so, sem caixa: o contorno arredondado e o caimento suave saem de um
+## shader (SDF de retangulo arredondado), porque geometria chapada e o que
+## deixava a selecao com cara de brinquedo de montar. Sem bloom no projeto
+## (gl_compatibility tem brilho global limitado, e ele tingiria a cena
+## inteira): o brilho e localizado no proprio quad, que o fundo escuro faz
+## parecer glow.
 ##
 ## Zero regra (R1): isto e desenho puro.
 
-## Espessura do vidro do ladrilho (a moldura sai a frente dele, nao dentro).
-## O DONO e a mesa, que mede a carta e passa. Sem default de proposito: 0,05
-## aqui era 10x a espessura real (0,30 mm numa carta de 59 mm) e só nao apareceu
-## porque a mesa sobrescreve no boot.
-var espessura_carta: float
 ## Cor do foco: o azul brilhante da ref.
 var cor := Color(0.25, 0.55, 1.0)
-## Material UNSHADED: a mesa passa o dela (tudo na cena e sem luz).
+## Espessura do vidro do ladrilho (a luz sai a frente dele, nao dentro).
+## O DONO e a mesa, que mede a carta e passa.
+var espessura_carta: float
+## Material UNSHADED: a mesa passa o dela (tudo na cena e sem luz). Mantido
+## porque a mesa chama com a mesma assinatura; a luz usa shader proprio.
 var mat: Callable
-## Fabrica de caixa da mesa (a mesma que monta o corpo das cartas).
+## Fabrica de caixa da mesa. Mantida pela mesma razao (assinatura da mesa).
 var caixa: Callable
+
+## O shader da luz: contorno arredondado (SDF) + linha viva + halo que cai
+## suave + pulso. `quad` e o tamanho do quad em unidades locais; `meio` e a
+## metade da carta (a linha passa na borda dela); o resto e gosto medido.
+const SH := """
+shader_type spatial;
+render_mode unshaded, blend_add, depth_draw_never, cull_disabled;
+uniform vec4 cor : source_color = vec4(0.35, 0.7, 1.0, 1.0);
+uniform vec2 quad = vec2(1.2, 1.7);
+uniform vec2 meio = vec2(0.5, 0.73);
+uniform float raio = 0.07;
+uniform float faixa = 0.035;
+uniform float pulso = 0.5;
+float sd_caixa(vec2 p, vec2 b, float r) {
+	vec2 q = abs(p) - b + r;
+	return length(max(q, vec2(0.0))) + min(max(q.x, q.y), 0.0) - r;
+}
+void fragment() {
+	vec2 p = (UV - vec2(0.5)) * quad;
+	float d = sd_caixa(p, meio, raio);
+	float linha = 1.0 - smoothstep(0.0, faixa, abs(d));
+	float halo = exp(-max(d, 0.0) * 16.0) * 0.55;
+	float vivo = 0.72 + 0.38 * pulso;
+	vec3 luz = cor.rgb * (linha * 2.4 + halo) * vivo;
+	ALBEDO = luz;
+	ALPHA = clamp(linha + halo * 0.7, 0.0, 1.0);
+}
+"""
 
 var _grupo: Node3D = null
 var _moldura: Node3D = null
-var _mao: Node3D = null
+var _brilho: MeshInstance3D = null
+var _shader_mat: ShaderMaterial = null
+## Fase do pulso em radianos (0..1 no shader). Dono: este arquivo.
+var _pulso := 0.0
 
 
 func _ready() -> void:
@@ -38,55 +75,42 @@ func _ready() -> void:
 	_moldura = Node3D.new()
 	_moldura.name = "Moldura"
 	_grupo.add_child(_moldura)
-	_construir_mao()
+	var quad := QuadMesh.new()
+	quad.size = Vector2(1.2, 1.7)
+	_brilho = MeshInstance3D.new()
+	_brilho.name = "Brilho"
+	_brilho.mesh = quad
+	_shader_mat = ShaderMaterial.new()
+	var sh := Shader.new()
+	sh.code = SH
+	_shader_mat.shader = sh
+	_brilho.material_override = _shader_mat
+	_moldura.add_child(_brilho)
 
 
-## Redesenha a moldura do foco com o tamanho e a inclinacao da focada.
-## `larg`/`alt` sao as medidas da COISA focada e `rot` a rotacao dela; a
-## moldura sai 6% maior, no plano da coisa, com a grossura proporcional
-## (nada de moldura fininha num lado e grossa no outro).
+## Redesenha a luz do foco com o tamanho e a inclinacao da focada.
+## `larg`/`alt` sao as medidas da COISA focada e `rot` a rotacao dela; o quad
+## cobre a carta mais a margem do caimento, e a linha passa na borda dela.
 func moldar(larg: float, alt: float, rot: Vector3, escala_mao: float) -> void:
-	if _grupo == null:
+	if _grupo == null or _brilho == null or _shader_mat == null:
 		return
-	assert(espessura_carta > 0.0,
-		"cursor_3d: espessura_carta vem da mesa (dono da medida). Vazio aqui = "
-		+ "moldura com espessura zero em silencio.")
 	_grupo.rotation_degrees = rot
-	for f in _moldura.get_children():
-		(f as Node).queue_free()
 	var w := larg * 1.06
 	var h := alt * 1.06
-	var t := maxf(larg, alt) * 0.055
-	var z := espessura_carta / 2.0 + 0.012
-	var m := mat.call(cor, 0.85) as Material
-	_moldura.add_child(caixa.call("Aba", Vector3(w, t, 0.03), Vector3(0, h / 2.0, z), m) as Node)
-	_moldura.add_child(caixa.call("Abaixo", Vector3(w, t, 0.03), Vector3(0, -h / 2.0, z), m) as Node)
-	_moldura.add_child(caixa.call("Esq", Vector3(t, h, 0.03), Vector3(-w / 2.0, 0, z), m) as Node)
-	_moldura.add_child(caixa.call("Dir", Vector3(t, h, 0.03), Vector3(w / 2.0, 0, z), m) as Node)
-	if _mao != null:
-		_mao.scale = Vector3.ONE * escala_mao
-		_mao.position = Vector3(0, 0, z)
+	var margem := maxf(larg, alt) * 0.22
+	var quad := _brilho.mesh as QuadMesh
+	quad.size = Vector2(w + margem * 2.0, h + margem * 2.0)
+	_brilho.position = Vector3(0, 0, espessura_carta / 2.0 + 0.012)
+	_shader_mat.set_shader_parameter("cor", cor)
+	_shader_mat.set_shader_parameter("quad", Vector2(w + margem * 2.0, h + margem * 2.0))
+	_shader_mat.set_shader_parameter("meio", Vector2(w * 0.5, h * 0.5))
+	_shader_mat.set_shader_parameter("raio", minf(w, h) * 0.09)
+	_shader_mat.set_shader_parameter("faixa", maxf(larg, alt) * 0.045)
 
 
-## MAO BRANCA no centro do cursor (ref): palma + 4 dedos + polegar, feita de
-## caixas brancas. Montada na escala de UMA carta (largura 1,0) - quem chama e
-## que escala pelo tamanho da coisa focada, entao ela e a mesma na mao e no
-## ladrilho.
-func _construir_mao() -> void:
-	var mao := Node3D.new()
-	mao.name = "Mao"
-	var branco := mat.call(Color(1.0, 1.0, 1.0), 0.55) as Material
-	var w := 0.048
-	mao.add_child(caixa.call("Palma", Vector3(w * 2.2, w * 1.5, 0.02), Vector3.ZERO, branco) as Node)
-	# dedos: 4 barras curtas em cima da palma, do maior pro menor
-	var alturas := [0.100, 0.130, 0.125, 0.095]
-	for i in range(4):
-		var alt: float = float(alturas[i])
-		var x := (-1.5 + float(i)) * w * 1.05
-		mao.add_child(caixa.call("Dedo%d" % i, Vector3(w * 0.80, alt, 0.02), Vector3(x, alt * 0.5 + w * 0.75, 0), branco) as Node)
-	# polegar: barra curta diagonal a esquerda da palma
-	var pol := caixa.call("Polegar", Vector3(w * 0.80, w * 1.3, 0.02), Vector3(-w * 1.9, w * 0.1, 0), branco) as Node3D
-	pol.rotation_degrees = Vector3(0, 0, 40)
-	mao.add_child(pol)
-	_mao = mao
-	_grupo.add_child(mao)
+## Pulso do foco: 0..1 no shader, num seno lento — a luz respira em vez de
+## piscar.
+func _process(delta: float) -> void:
+	_pulso += delta * 2.4
+	if _shader_mat != null:
+		_shader_mat.set_shader_parameter("pulso", 0.5 + 0.5 * sin(_pulso))

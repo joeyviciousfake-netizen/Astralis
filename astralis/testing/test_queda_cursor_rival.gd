@@ -86,8 +86,8 @@ func test_fileira_do_rival_nao_da_erro_de_script_em_nenhuma_coluna() -> void:
 			await wait_process_frames(1)
 			var grupo := _n3d(mesa, "Cursor3D/Grupo")
 			var moldura := _n3d(mesa, "Cursor3D/Grupo/Moldura")
-			assert_true(grupo != null and moldura != null and moldura.get_child_count() == 4,
-				"Fileira %d coluna %d: moldura de foco montada (4 barras)." % [f, c])
+			assert_true(grupo != null and moldura != null and moldura.get_child_count() == 1,
+				"Fileira %d coluna %d: luz de foco montada (1 quad)." % [f, c])
 			molduras_ok += 1
 	assert_eq(molduras_ok, 10, "As 10 posições (2 fileiras x 5 colunas) do rival passaram.")
 
