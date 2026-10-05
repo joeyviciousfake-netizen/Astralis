@@ -53,8 +53,10 @@ Quem coloca é a vista (`colocar_vista`) e quem chama é a mesa
 No passo do slot a câmera sobe para cima do centro do campo e olha para baixo:
 o slot se escolhe vendo o campo inteiro de cima. É outro ponto de vista, não
 outra volta — as cartas não se mexem e o giro continua valendo. A câmera desce
-ANTES da estrela, porque o palco da segurada é calculado dela; e a volta desce
-antes de girar. A subida e a descida travam o controle como a volta.
+ANTES da estrela, porque o palco da segurada é calculado dela; escolhida a
+estrela, a carta desce e a câmera SOBE junto, e fica no topo pela BATTLE
+inteira. Passar a vez desce para a perspectiva inicial e SÓ ENTÃO gira ao
+rival. A subida e a descida travam o controle como a volta.
 
 ## 16.2 O QUE A CORREÇÃO PRECISA CONTINUAR SATISFEZENDO
 

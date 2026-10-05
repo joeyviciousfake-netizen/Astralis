@@ -29,18 +29,13 @@ onde_estamos: "A mesa 3D tem 11 arquivos, um assunto cada. O DUELO DE MOEDA e um
   do manual) ANTES de fazer o que nao se sabe, depois nativa, internet, e manual so
   em ultimo caso (D71)."
 
-faz_agora: "A espera da moeda esta fechada e conferida nas tres telas: a ESPERA
-  (painel em branco, `?` roxo, moeda girando na estrela), a rota do JOGADOR (sem
-  giro, marcador azul com o numero, painel com a carta sob o cursor) e a rota do
-  RIVAL (giro para 180, mao do rival embaixo, painel no neutro do D46b). A espera e
-  uma resposta so, de `_tem_sorteio_na_tela()`, e as tres travas saem dela. O GUT
-  passa inteiro."
+ faz_agora: "A virada em DEF gira no desenho: `_deitar_carta` e `_rot_deitada`
+  aplicam o quarto de volta na virada também (90,90,0), e o GUT trava com a
+  mesa real. O GUT passa inteiro."
 
- proximo_passo: "Fazer `carta_3d.gd` ler o `card_layout` em vez dos literais
+  proximo_passo: "Fazer `carta_3d.gd` ler o `card_layout` em vez dos literais
   (orbe, estrela, nome, ATK/DEF estao no `.gd`, e o molde em por-mil so alimenta o
-  `CardView` 2D). E o que da a opcao de editor para mover a foto do monstro ou as
-  estrelas — e a carta do painel passa a ler o mesmo molde, entao o ganho e na tela
-  e no editor ao mesmo tempo."
+  `CardView` 2D)."
  travas: "R1 a R14 valem (seção 2 do AGENTS.md). Trava do domínio: a arena é do
    jogo e não tem fallback (D50); a lente nunca é deslocada e o `frustum_offset`
     é ZERO (D41, D47); a grade é 237 nas seis direções e 390 entre as fileiras de
