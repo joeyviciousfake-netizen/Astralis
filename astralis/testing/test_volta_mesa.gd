@@ -785,3 +785,17 @@ func test_topo_na_escolha_do_slot_e_volta_antes_da_estrela() -> void:
 	assert_eq(int(mesa.get("_sub_mao")), 3, "Slot escolhido, passo da estrela.")
 	assert_false(bool(vista.get("no_topo")), "Escolhido o slot, a câmera desceu do topo.")
 	assert_eq(cam.position, Vector3(0.0, 16.8, 20.9), "A câmera voltou exata para a vista.")
+	# Escolhida a estrela, a carta desce e a câmera SOBE junto — e fica lá.
+	Input.action_press("confirmar")
+	mesa.call("_confirmar")
+	Input.action_release("confirmar")
+	assert_eq(int(mesa.get("_fase_jogador")), 1, "Carta desceu: fase de campo.")
+	assert_true(bool(vista.get("no_topo")), "Depois da estrela a câmera está no topo.")
+	# Passar a vez desce para a perspectiva inicial e SÓ ENTÃO gira ao rival.
+	mesa.call("_girar_campo", 180.0)
+	await wait_process_frames(2)
+	assert_false(bool(vista.get("no_topo")), "A volta desceu do topo antes de girar.")
+	assert_eq(float(vista.get("giro_campo")), 180.0, "A mesa está na visão do rival.")
+	# No 180 a câmera fica no espelho exato (D51): o z é o corrigido, não o da vista.
+	var z_espelho := 20.9 - 2.0 * float(vista.get("z_simetria"))
+	assert_eq(cam.position, Vector3(0.0, 16.8, z_espelho), "A câmera está no espelho exato da vista.")

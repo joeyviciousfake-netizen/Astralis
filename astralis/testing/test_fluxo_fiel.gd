@@ -120,6 +120,36 @@ func test_carta_desce_em_ataque_com_face_baixo_e_estrela() -> void:
 	assert_eq(int(mesa.get("_fase_jogador")), FASE_CAMPO, "Entrou na fase de campo.")
 
 
+func test_virada_gira_para_defesa_no_desenho() -> void:
+	# Virada em ATK deita (90,0,0); RB põe em DEF no estado e o desenho gira
+	# um quarto de volta junto (90,90,0) — igual à aberta. Antes a virada
+	# ignorava a posição e parecia não girar.
+	var mesa = await _mesa3d_nova()
+	var fim: Dictionary = _fluxo3d_ate_campo(mesa, true, 0)
+	var st = mesa.get("_st")
+	var slot: int = int(fim["slot"])
+	var alvo := "p0_m%d" % slot
+	mesa.set("_fase_jogador", FASE_CAMPO)
+	mesa.set("_fileira", FILEIRA_MEU_M)
+	mesa.set("_col", slot)
+	var no_antes: Node3D = null
+	for f in (mesa.get("_no_cartas") as Node3D).get_children():
+		if (f as Node).has_meta("slot_id") and str((f as Node).get_meta("slot_id")) == alvo:
+			no_antes = f as Node3D
+	assert_true(no_antes != null, "Carta virada desenhada no slot %d." % slot)
+	assert_eq((no_antes as Node3D).rotation_degrees, Vector3(90.0, 0.0, 0.0), "Virada em ATK deita sem girar.")
+	Input.action_press("posicao_r1")
+	mesa.call("_alternar_posicao")
+	Input.action_release("posicao_r1")
+	assert_eq(str(((st.players[0] as Dictionary)["monster"][slot] as Dictionary).get("position", "")), "DEF", "RB põe a virada em DEF no estado.")
+	var no_depois: Node3D = null
+	for f in (mesa.get("_no_cartas") as Node3D).get_children():
+		if (f as Node).has_meta("slot_id") and str((f as Node).get_meta("slot_id")) == alvo:
+			no_depois = f as Node3D
+	assert_true(no_depois != null, "Carta segue desenhada no slot %d." % slot)
+	assert_eq((no_depois as Node3D).rotation_degrees, Vector3(90.0, 90.0, 0.0), "Virada em DEF gira um quarto de volta no desenho.")
+
+
 func test_rb_lb_bloqueado_pos_ataque() -> void:
 	# (3) RB/LB (posicao_l1/r1) trava pós-ataque: o sistema real recusa com
 	# "Já atacou" e a mesa mantém a posição. Ataque de verdade primeiro.

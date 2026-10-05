@@ -1609,7 +1609,9 @@ func _limpar_cartas() -> void:
 
 ## Pose da carta DEITADA no painel de vidro (doc 15 §15.3: na referência as
 ## cartas do campo estão deitadas na peça, não em pé). Só DESENHO:
-##   virada  -> só o verso pra cima (a carta some, não vaza nome);
+##   virada  -> só o verso pra cima (a carta some, não vaza nome), e deitada
+##              de lado quando em DEFESA (o quarto de volta vale virada também,
+##              senão a virada nunca parece girar);
 ##   aberta  -> topo da carta virado pro DONO do slot (o dono é quem está
 ##              jogando, e o lado que decide é o LADO VISUAL — doc 16 §16.5;
 ##              na tela de hoje ele é o espelho do rival, D18) e a de DEFESA
@@ -1618,7 +1620,7 @@ func _limpar_cartas() -> void:
 ## `lado` aqui é o LADO VISUAL (saído de `_vis`), nunca o lado do dado.
 func _deitar_carta(carta: Node3D, face_down: bool, em_defesa: bool, lado: int) -> void:
 	if face_down:
-		carta.rotation_degrees = Vector3(90.0, 0.0, 0.0)
+		carta.rotation_degrees = Vector3(90.0, 90.0, 0.0) if em_defesa else Vector3(90.0, 0.0, 0.0)
 		return
 	var giro := 0.0
 	if lado == 1:
@@ -2095,7 +2097,7 @@ func _posicionar_cursor() -> void:
 ## (saído de `_vis`), como em `_deitar_carta`.
 func _rot_deitada(face_down: bool, lado: int, em_defesa: bool) -> Vector3:
 	if face_down:
-		return Vector3(90.0, 0.0, 0.0)
+		return Vector3(90.0, 90.0, 0.0) if em_defesa else Vector3(90.0, 0.0, 0.0)
 	var giro := 0.0
 	if lado == 1:
 		giro = 180.0
@@ -3138,6 +3140,10 @@ func _terminar_jogada_mao(slot_n: int) -> void:
 	_sel_atk = -1
 	_fileira = FILEIRA_MEU_M
 	_col = clampi(slot_n, 0, 4)
+	# A carta desceu: a câmera sobe para o topo junto e fica lá pela BATTLE
+	# inteira — só desce de novo quando a vez passar (`_girar_campo`).
+	if _vista != null and is_instance_valid(_vista):
+		_vista.ir_para_topo()
 	# D53: aqui não houve compra nenhuma (a carta DESCEU da mão para o campo), e
 	# sim a mão ficou com uma carta a menos — então nada anima. Antes isto era
 	# `com_efeito = true` e a mão do jogador saía voando do baralho sozinha.
@@ -3373,6 +3379,9 @@ func _executar_fusao_fiel(estrela: String) -> void:
 	_fase_jogador = FASE_CAMPO
 	_fileira = FILEIRA_MEU_M
 	_col = clampi(slot_n, 0, 4)
+	# A carta desceu: a câmera sobe para o topo junto, igual à invocação.
+	if _vista != null and is_instance_valid(_vista):
+		_vista.ir_para_topo()
 	_redesenhar(false) # D53: descida da carta, não é compra -> não anima.
 	_flash_efeito()
 
