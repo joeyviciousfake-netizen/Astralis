@@ -414,6 +414,9 @@ var _slot_alvo := -1
 ## esconde o original no mesmo índice. Nulo = ninguém segurado.
 var _segurada: Node3D = null
 var _segurada_idx := -1
+## De quem é a carta segurada (0 = jogador, 1 = rival): o redesenho esconde o
+## original na mão certa. A do rival é sempre virada e sem menu de estrela.
+var _segurada_dono := 0
 ## Quantas meias voltas a segurada já deu para a direita: a paridade é a face
 ## (par = cima, ímpar = baixo) e o número só cresce, então ela nunca gira de
 ## volta pelo caminho mais curto.
@@ -1812,7 +1815,7 @@ func _redesenhar(com_efeito: bool, dono_efeito: int = 0) -> void:
 			# o verso ocupando o mesmo retângulo na tela, com a mesma
 			# inclinação das outras. Girar no eixo da cena entorta ela em pé.
 			c.global_transform.basis = Basis(Vector3.RIGHT, c.rotation.x) * Basis(Vector3.UP, PI)
-		if _segurada != null and is_instance_valid(_segurada) and i == _segurada_idx:
+		if _segurada != null and is_instance_valid(_segurada) and i == _segurada_idx and _segurada_dono == 0:
 			c.visible = false
 		_marcar_entrada(compra0, c, i)
 	var mao1: Array = (_st.players[1] as Dictionary)["hand"]
@@ -1824,6 +1827,8 @@ func _redesenhar(com_efeito: bool, dono_efeito: int = 0) -> void:
 		v.set_meta("mao_dono", 1)
 		_no_cartas.add_child(v)
 		_pose_da_carta_da_mao(v, 1)
+		if _segurada != null and is_instance_valid(_segurada) and j == _segurada_idx and _segurada_dono == 1:
+			v.visible = false
 		_marcar_entrada(compra1, v, j)
 	_tocar_entrada(compra0)
 	_tocar_entrada(compra1)
@@ -2864,14 +2869,49 @@ func _pegar_segurada(alta: bool) -> void:
 	_seg_base = _cam.global_transform.basis
 	no.scale = Vector3.ONE * 0.35
 	_segurada = no
+	_segurada_dono = 0
 	_segurada_idx = _mao_idx
 	_segurada_giros = 1 if _face_baixo else 0
 	no.global_transform.basis = _seg_base.rotated(_seg_base.y.normalized(), float(_segurada_giros) * PI)
+	_voar_segurada_ao_palco(no, palco)
+
+
+## Voa a segurada até o palco (posição + escala). O voo anterior morre: só um
+## mexe no nó por vez.
+func _voar_segurada_ao_palco(no: Node3D, palco: Vector3) -> void:
+	if _seg_voo != null and _seg_voo.is_valid():
+		_seg_voo.kill()
+	_seg_voo = null
 	_seg_voo = no.create_tween().set_parallel(true)
 	_seg_voo.tween_property(no, "position", palco, PALCO_VOO) \
 		.set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	_seg_voo.tween_property(no, "scale", Vector3.ONE, PALCO_VOO) \
 		.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+
+
+## A segurada DO RIVAL no mesmo palco: sempre virada, sem nome no centro e sem
+## menu de estrela (a estrela dele é sorteada, porque a IA final não existe).
+## Não toca o fluxo do jogador (`_mao_idx`, `_face_baixo`, `_face_na_mao`):
+## o turno dele roda com a mesa em outro estado.
+func _pegar_segurada_rival(idx: int) -> void:
+	_liberar_segurada()
+	if _st == null or _cam == null or not is_instance_valid(_cam):
+		return
+	var mao: Array = (_st.players[1] as Dictionary)["hand"]
+	if idx < 0 or idx >= mao.size():
+		return
+	var no := _fazer_carta(mao[idx] as Dictionary, true, false)
+	var palco: Vector3 = _pos_palco()
+	_vp.add_child(no)
+	no.global_position = _pos_mao_arco(idx, mao.size(), 1)
+	_seg_base = _cam.global_transform.basis
+	no.scale = Vector3.ONE * 0.35
+	_segurada = no
+	_segurada_dono = 1
+	_segurada_idx = idx
+	_segurada_giros = 1
+	no.global_transform.basis = _seg_base.rotated(_seg_base.y.normalized(), PI)
+	_voar_segurada_ao_palco(no, palco)
 
 
 ## Solta a segurada sem redesenhar: quem chama decide o que a tela mostra
@@ -2887,6 +2927,8 @@ func _liberar_segurada() -> void:
 		(_segurada as Node).queue_free()
 	_segurada = null
 	_segurada_idx = -1
+	_segurada_dono = 0
+	_segurada_giros = 0
 
 
 ## UMA troca de face: meia volta para a direita, e a face do estado vira junto.
@@ -3481,15 +3523,33 @@ func _rival_auto() -> void:
 	_duel.advance_phase() # -> MAIN do rival
 	_redesenhar(false) # a barra de fases mostra a fase REAL (não a anterior)
 	# A IA ESCOLHE a carta; o slot e do SummonSystem (regra) e a invocacao e
-	# executada aqui, pelo mesmo caminho da jogada do jogador.
+	# executada aqui, pelo mesmo caminho da jogada do jogador: palco sempre
+	# virado, topo na descida, estrela aleatoria sem menu (a IA final que vai
+	# escolher; D28/D55/D68).
 	var mao: Array = (_st.players[1] as Dictionary)["hand"]
 	var escolha: Dictionary = _ia.escolher_invocacao(_st, 1)
 	var idx := int(escolha.get("idx", -1))
 	var slot := SummonSystem.free_monster_slot(_st, 1)
 	if idx >= 0 and slot >= 0:
-		var r: Dictionary = SummonSystem.normal_summon(_st, 1, idx, slot, false, "ATK")
+		_pegar_segurada_rival(idx)
+		_redesenhar(false)
+		_fala("Rival mostra a carta virada.")
+		await get_tree().create_timer(0.9).timeout
+		if not is_inside_tree() or bool(_st.over):
+			_liberar_segurada()
+			_rival_rodando = false
+			_redesenhar(false)
+			return
+		if _vista != null and is_instance_valid(_vista):
+			_vista.ir_para_topo()
+		var ops := _estrelas_da_carta(mao[idx] as Dictionary)
+		var estrela := str(ops[randi() % ops.size()])
+		var r: Dictionary = SummonSystem.normal_summon(_st, 1, idx, slot, true, "ATK", estrela)
+		_liberar_segurada()
 		if bool(r.get("ok", false)):
-			_fala("Rival invocou %s em Ataque." % str((r.get("nome", (mao[idx] as Dictionary).get("name", "um monstro")) as String)))
+			_fala("Rival invocou virada em Ataque.")
+		else:
+			_fala("Rival não invocou: " + str(r.get("erro", "")))
 	elif str(escolha.get("motivo", "")) == "mao_vazia":
 		_fala("Rival esta com a mao vazia neste turno.")
 	else:

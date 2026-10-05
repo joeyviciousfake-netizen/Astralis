@@ -326,3 +326,61 @@ func test_turno_do_rival_nao_roda_em_paralelo() -> void:
 	assert_eq(int(st.turn_number), turno_inicial + 1, "O turno do rival rodou UMA vez só (+1 no motor, não +2).")
 	assert_eq(int(st.current_player), 0, "A vez voltou para o jogador.")
 	assert_eq(String(st.phase), "MAIN", "O jogador recebeu na MAIN.")
+
+
+## O rival mostra a carta no mesmo palco, sempre virada: nó existe, é do
+## dono 1, conta 1 giro (face p/ baixo) e o original some da mão dele. Sem
+## nome no centro (não vaza a carta).
+func test_rival_mostra_carta_virada_no_palco() -> void:
+	var par := await _mesa_com_ordem("first_p2")
+	var mesa: Node = par[0]
+	var st = par[1]
+	_garantir_monstros_na_mao(st, 1, 1)
+	var idx := _indice_monstro_na_mao(st, 1)
+	assert_true(idx >= 0, "Preparo: rival tem monstro na mão.")
+	mesa.call("_pegar_segurada_rival", idx)
+	var seg = mesa.get("_segurada")
+	assert_true(seg != null and is_instance_valid(seg), "Segurada do rival existe no palco.")
+	assert_eq(int(mesa.get("_segurada_dono")), 1, "Segurada é do dono 1.")
+	assert_eq(int(mesa.get("_segurada_idx")), idx, "Segurada marca o índice da mão do rival.")
+	assert_eq(int(mesa.get("_segurada_giros")), 1, "Segurada conta 1 giro (face p/ baixo).")
+	var nome := (seg as Node).get_node_or_null("Nome") as Label3D
+	assert_true(nome == null or not nome.visible, "Sem nome no centro (não vaza a carta).")
+	mesa.call("_redesenhar", false)
+	await wait_process_frames(2)
+	var escondidos := 0
+	var visiveis := 0
+	for f in (mesa.get_node("Camada3D/JanelaCampo/Viewport3D/Cartas") as Node3D).get_children():
+		if (f as Node).has_meta("mao_dono") and int((f as Node).get_meta("mao_dono")) == 1 \
+				and int((f as Node).get_meta("mao_idx")) == idx:
+			if not (f as Node3D).visible:
+				escondidos += 1
+			else:
+				visiveis += 1
+	assert_eq(escondidos, 1, "Original sumiu da mão do rival.")
+	assert_eq(visiveis, 0, "Nenhuma cópia visível no lugar.")
+	mesa.call("_liberar_segurada")
+	assert_true(mesa.get("_segurada") == null, "Liberar solta a segurada.")
+
+
+## O turno inteiro do rival termina com a invocação virada e estrela válida
+## (sorteada, sem menu). Mesa e motor reais, do DRAW dele até a vez voltar.
+func test_rival_invoca_virada_com_estrela_valida() -> void:
+	var par := await _mesa_com_ordem("first_p2")
+	var mesa: Node = par[0]
+	var st = par[1]
+	_garantir_monstros_na_mao(st, 1, 1)
+	mesa.call("_rival_auto")
+	await _espera_turno_do_rival(mesa)
+	assert_false(bool(mesa.get("_rival_rodando")), "A condução do rival terminou.")
+	var zona: Array = (st.players[1] as Dictionary)["monster"] as Array
+	var achou := false
+	for m in zona:
+		if m != null and not (m as Dictionary).is_empty():
+			achou = true
+			assert_true(bool((m as Dictionary).get("face_down", false)), "Invocação do rival desce virada.")
+			var cid := str((m as Dictionary).get("card_id", ""))
+			var ops: Array = mesa.call("_estrelas_da_carta", {"id": cid}) as Array
+			assert_true(str((m as Dictionary).get("guardian_star", "")) in ops, "Estrela sorteada é uma das guardiãs da carta.")
+	assert_true(achou, "Rival invocou neste turno.")
+	assert_true(mesa.get("_segurada") == null, "Sem segurada pendurada no fim do turno.")
