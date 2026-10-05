@@ -22,18 +22,15 @@ mesa tem um comentário que registra isso.
 
 | O quê | De onde |
 |---|---|
-| 6 molduras de carta | `astralis/assets/frames/`, byte-idênticas ao `static/frames/` do Studio (D38) |
-| 9 orbes de atributo | `astralis/assets/attributes/` |
-| estrela de nível | `astralis/assets/estrelas/` |
-| verso da carta | `astralis/assets/backs/` |
-| arte da carta | `artwork` do dado; 722 PNGs em `schemas/examples/assets/fm/` |
-| retrato do duelista | `portrait` do dado; **vazio no pack do FM** → placeholder cinza |
+| 6 molduras de carta | `assets/frames/` do pack do editor (via `--project`) |
+| 9 orbes de atributo | `assets/attributes/` do pack do editor |
+| estrela de nível | `assets/estrelas/` do pack do editor |
+| verso da carta | `assets/backs/` do pack do editor |
+| arte da carta | `artwork` do dado, arquivo dentro do pack |
+| retrato do duelista | `portrait` do dado, arquivo dentro do pack; vazio → placeholder cinza |
 | fundo do tabuleiro | gerado em código, sem imagem |
 
-A cascata é: projeto (`--project` → `_base_dir`) → embutido em `astralis/assets/`
-→ Studio em `astralis-studio/static/`. Os 17 pares embutidos são comparados por
-**SHA-256** em `astralis/testing/test_assets_embutidos.gd`, e sabotar 1 byte faz
-o teste falhar.
+Sem arquivo no pack a carta usa o fallback: cor no lugar da moldura, sem orbe nem estrela, marrom com espiral no verso.
 
 **O duelo nunca escreve nome, ATK, DEF, atributo ou nível hardcoded.** Vem sempre
 do estado real. Se falta arte, mostra placeholder cinza — **nunca inventa**.

@@ -25,17 +25,16 @@ onde_estamos: "A mesa 3D tem 11 arquivos, um assunto cada. O DUELO DE MOEDA e um
   porque a camera e de perspectiva (FOV 20). Cada doc tem so a regra viva, e o que e
   derivavel do codigo e gerado: `python tools/checar_docs.py` recusa data, versao,
   contagem de teste, hash, narrativa de mudanca, caminho morto e excesso de
-  tamanho. A regra das ferramentas e a R12: documentacao (o doc 17 e a copia local
-  do manual) ANTES de fazer o que nao se sabe, depois nativa, internet, e manual so
-  em ultimo caso (D71)."
+   tamanho. A regra das ferramentas e a R12: documentacao (o doc 17 e a copia local
+   do manual) ANTES de fazer o que nao se sabe, depois nativa, internet, e manual so
+   em ultimo caso (D71). O visual da carta vem do pack do editor (`assets/` via
+   `--project`), sem copia no jogo (D85)."
 
- faz_agora: "A selecao da mao virou luz: `cursor_3d.gd` desenha um quad com
-  shader (contorno arredondado + halo + pulso), sem caixa e sem mao. O GUT
-  passa inteiro."
+  faz_agora: "O visual embutido saiu do jogo: pastas attributes/backs/estrelas/frames
+   apagadas, `_textura_arquivo` le so a base do `--project`, fallback e cor/placeholder.
+   O GUT passa inteiro."
 
-  proximo_passo: "Fazer `carta_3d.gd` ler o `card_layout` em vez dos literais
-  (orbe, estrela, nome, ATK/DEF estao no `.gd`, e o molde em por-mil so alimenta o
-  `CardView` 2D)."
+  proximo_passo: "Criar packs no editor com imagens e ver o jogo carregar o visual do pack."
  travas: "R1 a R14 valem (seção 2 do AGENTS.md). Trava do domínio: a arena é do
    jogo e não tem fallback (D50); a lente nunca é deslocada e o `frustum_offset`
     é ZERO (D41, D47); a grade é 237 nas seis direções e 390 entre as fileiras de
@@ -44,7 +43,7 @@ onde_estamos: "A mesa 3D tem 11 arquivos, um assunto cada. O DUELO DE MOEDA e um
    (D75); a entrada da mão é só da carta comprada, e a compra só é mostrada na
    tela de quem comprou, depois que a câmera parou nela (D76); a espera da moeda é
    uma coisa só e a mesa que diz que ela existe — sem `turn_order: "moeda"` no dado
-   não há espera, e teste não liga a espera na mão para provocá-la (D80); efeito não tem motor na mesa (D30); quem manda é o usuário; a mesa nasce na vista de quem tem a vez (D47); modelar 3D e na frente da pessoa, nunca headless (D72/R15); o canto da face e' o canto do corpo, medido e conferido (D70); documentacao antes do codigo e o motor arbitra a versao (D74/R17); consultar a documentação antes do que nao se sabe, e a nativa gera a topologia (D71/R12); tri e quad entram, n-gon nao, e a face e medida (D73/R16)."
+       não há espera, e teste não liga a espera na mão para provocá-la (D80); efeito não tem motor na mesa (D30); o visual da carta vem do pack, sem copia no jogo (D85); quem manda é o usuário; a mesa nasce na vista de quem tem a vez (D47); modelar 3D e na frente da pessoa, nunca headless (D72/R15); o canto da face e' o canto do corpo, medido e conferido (D70); documentacao antes do codigo e o motor arbitra a versao (D74/R17); consultar a documentação antes do que nao se sabe, e a nativa gera a topologia (D71/R12); tri e quad entram, n-gon nao, e a face e medida (D73/R16)."
 
  dividas: "Motor de efeitos (D30) é o buraco de gameplay maior. Distribuição
    `.astralis` trancada é PLANO, 0% implementado. Campanha é PLANO, 0%
@@ -68,7 +67,7 @@ onde_estamos: "A mesa 3D tem 11 arquivos, um assunto cada. O DUELO DE MOEDA e um
    a única tela do duelo, e a carta dele é a peça 3D: `--mesa3d-foto=<arquivo>`
    tira a prova na tela."
 
-  data_utc: "2026-10-04"
+   data_utc: "2026-10-05"
 
 ```
 

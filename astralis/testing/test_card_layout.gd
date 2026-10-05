@@ -354,9 +354,8 @@ func test_cardview_nunca_quebra() -> void:
 
 ## A "mesa real renderiza pelo molde" ia na duel_table.tscn (2D). A mesa 3D
 ## (a oficial) tambem mostra a carta real, e quem trava isso hoje e
-## test_assets_embutidos (a carta deitada no campo sai igual a da mao, com
-## nome e ATK/DEF) + test_mesa_3d_oficial (posicao no painel, verso, painel
-## esquerdo). O molde em si,separado do desenho, e testado aqui do comeco ao fim.
+## test_mesa_3d_oficial (posicao no painel, verso, painel esquerdo). O molde
+## em si, separado do desenho, e testado aqui do comeco ao fim.
 
 
 # ---------- (9) COMPAT: RUST ACEITA = JOGO ACEITA E RENDERIZA ----------

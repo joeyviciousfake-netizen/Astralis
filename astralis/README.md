@@ -25,9 +25,9 @@ astralis/
   ai/                      <- ia_rival (a IA ESCOLHE: carta e alvo; a mesa EXECUTA, D68)
   ui/                      <- card_view (a carta 2D/molde; a mesa do duelo saiu no D54/D58)
   testing/                 <- testes GUT + astralis_test_base.gd (base comum)
-  campaign/ debug/         <- vazias por enquanto (.gitkeep)
-  assets/                  <- 17 assets de carta embutidos (frames/attributes/estrelas/backs)
-  addons/gut/              <- framework de testes (único addon)
+   campaign/ debug/         <- vazias por enquanto (.gitkeep)
+   assets/                  <- 3d/ (corpo da carta); moldura/orbe/estrela/verso vêm do pack do editor
+   addons/gut/              <- framework de testes (único addon)
 ```
 
 O programa Godot fica em `Godot/` na raiz (ignorado no git), não aqui.

@@ -87,18 +87,6 @@ const JANELA_CAMPO_A := TELA_A                   # altura toda
 ## Cor de fundo da faixa que sobrou à esquerda (na ref, o painel 2D é
 ## escuro). Só apresentação, zero regra.
 const FUNDO_3D := Color(0.04, 0.05, 0.10)
-## Os 17 assets da CARTA que o JOGO tem EMBUTIDOS (doc 15 §15.2: moram em
-## `astralis/assets/`, cópia byte-idêntica da do Studio, com teste de
-## compatibilidade travando as duas — astralis/testing/test_assets_embutidos).
-## O jogo tenta o PROJETO primeiro e cai no embutido — nunca o contrário.
-const ASSETS_EMBUTIDOS := [
-	"assets/frames/normal.jpg", "assets/frames/effect.jpg", "assets/frames/spell.jpg",
-	"assets/frames/trap.jpg", "assets/frames/ritual.jpg", "assets/frames/fusion.jpg",
-	"assets/attributes/earth.png", "assets/attributes/water.png", "assets/attributes/fire.png",
-	"assets/attributes/wind.png", "assets/attributes/light.png", "assets/attributes/dark.png",
-	"assets/attributes/divine.png", "assets/attributes/spell.png", "assets/attributes/trap.png",
-	"assets/estrelas/estrela.png", "assets/backs/verso_padrao.png",
-]
 
 const LARG_CARTA := 1.0
 ## Lado do ladrilho (só o ladrilho, não o cursor): um pouco maior que a carta
@@ -527,10 +515,9 @@ func _ready() -> void:
 	if _foto_em >= 0.0:
 		_foto_em_espera = 0.0
 	_iniciar_turno_do_duelo()
-	_diag("Pronta: mão p0=%d p1=%d, artes carregadas=%d, assets embutidos=%d/17." % [
+	_diag("Pronta: mão p0=%d p1=%d, artes carregadas=%d." % [
 		((_st.players[0] as Dictionary)["hand"] as Array).size(),
-		((_st.players[1] as Dictionary)["hand"] as Array).size(), _artes_ok,
-		_conta_assets_embutidos()])
+		((_st.players[1] as Dictionary)["hand"] as Array).size(), _artes_ok])
 	if _cam != null:
 		_diag("Cam: pos=%s fov=%s alvo=%s." % [str(_cam.global_position), str(_cam.fov), str(CAM_ALVO)])
 		var px := _cam.unproject_position(_pos_slot(0, "monstro", 2))
@@ -1167,21 +1154,18 @@ func _tex_cache(rel: String) -> Texture2D:
 
 
 func _textura_arquivo(rel: String) -> Texture2D:
-	# Foto REAL do projeto (caminho do dado, relativo à base).
-	# Inexistente (dívida conhecida: FM sem assets) = volta nulo.
+	# Foto do pack do editor (caminho do dado, relativo à base do --project).
+	# Sem arquivo no pack = nulo e a carta usa o fallback (cor/placeholder).
 	var arq := rel.strip_edges()
 	if arq.is_empty():
 		return null
-	var tentativas: Array = []
-	if not _base_dir.is_empty():
-		tentativas.append(_base_dir.path_join(arq))
-	tentativas.append(ProjectSettings.globalize_path("res://").path_join(arq))
-	tentativas.append(ProjectSettings.globalize_path("res://").path_join("../schemas/examples").path_join(arq))
-	for t in tentativas:
-		if FileAccess.file_exists(str(t)):
-			var img := Image.load_from_file(str(t))
-			if img != null:
-				return ImageTexture.create_from_image(img)
+	if _base_dir.is_empty():
+		return null
+	var t := _base_dir.path_join(arq)
+	if FileAccess.file_exists(t):
+		var img := Image.load_from_file(t)
+		if img != null:
+			return ImageTexture.create_from_image(img)
 	return null
 
 
@@ -1254,6 +1238,7 @@ func _montar_retrato(foto: TextureRect, silhueta: Label, caminho: String, nome: 
 		silhueta.visible = true
 
 
+## Moldura pelo dado, caminho dentro do pack do editor (assets/frames/).
 func _moldura_da_carta(dado: Dictionary) -> String:
 	var t := str(dado.get("card_type", "monster"))
 	if t == "spell" or t == "equip":
@@ -1592,17 +1577,6 @@ func _caixa_carta_tela(centro: Vector3, tilt_graus: float) -> Vector4:
 	var c := _cam.unproject_position(centro + eixo_y * (ALT_CARTA / 2.0))
 	var b := _cam.unproject_position(centro - eixo_y * (ALT_CARTA / 2.0))
 	return Vector4(minf(e.x, d.x), minf(c.y, b.y), maxf(e.x, d.x), maxf(c.y, b.y))
-
-
-## Quantos assets embutidos o jogo achou de verdade agora (a cascata de
-## `_textura_arquivo`: projeto -> embutido -> nada). Prova de que o jogo
-## mostra a carta real SOZINHO, sem `--project`. Só leitura, zero regra.
-func _conta_assets_embutidos() -> int:
-	var n := 0
-	for rel in ASSETS_EMBUTIDOS:
-		if _tex_cache(str(rel)) != null:
-			n += 1
-	return n
 
 
 func _limpar_cartas() -> void:

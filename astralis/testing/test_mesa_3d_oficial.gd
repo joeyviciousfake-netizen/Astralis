@@ -319,9 +319,9 @@ func test_indicador_atk_def_e_fila() -> void:
 
 
 func test_verso_marrom_com_espiral() -> void:
-	# Ref: carta virada = verso marrom com espiral (sem cruz azul). Com o
-	# asset EMBUTIDO (doc 15 §15.2, fase 2) o verso é a arte real; SEM ele,
-	# cai no marrom com espiral. Os dois caminhos são o comportamento certo:
+	# Ref: carta virada = verso marrom com espiral (sem cruz azul). Com a
+	# imagem do pack do editor o verso é a arte do pack; sem ela, cai no
+	# marrom com espiral. Os dois caminhos são o comportamento certo:
 	# o que NUNCA pode é a cruz azul.
 	var mesa: Node = await _mesa3d_nova()
 	var carta := mesa.call("_fazer_carta", {}, true, false) as Node3D
@@ -939,13 +939,10 @@ func test_painel_esquerdo_carta_focada() -> void:
 	assert_true(tipo.begins_with("["), "TIPO entre colchetes como na ref: " + tipo)
 	var desc := str((mesa.get_node("HUD/PainelCarta/BlocoDesc/FocoDesc") as Label).text)
 	assert_false(desc.is_empty(), "Painel mostra a descrição (ou guardiãs + atributo).")
-	# Orbes: o 1º é o ATRIBUTO (vem do asset real). O 2º (tipo) só aparece
-	# se o dado for magia/armadilha — carta sem esse atributo não ganha
-	# orbe inventado.
-	# D5: o atributo continua aparecendo — como ORBE do asset real (o
-	# quadradinho colorido da faixa é a cor do atributo do dado).
+	# Orbes vêm do pack do editor (D85). O pack de exemplos não tem imagens,
+	# então sem textura o orbe fica escondido e o atributo aparece só na cor.
 	var orbe_attr := mesa.get_node("HUD/PainelCarta/FocoFaixa/FocoOrbeFaixa") as TextureRect
-	assert_true(orbe_attr.visible and orbe_attr.texture != null, "Orbe do atributo visível com o asset real.")
+	assert_eq(orbe_attr.visible, orbe_attr.texture != null, "Orbe só visível com imagem do pack (sem inventar).")
 	var cor_attr: Color = (mesa.get_node("HUD/PainelCarta/FocoFaixa/FocoAttrIcon") as ColorRect).color
 	assert_true(cor_attr.r + cor_attr.g + cor_attr.b > 0.05, "Quadradinho da faixa com a cor real do atributo.")
 	var foco: Dictionary = mesa.call("_carta_focada") as Dictionary

@@ -88,12 +88,12 @@ func montar(dado: Dictionary, face_down: bool, em_defesa: bool) -> Node3D:
 		var tex: Texture2D = textura_arte.call(dado)
 		if tex != null:
 			no.add_child(_quad_textura("Arte", larg_art, alt_art, Vector3(x_art, y_art, zf + 0.002), tex))
-		# Orbe do atributo no canto da placa.
+		# Orbe do atributo no canto da placa (imagem do pack do editor).
 		var attr := str(dado.get("attribute", ""))
 		var tex_orbe: Texture2D = textura.call("assets/attributes/%s.png" % attr.to_lower())
 		if tex_orbe != null:
 			no.add_child(_quad_textura("Orbe", 0.095, 0.0947, Vector3(0.3805, 0.6173, zf + 0.002), tex_orbe, true))
-		# Estrelas = level (só monstro), à direita como na moldura.
+		# Estrelas = level (só monstro), imagem do pack do editor.
 		if eh_monstro:
 			var tex_est: Texture2D = textura.call("assets/estrelas/estrela.png")
 			if tex_est != null:
@@ -139,8 +139,8 @@ func montar(dado: Dictionary, face_down: bool, em_defesa: bool) -> Node3D:
 	tag.position = Vector3(0, alt_carta / 2.0 + 0.14, 0)
 	tag.visible = false
 	no.add_child(tag)
-	# Verso: imagem do projeto (card_back da carta ou verso padrão).
-	# Sem nada = marrom com espiral (comportamento antigo).
+	# Verso do pack do editor (card_back da carta ou verso padrão do pack).
+	# Sem arquivo no pack = marrom com espiral.
 	var verso := MeshInstance3D.new()
 	verso.name = "Verso"
 	verso.mesh = _face()
