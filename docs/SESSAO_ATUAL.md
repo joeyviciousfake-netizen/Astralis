@@ -29,9 +29,9 @@ onde_estamos: "A mesa 3D tem 11 arquivos, um assunto cada. O DUELO DE MOEDA e um
   do manual) ANTES de fazer o que nao se sabe, depois nativa, internet, e manual so
   em ultimo caso (D71)."
 
- faz_agora: "O rival mostra a carta virada no palco (sem nome, sem menu),
-  sobe ao topo e desce virada com estrela aleatoria; virada nao ataca (regra
-  do sistema). O GUT passa inteiro."
+ faz_agora: "A virada desvira ANTES do voo de ataque: `_atacar3d` redesenha
+  de cara pra cima antes do tween, e o GUT trava com a mesa real. O GUT passa
+  inteiro."
 
   proximo_passo: "Fazer `carta_3d.gd` ler o `card_layout` em vez dos literais
   (orbe, estrela, nome, ATK/DEF estao no `.gd`, e o molde em por-mil so alimenta o
