@@ -51,7 +51,7 @@ void fragment() {
 	vec2 p = (UV - vec2(0.5)) * quad;
 	float d = sd_caixa(p, meio, raio);
 	float linha = 1.0 - smoothstep(0.0, faixa, abs(d));
-	float halo = exp(-max(d, 0.0) * 16.0) * 0.55;
+	float halo = d >= 0.0 ? exp(-d * 16.0) * 0.55 : 0.0;
 	float vivo = 0.72 + 0.38 * pulso;
 	vec3 luz = cor.rgb * (linha * 2.4 + halo) * vivo;
 	ALBEDO = luz;
