@@ -73,8 +73,9 @@
 - **D81** | A ordem da tela e fundo, campo, HUD e menus: fundo na -2 e campo transparente no vao. | porque: camada vale para a tela toda. | proibido: campo opaco, e segurada em outra camada.
 - **D82** | Cada lado tem 2 pilhas no campo: baralho a direita (`d0`) e cemiterio a esquerda (`g0`), no meio entre as fileiras e junto dos slots das pontas. O vidro da pilha tem o tamanho da carta em ataque e o cursor nao anda nelas. | porque: a pilha e desenho da lista que ja existe no estado, e carta de pilha nunca fica em defesa. | proibido: zona nova no estado para a pilha, e pilha quadrada de slot de monstro.
 - **D83** | A escolha do slot e vista DE CIMA: no passo do slot a camera sobe e olha para baixo, e desce ANTES da estrela. Escolhida a estrela, a carta desce e a camera SOBE junto — e fica no topo pela BATTLE inteira; passar a vez desce para a perspectiva inicial e SÓ ENTÃO gira ao rival. | porque: o slot se escolhe vendo o campo inteiro, o palco da segurada e calculado da camera, e a descida se ve de cima. | proibido: segurada e menu com a camera voando, e volta sem descer do topo.
+- **D84** | O rival mostra a carta no palco sempre virada, sem nome no centro e sem menu de estrela (aleatoria, ate a IA final escolher). | porque: virada nao ataca nem mostra a cara, e menu e escolha do jogador. | proibido: nome da carta do rival no centro, e menu de estrela no turno dele.
 
-# ÍNDICE (R13: a maior decisão que existe é a **D83**)
+# ÍNDICE (R13: a maior decisão que existe é a **D84**)
 
 ```text
 D01 DATA != LOGIC
@@ -145,4 +146,5 @@ D80 A espera e uma coisa so, decidida pela mesa
 D81 Fundo, campo, HUD e menus: a carta passa por cima sem trocar de camada
 D82 As 2 pilhas de cada lado, junto dos slots das pontas
 D83 A escolha do slot e vista de cima, e desce antes da estrela
+D84 O rival mostra a carta virada no palco, sem menu, estrela aleatoria
 ```
