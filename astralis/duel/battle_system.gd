@@ -54,7 +54,7 @@ static func can_attack(state, attacker_player: int, attacker_slot: int) -> Dicti
 	if attacker_slot < 0 or attacker_slot >= zona.size() or zona[attacker_slot] == null:
 		return {"ok": false, "erro": "Atacante inválido."}
 	var atacante: Dictionary = zona[attacker_slot] as Dictionary
-	if bool(atacante.get("face_down", false)) or str(atacante.get("position", "ATK")) != "ATK":
+	if str(atacante.get("position", "ATK")) != "ATK":
 		return {"ok": false, "erro": "Só monstro virado em Ataque pode atacar."}
 	if bool(atacante.get("has_attacked", false)):
 		return {"ok": false, "erro": "Este monstro já atacou neste turno."}
@@ -83,6 +83,8 @@ static func attack(state, attacker_player: int, attacker_slot: int, target_playe
 		return {"ok": false, "erro": "Alvo inválido."}
 	var zona_a: Array = (state.players[attacker_player] as Dictionary)["monster"]
 	var atacante: Dictionary = zona_a[attacker_slot] as Dictionary
+	# Quem ataca virado desvira ANTES do cálculo: vira a face p/ cima e ataca.
+	atacante["face_down"] = false
 	var atk_val: int = clampi(int(atacante.get("atk", 0)), 0, 9999)
 	# Ataque direto: só sem monstros inimigos.
 	if target_slot < 0:

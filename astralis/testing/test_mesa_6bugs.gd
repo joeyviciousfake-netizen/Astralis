@@ -239,7 +239,7 @@ func test_bug6_rival_vazio_menu_LP_dano_ATK_cheio_e_IA_direta() -> void:
 	await wait_seconds(5.0)
 	assert_true(is_instance_valid(mesa2), "Mesa segue valida apos o turno do rival.")
 	var lp_voce_depois: int = int((st2.players[0] as Dictionary)["lp"])
-	assert_eq(lp_voce_depois, lp_voce_antes, "Rival invocou virado: virada não ataca (regra do sistema), seu LP segue %d." % lp_voce_antes)
+	assert_true(lp_voce_depois < lp_voce_antes, "Rival atacou direto: seu LP caiu (%d -> %d)." % [lp_voce_antes, lp_voce_depois])
 	var atk_ia := 0
 	var viradas := 0
 	for m in ((st2.players[1] as Dictionary)["monster"] as Array):
@@ -248,5 +248,6 @@ func test_bug6_rival_vazio_menu_LP_dano_ATK_cheio_e_IA_direta() -> void:
 			if bool((m as Dictionary).get("face_down", false)):
 				viradas += 1
 	assert_true(atk_ia > 0, "Preparo: o rival tem atacante (ATK %d)." % atk_ia)
-	assert_true(viradas > 0, "O rival desceu virado (não mostra a cara).")
+	assert_true(lp_voce_antes - lp_voce_depois >= atk_ia, "Direto: dano >= ATK cheio do rival (%d)." % atk_ia)
+	assert_eq(viradas, 0, "Quem atacou desvirou p/ cima no ataque.")
 	assert_eq(int(st2.current_player), 0, "O rival devolveu sua vez.")

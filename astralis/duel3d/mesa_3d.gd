@@ -3457,12 +3457,19 @@ func _animar_fila_fusao(passos: Array, slot_n: int) -> void:
 
 
 func _atacar3d(alvo_slot: int) -> void:
+	var era_virada := false
+	if _sel_atk >= 0:
+		var zona_pre: Array = (_st.players[0] as Dictionary)["monster"]
+		if _sel_atk < zona_pre.size() and zona_pre[_sel_atk] != null:
+			era_virada = bool((zona_pre[_sel_atk] as Dictionary).get("face_down", false))
 	var r: Dictionary = BattleSystem.attack(_st, 0, _sel_atk, 1, alvo_slot)
 	if not bool(r.get("ok", false)):
 		_fala("Não deu: " + str(r.get("erro", "")))
 		_sel_atk = -1
 		_redesenhar(false)
 		return
+	if era_virada:
+		_redesenhar(false) # desvira ANTES do voo: a carta voa de cara pra cima
 	# Voo de ataque (só visual): avança e volta.
 	var no_atk := _achar_carta_campo(0, "monster", _sel_atk)
 	if no_atk != null and not _sem_render():

@@ -271,7 +271,7 @@ func test_turno_3_libera_o_ataque_dos_dois_lados() -> void:
 
 
 func test_so_ataca_virado_para_cima_em_atk() -> void:
-	# D17: carta virada p/ baixo (ou em DEF) não pode atacar.
+	# Virada p/ baixo em ATK ataca desvirando antes do cálculo; em DEF não ataca.
 	var duel = _novo_duelo()
 	var st = duel.get_state()
 	while int(st.turn_number) < 2 or String(st.phase) != "MAIN":
@@ -279,22 +279,26 @@ func test_so_ataca_virado_para_cima_em_atk() -> void:
 	assert_eq(int(st.current_player), 1, "Preparo: turno 2 é do rival.")
 	_garantir_monstros_na_mao(st, 1, 1)
 	var i: int = _indice_monstro_na_mao(st, 1)
-	var rs: Dictionary = SummonSystem.normal_summon(st, 1, i, 0, true, "DEF")
-	assert_true(bool(rs.get("ok", false)), "Preparo: rival invoca virado p/ baixo.")
+	var rs: Dictionary = SummonSystem.normal_summon(st, 1, i, 0, true, "ATK")
+	assert_true(bool(rs.get("ok", false)), "Preparo: rival invoca virado p/ baixo em ATK.")
 	duel.advance_phase() # MAIN -> BATTLE
+	for k in range(5):
+		(st.players[0] as Dictionary)["monster"][k] = null
+	var lp_antes: int = int((st.players[0] as Dictionary)["lp"])
 	var a: Dictionary = BattleSystem.attack(st, 1, 0, 0, -1)
-	assert_false(bool(a.get("ok", false)), "Virada p/ baixo não ataca.")
-	assert_eq(str(a.get("erro", "")), "Só monstro virado em Ataque pode atacar.", "Erro da virada é o esperado.")
+	assert_true(bool(a.get("ok", false)), "Virada p/ baixo em ATK ataca desvirando.")
+	assert_false(bool(((st.players[1] as Dictionary)["monster"][0] as Dictionary).get("face_down", true)), "Atacante desvirou p/ cima no ataque.")
+	assert_true(int((st.players[0] as Dictionary)["lp"]) < lp_antes, "Dano direto entrou no LP.")
+	# Truque de teste: monta o defensor em DEF direto na zona (só organiza
+	# dado, sem regra nova).
 	(st.players[1] as Dictionary)["monster"][0] = null
 	_garantir_monstros_na_mao(st, 1, 1)
-	# Truque de teste: 2ª invocação no mesmo turno é proibida, então monta
-	# o defensor em DEF direto na zona (só organiza dado, sem regra nova).
 	var zona: Array = (st.players[1] as Dictionary)["monster"]
 	var mao: Array = (st.players[1] as Dictionary)["hand"]
 	var j: int = _indice_monstro_na_mao(st, 1)
 	var base: Dictionary = mao[j] as Dictionary
 	mao.remove_at(j)
-	zona[0] = {"card_id": str(base.get("id", "")), "nome": str(base.get("name", "")), "atk": int(base.get("attack", 0)), "def": int(base.get("defense", 0)), "position": "DEF", "battle_position": "DEF", "face_down": false, "has_attacked": false}
+	zona[0] = {"card_id": str(base.get("id", "")), "nome": str(base.get("name", "")), "atk": clampi(int(base.get("attack", 0)), 0, 9999), "def": clampi(int(base.get("defense", 0)), 0, 9999), "position": "DEF", "battle_position": "DEF", "face_down": false, "has_attacked": false}
 	st.normal_summon_used = true
 	var b: Dictionary = BattleSystem.attack(st, 1, 0, 0, -1)
 	assert_false(bool(b.get("ok", false)), "Monstro em Defesa não ataca.")

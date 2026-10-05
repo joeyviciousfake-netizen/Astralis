@@ -266,3 +266,29 @@ func test_carta_virada_volta_pra_mao_com_mesma_inclinacao() -> void:
 	var z_v: Vector3 = (virada as Node3D).global_transform.basis.z
 	var z_n: Vector3 = (normal as Node3D).global_transform.basis.z
 	assert_true(z_v.dot(z_n) < -0.99, "Virada mostra o outro lado (eixo Z invertido).")
+
+
+func test_virada_desvira_antes_do_voo_de_ataque() -> void:
+	# Quem ataca virado desvira ANTES do voo: o redesenho mostra a carta de
+	# cara pra cima e só então ela avança e volta. Antes voava virada e só
+	# desvirava no pouso.
+	var mesa = await _mesa3d_nova()
+	var fim: Dictionary = _fluxo3d_ate_campo(mesa, true, 0)
+	var st = mesa.get("_st")
+	var slot: int = int(fim["slot"])
+	var alvo := "p0_m%d" % slot
+	st.set("turn_number", 3) # D43 trava o turno 1: o fluxo termina em BATTLE no turno 1.
+	assert_eq(String(st.phase), "BATTLE", "Preparo: fluxo terminou na BATTLE.")
+	for k in range(5):
+		(st.players[1] as Dictionary)["monster"][k] = null
+	mesa.set("_fase_jogador", FASE_CAMPO)
+	mesa.set("_sel_atk", slot)
+	mesa.call("_atacar3d", -1)
+	assert_false(bool(((st.players[0] as Dictionary)["monster"][slot] as Dictionary).get("face_down", true)), "Atacante desvirou no estado.")
+	var no: Node3D = null
+	for f in _cartas3d(mesa):
+		if (f as Node).has_meta("slot_id") and str((f as Node).get_meta("slot_id")) == alvo:
+			no = f as Node3D
+	assert_true(no != null, "Carta segue desenhada no slot %d." % slot)
+	assert_eq((no as Node3D).rotation_degrees, Vector3(-90.0, 0.0, 0.0), "Desenho mostra a carta de cara pra cima.")
+	assert_true(int((st.players[1] as Dictionary)["lp"]) < 8000, "Dano direto entrou no rival.")
